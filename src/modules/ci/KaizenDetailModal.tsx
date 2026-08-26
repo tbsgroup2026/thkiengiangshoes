@@ -25,6 +25,7 @@ import {
   IconShieldCheck,
   IconAlertTriangle,
   IconPlus,
+  IconTrendingUp,
 } from "@tabler/icons-react";
 import { KaizenProposal } from "./CIModule";
 import { usePermission } from "@/hooks/usePermission";
@@ -108,18 +109,18 @@ export default function KaizenDetailModal({
       <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-[96vw] xl:max-w-7xl 2xl:max-w-[1550px] max-h-[96vh] flex flex-col md:flex-row overflow-hidden text-left animate-in zoom-in-95 duration-200">
         
         {/* ═══════════════════════════════════════════════════════════════════════════════════
-            LEFT SIDEBAR (Fixed, ~300px)
+            1. SIDEBAR TRÁI — CHỈNH KHỚP BỘ BỐ CỤC THEO REFERENCE
            ═══════════════════════════════════════════════════════════════════════════════════ */}
-        <div className="w-full md:w-80 md:max-h-[96vh] md:overflow-y-auto bg-slate-50 border-r border-slate-200 p-4 md:p-5 flex flex-col gap-4 flex-shrink-0">
+        <div className="w-full md:w-80 md:max-h-[96vh] md:overflow-y-auto bg-slate-50 border-r border-slate-200 p-4 md:p-5 flex flex-col gap-4 shrink-0">
           
-          {/* A. ẢNH BÊN TRÁI & THUMBNAILS */}
-          <div className="space-y-2.5">
-            <div className="relative w-full aspect-video bg-slate-900 rounded-2xl overflow-hidden border border-slate-300 shadow-sm flex items-center justify-center">
+          {/* Cover Image 4:3 rounded-2xl */}
+          <div className="space-y-2">
+            <div className="relative w-full aspect-[4/3] bg-slate-900 rounded-2xl overflow-hidden border border-slate-300 shadow-xs flex items-center justify-center">
               {selectedMedia?.type === "image" && selectedMedia.url ? (
                 <img
                   src={selectedMedia.url}
                   alt="Selected"
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-cover"
                 />
               ) : selectedMedia?.type === "video" && selectedMedia.url ? (
                 <video
@@ -135,13 +136,13 @@ export default function KaizenDetailModal({
               )}
             </div>
 
-            {/* Thumbnails list */}
+            {/* Dải Thumbnail vuông 56-64px */}
             <div className="flex gap-2">
               {proposal.before_image_url && (
                 <button
                   type="button"
                   onClick={() => proposal.before_image_url && setSelectedMedia({ type: "image", url: proposal.before_image_url })}
-                  className={`flex-1 h-14 rounded-xl overflow-hidden border-2 transition-all cursor-pointer bg-slate-900 ${
+                  className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all cursor-pointer bg-slate-900 ${
                     selectedMedia?.url === proposal.before_image_url && selectedMedia?.type === "image"
                       ? "border-[#006838] ring-2 ring-[#006838]/40"
                       : "border-slate-300 hover:border-slate-400 opacity-80 hover:opacity-100"
@@ -155,7 +156,7 @@ export default function KaizenDetailModal({
                 <button
                   type="button"
                   onClick={() => proposal.after_image_url && setSelectedMedia({ type: "image", url: proposal.after_image_url })}
-                  className={`flex-1 h-14 rounded-xl overflow-hidden border-2 transition-all cursor-pointer bg-slate-900 ${
+                  className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all cursor-pointer bg-slate-900 ${
                     selectedMedia?.url === proposal.after_image_url && selectedMedia?.type === "image"
                       ? "border-[#006838] ring-2 ring-[#006838]/40"
                       : "border-slate-300 hover:border-slate-400 opacity-80 hover:opacity-100"
@@ -168,154 +169,180 @@ export default function KaizenDetailModal({
             </div>
           </div>
 
-          {/* B. THÔNG TIN NGƯỜI ĐĂNG KÝ (CARD BỐ CỤC THEO ẢNH 2) */}
-          <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
-            <span className="text-[10px] font-black uppercase text-slate-400 block tracking-wider">
+          {/* Label Vị Trí + Phân Loại */}
+          <div className="text-[11px] font-black uppercase tracking-wide text-slate-500">
+            {proposal.region || "MỸ PHONG"} &bull; {catObj.label.toUpperCase()}
+          </div>
+
+          {/* Grid 2 cột: ĐIỂM TB | CHUYÊN MÔN */}
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs text-center space-y-0.5">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">ĐIỂM TB</span>
+              <span className="text-xl font-black text-amber-600 block">
+                {(proposal.avg_rating || 0).toFixed(1)} ⭐
+              </span>
+              <span className="text-[10px] font-bold text-slate-500 block">
+                {proposal.rating_count || 0} lượt đánh giá
+              </span>
+            </div>
+
+            <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs text-center space-y-0.5">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">CHUYÊN MÔN</span>
+              <span className="text-xl font-black text-emerald-600 block">
+                {proposal.score_points || proposal.average_score ? `${proposal.score_points || proposal.average_score}/100` : "---"}
+              </span>
+              <span className="text-[10px] font-bold text-slate-500 block">
+                {proposal.sub_status === "DA_DANH_GIA" ? "Đã tổng hợp" : "Chờ tổng hợp"}
+              </span>
+            </div>
+          </div>
+
+          {/* Thẻ NGƯỜI ĐĂNG KÝ (Full width) */}
+          <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
               NGƯỜI ĐĂNG KÝ
             </span>
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-emerald-100 text-[#006838] font-black text-xs flex items-center justify-center shrink-0">
-                👤
-              </div>
-              <span className="text-xs font-black text-slate-900 truncate">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs">👤</span>
+              <span className="text-xs font-extrabold text-slate-900">
                 {proposal.proposer_name}
               </span>
             </div>
           </div>
 
+          {/* 3 Hàng Grid 2 cột */}
           <div className="grid grid-cols-2 gap-2.5">
-            <div className="p-3 rounded-xl bg-white border border-slate-200 space-y-0.5">
-              <span className="text-[9px] font-black uppercase text-slate-400 block">ĐIỂM TRUNG BÌNH</span>
-              <span className="text-sm font-black text-amber-600 block">
-                {(proposal.avg_rating || 0).toFixed(1)} ⭐
-              </span>
-            </div>
-
-            <div className="p-3 rounded-xl bg-white border border-slate-200 space-y-0.5">
-              <span className="text-[9px] font-black uppercase text-slate-400 block">CHUYÊN MÔN</span>
-              <span className="text-sm font-black text-emerald-600 block">
-                {proposal.score_points || proposal.average_score ? `${proposal.score_points || proposal.average_score}/100` : "---"}
-              </span>
-            </div>
-
-            <div className="p-3 rounded-xl bg-white border border-slate-200 space-y-0.5">
-              <span className="text-[9px] font-black uppercase text-slate-400 block">VTCV</span>
-              <span className="text-xs font-bold text-slate-900 block truncate" title={vtcv}>
+            {/* Hàng 1: VTCV | NHÓM SP/DV */}
+            <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-0.5">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">VTCV</span>
+              <span className="text-xs font-extrabold text-slate-900 block truncate" title={vtcv}>
                 {vtcv}
               </span>
             </div>
 
-            <div className="p-3 rounded-xl bg-white border border-slate-200 space-y-0.5">
-              <span className="text-[9px] font-black uppercase text-slate-400 block">NHÓM SP/DV</span>
-              <span className="text-xs font-bold text-slate-900 block truncate" title={prodGroup}>
+            <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-0.5">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">NHÓM SP/DV</span>
+              <span className="text-xs font-extrabold text-slate-900 block truncate" title={prodGroup}>
                 {prodGroup}
               </span>
             </div>
 
-            <div className="p-3 rounded-xl bg-white border border-slate-200 space-y-0.5">
-              <span className="text-[9px] font-black uppercase text-slate-400 block">PHÂN LOẠI</span>
-              <span className="text-xs font-bold text-slate-900 block truncate" title={catObj.label}>
+            {/* Hàng 2: PHÂN LOẠI | NGÀY ĐĂNG */}
+            <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-0.5">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">PHÂN LOẠI</span>
+              <span className="text-xs font-extrabold text-slate-900 block truncate" title={catObj.label}>
                 {catObj.label}
               </span>
             </div>
 
-            <div className="p-3 rounded-xl bg-white border border-slate-200 space-y-0.5">
-              <span className="text-[9px] font-black uppercase text-slate-400 block">NGÀY ĐĂNG</span>
-              <span className="text-xs font-bold text-slate-900 block">
+            <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-0.5">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">NGÀY ĐĂNG</span>
+              <span className="text-xs font-extrabold text-slate-900 block">
                 {new Date(proposal.created_at).toLocaleDateString("vi-VN")}
               </span>
             </div>
 
-            <div className="p-3 rounded-xl bg-white border border-slate-200 space-y-0.5">
-              <span className="text-[9px] font-black uppercase text-slate-400 block">NHÂN SỰ ĐỀ XUẤT</span>
-              <span className="text-xs font-bold text-slate-900 block font-mono">
+            {/* Hàng 3: NHÂN SỰ ĐỀ XUẤT (Nhiều tên nối bằng & -> wrap 2 dòng) | KHÁCH HÀNG */}
+            <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-0.5">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">NHÂN SỰ ĐỀ XUẤT</span>
+              <span className="text-xs font-extrabold text-slate-900 block leading-tight break-words">
                 {proposal.proposer_emp_code}
               </span>
             </div>
 
-            <div className="p-3 rounded-xl bg-white border border-slate-200 space-y-0.5">
-              <span className="text-[9px] font-black uppercase text-slate-400 block">KHÁCH HÀNG</span>
-              <span className="text-xs font-bold text-slate-900 block">
+            <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-0.5">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">KHÁCH HÀNG</span>
+              <span className="text-xs font-extrabold text-slate-900 block">
                 {cust}
               </span>
             </div>
           </div>
 
-          {/* Action Buttons */}
+          {/* Action Buttons & Close Button at Bottom */}
           <div className="space-y-2 pt-2 mt-auto border-t border-slate-200">
-            <button
-              type="button"
-              onClick={onEdit}
-              className="w-full py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black text-xs shadow-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
-            >
-              <IconEditCircle size={16} />
-              <span>Sửa Cải Tiến</span>
-            </button>
+            {isOwner || isExecutiveOrAdmin ? (
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={onEdit}
+                  className="py-2.5 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black text-xs shadow-xs flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                >
+                  <IconEditCircle size={15} />
+                  <span>Sửa</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={onDelete}
+                  className="py-2.5 px-3 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 font-black text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                >
+                  <IconTrash size={15} />
+                  <span>Xóa</span>
+                </button>
+              </div>
+            ) : null}
 
+            {/* Nút ✕ Đóng ở đáy sidebar */}
             <button
               type="button"
-              onClick={onDelete}
-              className="w-full py-2.5 px-4 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 font-black text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              onClick={onClose}
+              className="w-full py-2.5 px-4 rounded-xl border border-slate-300 hover:bg-slate-200 text-slate-700 font-extrabold text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
             >
-              <IconTrash size={16} />
-              <span>Xóa Cải Tiến</span>
+              <span>✕ Đóng</span>
             </button>
           </div>
         </div>
 
         {/* ═══════════════════════════════════════════════════════════════════════════════════
-            RIGHT CONTENT AREA
+            2. HEADER PHẢI — BADGE + TIÊU ĐỀ + TAB
            ═══════════════════════════════════════════════════════════════════════════════════ */}
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-white">
           
-          {/* HEADER BÊN PHẢI (BỐ CỤC GIỐNG ẢNH 2) */}
           <div className="flex-shrink-0 p-5 md:p-6 border-b border-slate-200 bg-white">
-            <div className="flex items-start justify-between gap-4 mb-3">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className={`px-3 py-1 rounded-full text-xs font-black ${catObj.color}`}>
-                  {catObj.label}
-                </span>
-                <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-black border border-emerald-300">
-                  {proposal.registration_type === "THI_DUA" ? "🏆 Thi đua" : "📦 Lưu trữ"}
-                </span>
-                <span className={`px-3 py-1 rounded-full text-xs font-black border ${
-                  proposal.sub_status === "DA_DANH_GIA" || proposal.score_points
-                    ? "bg-emerald-50 text-emerald-700 border-emerald-300"
-                    : "bg-amber-50 text-amber-700 border-amber-300"
-                }`}>
-                  ● {proposal.sub_status === "DA_DANH_GIA" || proposal.score_points ? "Đã tổng hợp điểm" : "Chờ tổng hợp điểm"}
-                </span>
-              </div>
+            {/* 3 Pills Hàng Trên */}
+            <div className="flex items-center gap-2 flex-wrap mb-3">
+              {/* Pill 1: Phân loại */}
+              <span className="px-3 py-1 rounded-full bg-slate-100 border border-slate-300 text-slate-800 text-xs font-black flex items-center gap-1">
+                <span>📈</span>
+                <span>{catObj.label}</span>
+              </span>
 
-              <button
-                type="button"
-                onClick={onClose}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 hover:text-slate-900 transition-colors cursor-pointer shrink-0"
-              >
-                <IconX size={18} />
-              </button>
+              {/* Pill 2: Hình thức */}
+              <span className="px-3 py-1 rounded-full bg-amber-50 border border-amber-300 text-amber-900 text-xs font-black flex items-center gap-1">
+                <span>🏆</span>
+                <span>{proposal.registration_type === "THI_DUA" ? "Thi đua" : "Lưu trữ"}</span>
+              </span>
+
+              {/* Pill 3: Trạng thái tổng hợp */}
+              <span className={`px-3 py-1 rounded-full border text-xs font-black flex items-center gap-1 ${
+                proposal.sub_status === "DA_DANH_GIA" || proposal.score_points
+                  ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                  : "bg-amber-50 text-amber-800 border-amber-300"
+              }`}>
+                <span>{proposal.sub_status === "DA_DANH_GIA" || proposal.score_points ? "✅" : "⏳"}</span>
+                <span>{proposal.sub_status === "DA_DANH_GIA" || proposal.score_points ? "Đã tổng hợp điểm" : "Chờ đánh giá"}</span>
+              </span>
             </div>
 
-            {/* Title & Metadata */}
-            <div>
-              <h2 className="text-xl md:text-2xl font-black text-slate-900 uppercase leading-snug mb-1">
-                {proposal.title}
-              </h2>
-              <p className="text-xs font-bold text-slate-500">
-                MSNV: <span className="font-mono text-slate-700">{proposal.proposer_emp_code}</span> &bull; TCV: <span className="text-slate-700">{vtcv}</span> &bull; KV: <span className="text-slate-700">{proposal.region || "Kiên Giang 1"}</span> &bull; Tháng {pMonth}/{pYear}
-              </p>
-            </div>
+            {/* Tiêu đề hồ sơ */}
+            <h2 className="text-xl md:text-2xl font-black text-slate-900 leading-snug mb-1">
+              {proposal.title}
+            </h2>
+
+            {/* Dòng phụ: MSNV · KV · Tháng/Năm */}
+            <p className="text-xs font-bold text-slate-400">
+              MSNV: <span className="font-mono text-slate-700">{proposal.proposer_emp_code}</span> &bull; KV: <span className="text-slate-700">{proposal.region || "Kiên Giang 1"}</span> &bull; Tháng {pMonth}/{pYear}
+            </p>
           </div>
 
-          {/* PILL TABS (BỐ CỤC PILL TAB BUTTON GIỐNG ẢNH 2) */}
+          {/* Thanh Tab - Active Navy #0b1739 */}
           <div className="flex-shrink-0 px-5 md:px-6 py-3 border-b border-slate-200 bg-slate-50/50 flex items-center gap-2 overflow-x-auto">
             <button
               type="button"
               onClick={() => setActiveTab("info")}
               className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                 activeTab === "info"
-                  ? "bg-white text-[#006838] shadow-xs border border-slate-200"
-                  : "bg-slate-200/70 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
+                  ? "bg-[#0b1739] text-white shadow-xs"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
               }`}
             >
               <span>ℹ️ Thông tin</span>
@@ -327,8 +354,8 @@ export default function KaizenDetailModal({
                 onClick={() => setActiveTab("expert_review")}
                 className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                   activeTab === "expert_review"
-                    ? "bg-white text-[#006838] shadow-xs border border-slate-200"
-                    : "bg-slate-200/70 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
+                    ? "bg-[#0b1739] text-white shadow-xs"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
                 }`}
               >
                 <span>♛ Đánh giá chuyên môn</span>
@@ -344,8 +371,8 @@ export default function KaizenDetailModal({
                 onClick={() => setActiveTab("star_review")}
                 className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                   activeTab === "star_review"
-                    ? "bg-white text-[#006838] shadow-xs border border-slate-200"
-                    : "bg-slate-200/70 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
+                    ? "bg-[#0b1739] text-white shadow-xs"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
                 }`}
               >
                 <span>★ Đánh giá thưởng</span>
@@ -373,7 +400,7 @@ export default function KaizenDetailModal({
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════════
-   TAB 1: INFO CONTENT (THAM CHIẾU THEO CẤU TRÚC VÀ BỐ CỤC CHUẨN CỦA ẢNH 2)
+   3. NỘI DUNG TAB "THÔNG TIN" — 4 KHỐI THEO ĐÚNG THỨ TỰ REFERENCE
    ═══════════════════════════════════════════════════════════════════════════════════ */
 function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
   const prodCode = (proposal as any).product_code || proposal.code || "---";
@@ -394,149 +421,136 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
   return (
     <div className="p-5 md:p-6 space-y-6 text-xs">
       
-      {/* 1. TỔNG QUAN CẢI TIẾN (3 CARDS GRID THEO ẢNH 2) */}
-      <div className="space-y-2">
-        <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">
-          TỔNG QUAN CẢI TIẾN
-        </h4>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-            <span className="text-[10px] font-black uppercase text-slate-400 block">MÃ HÀNG</span>
-            <span className="text-sm font-black text-slate-900 block">{prodCode}</span>
-          </div>
-
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-            <span className="text-[10px] font-black uppercase text-slate-400 block">SỐ LƯỢNG ĐH</span>
-            <span className="text-sm font-black text-slate-900 block">
-              {qty > 0 ? qty.toLocaleString("vi-VN") : "---"}
-            </span>
-          </div>
-
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-            <span className="text-[10px] font-black uppercase text-slate-400 block">HƯỚNG ĐÁNH GIÁ</span>
-            <span className="text-sm font-black text-slate-900 block">
-              {pricingDir === "TRI_GIA" || pricingDir === "Trị giá" ? "Trị giá" : "Thời gian"}
-            </span>
-          </div>
-        </div>
+      {/* KHỐI A — Mô tả hiện trạng cũ (Before Description) */}
+      <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 space-y-2">
+        <p className="font-bold text-rose-900 leading-relaxed whitespace-pre-wrap text-xs">
+          {proposal.before_description || "Chưa có mô tả hiện trạng lãng phí trước cải tiến."}
+        </p>
       </div>
 
-      {/* 2. VẤN ĐỀ PHÁT HIỆN (TRƯỚC) & GIẢI PHÁP HÀNH ĐỘNG (SAU) THEO ẢNH 2 */}
-      <div className="space-y-4">
-        {/* VẤN ĐỀ PHÁT HIỆN (TRƯỚC) */}
-        <div className="p-4 rounded-2xl bg-rose-50/70 border border-rose-200 space-y-2">
-          <h4 className="text-xs font-black uppercase text-rose-800 tracking-wide flex items-center gap-1.5">
-            <IconAlertCircle size={16} className="text-rose-600" />
-            <span>VẤN ĐỀ PHÁT HIỆN (TRƯỚC)</span>
-          </h4>
-          <p className="font-medium text-slate-800 leading-relaxed whitespace-pre-wrap text-xs">
-            {proposal.before_description || "Chưa có mô tả hiện trạng lãng phí trước cải tiến."}
-          </p>
-        </div>
-
-        {/* GIẢI PHÁP HÀNH ĐỘNG (SAU) */}
-        <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-2">
-          <h4 className="text-xs font-black uppercase text-emerald-800 tracking-wide flex items-center gap-1.5">
-            <IconThumbUp size={16} className="text-emerald-600" />
-            <span>GIẢI PHÁP HÀNH ĐỘNG (SAU)</span>
-          </h4>
-          <p className="font-medium text-slate-800 leading-relaxed whitespace-pre-wrap text-xs">
-            {proposal.after_solution || "Chưa có mô tả giải pháp sáng kiến cải tiến."}
-          </p>
-        </div>
+      {/* KHỐI B — Giải pháp hành động (SAU) */}
+      <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-2">
+        <h4 className="text-xs font-black uppercase text-emerald-800 tracking-wide">
+          GIẢI PHÁP HÀNH ĐỘNG (SAU)
+        </h4>
+        <p className="font-medium text-slate-800 leading-relaxed whitespace-pre-wrap text-xs">
+          {proposal.after_solution || "Chưa có mô tả giải pháp sáng kiến cải tiến."}
+        </p>
       </div>
 
-      {/* 3. HIỆU QUẢ CẢI TIẾN (4 METRIC CARDS GRID THEO ẢNH 2) */}
+      {/* KHỐI C — "📈 HIỆU QUẢ CẢI TIẾN" */}
       <div className="space-y-2">
-        <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">
-          HIỆU QUẢ CẢI TIẾN
+        <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1">
+          <IconTrendingUp size={16} />
+          <span>HIỆU QUẢ CẢI TIẾN</span>
         </h4>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {/* TRƯỚC */}
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-            <span className="text-[10px] font-extrabold uppercase text-slate-500 block">TRƯỚC</span>
-            <span className="text-base sm:text-lg font-black text-slate-900 block">
-              {proposal.time_before_seconds ? `${proposal.time_before_seconds}s` : "---"}
-            </span>
-          </div>
 
-          {/* SAU */}
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-            <span className="text-[10px] font-extrabold uppercase text-slate-500 block">SAU</span>
-            <span className="text-base sm:text-lg font-black text-slate-900 block">
-              {proposal.time_after_seconds ? `${proposal.time_after_seconds}s` : "---"}
-            </span>
-          </div>
-
-          {/* TIẾT KIỆM */}
-          <div className="p-3.5 rounded-2xl bg-purple-50 border border-purple-200 space-y-1">
-            <span className="text-[10px] font-extrabold uppercase text-purple-700 block">TIẾT KIỆM</span>
-            <span className="text-base sm:text-lg font-black text-purple-900 block">
-              {proposal.saved_seconds ? `${proposal.saved_seconds} giây` : "---"}
-            </span>
-          </div>
-
-          {/* HIỆU QUẢ (NỔI BẬT NỀN XANH LÁ THEO ẢNH 2) */}
-          <div className="p-3.5 rounded-2xl bg-[#006838] text-white space-y-1 shadow-sm">
-            <span className="text-[10px] font-extrabold uppercase text-emerald-200 block">HIỆU QUẢ</span>
-            <span className="text-base sm:text-lg font-black text-white block truncate">
-              {Math.round((proposal.saved_seconds || 0) * 12.5).toLocaleString("vi-VN")} VNĐ
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* 4. SO SÁNH HÌNH ẢNH (BEFORE / AFTER SIDE-BY-SIDE THEO ẢNH 2) */}
-      <div className="space-y-2">
-        <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">
-          SO SÁNH HÌNH ẢNH
-        </h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Ảnh TRƯỚC */}
-          <div className="p-3.5 rounded-2xl border-2 border-rose-200 bg-rose-50/20 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-black text-rose-900 flex items-center gap-1.5">
-                <span>🖼 TRƯỚC</span>
+        {pricingDir === "TRI_GIA" || pricingDir === "Trị giá" ? (
+          <div className="p-4 rounded-2xl bg-[#006838] text-white shadow-sm flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-extrabold uppercase text-emerald-200 block">
+                HIỆU QUẢ QUY ĐỔI VNĐ/ĐÔI
               </span>
-              <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-[10px] font-extrabold">
-                {proposal.before_image_url ? "1 ảnh" : "0 ảnh"}
+              <span className="text-xl font-black text-white block">
+                {Math.round((proposal.saved_seconds || 0) * 12.5).toLocaleString("vi-VN")} VNĐ
+              </span>
+            </div>
+            <span className="px-3 py-1 bg-emerald-800 text-emerald-100 rounded-lg text-xs font-extrabold">
+              Trị giá
+            </span>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {/* Thẻ 1: TRƯỚC */}
+            <div className="p-3.5 rounded-2xl bg-white border border-slate-200 space-y-1">
+              <span className="text-[10px] font-extrabold uppercase text-slate-400 block">TRƯỚC</span>
+              <span className="text-xl font-black text-slate-900 block">
+                {proposal.time_before_seconds ? `${proposal.time_before_seconds}` : "0"}
+              </span>
+              <span className="text-[10px] font-bold text-slate-500 block">giây</span>
+            </div>
+
+            {/* Thẻ 2: SAU */}
+            <div className="p-3.5 rounded-2xl bg-white border border-slate-200 space-y-1">
+              <span className="text-[10px] font-extrabold uppercase text-slate-400 block">SAU</span>
+              <span className="text-xl font-black text-slate-900 block">
+                {proposal.time_after_seconds ? `${proposal.time_after_seconds}` : "0"}
+              </span>
+              <span className="text-[10px] font-bold text-slate-500 block">giây</span>
+            </div>
+
+            {/* Thẻ 3: TIẾT KIỆM */}
+            <div className="p-3.5 rounded-2xl bg-purple-50 border border-purple-200 space-y-1">
+              <span className="text-[10px] font-extrabold uppercase text-purple-700 block">TIẾT KIỆM</span>
+              <span className="text-xl font-black text-purple-900 block">
+                {proposal.saved_seconds ? `${proposal.saved_seconds}` : "0"}
+              </span>
+              <span className="text-[10px] font-bold text-purple-600 block">
+                giây {proposal.time_before_seconds && proposal.saved_seconds ? `(${Math.round((proposal.saved_seconds / proposal.time_before_seconds) * 100)}%)` : ""}
+              </span>
+            </div>
+
+            {/* Thẻ 4: HIỆU QUẢ - NỔI BẬT NỀN XANH EMERALD ĐẬM */}
+            <div className="p-3.5 rounded-2xl bg-[#006838] text-white space-y-1 shadow-sm">
+              <span className="text-[10px] font-extrabold uppercase text-emerald-200 block">HIỆU QUẢ</span>
+              <span className="text-base sm:text-lg font-black text-white block truncate">
+                {Math.round((proposal.saved_seconds || 0) * 12.5).toLocaleString("vi-VN")} VNĐ
+              </span>
+              <span className="text-[10px] font-bold text-emerald-200 block">quy đổi / đôi</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* KHỐI D — "🖼 So Sánh Hình Ảnh" */}
+      <div className="space-y-2">
+        <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1">
+          <IconPhoto size={16} />
+          <span>So Sánh Hình Ảnh</span>
+        </h4>
+
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          {/* Cột Trước */}
+          <div className="p-3 sm:p-3.5 rounded-2xl border-2 border-rose-200 bg-rose-50/20 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-rose-900">Trước</span>
+              <span className="w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center">
+                {proposal.before_image_url ? "1" : "0"}
               </span>
             </div>
             {proposal.before_image_url ? (
-              <a href={proposal.before_image_url} target="_blank" rel="noreferrer" className="block">
+              <a href={proposal.before_image_url} target="_blank" rel="noreferrer" className="block relative">
                 <img
                   src={proposal.before_image_url}
                   alt="Before"
-                  className="w-full h-52 object-contain rounded-xl border border-rose-200 bg-white"
+                  className="w-full h-44 sm:h-52 object-contain rounded-xl border border-rose-200 bg-white"
                 />
               </a>
             ) : (
-              <div className="w-full h-44 rounded-xl border border-dashed border-rose-200 bg-white flex items-center justify-center text-slate-400 font-bold text-xs">
+              <div className="w-full h-36 sm:h-44 rounded-xl border border-dashed border-rose-200 bg-white flex items-center justify-center text-slate-400 font-bold text-xs">
                 Chưa có ảnh trước
               </div>
             )}
           </div>
 
-          {/* Ảnh SAU */}
-          <div className="p-3.5 rounded-2xl border-2 border-emerald-200 bg-emerald-50/20 space-y-2">
+          {/* Cột Sau */}
+          <div className="p-3 sm:p-3.5 rounded-2xl border-2 border-emerald-200 bg-emerald-50/20 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-black text-emerald-900 flex items-center gap-1.5">
-                <span>🖼 SAU</span>
-              </span>
-              <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-black">
-                {proposal.after_image_url ? "1 ảnh" : "0 ảnh"}
+              <span className="text-xs font-black text-emerald-900">Sau</span>
+              <span className="w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] font-black flex items-center justify-center">
+                {proposal.after_image_url ? "1" : "0"}
               </span>
             </div>
             {proposal.after_image_url ? (
-              <a href={proposal.after_image_url} target="_blank" rel="noreferrer" className="block">
+              <a href={proposal.after_image_url} target="_blank" rel="noreferrer" className="block relative">
                 <img
                   src={proposal.after_image_url}
                   alt="After"
-                  className="w-full h-52 object-contain rounded-xl border border-emerald-200 bg-white"
+                  className="w-full h-44 sm:h-52 object-contain rounded-xl border border-emerald-200 bg-white"
                 />
               </a>
             ) : (
-              <div className="w-full h-44 rounded-xl border border-dashed border-emerald-200 bg-white flex items-center justify-center text-slate-400 font-bold text-xs">
+              <div className="w-full h-36 sm:h-44 rounded-xl border border-dashed border-emerald-200 bg-white flex items-center justify-center text-slate-400 font-bold text-xs">
                 Chưa có ảnh sau
               </div>
             )}
@@ -544,7 +558,7 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
         </div>
       </div>
 
-      {/* 5. VIDEO CLIPS (CHỈ HIỂN THỊ KHI CÓ DATA VIDEO) */}
+      {/* VIDEO CLIPS (NẾU CÓ) */}
       {videos.length > 0 && (
         <div className="space-y-2 pt-2 border-t border-slate-200">
           <h4 className="text-xs font-black uppercase tracking-wider text-purple-700">
