@@ -64,11 +64,22 @@ export default function KaizenDetailModal({
   const [selectedMedia, setSelectedMedia] = useState<{
     type: "image" | "video";
     url: string;
-  } | null>(proposal.before_image_url ? { type: "image", url: proposal.before_image_url } : null);
+  } | null>(proposal?.before_image_url ? { type: "image", url: proposal.before_image_url } : null);
+
+  // Sync selected media when proposal changes
+  useEffect(() => {
+    if (proposal?.before_image_url) {
+      setSelectedMedia({ type: "image", url: proposal.before_image_url });
+    } else if (proposal?.after_image_url) {
+      setSelectedMedia({ type: "image", url: proposal.after_image_url });
+    } else {
+      setSelectedMedia(null);
+    }
+  }, [proposal]);
 
   // Determine permissions for Tab 2 "Đánh giá chuyên môn" & Tab 3 "Đánh giá thưởng"
   const isOwner = useMemo(() => {
-    if (!user || !user.empCode || !proposal.proposer_emp_code) return false;
+    if (!user || !user.empCode || !proposal?.proposer_emp_code) return false;
     return user.empCode.trim().toUpperCase() === proposal.proposer_emp_code.trim().toUpperCase();
   }, [user, proposal]);
 
@@ -79,58 +90,63 @@ export default function KaizenDetailModal({
   }, [user, isExecutiveOrAdmin, levelRank]);
 
   // Tab 2: BGK/Ban 2.2/Admin HOẶC Tác giả (chỉ xem điểm đã chấm)
-  const canSeeExpertTab = isJudgeOrExecutive || (isOwner && proposal.sub_status === "DA_DANH_GIA");
+  const canSeeExpertTab = isJudgeOrExecutive || (isOwner && proposal?.sub_status === "DA_DANH_GIA");
   // Tab 3: CHỈ BGK / Ban 2.2 / Admin mới có quyền thấy & trao giải thưởng
   const canSeeAwardTab = isJudgeOrExecutive;
 
   if (!isOpen || !proposal) return null;
 
   const catObj = CATEGORIES.find((c) => c.id === proposal.category) || CATEGORIES[0];
+  const pMonth = (proposal as any).proposer_month || (proposal.created_at ? new Date(proposal.created_at).getMonth() + 1 : new Date().getMonth() + 1);
+  const pYear = (proposal as any).proposer_year || (proposal.created_at ? new Date(proposal.created_at).getFullYear() : new Date().getFullYear());
+  const vtcv = (proposal as any).proposer_position || proposal.department || "Công Nhân Sản Xuất";
+  const cust = proposal.customer || "Skechers";
+  const prodGroup = (proposal as any).product_group || proposal.factory || "Quai";
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-1 sm:p-3 animate-in fade-in duration-200">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200">
       <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-[96vw] xl:max-w-7xl 2xl:max-w-[1550px] max-h-[96vh] flex flex-col md:flex-row overflow-hidden text-left animate-in zoom-in-95 duration-200">
         
         {/* ═══════════════════════════════════════════════════════════════════════════════════
-            LEFT SIDEBAR (Fixed, ~320px, no scroll)
+            LEFT SIDEBAR (Fixed, ~300px)
            ═══════════════════════════════════════════════════════════════════════════════════ */}
-        <div className="w-full md:w-80 md:max-h-[95vh] md:overflow-y-auto bg-gradient-to-b from-slate-50 to-slate-100 border-r border-slate-200 p-5 md:p-6 flex flex-col gap-5 flex-shrink-0">
+        <div className="w-full md:w-80 md:max-h-[96vh] md:overflow-y-auto bg-slate-50 border-r border-slate-200 p-4 md:p-5 flex flex-col gap-4 flex-shrink-0">
           
-          {/* 1. Large Main Media Display (Image/Video) */}
-          <div className="space-y-3">
-            <div className="relative w-full aspect-video bg-slate-200 rounded-2xl overflow-hidden border-2 border-slate-300 shadow-md flex items-center justify-center">
+          {/* A. ẢNH BÊN TRÁI & THUMBNAILS */}
+          <div className="space-y-2.5">
+            <div className="relative w-full aspect-video bg-slate-900 rounded-2xl overflow-hidden border border-slate-300 shadow-sm flex items-center justify-center">
               {selectedMedia?.type === "image" && selectedMedia.url ? (
                 <img
                   src={selectedMedia.url}
                   alt="Selected"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                 />
               ) : selectedMedia?.type === "video" && selectedMedia.url ? (
                 <video
                   src={selectedMedia.url}
                   controls
-                  className="w-full h-full object-cover bg-slate-900"
+                  className="w-full h-full object-cover bg-black"
                 />
               ) : (
                 <div className="text-center text-slate-400 text-xs font-bold flex flex-col items-center gap-1">
-                  <IconPhoto size={32} className="opacity-40" />
-                  <span>Không có media</span>
+                  <IconPhoto size={28} className="opacity-40" />
+                  <span>Không có ảnh</span>
                 </div>
               )}
             </div>
 
-            {/* Thumbnails - Click to Switch Media */}
+            {/* Thumbnails list */}
             <div className="flex gap-2">
               {proposal.before_image_url && (
                 <button
                   type="button"
                   onClick={() => proposal.before_image_url && setSelectedMedia({ type: "image", url: proposal.before_image_url })}
-                  className={`flex-1 h-16 rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
+                  className={`flex-1 h-14 rounded-xl overflow-hidden border-2 transition-all cursor-pointer bg-slate-900 ${
                     selectedMedia?.url === proposal.before_image_url && selectedMedia?.type === "image"
-                      ? "border-[#006838] ring-2 ring-[#006838]/50"
-                      : "border-slate-300 hover:border-slate-400"
+                      ? "border-[#006838] ring-2 ring-[#006838]/40"
+                      : "border-slate-300 hover:border-slate-400 opacity-80 hover:opacity-100"
                   }`}
-                  title="Ảnh trước"
+                  title="Ảnh Trước"
                 >
                   <img src={proposal.before_image_url} alt="Before" className="w-full h-full object-cover" />
                 </button>
@@ -139,12 +155,12 @@ export default function KaizenDetailModal({
                 <button
                   type="button"
                   onClick={() => proposal.after_image_url && setSelectedMedia({ type: "image", url: proposal.after_image_url })}
-                  className={`flex-1 h-16 rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
+                  className={`flex-1 h-14 rounded-xl overflow-hidden border-2 transition-all cursor-pointer bg-slate-900 ${
                     selectedMedia?.url === proposal.after_image_url && selectedMedia?.type === "image"
-                      ? "border-[#006838] ring-2 ring-[#006838]/50"
-                      : "border-slate-300 hover:border-slate-400"
+                      ? "border-[#006838] ring-2 ring-[#006838]/40"
+                      : "border-slate-300 hover:border-slate-400 opacity-80 hover:opacity-100"
                   }`}
-                  title="Ảnh sau"
+                  title="Ảnh Sau"
                 >
                   <img src={proposal.after_image_url} alt="After" className="w-full h-full object-cover" />
                 </button>
@@ -152,90 +168,85 @@ export default function KaizenDetailModal({
             </div>
           </div>
 
-          {/* 2. Region & Category Badges */}
-          <div className="space-y-2">
-            <span className="inline-block px-3 py-1.5 rounded-full bg-slate-700 text-white text-[11px] font-black">
-              {proposal.region} · {proposal.proposer_emp_code}
+          {/* B. THÔNG TIN NGƯỜI ĐĂNG KÝ (CARD BỐ CỤC THEO ẢNH 2) */}
+          <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
+            <span className="text-[10px] font-black uppercase text-slate-400 block tracking-wider">
+              NGƯỜI ĐĂNG KÝ
             </span>
-            <span className={`inline-block px-3 py-1.5 rounded-full text-[11px] font-black ${catObj.color}`}>
-              {catObj.label}
-            </span>
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-full bg-emerald-100 text-[#006838] font-black text-xs flex items-center justify-center shrink-0">
+                👤
+              </div>
+              <span className="text-xs font-black text-slate-900 truncate">
+                {proposal.proposer_name}
+              </span>
+            </div>
           </div>
 
-          {/* 3. Two-Column Score Stats */}
-          <div className="grid grid-cols-2 gap-3">
-            {/* Score */}
-            <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-1">
-              <span className="text-[10px] font-extrabold uppercase text-slate-500 block">Đánh Giá</span>
-              <span className="text-2xl font-black text-amber-600 block">
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="p-3 rounded-xl bg-white border border-slate-200 space-y-0.5">
+              <span className="text-[9px] font-black uppercase text-slate-400 block">ĐIỂM TRUNG BÌNH</span>
+              <span className="text-sm font-black text-amber-600 block">
                 {(proposal.avg_rating || 0).toFixed(1)} ⭐
               </span>
-              <span className="text-[10px] font-bold text-slate-400">{proposal.rating_count || 0} lượt</span>
             </div>
 
-            {/* Expert Score */}
-            <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-1">
-              <span className="text-[10px] font-extrabold uppercase text-slate-500 block">Chuyên Môn</span>
-              <span className="text-2xl font-black text-emerald-600 block">
+            <div className="p-3 rounded-xl bg-white border border-slate-200 space-y-0.5">
+              <span className="text-[9px] font-black uppercase text-slate-400 block">CHUYÊN MÔN</span>
+              <span className="text-sm font-black text-emerald-600 block">
                 {proposal.score_points || proposal.average_score ? `${proposal.score_points || proposal.average_score}/100` : "---"}
               </span>
-              <span className="text-[10px] font-bold text-slate-400">
-                {proposal.sub_status === "DA_DANH_GIA" ? "Đã tổng hợp" : "Chờ tổng hợp"}
+            </div>
+
+            <div className="p-3 rounded-xl bg-white border border-slate-200 space-y-0.5">
+              <span className="text-[9px] font-black uppercase text-slate-400 block">VTCV</span>
+              <span className="text-xs font-bold text-slate-900 block truncate" title={vtcv}>
+                {vtcv}
+              </span>
+            </div>
+
+            <div className="p-3 rounded-xl bg-white border border-slate-200 space-y-0.5">
+              <span className="text-[9px] font-black uppercase text-slate-400 block">NHÓM SP/DV</span>
+              <span className="text-xs font-bold text-slate-900 block truncate" title={prodGroup}>
+                {prodGroup}
+              </span>
+            </div>
+
+            <div className="p-3 rounded-xl bg-white border border-slate-200 space-y-0.5">
+              <span className="text-[9px] font-black uppercase text-slate-400 block">PHÂN LOẠI</span>
+              <span className="text-xs font-bold text-slate-900 block truncate" title={catObj.label}>
+                {catObj.label}
+              </span>
+            </div>
+
+            <div className="p-3 rounded-xl bg-white border border-slate-200 space-y-0.5">
+              <span className="text-[9px] font-black uppercase text-slate-400 block">NGÀY ĐĂNG</span>
+              <span className="text-xs font-bold text-slate-900 block">
+                {new Date(proposal.created_at).toLocaleDateString("vi-VN")}
+              </span>
+            </div>
+
+            <div className="p-3 rounded-xl bg-white border border-slate-200 space-y-0.5">
+              <span className="text-[9px] font-black uppercase text-slate-400 block">NHÂN SỰ ĐỀ XUẤT</span>
+              <span className="text-xs font-bold text-slate-900 block font-mono">
+                {proposal.proposer_emp_code}
+              </span>
+            </div>
+
+            <div className="p-3 rounded-xl bg-white border border-slate-200 space-y-0.5">
+              <span className="text-[9px] font-black uppercase text-slate-400 block">KHÁCH HÀNG</span>
+              <span className="text-xs font-bold text-slate-900 block">
+                {cust}
               </span>
             </div>
           </div>
 
-          {/* 4. Info Labels (vertical) */}
-          <div className="space-y-2.5 border-t border-slate-300 pt-3">
-            <div>
-              <span className="text-[10px] font-extrabold uppercase text-slate-500 block">Người Đăng Ký</span>
-              <span className="text-xs font-bold text-slate-900">{proposal.proposer_name}</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <span className="text-[10px] font-extrabold uppercase text-slate-500 block">VTCV</span>
-                <span className="text-xs font-bold text-slate-900">{proposal.department}</span>
-              </div>
-              <div>
-                <span className="text-[10px] font-extrabold uppercase text-slate-500 block">Nhóm SP-DV</span>
-                <span className="text-xs font-bold text-slate-900">{proposal.factory || "N/A"}</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <span className="text-[10px] font-extrabold uppercase text-slate-500 block">Phân Loại</span>
-                <span className="text-xs font-bold text-slate-900">{catObj.label}</span>
-              </div>
-              <div>
-                <span className="text-[10px] font-extrabold uppercase text-slate-500 block">Ngày Đăng</span>
-                <span className="text-xs font-bold text-slate-900">
-                  {new Date(proposal.created_at).toLocaleDateString("vi-VN")}
-                </span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <span className="text-[10px] font-extrabold uppercase text-slate-500 block">Mã NV</span>
-                <span className="text-xs font-bold text-slate-900">{proposal.proposer_emp_code}</span>
-              </div>
-              <div>
-                <span className="text-[10px] font-extrabold uppercase text-slate-500 block">Loại ĐK</span>
-                <span className="text-xs font-bold text-slate-900">
-                  {proposal.registration_type === "THI_DUA" ? "Thi Đua" : "Lưu Trữ"}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* 5. Action Buttons (Full Width, Stacked) */}
-          <div className="space-y-2 border-t border-slate-300 pt-4">
+          {/* Action Buttons */}
+          <div className="space-y-2 pt-2 mt-auto border-t border-slate-200">
             <button
               type="button"
               onClick={onEdit}
-              className="w-full py-3 px-4 rounded-2xl bg-amber-600 hover:bg-amber-700 text-white font-black text-xs shadow-md flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              className="w-full py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black text-xs shadow-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
             >
               <IconEditCircle size={16} />
               <span>Sửa Cải Tiến</span>
@@ -244,7 +255,7 @@ export default function KaizenDetailModal({
             <button
               type="button"
               onClick={onDelete}
-              className="w-full py-3 px-4 rounded-2xl border-2 border-red-300 text-red-500 hover:bg-red-50 font-black text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              className="w-full py-2.5 px-4 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 font-black text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
             >
               <IconTrash size={16} />
               <span>Xóa Cải Tiến</span>
@@ -253,87 +264,91 @@ export default function KaizenDetailModal({
         </div>
 
         {/* ═══════════════════════════════════════════════════════════════════════════════════
-            RIGHT CONTENT (Scrollable, with 3 Tabs)
+            RIGHT CONTENT AREA
            ═══════════════════════════════════════════════════════════════════════════════════ */}
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-white">
           
-          {/* Header with Close Button & Category Badges */}
+          {/* HEADER BÊN PHẢI (BỐ CỤC GIỐNG ẢNH 2) */}
           <div className="flex-shrink-0 p-5 md:p-6 border-b border-slate-200 bg-white">
-            <div className="flex items-start justify-between gap-4 mb-4">
-              <div className="flex gap-2">
-                <span className={`inline-block px-3 py-1.5 rounded-full text-[11px] font-black ${catObj.color}`}>
+            <div className="flex items-start justify-between gap-4 mb-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`px-3 py-1 rounded-full text-xs font-black ${catObj.color}`}>
                   {catObj.label}
                 </span>
-                <span className="inline-block px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-black">
-                  {proposal.registration_type === "THI_DUA" ? "🏆 Thi Đua" : "📦 Lưu Trữ"}
+                <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-black border border-emerald-300">
+                  {proposal.registration_type === "THI_DUA" ? "🏆 Thi đua" : "📦 Lưu trữ"}
+                </span>
+                <span className={`px-3 py-1 rounded-full text-xs font-black border ${
+                  proposal.sub_status === "DA_DANH_GIA" || proposal.score_points
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-300"
+                    : "bg-amber-50 text-amber-700 border-amber-300"
+                }`}>
+                  ● {proposal.sub_status === "DA_DANH_GIA" || proposal.score_points ? "Đã tổng hợp điểm" : "Chờ tổng hợp điểm"}
                 </span>
               </div>
+
               <button
                 type="button"
                 onClick={onClose}
-                className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 hover:text-slate-900 transition-colors cursor-pointer flex-shrink-0"
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 hover:text-slate-900 transition-colors cursor-pointer shrink-0"
               >
                 <IconX size={18} />
               </button>
             </div>
 
-            {/* Title & Subtitle */}
+            {/* Title & Metadata */}
             <div>
-              <h2 className="text-xl md:text-2xl font-black text-slate-900 uppercase line-clamp-2 mb-1">
+              <h2 className="text-xl md:text-2xl font-black text-slate-900 uppercase leading-snug mb-1">
                 {proposal.title}
               </h2>
-              <p className="text-xs font-bold text-slate-400">
-                MSNV: {proposal.proposer_emp_code} · KV: {proposal.region} · Tháng{" "}
-                {new Date(proposal.created_at).getMonth() + 1}/{new Date(proposal.created_at).getFullYear()}
+              <p className="text-xs font-bold text-slate-500">
+                MSNV: <span className="font-mono text-slate-700">{proposal.proposer_emp_code}</span> &bull; TCV: <span className="text-slate-700">{vtcv}</span> &bull; KV: <span className="text-slate-700">{proposal.region || "Kiên Giang 1"}</span> &bull; Tháng {pMonth}/{pYear}
               </p>
             </div>
           </div>
 
-          {/* 3 Main Tabs */}
-          <div className="flex-shrink-0 px-5 md:px-6 border-b border-slate-200 bg-slate-50/50 flex items-center gap-2 overflow-x-auto">
-            {/* Tab 1: Tổng Quan */}
+          {/* PILL TABS (BỐ CỤC PILL TAB BUTTON GIỐNG ẢNH 2) */}
+          <div className="flex-shrink-0 px-5 md:px-6 py-3 border-b border-slate-200 bg-slate-50/50 flex items-center gap-2 overflow-x-auto">
             <button
               type="button"
               onClick={() => setActiveTab("info")}
-              className={`px-4 py-3 text-xs font-extrabold flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer border-b-2 ${
+              className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                 activeTab === "info"
-                  ? "border-[#006838] text-[#006838] bg-white shadow-2xs"
-                  : "border-transparent text-slate-600 hover:text-slate-900"
+                  ? "bg-white text-[#006838] shadow-xs border border-slate-200"
+                  : "bg-slate-200/70 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
               }`}
             >
-              <span>ℹ️ Tổng Quan</span>
+              <span>ℹ️ Thông tin</span>
             </button>
 
-            {/* Tab 2: Đánh giá chuyên môn (Chỉ hiện với BGK / Ban 2.2 / Admin hoặc Tác giả xem điểm kết quả) */}
             {canSeeExpertTab && (
               <button
                 type="button"
                 onClick={() => setActiveTab("expert_review")}
-                className={`px-4 py-3 text-xs font-extrabold flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer border-b-2 ${
+                className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                   activeTab === "expert_review"
-                    ? "border-[#006838] text-[#006838] bg-white shadow-2xs"
-                    : "border-transparent text-slate-600 hover:text-slate-900"
+                    ? "bg-white text-[#006838] shadow-xs border border-slate-200"
+                    : "bg-slate-200/70 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
                 }`}
               >
-                <span>👑 Đánh giá chuyên môn</span>
+                <span>♛ Đánh giá chuyên môn</span>
                 <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black">
                   {proposal.sub_status === "DA_DANH_GIA" || proposal.score_points ? `${proposal.score_points || proposal.average_score || 0}đ` : "Barem"}
                 </span>
               </button>
             )}
 
-            {/* Tab 3: Đánh giá thưởng (Chỉ hiện với BGK / Ban 2.2 / Admin) */}
             {canSeeAwardTab && (
               <button
                 type="button"
                 onClick={() => setActiveTab("star_review")}
-                className={`px-4 py-3 text-xs font-extrabold flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer border-b-2 ${
+                className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
                   activeTab === "star_review"
-                    ? "border-[#006838] text-[#006838] bg-white shadow-2xs"
-                    : "border-transparent text-slate-600 hover:text-slate-900"
+                    ? "bg-white text-[#006838] shadow-xs border border-slate-200"
+                    : "bg-slate-200/70 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
                 }`}
               >
-                <span>⭐ Đánh giá thưởng</span>
+                <span>★ Đánh giá thưởng</span>
                 <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-black">
                   {proposal.award_title ? "Đã trao giải" : "Trao giải"}
                 </span>
@@ -341,8 +356,8 @@ export default function KaizenDetailModal({
             )}
           </div>
 
-          {/* Tab Content - Scrollable horizontally and vertically */}
-          <div className="flex-1 min-w-0 overflow-y-auto overflow-x-auto">
+          {/* TAB CONTENT */}
+          <div className="flex-1 min-w-0 overflow-y-auto">
             {activeTab === "info" && <TabInfoContent proposal={proposal} />}
             {activeTab === "expert_review" && canSeeExpertTab && (
               <TabExpertReviewContent proposal={proposal} isOwner={isOwner} />
@@ -358,20 +373,14 @@ export default function KaizenDetailModal({
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════════
-   TAB 1: INFO CONTENT (Giữ 100% logic & giao diện nghiệp vụ)
+   TAB 1: INFO CONTENT (THAM CHIẾU THEO CẤU TRÚC VÀ BỐ CỤC CHUẨN CỦA ẢNH 2)
    ═══════════════════════════════════════════════════════════════════════════════════ */
 function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
-  const pMonth = (proposal as any).proposer_month || (proposal.created_at ? new Date(proposal.created_at).getMonth() + 1 : new Date().getMonth() + 1);
-  const pYear = (proposal as any).proposer_year || (proposal.created_at ? new Date(proposal.created_at).getFullYear() : new Date().getFullYear());
-  const vtcv = (proposal as any).proposer_position || proposal.department || "Công Nhân Sản Xuất";
-  const hrSug = (proposal as any).hr_suggestor || "---";
-  const cust = proposal.customer || "Skechers";
-  const prodGroup = (proposal as any).product_group || proposal.factory || "Quai";
   const prodCode = (proposal as any).product_code || proposal.code || "---";
   const qty = (proposal as any).quantity || proposal.vote_count || 0;
   const pricingDir = (proposal as any).pricing_direction || "THOI_GIAN";
 
-  // Attachments parse for videos
+  // Videos list parse
   let videos: { type: string; url: string; title?: string }[] = [];
   if (proposal.attachments_json) {
     try {
@@ -384,168 +393,150 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
 
   return (
     <div className="p-5 md:p-6 space-y-6 text-xs">
-      {/* A. THÔNG TIN NGƯỜI ĐĂNG KÝ */}
-      <div className="space-y-3 pb-5 border-b border-slate-200">
-        <h3 className="text-xs font-black uppercase text-[#006838] tracking-wide flex items-center gap-1.5">
-          <IconUserCheck size={16} />
-          <span>A. THÔNG TIN NGƯỜI ĐĂNG KÝ</span>
-        </h3>
+      
+      {/* 1. TỔNG QUAN CẢI TIẾN (3 CARDS GRID THEO ẢNH 2) */}
+      <div className="space-y-2">
+        <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">
+          TỔNG QUAN CẢI TIẾN
+        </h4>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+            <span className="text-[10px] font-black uppercase text-slate-400 block">MÃ HÀNG</span>
+            <span className="text-sm font-black text-slate-900 block">{prodCode}</span>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+            <span className="text-[10px] font-black uppercase text-slate-400 block">SỐ LƯỢNG ĐH</span>
+            <span className="text-sm font-black text-slate-900 block">
+              {qty > 0 ? qty.toLocaleString("vi-VN") : "---"}
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+            <span className="text-[10px] font-black uppercase text-slate-400 block">HƯỚNG ĐÁNH GIÁ</span>
+            <span className="text-sm font-black text-slate-900 block">
+              {pricingDir === "TRI_GIA" || pricingDir === "Trị giá" ? "Trị giá" : "Thời gian"}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. VẤN ĐỀ PHÁT HIỆN (TRƯỚC) & GIẢI PHÁP HÀNH ĐỘNG (SAU) THEO ẢNH 2 */}
+      <div className="space-y-4">
+        {/* VẤN ĐỀ PHÁT HIỆN (TRƯỚC) */}
+        <div className="p-4 rounded-2xl bg-rose-50/70 border border-rose-200 space-y-2">
+          <h4 className="text-xs font-black uppercase text-rose-800 tracking-wide flex items-center gap-1.5">
+            <IconAlertCircle size={16} className="text-rose-600" />
+            <span>VẤN ĐỀ PHÁT HIỆN (TRƯỚC)</span>
+          </h4>
+          <p className="font-medium text-slate-800 leading-relaxed whitespace-pre-wrap text-xs">
+            {proposal.before_description || "Chưa có mô tả hiện trạng lãng phí trước cải tiến."}
+          </p>
+        </div>
+
+        {/* GIẢI PHÁP HÀNH ĐỘNG (SAU) */}
+        <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-2">
+          <h4 className="text-xs font-black uppercase text-emerald-800 tracking-wide flex items-center gap-1.5">
+            <IconThumbUp size={16} className="text-emerald-600" />
+            <span>GIẢI PHÁP HÀNH ĐỘNG (SAU)</span>
+          </h4>
+          <p className="font-medium text-slate-800 leading-relaxed whitespace-pre-wrap text-xs">
+            {proposal.after_solution || "Chưa có mô tả giải pháp sáng kiến cải tiến."}
+          </p>
+        </div>
+      </div>
+
+      {/* 3. HIỆU QUẢ CẢI TIẾN (4 METRIC CARDS GRID THEO ẢNH 2) */}
+      <div className="space-y-2">
+        <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">
+          HIỆU QUẢ CẢI TIẾN
+        </h4>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
-            <span className="text-[10px] font-black text-slate-400 uppercase block">Khu vực SX</span>
-            <span className="font-extrabold text-slate-900">{proposal.region || "Kiên Giang 1"}</span>
+          {/* TRƯỚC */}
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+            <span className="text-[10px] font-extrabold uppercase text-slate-500 block">TRƯỚC</span>
+            <span className="text-base sm:text-lg font-black text-slate-900 block">
+              {proposal.time_before_seconds ? `${proposal.time_before_seconds}s` : "---"}
+            </span>
           </div>
-          <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
-            <span className="text-[10px] font-black text-slate-400 uppercase block">MSNV</span>
-            <span className="font-extrabold text-slate-900">{proposal.proposer_emp_code}</span>
+
+          {/* SAU */}
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+            <span className="text-[10px] font-extrabold uppercase text-slate-500 block">SAU</span>
+            <span className="text-base sm:text-lg font-black text-slate-900 block">
+              {proposal.time_after_seconds ? `${proposal.time_after_seconds}s` : "---"}
+            </span>
           </div>
-          <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
-            <span className="text-[10px] font-black text-slate-400 uppercase block">VTCV</span>
-            <span className="font-extrabold text-slate-900">{vtcv}</span>
+
+          {/* TIẾT KIỆM */}
+          <div className="p-3.5 rounded-2xl bg-purple-50 border border-purple-200 space-y-1">
+            <span className="text-[10px] font-extrabold uppercase text-purple-700 block">TIẾT KIỆM</span>
+            <span className="text-base sm:text-lg font-black text-purple-900 block">
+              {proposal.saved_seconds ? `${proposal.saved_seconds} giây` : "---"}
+            </span>
           </div>
-          <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
-            <span className="text-[10px] font-black text-slate-400 uppercase block">Tháng / Năm</span>
-            <span className="font-extrabold text-slate-900">Tháng {pMonth} / {pYear}</span>
-          </div>
-          <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 sm:col-span-2">
-            <span className="text-[10px] font-black text-slate-400 uppercase block">Người đăng ký</span>
-            <span className="font-extrabold text-slate-900">{proposal.proposer_name}</span>
-          </div>
-          <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
-            <span className="text-[10px] font-black text-slate-400 uppercase block">Khách hàng</span>
-            <span className="font-extrabold text-slate-900">{cust}</span>
+
+          {/* HIỆU QUẢ (NỔI BẬT NỀN XANH LÁ THEO ẢNH 2) */}
+          <div className="p-3.5 rounded-2xl bg-[#006838] text-white space-y-1 shadow-sm">
+            <span className="text-[10px] font-extrabold uppercase text-emerald-200 block">HIỆU QUẢ</span>
+            <span className="text-base sm:text-lg font-black text-white block truncate">
+              {Math.round((proposal.saved_seconds || 0) * 12.5).toLocaleString("vi-VN")} VNĐ
+            </span>
           </div>
         </div>
       </div>
 
-      {/* B. THÔNG TIN CẢI TIẾN */}
-      <div className="space-y-3 pb-5 border-b border-slate-200">
-        <h3 className="text-xs font-black uppercase text-blue-600 tracking-wide flex items-center gap-1.5">
-          <IconInfoCircle size={16} />
-          <span>B. THÔNG TIN CẢI TIẾN</span>
-        </h3>
-        <div className="p-4 rounded-2xl bg-blue-50/50 border border-blue-200 space-y-1">
-          <span className="text-[10px] font-black text-blue-600 uppercase block">Tiêu Đề Cải Tiến</span>
-          <span className="text-sm font-black text-slate-900">{proposal.title}</span>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
-            <span className="text-[10px] font-black text-slate-400 uppercase block">Phân Loại Cải Tiến</span>
-            <span className="font-extrabold text-slate-900">{proposal.category_label || proposal.category}</span>
-          </div>
-          <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
-            <span className="text-[10px] font-black text-slate-400 uppercase block">Nhóm SP / DV</span>
-            <span className="font-extrabold text-slate-900">{prodGroup}</span>
-          </div>
-          <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
-            <span className="text-[10px] font-black text-slate-400 uppercase block">Mã Hàng</span>
-            <span className="font-extrabold text-slate-900">{prodCode}</span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="p-4 rounded-2xl bg-red-50 border border-red-200 space-y-1">
-            <span className="text-[10px] font-black text-red-700 uppercase flex items-center gap-1">
-              <IconAlertCircle size={14} />
-              Vấn Đề Phát Hiện (Trước Cải Tiến)
-            </span>
-            <p className="font-medium text-slate-800 leading-relaxed whitespace-pre-wrap">
-              {proposal.before_description || "Chưa có mô tả hiện trạng"}
-            </p>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-1">
-            <span className="text-[10px] font-black text-emerald-700 uppercase flex items-center gap-1">
-              <IconThumbUp size={14} />
-              Giải Pháp Hành Động (Sau Cải Tiến)
-            </span>
-            <p className="font-medium text-slate-800 leading-relaxed whitespace-pre-wrap">
-              {proposal.after_solution || "Chưa có mô tả giải pháp"}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* C. HIỆU QUẢ CẢI TIẾN */}
-      <div className="space-y-3 pb-5 border-b border-slate-200">
-        <h3 className="text-xs font-black uppercase text-purple-600 tracking-wide flex items-center gap-1.5">
-          <IconCalendar size={16} />
-          <span>C. HIỆU QUẢ CẢI TIẾN (HƯỚNG: {pricingDir === "TRI_GIA" || pricingDir === "Trị giá" ? "TRỊ GIÁ" : "THỜI GIAN"})</span>
-        </h3>
-
-        {pricingDir === "TRI_GIA" || pricingDir === "Trị giá" ? (
-          <div className="p-4 rounded-2xl border-2 border-emerald-200 bg-emerald-50/60 flex items-center justify-between">
-            <div>
-              <span className="text-[10px] font-bold text-slate-500 block uppercase">Giá Trị Quy Đổi Tự Động:</span>
-              <span className="text-base sm:text-lg font-black text-[#006838]">
-                {Math.round((proposal.saved_seconds || 0) * 12.5).toLocaleString("vi-VN")} VNĐ / đôi
-              </span>
-            </div>
-            <span className="px-2.5 py-1 rounded-lg bg-emerald-200/80 text-[#006838] text-xs font-black">
-              🔒 CHỈ HIỂN THỊ
-            </span>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-3 rounded-2xl bg-orange-50 border border-orange-200 space-y-1">
-              <span className="text-[10px] font-extrabold uppercase text-orange-600 block">Thời Gian Trước</span>
-              <span className="text-base font-black text-orange-900">{proposal.time_before_seconds || 0}s</span>
-            </div>
-            <div className="p-3 rounded-2xl bg-blue-50 border border-blue-200 space-y-1">
-              <span className="text-[10px] font-extrabold uppercase text-blue-600 block">Thời Gian Sau</span>
-              <span className="text-base font-black text-blue-900">{proposal.time_after_seconds || 0}s</span>
-            </div>
-            <div className="p-3 rounded-2xl bg-purple-50 border border-purple-200 space-y-1">
-              <span className="text-[10px] font-extrabold uppercase text-purple-600 block">Tiết Kiệm (Giây/Đôi)</span>
-              <span className="text-base font-black text-purple-900">{proposal.saved_seconds || 0}s</span>
-            </div>
-            <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-1">
-              <span className="text-[10px] font-extrabold uppercase text-emerald-600 block">Quy Đổi VNĐ/Đôi</span>
-              <span className="text-base font-black text-[#006838]">
-                {Math.round((proposal.saved_seconds || 0) * 12.5).toLocaleString("vi-VN")}đ
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* D. HÌNH ẢNH MINH HỌA */}
-      <div className="space-y-3 pb-5 border-b border-slate-200">
-        <h3 className="text-xs font-black uppercase text-indigo-600 tracking-wide flex items-center gap-1.5">
-          <IconPhoto size={16} />
-          <span>D. HÌNH ẢNH MINH HỌA THỰC ĐỊA</span>
-        </h3>
+      {/* 4. SO SÁNH HÌNH ẢNH (BEFORE / AFTER SIDE-BY-SIDE THEO ẢNH 2) */}
+      <div className="space-y-2">
+        <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">
+          SO SÁNH HÌNH ẢNH
+        </h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <span className="text-xs font-bold text-slate-700 block">Ảnh Trước Cải Tiến:</span>
+          {/* Ảnh TRƯỚC */}
+          <div className="p-3.5 rounded-2xl border-2 border-rose-200 bg-rose-50/20 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-rose-900 flex items-center gap-1.5">
+                <span>🖼 TRƯỚC</span>
+              </span>
+              <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-[10px] font-extrabold">
+                {proposal.before_image_url ? "1 ảnh" : "0 ảnh"}
+              </span>
+            </div>
             {proposal.before_image_url ? (
-              <a href={proposal.before_image_url} target="_blank" rel="noreferrer">
+              <a href={proposal.before_image_url} target="_blank" rel="noreferrer" className="block">
                 <img
                   src={proposal.before_image_url}
                   alt="Before"
-                  className="w-full h-48 object-cover rounded-2xl border border-slate-300 shadow-xs hover:opacity-95 transition-opacity"
+                  className="w-full h-52 object-contain rounded-xl border border-rose-200 bg-white"
                 />
               </a>
             ) : (
-              <div className="w-full h-36 bg-slate-100 rounded-2xl border border-dashed border-slate-300 flex items-center justify-center text-slate-400 font-bold">
+              <div className="w-full h-44 rounded-xl border border-dashed border-rose-200 bg-white flex items-center justify-center text-slate-400 font-bold text-xs">
                 Chưa có ảnh trước
               </div>
             )}
           </div>
 
-          <div className="space-y-1.5">
-            <span className="text-xs font-bold text-slate-700 block">Ảnh Sau Cải Tiến:</span>
+          {/* Ảnh SAU */}
+          <div className="p-3.5 rounded-2xl border-2 border-emerald-200 bg-emerald-50/20 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-emerald-900 flex items-center gap-1.5">
+                <span>🖼 SAU</span>
+              </span>
+              <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-black">
+                {proposal.after_image_url ? "1 ảnh" : "0 ảnh"}
+              </span>
+            </div>
             {proposal.after_image_url ? (
-              <a href={proposal.after_image_url} target="_blank" rel="noreferrer">
+              <a href={proposal.after_image_url} target="_blank" rel="noreferrer" className="block">
                 <img
                   src={proposal.after_image_url}
                   alt="After"
-                  className="w-full h-48 object-cover rounded-2xl border border-slate-300 shadow-xs hover:opacity-95 transition-opacity"
+                  className="w-full h-52 object-contain rounded-xl border border-emerald-200 bg-white"
                 />
               </a>
             ) : (
-              <div className="w-full h-36 bg-slate-100 rounded-2xl border border-dashed border-slate-300 flex items-center justify-center text-slate-400 font-bold">
+              <div className="w-full h-44 rounded-xl border border-dashed border-emerald-200 bg-white flex items-center justify-center text-slate-400 font-bold text-xs">
                 Chưa có ảnh sau
               </div>
             )}
@@ -553,26 +544,22 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
         </div>
       </div>
 
-      {/* E. VIDEO MINH HỌA (TÙY CHỌN) */}
-      <div className="space-y-3">
-        <h3 className="text-xs font-black uppercase text-purple-600 tracking-wide flex items-center gap-1.5">
-          <span>🎬 E. VIDEO MINH HỌA (TÙY CHỌN)</span>
-        </h3>
-        {videos.length > 0 ? (
+      {/* 5. VIDEO CLIPS (CHỈ HIỂN THỊ KHI CÓ DATA VIDEO) */}
+      {videos.length > 0 && (
+        <div className="space-y-2 pt-2 border-t border-slate-200">
+          <h4 className="text-xs font-black uppercase tracking-wider text-purple-700">
+            VIDEO CLIPS MINH HỌA
+          </h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {videos.map((vid, idx) => (
-              <div key={idx} className="space-y-1.5">
-                <span className="text-xs font-bold text-slate-700 block">{vid.title || `Video clip #${idx + 1}`}:</span>
-                <video controls src={vid.url} className="w-full h-44 object-cover rounded-2xl border border-purple-200 bg-black" />
+              <div key={idx} className="p-3 rounded-2xl border border-purple-200 bg-purple-50/30 space-y-1.5">
+                <span className="text-xs font-bold text-purple-900 block">{vid.title || `Video #${idx + 1}`}</span>
+                <video controls src={vid.url} className="w-full h-44 object-cover rounded-xl bg-black" />
               </div>
             ))}
           </div>
-        ) : (
-          <div className="p-4 rounded-2xl bg-purple-50/40 border border-dashed border-purple-200 text-purple-800 text-xs font-bold text-center">
-            Chưa có tệp video thực địa nào được đính kèm.
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -618,55 +605,58 @@ function TabExpertReviewContent({
   const [c3Score, setC3Score] = useState<number>(0);
   const [c4Score, setC4Score] = useState<number>(0);
   const [c5Score, setC5Score] = useState<number>(0);
-  const [comments, setComments] = useState("");
+  const [comments, setComments] = useState<string>("");
   const [evalStatus, setEvalStatus] = useState<"DRAFT" | "CONFIRMED">("DRAFT");
 
-  // Judge Assignment state
+  // Admin assign state
   const [newJudgeEmpCode, setNewJudgeEmpCode] = useState("");
   const [assigning, setAssigning] = useState(false);
 
-  // Fetch evaluations & assignments data from Cloudflare Worker API
+  // Fetch current evaluations from DB
   const fetchEvaluations = async () => {
-    setLoading(true);
-    setErrorMsg(null);
     try {
+      setLoading(true);
       const res = await fetch(`/api/ci-kaizen/expert-evaluations?proposalId=${proposal.id}`);
       const json = await res.json();
-      if (json.success && json.data) {
+      if (json.success) {
         setEvalData(json.data);
         if (json.data.myEvaluation) {
           const my = json.data.myEvaluation;
-          const pass = my.prerequisitePass !== false;
-          setReq1(pass);
-          setReq2(pass);
-          setReq3(pass);
-          setReq4(pass);
-          setC1Score(my.criterion1Score || 0);
-          setC2Score(my.criterion2Score || 0);
-          setC3Score(my.criterion3Score || 0);
-          setC4Score(my.criterion4Score || 0);
-          setC5Score(my.criterion5Score || 0);
+          setReq1(my.prerequisitePass);
+          setReq2(my.prerequisitePass);
+          setReq3(my.prerequisitePass);
+          setReq4(my.prerequisitePass);
+          setC1Score(my.c1Score || 0);
+          setC2Score(my.c2Score || 0);
+          setC3Score(my.c3Score || 0);
+          setC4Score(my.c4Score || 0);
+          setC5Score(my.c5Score || 0);
           setComments(my.comments || "");
           setEvalStatus(my.status || "DRAFT");
         }
       }
     } catch (e: any) {
-      setErrorMsg("Không thể tải dữ liệu đánh giá chuyên môn!");
+      console.error("Lỗi khi tải bảng chấm điểm:", e);
     } finally {
       setLoading(false);
     }
   };
 
+  // Assign Judge BY EMP CODE
   const handleAddJudge = async () => {
     if (!newJudgeEmpCode.trim()) return;
     setAssigning(true);
     setErrorMsg(null);
     setSuccessMsg(null);
     try {
-      const res = await fetch("/api/ci-kaizen/assignments", {
+      const res = await fetch("/api/ci-kaizen/expert-evaluations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ proposalId: proposal.id, judgeEmpCode: newJudgeEmpCode.trim() }),
+        body: JSON.stringify({
+          action: "ASSIGN_JUDGE",
+          proposalId: proposal.id,
+          judgeEmpCode: newJudgeEmpCode.trim(),
+        }),
       });
       const json = await res.json();
       if (json.success) {
@@ -674,25 +664,29 @@ function TabExpertReviewContent({
         setNewJudgeEmpCode("");
         await fetchEvaluations();
       } else {
-        setErrorMsg(json.message || "Lỗi khi phân công BGK!");
+        setErrorMsg(json.message || "Lỗi khi gán BGK!");
       }
-    } catch(e: any) {
-      setErrorMsg("Không thể thực hiện phân công!");
+    } catch (e: any) {
+      setErrorMsg("Không thể gửi dữ liệu gán BGK!");
     } finally {
       setAssigning(false);
     }
   };
 
+  // Remove Assigned Judge
   const handleRemoveJudge = async (judgeEmpCode: string) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn gỡ MSNV ${judgeEmpCode} khỏi danh sách BGK bài này?`)) return;
     setAssigning(true);
     setErrorMsg(null);
     setSuccessMsg(null);
     try {
-      const res = await fetch("/api/ci-kaizen/assignments", {
-        method: "DELETE",
+      const res = await fetch("/api/ci-kaizen/expert-evaluations", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ proposalId: proposal.id, judgeEmpCode }),
+        body: JSON.stringify({
+          action: "REMOVE_JUDGE",
+          proposalId: proposal.id,
+          judgeEmpCode,
+        }),
       });
       const json = await res.json();
       if (json.success) {
@@ -701,7 +695,7 @@ function TabExpertReviewContent({
       } else {
         setErrorMsg(json.message || "Lỗi khi gỡ BGK!");
       }
-    } catch(e: any) {
+    } catch (e: any) {
       setErrorMsg("Không thể gỡ BGK!");
     } finally {
       setAssigning(false);
@@ -867,9 +861,7 @@ function TabExpertReviewContent({
 
   return (
     <div className="p-5 md:p-6 space-y-6">
-      {/* ════════════════════════════════════════════════════════════════
-          PROGRESS & SUMMARY BAR
-         ════════════════════════════════════════════════════════════════ */}
+      {/* PROGRESS & SUMMARY BAR */}
       <div className="bg-slate-900 text-white p-4 md:p-5 rounded-3xl shadow-lg border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <span className="text-[11px] font-extrabold uppercase text-amber-400 block tracking-wider mb-0.5">
@@ -911,11 +903,9 @@ function TabExpertReviewContent({
         </div>
       )}
 
-      {/* ════════════════════════════════════════════════════════════════
-          👑 TGĐ / ADMIN JUDGE ASSIGNMENT PANEL (PHÂN CÔNG TƯỜNG MINH QUA MSNV)
-         ════════════════════════════════════════════════════════════════ */}
+      {/* TGĐ / ADMIN JUDGE ASSIGNMENT PANEL */}
       {evalData?.isExecutiveManager && (
-        <div className="bg-gradient-to-r from-amber-500/10 via-amber-50 to-emerald-50 rounded-3xl border-2 border-amber-300 p-5 shadow-sm space-y-4">
+        <div className="bg-gradient-to-r from-amber-500/10 via-amber-50 to-emerald-50 rounded-3xl border-2 border-amber-300 p-5 shadow-xs space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-amber-200/80 pb-3">
             <div>
               <h3 className="text-sm font-black uppercase text-amber-900 flex items-center gap-2">
@@ -930,7 +920,6 @@ function TabExpertReviewContent({
             </span>
           </div>
 
-          {/* Input Form */}
           <div className="flex items-center gap-2">
             <input
               type="text"
@@ -950,7 +939,6 @@ function TabExpertReviewContent({
             </button>
           </div>
 
-          {/* Quick Presets / Suggestions */}
           <div className="flex flex-wrap items-center gap-1.5 pt-1">
             <span className="text-[10px] font-extrabold uppercase text-amber-800">Gợi ý chọn nhanh:</span>
             {[
@@ -971,7 +959,6 @@ function TabExpertReviewContent({
             ))}
           </div>
 
-          {/* Assigned Judges List Cards */}
           <div className="space-y-2 pt-2">
             <span className="text-xs font-black uppercase text-slate-700 block">Danh Sách BGK Được Phân Công:</span>
             {(!evalData?.assignedJudges || evalData.assignedJudges.length === 0) ? (
@@ -985,7 +972,7 @@ function TabExpertReviewContent({
                   return (
                     <div key={j.judge_emp_code} className="p-3 rounded-2xl bg-white border border-amber-200 flex items-center justify-between gap-3 shadow-2xs">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-800 font-black text-xs flex items-center justify-center flex-shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-800 font-black text-xs flex items-center justify-center shrink-0">
                           👑
                         </div>
                         <div className="min-w-0">
@@ -997,7 +984,7 @@ function TabExpertReviewContent({
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="flex items-center gap-2 shrink-0">
                         {isConfirmed ? (
                           <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black border border-emerald-300">
                             🔒 Đã chấm
@@ -1022,7 +1009,7 @@ function TabExpertReviewContent({
         </div>
       )}
 
-      {/* Notice for Non-Assigned BGK / TGĐ who hasn't assigned self */}
+      {/* Notice for Non-Assigned BGK */}
       {!evalData?.isAssignedJudge && (
         <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-bold space-y-1">
           <div className="flex items-center gap-2 text-amber-800 font-black">
@@ -1040,427 +1027,417 @@ function TabExpertReviewContent({
         </div>
       )}
 
-      {/* ════════════════════════════════════════════════════════════════
-          FORM CHẤM ĐIỂM DÀNH CHO BGK (REFERENCE 2 UI TABLE)
-         ════════════════════════════════════════════════════════════════ */}
-        <div className="bg-white rounded-3xl border border-slate-200 p-4 md:p-6 shadow-sm space-y-6">
-          
-          {/* SECTION 1: ĐIỀU KIỆN TIÊN QUYẾT (PASS/FAIL) */}
-          <div className="p-4 rounded-2xl bg-blue-50/40 border border-blue-100 space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-blue-200/60">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-black uppercase text-blue-900 tracking-wider">
-                  ĐIỀU KIỆN TIÊN QUYẾT (PASS/FAIL)
+      {/* FORM CHẤM ĐIỂM DÀNH CHO BGK */}
+      <div className="bg-white rounded-3xl border border-slate-200 p-4 md:p-6 shadow-2xs space-y-6">
+        
+        {/* SECTION 1: ĐIỀU KIỆN TIÊN QUYẾT */}
+        <div className="p-4 rounded-2xl bg-blue-50/40 border border-blue-100 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-blue-200/60">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-black uppercase text-blue-900 tracking-wider">
+                ĐIỀU KIỆN TIÊN QUYẾT (PASS/FAIL)
+              </span>
+              <span className="w-4 h-4 rounded-full bg-blue-200 text-blue-800 text-[10px] font-bold flex items-center justify-center">i</span>
+            </div>
+
+            <div>
+              {prerequisitePass ? (
+                <span className="px-3 py-1 rounded-lg bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-black flex items-center gap-1.5 shadow-2xs">
+                  <IconCheck size={15} className="text-emerald-600 stroke-[3]" />
+                  <span>ĐẠT ĐIỀU KIỆN ➔ Có thể chấm điểm</span>
                 </span>
-                <span className="w-4 h-4 rounded-full bg-blue-200 text-blue-800 text-[10px] font-bold flex items-center justify-center">i</span>
-              </div>
-
-              {/* Status Pill Badge */}
-              <div>
-                {prerequisitePass ? (
-                  <span className="px-3 py-1 rounded-lg bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-black flex items-center gap-1.5 shadow-2xs">
-                    <IconCheck size={15} className="text-emerald-600 stroke-[3]" />
-                    <span>ĐẠT ĐIỀU KIỆN ➔ Có thể chấm điểm</span>
-                  </span>
-                ) : (
-                  <span className="px-3 py-1 rounded-lg bg-red-100 border border-red-300 text-red-800 text-xs font-black flex items-center gap-1.5 shadow-2xs">
-                    <IconX size={15} className="text-red-600 stroke-[3]" />
-                    <span>KHÔNG ĐẠT ĐIỀU KIỆN ➔ Hồ sơ bị loại</span>
-                  </span>
-                )}
-              </div>
+              ) : (
+                <span className="px-3 py-1 rounded-lg bg-red-100 border border-red-300 text-red-800 text-xs font-black flex items-center gap-1.5 shadow-2xs">
+                  <IconX size={15} className="text-red-600 stroke-[3]" />
+                  <span>KHÔNG ĐẠT ĐIỀU KIỆN ➔ Hồ sơ bị loại</span>
+                </span>
+              )}
             </div>
-
-            {/* 4 Mandatory Checkboxes */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
-              <label className="flex items-center gap-2 text-xs font-bold text-slate-800 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  disabled={!isAssignedJudge || evalStatus === "CONFIRMED"}
-                  checked={req1}
-                  onChange={(e) => setReq1(e.target.checked)}
-                  className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
-                />
-                <span>1. Đã triển khai thực tế</span>
-              </label>
-
-              <label className="flex items-center gap-2 text-xs font-bold text-slate-800 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  disabled={!isAssignedJudge || evalStatus === "CONFIRMED"}
-                  checked={req2}
-                  onChange={(e) => setReq2(e.target.checked)}
-                  className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
-                />
-                <span>2. Có minh chứng trước - sau</span>
-              </label>
-
-              <label className="flex items-center gap-2 text-xs font-bold text-slate-800 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  disabled={!isAssignedJudge || evalStatus === "CONFIRMED"}
-                  checked={req3}
-                  onChange={(e) => setReq3(e.target.checked)}
-                  className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
-                />
-                <span>3. Không vi phạm ATLĐ</span>
-              </label>
-
-              <label className="flex items-center gap-2 text-xs font-bold text-slate-800 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  disabled={!isAssignedJudge || evalStatus === "CONFIRMED"}
-                  checked={req4}
-                  onChange={(e) => setReq4(e.target.checked)}
-                  className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
-                />
-                <span>4. Không trùng lặp</span>
-              </label>
-            </div>
-
-            <p className="text-[11px] font-bold text-slate-500 pt-1">
-              * Không đạt bất kỳ điều kiện nào ở trên ➔ <span className="text-red-600">Loại hồ sơ, không chấm điểm.</span>
-            </p>
           </div>
 
-          {/* SECTION 2: BẢNG CHẤM ĐIỂM CHUYÊN MÔN (THANG 100 ĐIỂM) */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-black uppercase text-slate-900 tracking-wider">
-              BẢNG CHẤM ĐIỂM CHUYÊN MÔN (Tổng điểm 100)
-            </h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+            <label className="flex items-center gap-2 text-xs font-bold text-slate-800 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                disabled={!isAssignedJudge || evalStatus === "CONFIRMED"}
+                checked={req1}
+                onChange={(e) => setReq1(e.target.checked)}
+                className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
+              />
+              <span>1. Đã triển khai thực tế</span>
+            </label>
 
-            <fieldset disabled={!isAssignedJudge || !prerequisitePass || evalStatus === "CONFIRMED"} className="disabled:opacity-60 space-y-4">
-              <div className="overflow-x-auto border border-slate-200 rounded-2xl shadow-2xs bg-white w-full">
-                <table className="w-full min-w-[860px] text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-slate-100 border-b border-slate-200 text-[11px] font-black text-slate-700 uppercase">
-                      <th className="py-3 px-2 text-center w-8 border-r border-slate-200">STT</th>
-                      <th className="py-3 px-2.5 w-28 border-r border-slate-200">TIÊU CHÍ</th>
-                      <th className="py-3 px-2.5 w-32 border-r border-slate-200">MÔ TẢ NGẮN</th>
-                      <th className="py-3 px-2 text-center w-16 border-r border-slate-200">ĐIỂM TỐI ĐA</th>
-                      <th className="py-3 px-3 border-r border-slate-200">BGK CHỌN ĐIỂM</th>
-                      <th className="py-3 px-2 text-center w-16">ĐIỂM BGK</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    
-                    {/* ROW 1: TIÊU CHÍ 1 */}
-                    <tr className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-3 px-2 text-center font-extrabold text-blue-600 border-r border-slate-200">1</td>
-                      <td className="py-3 px-2.5 font-black text-slate-900 border-r border-slate-200 leading-snug text-[11px]">
-                        Hiệu quả thực tế đạt được
-                      </td>
-                      <td className="py-3 px-2.5 font-medium text-slate-500 border-r border-slate-200 text-[10.5px] leading-tight">
-                        Mức độ hiệu quả mang lại (tùy danh mục)
-                      </td>
-                      <td className="py-3 px-2 text-center font-black text-slate-800 border-r border-slate-200 text-sm">
-                        35
-                      </td>
-                      <td className="py-3 px-3 border-r border-slate-200">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 block mb-2">
-                          BAREM CHO "{catObj.label.toUpperCase()}" – Tiêu chí 1 ℹ️
-                        </span>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-                          {c1Options.map((opt) => (
-                            <label
-                              key={opt.score}
-                              className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all flex flex-col justify-between min-w-[125px] w-full ${
-                                c1Score === opt.score
-                                  ? "border-blue-600 bg-blue-50/80 text-blue-900 font-extrabold shadow-2xs ring-1 ring-blue-500/30"
-                                  : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50/50"
-                              }`}
-                            >
-                              <div className="flex items-center gap-1.5">
-                                <input
-                                  type="radio"
-                                  name="c1"
-                                  disabled={!isAssignedJudge || !prerequisitePass || evalStatus === "CONFIRMED"}
-                                  checked={c1Score === opt.score}
-                                  onChange={() => setC1Score(opt.score)}
-                                  className="w-3.5 h-3.5 text-blue-600 border-slate-300 focus:ring-blue-500 shrink-0"
-                                />
-                                <span className="font-black text-xs">{opt.label}</span>
-                              </div>
-                              <span className="text-[10.5px] text-slate-500 font-medium leading-snug mt-1.5 whitespace-normal break-words">
-                                {opt.desc}
-                              </span>
-                            </label>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="py-3 px-2 text-center font-black text-base text-blue-700">
-                        {c1Score > 0 ? `${c1Score}đ` : "—"}
-                      </td>
-                    </tr>
+            <label className="flex items-center gap-2 text-xs font-bold text-slate-800 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                disabled={!isAssignedJudge || evalStatus === "CONFIRMED"}
+                checked={req2}
+                onChange={(e) => setReq2(e.target.checked)}
+                className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
+              />
+              <span>2. Có minh chứng trước - sau</span>
+            </label>
 
-                    {/* ROW 2: TIÊU CHÍ 2 */}
-                    <tr className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-3 px-2 text-center font-extrabold text-emerald-600 border-r border-slate-200">2</td>
-                      <td className="py-3 px-2.5 font-black text-slate-900 border-r border-slate-200 leading-snug text-[11px]">
-                        Tính khả thi &amp; hiệu quả đầu tư
-                      </td>
-                      <td className="py-3 px-2.5 font-medium text-slate-500 border-r border-slate-200 text-[10.5px] leading-tight">
-                        Chi phí đầu tư so với lợi ích.
-                      </td>
-                      <td className="py-3 px-2 text-center font-black text-slate-800 border-r border-slate-200 text-sm">
-                        20
-                      </td>
-                      <td className="py-3 px-3 border-r border-slate-200">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-                          {c2Options.map((opt) => (
-                            <label
-                              key={opt.score}
-                              className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all flex flex-col justify-between min-w-[125px] w-full ${
-                                c2Score === opt.score
-                                  ? "border-emerald-600 bg-emerald-50/80 text-emerald-900 font-extrabold shadow-2xs ring-1 ring-emerald-500/30"
-                                  : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50/50"
-                              }`}
-                            >
-                              <div className="flex items-center gap-1.5">
-                                <input
-                                  type="radio"
-                                  name="c2"
-                                  disabled={!isAssignedJudge || !prerequisitePass || evalStatus === "CONFIRMED"}
-                                  checked={c2Score === opt.score}
-                                  onChange={() => setC2Score(opt.score)}
-                                  className="w-3.5 h-3.5 text-emerald-600 border-slate-300 focus:ring-emerald-500 shrink-0"
-                                />
-                                <span className="font-black text-xs">{opt.label}</span>
-                              </div>
-                              <span className="text-[10.5px] text-slate-500 font-medium leading-snug mt-1.5 whitespace-normal break-words">
-                                {opt.desc}
-                              </span>
-                            </label>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="py-3 px-2 text-center font-black text-base text-emerald-700">
-                        {c2Score > 0 ? `${c2Score}đ` : "—"}
-                      </td>
-                    </tr>
+            <label className="flex items-center gap-2 text-xs font-bold text-slate-800 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                disabled={!isAssignedJudge || evalStatus === "CONFIRMED"}
+                checked={req3}
+                onChange={(e) => setReq3(e.target.checked)}
+                className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
+              />
+              <span>3. Không vi phạm ATLĐ</span>
+            </label>
 
-                    {/* ROW 3: TIÊU CHÍ 3 */}
-                    <tr className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-3 px-2 text-center font-extrabold text-purple-600 border-r border-slate-200">3</td>
-                      <td className="py-3 px-2.5 font-black text-slate-900 border-r border-slate-200 leading-snug text-[11px]">
-                        Khả năng nhân rộng
-                      </td>
-                      <td className="py-3 px-2.5 font-medium text-slate-500 border-r border-slate-200 text-[10.5px] leading-tight">
-                        Mức độ áp dụng cho nhiều vị trí / đơn vị.
-                      </td>
-                      <td className="py-3 px-2 text-center font-black text-slate-800 border-r border-slate-200 text-sm">
-                        20
-                      </td>
-                      <td className="py-3 px-3 border-r border-slate-200">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-                          {c3Options.map((opt) => (
-                            <label
-                              key={opt.score}
-                              className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all flex flex-col justify-between min-w-[125px] w-full ${
-                                c3Score === opt.score
-                                  ? "border-purple-600 bg-purple-50/80 text-purple-900 font-extrabold shadow-2xs ring-1 ring-purple-500/30"
-                                  : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50/50"
-                              }`}
-                            >
-                              <div className="flex items-center gap-1.5">
-                                <input
-                                  type="radio"
-                                  name="c3"
-                                  disabled={!isAssignedJudge || !prerequisitePass || evalStatus === "CONFIRMED"}
-                                  checked={c3Score === opt.score}
-                                  onChange={() => setC3Score(opt.score)}
-                                  className="w-3.5 h-3.5 text-purple-600 border-slate-300 focus:ring-purple-500 shrink-0"
-                                />
-                                <span className="font-black text-xs">{opt.label}</span>
-                              </div>
-                              <span className="text-[10.5px] text-slate-500 font-medium leading-snug mt-1.5 whitespace-normal break-words">
-                                {opt.desc}
-                              </span>
-                            </label>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="py-3 px-2 text-center font-black text-base text-purple-700">
-                        {c3Score > 0 ? `${c3Score}đ` : "—"}
-                      </td>
-                    </tr>
-
-                    {/* ROW 4: TIÊU CHÍ 4 */}
-                    <tr className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-3 px-2 text-center font-extrabold text-amber-600 border-r border-slate-200">4</td>
-                      <td className="py-3 px-2.5 font-black text-slate-900 border-r border-slate-200 leading-snug text-[11px]">
-                        Tính sáng tạo &amp; chủ động
-                      </td>
-                      <td className="py-3 px-2.5 font-medium text-slate-500 border-r border-slate-200 text-[10.5px] leading-tight">
-                        Mức độ sáng tạo và chủ động đề xuất.
-                      </td>
-                      <td className="py-3 px-2 text-center font-black text-slate-800 border-r border-slate-200 text-sm">
-                        15
-                      </td>
-                      <td className="py-3 px-3 border-r border-slate-200">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-                          {c4Options.map((opt) => (
-                            <label
-                              key={opt.score}
-                              className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all flex flex-col justify-between min-w-[125px] w-full ${
-                                c4Score === opt.score
-                                  ? "border-amber-600 bg-amber-50/80 text-amber-900 font-extrabold shadow-2xs ring-1 ring-amber-500/30"
-                                  : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50/50"
-                              }`}
-                            >
-                              <div className="flex items-center gap-1.5">
-                                <input
-                                  type="radio"
-                                  name="c4"
-                                  disabled={!isAssignedJudge || !prerequisitePass || evalStatus === "CONFIRMED"}
-                                  checked={c4Score === opt.score}
-                                  onChange={() => setC4Score(opt.score)}
-                                  className="w-3.5 h-3.5 text-amber-600 border-slate-300 focus:ring-amber-500 shrink-0"
-                                />
-                                <span className="font-black text-xs">{opt.label}</span>
-                              </div>
-                              <span className="text-[10.5px] text-slate-500 font-medium leading-snug mt-1.5 whitespace-normal break-words">
-                                {opt.desc}
-                              </span>
-                            </label>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="py-3 px-2 text-center font-black text-base text-amber-700">
-                        {c4Score > 0 ? `${c4Score}đ` : "—"}
-                      </td>
-                    </tr>
-
-                    {/* ROW 5: TIÊU CHÍ 5 */}
-                    <tr className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-3 px-2 text-center font-extrabold text-sky-600 border-r border-slate-200">5</td>
-                      <td className="py-3 px-2.5 font-black text-slate-900 border-r border-slate-200 leading-snug text-[11px]">
-                        Lan tỏa &amp; tinh thần đội nhóm
-                      </td>
-                      <td className="py-3 px-2.5 font-medium text-slate-500 border-r border-slate-200 text-[10.5px] leading-tight">
-                        Mức độ lan tỏa, hỗ trợ phối hợp.
-                      </td>
-                      <td className="py-3 px-2 text-center font-black text-slate-800 border-r border-slate-200 text-sm">
-                        10
-                      </td>
-                      <td className="py-3 px-3 border-r border-slate-200">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-                          {c5Options.map((opt) => (
-                            <label
-                              key={opt.score}
-                              className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all flex flex-col justify-between min-w-[125px] w-full ${
-                                c5Score === opt.score
-                                  ? "border-sky-600 bg-sky-50/80 text-sky-900 font-extrabold shadow-2xs ring-1 ring-sky-500/30"
-                                  : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50/50"
-                              }`}
-                            >
-                              <div className="flex items-center gap-1.5">
-                                <input
-                                  type="radio"
-                                  name="c5"
-                                  disabled={!isAssignedJudge || !prerequisitePass || evalStatus === "CONFIRMED"}
-                                  checked={c5Score === opt.score}
-                                  onChange={() => setC5Score(opt.score)}
-                                  className="w-3.5 h-3.5 text-sky-600 border-slate-300 focus:ring-sky-500 shrink-0"
-                                />
-                                <span className="font-black text-xs">{opt.label}</span>
-                              </div>
-                              <span className="text-[10.5px] text-slate-500 font-medium leading-snug mt-1.5 whitespace-normal break-words">
-                                {opt.desc}
-                              </span>
-                            </label>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="py-3 px-2 text-center font-black text-base text-sky-700">
-                        {c5Score > 0 ? `${c5Score}đ` : "—"}
-                      </td>
-                    </tr>
-                  </tbody>
-
-                  {/* SUMMARY ROW */}
-                  <tfoot>
-                    <tr className="bg-slate-900 text-white font-black">
-                      <td colSpan={3} className="py-3.5 px-4 text-xs uppercase tracking-wider">
-                        TỔNG ĐIỂM TỐI ĐA: 100
-                      </td>
-                      <td colSpan={3} className="py-3.5 px-4 text-right text-sm">
-                        TỔNG ĐIỂM BGK: <span className="text-emerald-400 text-xl ml-2">{totalScore} / 100</span>
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </fieldset>
+            <label className="flex items-center gap-2 text-xs font-bold text-slate-800 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                disabled={!isAssignedJudge || evalStatus === "CONFIRMED"}
+                checked={req4}
+                onChange={(e) => setReq4(e.target.checked)}
+                className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
+              />
+              <span>4. Không trùng lặp</span>
+            </label>
           </div>
 
+          <p className="text-[11px] font-bold text-slate-500 pt-1">
+            * Không đạt bất kỳ điều kiện nào ở trên ➔ <span className="text-red-600">Loại hồ sơ, không chấm điểm.</span>
+          </p>
+        </div>
 
-          {/* SECTION 4: NHẬN XÉT CỦA BGK & ACTION BAR */}
-          <div className="space-y-3 border-t border-slate-200 pt-4">
-            <label className="text-xs font-black text-slate-800 block">Nhận xét chuyên môn của sếp (Optional):</label>
-            <textarea
-              rows={2}
-              disabled={!isAssignedJudge || evalStatus === "CONFIRMED"}
-              value={comments}
-              onChange={(e) => setComments(e.target.value)}
-              placeholder="Nhập ghi chú ý kiến chỉ đạo hoặc góp ý phát triển cho bài cải tiến..."
-              className="w-full p-3 rounded-xl border border-slate-300 text-xs font-medium text-slate-800 outline-none focus:border-emerald-600 disabled:bg-slate-100"
-            />
+        {/* SECTION 2: BẢNG CHẤM ĐIỂM CHUYÊN MÔN */}
+        <div className="space-y-3">
+          <h4 className="text-xs font-black uppercase text-slate-900 tracking-wider">
+            BẢNG CHẤM ĐIỂM CHUYÊN MÔN (Tổng điểm 100)
+          </h4>
 
-            {/* Bottom Action Bar */}
-            {!isAssignedJudge ? (
-              <div className="p-3 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 text-xs font-bold text-center">
-                🔒 Bạn đang mở xem ở chế độ CHỈ ĐỌC (Read-Only). Quyền chấm điểm thuộc về Ban Giám Đốc (P.GĐ trở lên).
-              </div>
-            ) : evalStatus !== "CONFIRMED" ? (
-              <div className="flex items-center justify-between pt-2">
+          <fieldset disabled={!isAssignedJudge || !prerequisitePass || evalStatus === "CONFIRMED"} className="disabled:opacity-60 space-y-4">
+            <div className="overflow-x-auto border border-slate-200 rounded-2xl shadow-2xs bg-white w-full">
+              <table className="w-full min-w-[860px] text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-100 border-b border-slate-200 text-[11px] font-black text-slate-700 uppercase">
+                    <th className="py-3 px-2 text-center w-8 border-r border-slate-200">STT</th>
+                    <th className="py-3 px-2.5 w-28 border-r border-slate-200">TIÊU CHÍ</th>
+                    <th className="py-3 px-2.5 w-32 border-r border-slate-200">MÔ TẢ NGẮN</th>
+                    <th className="py-3 px-2 text-center w-16 border-r border-slate-200">ĐIỂM TỐI ĐA</th>
+                    <th className="py-3 px-3 border-r border-slate-200">BGK CHỌN ĐIỂM</th>
+                    <th className="py-3 px-2 text-center w-16">ĐIỂM BGK</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {/* ROW 1: TIÊU CHÍ 1 */}
+                  <tr className="hover:bg-slate-50/60 transition-colors">
+                    <td className="py-3 px-2 text-center font-extrabold text-blue-600 border-r border-slate-200">1</td>
+                    <td className="py-3 px-2.5 font-black text-slate-900 border-r border-slate-200 leading-snug text-[11px]">
+                      Hiệu quả thực tế đạt được
+                    </td>
+                    <td className="py-3 px-2.5 font-medium text-slate-500 border-r border-slate-200 text-[10.5px] leading-tight">
+                      Mức độ hiệu quả mang lại (tùy danh mục)
+                    </td>
+                    <td className="py-3 px-2 text-center font-black text-slate-800 border-r border-slate-200 text-sm">
+                      35
+                    </td>
+                    <td className="py-3 px-3 border-r border-slate-200">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 block mb-2">
+                        BAREM CHO "{catObj.label.toUpperCase()}" – Tiêu chí 1 ℹ️
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                        {c1Options.map((opt) => (
+                          <label
+                            key={opt.score}
+                            className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all flex flex-col justify-between min-w-[125px] w-full ${
+                              c1Score === opt.score
+                                ? "border-blue-600 bg-blue-50/80 text-blue-900 font-extrabold shadow-2xs ring-1 ring-blue-500/30"
+                                : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50/50"
+                            }`}
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                type="radio"
+                                name="c1"
+                                disabled={!isAssignedJudge || !prerequisitePass || evalStatus === "CONFIRMED"}
+                                checked={c1Score === opt.score}
+                                onChange={() => setC1Score(opt.score)}
+                                className="w-3.5 h-3.5 text-blue-600 border-slate-300 focus:ring-blue-500 shrink-0"
+                              />
+                              <span className="font-black text-xs">{opt.label}</span>
+                            </div>
+                            <span className="text-[10.5px] text-slate-500 font-medium leading-snug mt-1.5 whitespace-normal break-words">
+                              {opt.desc}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="py-3 px-2 text-center font-black text-base text-blue-700">
+                      {c1Score > 0 ? `${c1Score}đ` : "—"}
+                    </td>
+                  </tr>
+
+                  {/* ROW 2: TIÊU CHÍ 2 */}
+                  <tr className="hover:bg-slate-50/60 transition-colors">
+                    <td className="py-3 px-2 text-center font-extrabold text-emerald-600 border-r border-slate-200">2</td>
+                    <td className="py-3 px-2.5 font-black text-slate-900 border-r border-slate-200 leading-snug text-[11px]">
+                      Tính khả thi &amp; hiệu quả đầu tư
+                    </td>
+                    <td className="py-3 px-2.5 font-medium text-slate-500 border-r border-slate-200 text-[10.5px] leading-tight">
+                      Chi phí đầu tư so với lợi ích.
+                    </td>
+                    <td className="py-3 px-2 text-center font-black text-slate-800 border-r border-slate-200 text-sm">
+                      20
+                    </td>
+                    <td className="py-3 px-3 border-r border-slate-200">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                        {c2Options.map((opt) => (
+                          <label
+                            key={opt.score}
+                            className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all flex flex-col justify-between min-w-[125px] w-full ${
+                              c2Score === opt.score
+                                ? "border-emerald-600 bg-emerald-50/80 text-emerald-900 font-extrabold shadow-2xs ring-1 ring-emerald-500/30"
+                                : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50/50"
+                            }`}
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                type="radio"
+                                name="c2"
+                                disabled={!isAssignedJudge || !prerequisitePass || evalStatus === "CONFIRMED"}
+                                checked={c2Score === opt.score}
+                                onChange={() => setC2Score(opt.score)}
+                                className="w-3.5 h-3.5 text-emerald-600 border-slate-300 focus:ring-emerald-500 shrink-0"
+                              />
+                              <span className="font-black text-xs">{opt.label}</span>
+                            </div>
+                            <span className="text-[10.5px] text-slate-500 font-medium leading-snug mt-1.5 whitespace-normal break-words">
+                              {opt.desc}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="py-3 px-2 text-center font-black text-base text-emerald-700">
+                      {c2Score > 0 ? `${c2Score}đ` : "—"}
+                    </td>
+                  </tr>
+
+                  {/* ROW 3: TIÊU CHÍ 3 */}
+                  <tr className="hover:bg-slate-50/60 transition-colors">
+                    <td className="py-3 px-2 text-center font-extrabold text-purple-600 border-r border-slate-200">3</td>
+                    <td className="py-3 px-2.5 font-black text-slate-900 border-r border-slate-200 leading-snug text-[11px]">
+                      Khả năng nhân rộng
+                    </td>
+                    <td className="py-3 px-2.5 font-medium text-slate-500 border-r border-slate-200 text-[10.5px] leading-tight">
+                      Mức độ áp dụng cho nhiều vị trí / đơn vị.
+                    </td>
+                    <td className="py-3 px-2 text-center font-black text-slate-800 border-r border-slate-200 text-sm">
+                      20
+                    </td>
+                    <td className="py-3 px-3 border-r border-slate-200">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                        {c3Options.map((opt) => (
+                          <label
+                            key={opt.score}
+                            className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all flex flex-col justify-between min-w-[125px] w-full ${
+                              c3Score === opt.score
+                                ? "border-purple-600 bg-purple-50/80 text-purple-900 font-extrabold shadow-2xs ring-1 ring-purple-500/30"
+                                : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50/50"
+                            }`}
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                type="radio"
+                                name="c3"
+                                disabled={!isAssignedJudge || !prerequisitePass || evalStatus === "CONFIRMED"}
+                                checked={c3Score === opt.score}
+                                onChange={() => setC3Score(opt.score)}
+                                className="w-3.5 h-3.5 text-purple-600 border-slate-300 focus:ring-purple-500 shrink-0"
+                              />
+                              <span className="font-black text-xs">{opt.label}</span>
+                            </div>
+                            <span className="text-[10.5px] text-slate-500 font-medium leading-snug mt-1.5 whitespace-normal break-words">
+                              {opt.desc}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="py-3 px-2 text-center font-black text-base text-purple-700">
+                      {c3Score > 0 ? `${c3Score}đ` : "—"}
+                    </td>
+                  </tr>
+
+                  {/* ROW 4: TIÊU CHÍ 4 */}
+                  <tr className="hover:bg-slate-50/60 transition-colors">
+                    <td className="py-3 px-2 text-center font-extrabold text-amber-600 border-r border-slate-200">4</td>
+                    <td className="py-3 px-2.5 font-black text-slate-900 border-r border-slate-200 leading-snug text-[11px]">
+                      Tính sáng tạo &amp; chủ động
+                    </td>
+                    <td className="py-3 px-2.5 font-medium text-slate-500 border-r border-slate-200 text-[10.5px] leading-tight">
+                      Mức độ sáng tạo và chủ động đề xuất.
+                    </td>
+                    <td className="py-3 px-2 text-center font-black text-slate-800 border-r border-slate-200 text-sm">
+                      15
+                    </td>
+                    <td className="py-3 px-3 border-r border-slate-200">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                        {c4Options.map((opt) => (
+                          <label
+                            key={opt.score}
+                            className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all flex flex-col justify-between min-w-[125px] w-full ${
+                              c4Score === opt.score
+                                ? "border-amber-600 bg-amber-50/80 text-amber-900 font-extrabold shadow-2xs ring-1 ring-amber-500/30"
+                                : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50/50"
+                            }`}
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                type="radio"
+                                name="c4"
+                                disabled={!isAssignedJudge || !prerequisitePass || evalStatus === "CONFIRMED"}
+                                checked={c4Score === opt.score}
+                                onChange={() => setC4Score(opt.score)}
+                                className="w-3.5 h-3.5 text-amber-600 border-slate-300 focus:ring-amber-500 shrink-0"
+                              />
+                              <span className="font-black text-xs">{opt.label}</span>
+                            </div>
+                            <span className="text-[10.5px] text-slate-500 font-medium leading-snug mt-1.5 whitespace-normal break-words">
+                              {opt.desc}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="py-3 px-2 text-center font-black text-base text-amber-700">
+                      {c4Score > 0 ? `${c4Score}đ` : "—"}
+                    </td>
+                  </tr>
+
+                  {/* ROW 5: TIÊU CHÍ 5 */}
+                  <tr className="hover:bg-slate-50/60 transition-colors">
+                    <td className="py-3 px-2 text-center font-extrabold text-sky-600 border-r border-slate-200">5</td>
+                    <td className="py-3 px-2.5 font-black text-slate-900 border-r border-slate-200 leading-snug text-[11px]">
+                      Lan tỏa &amp; tinh thần đội nhóm
+                    </td>
+                    <td className="py-3 px-2.5 font-medium text-slate-500 border-r border-slate-200 text-[10.5px] leading-tight">
+                      Mức độ lan tỏa, hỗ trợ phối hợp.
+                    </td>
+                    <td className="py-3 px-2 text-center font-black text-slate-800 border-r border-slate-200 text-sm">
+                      10
+                    </td>
+                    <td className="py-3 px-3 border-r border-slate-200">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                        {c5Options.map((opt) => (
+                          <label
+                            key={opt.score}
+                            className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all flex flex-col justify-between min-w-[125px] w-full ${
+                              c5Score === opt.score
+                                ? "border-sky-600 bg-sky-50/80 text-sky-900 font-extrabold shadow-2xs ring-1 ring-sky-500/30"
+                                : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50/50"
+                            }`}
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                type="radio"
+                                name="c5"
+                                disabled={!isAssignedJudge || !prerequisitePass || evalStatus === "CONFIRMED"}
+                                checked={c5Score === opt.score}
+                                onChange={() => setC5Score(opt.score)}
+                                className="w-3.5 h-3.5 text-sky-600 border-slate-300 focus:ring-sky-500 shrink-0"
+                              />
+                              <span className="font-black text-xs">{opt.label}</span>
+                            </div>
+                            <span className="text-[10.5px] text-slate-500 font-medium leading-snug mt-1.5 whitespace-normal break-words">
+                              {opt.desc}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="py-3 px-2 text-center font-black text-base text-sky-700">
+                      {c5Score > 0 ? `${c5Score}đ` : "—"}
+                    </td>
+                  </tr>
+                </tbody>
+
+                <tfoot>
+                  <tr className="bg-slate-900 text-white font-black">
+                    <td colSpan={3} className="py-3.5 px-4 text-xs uppercase tracking-wider">
+                      TỔNG ĐIỂM TỐI ĐA: 100
+                    </td>
+                    <td colSpan={3} className="py-3.5 px-4 text-right text-sm">
+                      TỔNG ĐIỂM BGK: <span className="text-emerald-400 text-xl ml-2">{totalScore} / 100</span>
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </fieldset>
+        </div>
+
+        {/* NHẬN XÉT CỦA BGK & ACTION BAR */}
+        <div className="space-y-3 border-t border-slate-200 pt-4">
+          <label className="text-xs font-black text-slate-800 block">Nhận xét chuyên môn của sếp (Optional):</label>
+          <textarea
+            rows={2}
+            disabled={!isAssignedJudge || evalStatus === "CONFIRMED"}
+            value={comments}
+            onChange={(e) => setComments(e.target.value)}
+            placeholder="Nhập ghi chú ý kiến chỉ đạo hoặc góp ý phát triển cho bài cải tiến..."
+            className="w-full p-3 rounded-xl border border-slate-300 text-xs font-medium text-slate-800 outline-none focus:border-emerald-600 disabled:bg-slate-100"
+          />
+
+          {!isAssignedJudge ? (
+            <div className="p-3 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 text-xs font-bold text-center">
+              🔒 Bạn đang mở xem ở chế độ CHỈ ĐỌC (Read-Only). Quyền chấm điểm thuộc về Ban Giám Đốc (P.GĐ trở lên).
+            </div>
+          ) : evalStatus !== "CONFIRMED" ? (
+            <div className="flex items-center justify-between pt-2">
+              <button
+                type="button"
+                disabled={saving}
+                onClick={handleResetForm}
+                className="px-4 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <IconReload size={15} />
+                <span>↺ Xóa điểm</span>
+              </button>
+
+              <div className="flex items-center gap-3">
                 <button
                   type="button"
                   disabled={saving}
-                  onClick={handleResetForm}
-                  className="px-4 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer"
+                  onClick={() => handleSubmitScore("SAVE_DRAFT")}
+                  className="px-4 py-2.5 rounded-xl bg-white border-2 border-slate-400 hover:bg-slate-100 text-slate-800 text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-2xs"
                 >
-                  <IconReload size={15} />
-                  <span>↺ Xóa điểm</span>
+                  <IconDeviceFloppy size={15} />
+                  <span>{saving ? "Đang lưu..." : "💾 Lưu tạm"}</span>
                 </button>
 
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    disabled={saving}
-                    onClick={() => handleSubmitScore("SAVE_DRAFT")}
-                    className="px-4 py-2.5 rounded-xl bg-white border-2 border-slate-400 hover:bg-slate-100 text-slate-800 text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-2xs"
-                  >
-                    <IconDeviceFloppy size={15} />
-                    <span>{saving ? "Đang lưu..." : "💾 Lưu tạm"}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={saving}
-                    onClick={() => handleSubmitScore("CONFIRM")}
-                    className="px-6 py-2.5 rounded-xl bg-[#0f2c59] hover:bg-slate-900 text-white text-xs font-black shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                  >
-                    <IconLock size={15} />
-                    <span>{saving ? "Đang xử lý..." : "Tiếp tục ➔ Nhận xét"}</span>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => handleSubmitScore("CONFIRM")}
+                  className="px-6 py-2.5 rounded-xl bg-[#0f2c59] hover:bg-slate-900 text-white text-xs font-black shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <IconLock size={15} />
+                  <span>{saving ? "Đang xử lý..." : "Tiếp tục ➔ Nhận xét"}</span>
+                </button>
               </div>
-            ) : (
-              <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <IconLock size={18} className="text-emerald-700" />
-                  <span>Điểm đánh giá của bạn đã được XÁC NHẬN KHÓA VĨNH VIỄN.</span>
-                </span>
-                <span className="text-[11px] font-extrabold text-emerald-600">CONFIRMED</span>
-              </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <IconLock size={18} className="text-emerald-700" />
+                <span>Điểm đánh giá của bạn đã được XÁC NHẬN KHÓA VĨNH VIỄN.</span>
+              </span>
+              <span className="text-[11px] font-extrabold text-emerald-600">CONFIRMED</span>
+            </div>
+          )}
         </div>
+      </div>
 
-      {/* ════════════════════════════════════════════════════════════════
-          CHI TIẾT ĐIỂM TỪNG BGK (HIỂN THỊ DÀNH CHO TÁC GIẢ KHI ĐÃ HOÀN TẤT)
-         ════════════════════════════════════════════════════════════════ */}
+      {/* CHI TIẾT ĐIỂM TỪNG BGK */}
       {(isOwner || isExecutiveOrAdmin) && evalData?.evaluations?.length > 0 && (
         <div className="space-y-4 pt-2">
           <h4 className="text-xs font-black uppercase text-slate-800 flex items-center gap-2">
@@ -1474,40 +1451,42 @@ function TabExpertReviewContent({
                 <div className="flex items-center justify-between pb-2 border-b border-slate-200">
                   <div>
                     <span className="text-xs font-extrabold text-slate-900 block">
-                      BGK {idx + 1}: {ev.evaluatorName}
+                      BGK {idx + 1}: {ev.evaluatorName || ev.evaluatorEmpCode}
                     </span>
-                    <span className="text-[10px] font-bold text-slate-500 block">{ev.evaluatorTitle || "Ban Giám Đốc"}</span>
+                    <span className="text-[10px] font-bold text-slate-500">
+                      Chức danh: {ev.evaluatorTitle || "BGK"}
+                    </span>
                   </div>
-                  <span className="text-lg font-black text-emerald-700 bg-emerald-100 px-3 py-1 rounded-xl">
-                    {ev.totalScore} / 100
+                  <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 font-black text-xs">
+                    {ev.totalScore || 0} / 100 điểm
                   </span>
                 </div>
 
-                <div className="grid grid-cols-5 gap-1 text-center text-[10px] font-bold text-slate-600 bg-white p-2 rounded-xl border border-slate-200">
-                  <div>
-                    <span className="block text-slate-400">TC1</span>
-                    <span>{ev.criterion1Score}đ</span>
+                <div className="grid grid-cols-5 gap-1.5 text-[10px] font-bold text-center">
+                  <div className="p-1.5 rounded-lg bg-white border border-slate-200">
+                    <span className="text-slate-400 block">TC1</span>
+                    <span className="text-blue-600 font-black">{ev.c1Score || 0}đ</span>
                   </div>
-                  <div>
-                    <span className="block text-slate-400">TC2</span>
-                    <span>{ev.criterion2Score}đ</span>
+                  <div className="p-1.5 rounded-lg bg-white border border-slate-200">
+                    <span className="text-slate-400 block">TC2</span>
+                    <span className="text-emerald-600 font-black">{ev.c2Score || 0}đ</span>
                   </div>
-                  <div>
-                    <span className="block text-slate-400">TC3</span>
-                    <span>{ev.criterion3Score}đ</span>
+                  <div className="p-1.5 rounded-lg bg-white border border-slate-200">
+                    <span className="text-slate-400 block">TC3</span>
+                    <span className="text-purple-600 font-black">{ev.c3Score || 0}đ</span>
                   </div>
-                  <div>
-                    <span className="block text-slate-400">TC4</span>
-                    <span>{ev.criterion4Score}đ</span>
+                  <div className="p-1.5 rounded-lg bg-white border border-slate-200">
+                    <span className="text-slate-400 block">TC4</span>
+                    <span className="text-amber-600 font-black">{ev.c4Score || 0}đ</span>
                   </div>
-                  <div>
-                    <span className="block text-slate-400">TC5</span>
-                    <span>{ev.criterion5Score}đ</span>
+                  <div className="p-1.5 rounded-lg bg-white border border-slate-200">
+                    <span className="text-slate-400 block">TC5</span>
+                    <span className="text-sky-600 font-black">{ev.c5Score || 0}đ</span>
                   </div>
                 </div>
 
                 {ev.comments && (
-                  <p className="text-xs font-medium text-slate-700 bg-white p-2.5 rounded-xl border border-slate-200 italic">
+                  <p className="text-[11px] italic text-slate-600 bg-white p-2.5 rounded-xl border border-slate-200">
                     "{ev.comments}"
                   </p>
                 )}
@@ -1521,62 +1500,8 @@ function TabExpertReviewContent({
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════════
-   TAB 3: AWARD REVIEW CONTENT (UI chọn 1 trong 11 hạng giải thi đua)
+   TAB 3: AWARD REVIEW CONTENT (CHỈ HIỆN VỚI BGK / BAN 2.2 / ADMIN)
    ═══════════════════════════════════════════════════════════════════════════════════ */
-const AWARDS_LIST = [
-  "Giải Nhất Thi Đua Tháng (Trị Giá 3.000.000đ)",
-  "Giải Nhì Thi Đua Tháng (Trị Giá 2.000.000đ)",
-  "Giải Ba Thi Đua Tháng (Trị Giá 1.000.000đ)",
-  "Giải Khuyến Khích (Trị Giá 500.000đ)",
-  "Giải Ý Tưởng Sáng Tạo Xuất Sắc",
-  "Giải Cải Tiến Tiết Kiệm Chi Phí Nhất",
-  "Giải Cải Tiến An Toàn Lao Động",
-  "Giải Cải Tiến Tự Động Hóa",
-  "Giải Phong Trào Đồng Đội Gemba",
-  "Giải Cải Tiến 5S & Bề Mặt",
-  "Biểu Dương Khen Thưởng Đột Phá",
-  "Không Đạt Giải",
-];
-
-function StarRatingInput({
-  value,
-  onChange,
-  disabled = false,
-}: {
-  value: number;
-  onChange: (val: number) => void;
-  disabled?: boolean;
-}) {
-  const [hoverVal, setHoverVal] = useState<number | null>(null);
-
-  return (
-    <div className="flex items-center gap-1">
-      {[1, 2, 3, 4, 5].map((star) => {
-        const active = (hoverVal !== null ? hoverVal : value) >= star;
-        return (
-          <button
-            key={star}
-            type="button"
-            disabled={disabled}
-            onClick={() => onChange(star)}
-            onMouseEnter={() => setHoverVal(star)}
-            onMouseLeave={() => setHoverVal(null)}
-            className="p-0.5 text-amber-400 hover:scale-110 transition-transform cursor-pointer disabled:cursor-not-allowed"
-          >
-            <IconStar
-              size={18}
-              className={active ? "fill-amber-400 text-amber-400" : "text-slate-300 fill-slate-100"}
-            />
-          </button>
-        );
-      })}
-      <span className="text-[11px] font-black text-amber-800 ml-1">
-        {value > 0 ? `${value}/5` : "0/5"}
-      </span>
-    </div>
-  );
-}
-
 function TabAwardReviewContent({
   proposal,
   isJudgeOrExecutive,
@@ -1584,185 +1509,55 @@ function TabAwardReviewContent({
 }: {
   proposal: KaizenProposal;
   isJudgeOrExecutive: boolean;
-  onEvaluate?: () => void;
+  onEvaluate: () => void;
 }) {
-  const { user } = usePermission();
-  const [impactRating, setImpactRating] = useState<number>((proposal as any).rating || 5);
-  const [creativityRating, setCreativityRating] = useState<number>(5);
-  const [sustainabilityRating, setSustainabilityRating] = useState<number>(5);
-  const [commentText, setCommentText] = useState<string>("");
-  const [submitting, setSubmitting] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-
-  // Check if expert evaluation is completed (must have points scored)
-  const isExpertScored =
-    proposal.sub_status === "DA_DANH_GIA" ||
-    (proposal.score_points && proposal.score_points > 0) ||
-    (proposal.average_score && proposal.average_score > 0);
-
-  // Compute total score out of 100
-  const computedScore = useMemo(() => {
-    if (proposal.score_points && proposal.score_points > 0) return proposal.score_points;
-    if (proposal.average_score && proposal.average_score > 0) return proposal.average_score;
-    const starRatio = (impactRating + creativityRating + sustainabilityRating) / 15;
-    return Math.round(starRatio * 100);
-  }, [proposal.score_points, proposal.average_score, impactRating, creativityRating, sustainabilityRating]);
-
-  // Auto calculate award title based on score ranking
-  const autoAwardTitle = useMemo(() => {
-    if (computedScore >= 90) return "Giải Nhất Thi Đua Tháng (Trị Giá 3.000.000đ)";
-    if (computedScore >= 80) return "Giải Nhì Thi Đua Tháng (Trị Giá 2.000.000đ)";
-    if (computedScore >= 70) return "Giải Ba Thi Đua Tháng (Trị Giá 1.000.000đ)";
-    return "Giải Khuyến Khích (Trị Giá 500.000đ)";
-  }, [computedScore]);
-
-  const handleAwardSubmit = async () => {
-    setSubmitting(true);
-    setMsg(null);
-    try {
-      const res = await fetch("/api/ci-kaizen", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: proposal.id,
-          action: "EVALUATE",
-          awardTitle: autoAwardTitle,
-          scorePoints: computedScore,
-          comments: commentText,
-          impactRating,
-          creativityRating,
-          sustainabilityRating,
-        }),
-      });
-
-      const json = await res.json();
-      if (json.success) {
-        setMsg(`✨ Đã gửi nhận xét & trao ${autoAwardTitle} thành công!`);
-        if (onEvaluate) onEvaluate();
-      } else {
-        setMsg(`❌ ${json.message || "Lỗi khi gửi nhận xét"}`);
-      }
-    } catch (e: any) {
-      setMsg("❌ Không thể kết nối máy chủ!");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const reviewerHandle = (user as any)?.empCode || (user as any)?.emp_code || "CAITIEN";
-
   return (
-    <div className="p-4 md:p-6 space-y-6 text-xs">
-
-      {/* Main Redesigned Review Card */}
-      <div className="p-5 md:p-6 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-5">
-        {/* Card Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-          <h3 className="text-base font-black text-slate-800 flex items-center gap-2">
-            <IconMessages size={22} className="text-emerald-600" />
-            <span>💬 Nhận Xét (1-5 sao)</span>
+    <div className="p-5 md:p-6 space-y-5 text-xs">
+      <div className="p-5 rounded-3xl bg-gradient-to-r from-amber-500/10 via-amber-50 to-orange-50 border-2 border-amber-300 space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-black uppercase text-amber-900 flex items-center gap-2">
+            <IconTrophy size={20} className="text-amber-600" />
+            <span>TRAO GIẢI THƯỞNG THI ĐUA KAIZEN THÁNG</span>
           </h3>
-          {(proposal.award_title || autoAwardTitle) && (
-            <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-black">
-              🏆 {proposal.award_title || autoAwardTitle}
+          {proposal.award_title && (
+            <span className="px-3 py-1 rounded-full bg-amber-500 text-white font-black text-xs shadow-xs">
+              {proposal.award_title}
             </span>
           )}
         </div>
 
-        {/* Reviewer Info */}
-        <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
-          <div className="space-y-0.5">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Người nhận xét</span>
-            <span className="text-xs font-black text-slate-900">
-              Tài khoản: <span className="text-emerald-700">@{reviewerHandle}</span>
-            </span>
+        <p className="text-xs text-amber-800 font-bold leading-relaxed">
+          Dành riêng cho Ban Giám Đốc &amp; Ban CI 2.2 thẩm định xếp hạng giải thưởng (Giải Nhất, Nhì, Ba, Khuyến Khích) dựa trên điểm số chuyên môn tổng hợp.
+        </p>
+
+        {proposal.award_title ? (
+          <div className="p-4 rounded-2xl bg-white border border-amber-200 space-y-1">
+            <span className="text-[10px] font-extrabold uppercase text-amber-600 block">Danh hiệu trao tặng:</span>
+            <span className="text-lg font-black text-amber-900 block">{proposal.award_title}</span>
+            {(proposal as any).award_note && (
+              <p className="text-xs text-slate-600 font-medium pt-1 border-t border-slate-100">
+                Ghi chú: {(proposal as any).award_note}
+              </p>
+            )}
           </div>
-          <button
-            type="button"
-            className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs shadow-2xs hover:bg-slate-100 cursor-pointer flex items-center gap-1.5 transition-all"
-          >
-            <span>View User</span>
-          </button>
-        </div>
-
-        {/* 3 Criteria Star Ratings */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-2xl bg-slate-50/60 border border-slate-200/70">
-          {/* Criterion 1: Tác động */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-extrabold text-slate-900 flex items-center gap-1.5">
-              <span className="text-amber-500">◎</span>
-              <span>Tác động</span>
-              <span className="text-rose-600 font-bold">*</span>
-            </label>
-            <StarRatingInput value={impactRating} onChange={setImpactRating} />
-          </div>
-
-          {/* Criterion 2: Sáng tạo */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-extrabold text-slate-900 flex items-center gap-1.5">
-              <span className="text-amber-500">💡</span>
-              <span>Sáng tạo</span>
-              <span className="text-rose-600 font-bold">*</span>
-            </label>
-            <StarRatingInput value={creativityRating} onChange={setCreativityRating} />
-          </div>
-
-          {/* Criterion 3: Bền vững */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-extrabold text-slate-900 flex items-center gap-1.5">
-              <span className="text-emerald-600">🌱</span>
-              <span>Bền vững</span>
-              <span className="text-rose-600 font-bold">*</span>
-            </label>
-            <StarRatingInput value={sustainabilityRating} onChange={setSustainabilityRating} />
-          </div>
-        </div>
-
-        {/* Nhận xét tùy chọn */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-extrabold text-slate-900 block">
-            Nhận xét (tùy chọn)
-          </label>
-          <textarea
-            rows={3}
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            placeholder="Chia sẻ ý kiến..."
-            className="w-full p-3.5 rounded-2xl border border-slate-300 text-xs font-medium text-slate-800 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 resize-none bg-white placeholder:text-slate-400"
-          />
-        </div>
-
-        {/* Hạng Giải Tự Động Theo Bảng Điểm */}
-        <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200/80 flex items-center justify-between">
-          <div className="space-y-0.5">
-            <span className="text-[10px] font-black uppercase text-amber-700 tracking-wider block">
-              🏆 Hạng Giải Tự Động (Theo Bảng Điểm {computedScore}đ)
-            </span>
-            <span className="text-xs font-black text-amber-950 block">
-              {autoAwardTitle}
-            </span>
-          </div>
-          <span className="px-3 py-1 rounded-full bg-amber-500 text-slate-950 font-black text-xs shadow-2xs shrink-0">
-            {computedScore >= 90 ? "HẠNG NHẤT" : computedScore >= 80 ? "HẠNG NHÌ" : computedScore >= 70 ? "HẠNG BA" : "KHUYẾN KHÍCH"}
-          </span>
-        </div>
-
-        {msg && (
-          <div className="p-3.5 rounded-xl bg-slate-900 text-white font-bold text-xs animate-in fade-in">
-            {msg}
+        ) : (
+          <div className="p-4 rounded-2xl bg-white/80 border border-amber-200 text-amber-800 text-xs font-bold text-center">
+            Bài viết này hiện chưa được xếp hạng giải thưởng thi đua.
           </div>
         )}
 
-        {/* Submit Action Button */}
-        <button
-          type="button"
-          disabled={submitting}
-          onClick={handleAwardSubmit}
-          className="w-full py-3.5 rounded-2xl bg-[#006838] hover:bg-emerald-800 text-white font-black text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-        >
-          <IconSend size={16} />
-          <span>{submitting ? "Đang gửi nhận xét..." : "➤ Gửi Nhận Xét"}</span>
-        </button>
+        {isJudgeOrExecutive && (
+          <div className="pt-2 flex justify-end">
+            <button
+              type="button"
+              onClick={onEvaluate}
+              className="px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-black text-xs shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <IconAward size={18} />
+              <span>{proposal.award_title ? "Chỉnh Sửa Giải Thưởng" : "Quyết Định Trao Giải"}</span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
