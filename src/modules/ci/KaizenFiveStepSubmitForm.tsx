@@ -773,39 +773,63 @@ export default function KaizenFiveStepSubmitForm({ onSuccessClose, onCancel }: K
                     </div>
                   </div>
 
-                  {form.pricingDirection === "THOI_GIAN" ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                      <div className="space-y-1">
-                        <label className="font-black text-slate-800 text-xs">Thời gian sản xuất Trước (Giây)</label>
-                        <input
-                          type="number"
-                          value={form.timeBeforeSeconds}
-                          onChange={(e) => setForm({ ...form, timeBeforeSeconds: parseInt(e.target.value || "0", 10) })}
-                          placeholder="7200"
-                          className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="font-black text-slate-800 text-xs">Thời gian sản xuất Sau (Giây)</label>
-                        <input
-                          type="number"
-                          value={form.timeAfterSeconds}
-                          onChange={(e) => setForm({ ...form, timeAfterSeconds: parseInt(e.target.value || "0", 10) })}
-                          placeholder="4800"
-                          className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold"
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-1 pt-1">
-                      <label className="font-black text-slate-800 text-xs">Giá trị Tiết kiệm ước tính (VNĐ)</label>
+                  {/* Always show time inputs */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div className="space-y-1">
+                      <label className="font-black text-slate-800 text-xs">Thời gian sản xuất Trước (Giây) <span className="text-rose-600 font-bold">*</span></label>
                       <input
                         type="number"
-                        value={form.efficiencyValueVND}
+                        value={form.timeBeforeSeconds}
+                        onChange={(e) => {
+                          const before = parseInt(e.target.value || "0", 10);
+                          const after = form.timeAfterSeconds;
+                          const diff = Math.max(0, before - after);
+                          setForm({
+                            ...form,
+                            timeBeforeSeconds: before,
+                            savedSeconds: diff,
+                            efficiencyValueVND: Math.round(diff * 12.5),
+                          });
+                        }}
+                        placeholder="7200"
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-white"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="font-black text-slate-800 text-xs">Thời gian sản xuất Sau (Giây) <span className="text-rose-600 font-bold">*</span></label>
+                      <input
+                        type="number"
+                        value={form.timeAfterSeconds}
+                        onChange={(e) => {
+                          const after = parseInt(e.target.value || "0", 10);
+                          const before = form.timeBeforeSeconds;
+                          const diff = Math.max(0, before - after);
+                          setForm({
+                            ...form,
+                            timeAfterSeconds: after,
+                            savedSeconds: diff,
+                            efficiencyValueVND: Math.round(diff * 12.5),
+                          });
+                        }}
+                        placeholder="4800"
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  {form.pricingDirection === "TRI_GIA" && (
+                    <div className="space-y-1 pt-2 border-t border-slate-200">
+                      <label className="font-black text-slate-800 text-xs">Giá trị Tiết kiệm quy đổi (VNĐ)</label>
+                      <input
+                        type="number"
+                        value={form.efficiencyValueVND || Math.round(form.savedSeconds * 12.5)}
                         onChange={(e) => setForm({ ...form, efficiencyValueVND: parseInt(e.target.value || "0", 10) })}
                         placeholder="5000000"
-                        className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold"
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-emerald-50/50 focus:border-emerald-600"
                       />
+                      <p className="text-[10px] text-emerald-700 font-bold">
+                        Tự động tính: {form.savedSeconds} giây × 12.5đ = {(Math.round(form.savedSeconds * 12.5)).toLocaleString("vi-VN")} VNĐ
+                      </p>
                     </div>
                   )}
                 </div>
