@@ -456,7 +456,7 @@ export default function KaizenPublicSubmitForm({
       !form.beforeDescription.trim() ||
       !form.afterSolution.trim() ||
       !form.pricingDirection.trim() ||
-      (form.pricingDirection === "THOI_GIAN" && (!form.timeBeforeSeconds || !form.timeAfterSeconds))
+      (!form.savedSeconds && (!form.timeBeforeSeconds || !form.timeAfterSeconds))
     ) {
       showToast("⚠️ Vui lòng điền đầy đủ tất cả các trường thông tin bắt buộc có dấu (*) màu đỏ!");
       return;
