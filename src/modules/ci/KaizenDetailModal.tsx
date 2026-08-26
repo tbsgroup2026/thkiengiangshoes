@@ -105,13 +105,13 @@ export default function KaizenDetailModal({
   const prodGroup = (proposal as any).product_group || proposal.factory || "Quai";
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-[96vw] xl:max-w-7xl 2xl:max-w-[1550px] max-h-[96vh] flex flex-col md:flex-row overflow-hidden text-left animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 bg-black/65 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-6 md:p-8 animate-in fade-in duration-200">
+      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200/90 w-full max-w-5xl lg:max-w-6xl max-h-[90vh] flex flex-col md:flex-row overflow-hidden text-left animate-in zoom-in-95 duration-200">
         
         {/* ═══════════════════════════════════════════════════════════════════════════════════
-            1. SIDEBAR TRÁI — CHỈNH KHỚP BỘ BỐ CỤC THEO REFERENCE
+            1. SIDEBAR TRÁI — CHỈNH BẢO ĐẢM RỘNG VỪA PHẢI, TỈ LỆ CHUẨN
            ═══════════════════════════════════════════════════════════════════════════════════ */}
-        <div className="w-full md:w-80 md:max-h-[96vh] md:overflow-y-auto bg-slate-50 border-r border-slate-200 p-4 md:p-5 flex flex-col gap-4 shrink-0">
+        <div className="w-full md:w-72 lg:w-80 md:max-h-[90vh] md:overflow-y-auto bg-slate-50 border-r border-slate-200 p-4 md:p-5 flex flex-col gap-4 shrink-0">
           
           {/* Cover Image 4:3 rounded-2xl */}
           <div className="space-y-2">
@@ -295,7 +295,7 @@ export default function KaizenDetailModal({
         {/* ═══════════════════════════════════════════════════════════════════════════════════
             2. HEADER PHẢI — BADGE + TIÊU ĐỀ + TAB
            ═══════════════════════════════════════════════════════════════════════════════════ */}
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-white">
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-white max-h-[90vh]">
           
           <div className="flex-shrink-0 p-5 md:p-6 border-b border-slate-200 bg-white">
             {/* 3 Pills Hàng Trên */}
@@ -658,6 +658,7 @@ function TabExpertReviewContent({
 
   // Server state data
   const [evalData, setEvalData] = useState<any>(null);
+  const catObj = CATEGORIES.find((c) => c.id === proposal.category) || CATEGORIES[0];
 
   // Form states for assigned judge scoring
   const [req1, setReq1] = useState(true);
@@ -676,6 +677,11 @@ function TabExpertReviewContent({
   const [c5Score, setC5Score] = useState<number>(0);
   const [comments, setComments] = useState<string>("");
   const [evalStatus, setEvalStatus] = useState<"DRAFT" | "CONFIRMED">("DRAFT");
+
+  const totalScore = useMemo(() => {
+    if (!prerequisitePass) return 0;
+    return Math.round((c1Score + c2Score + c3Score + c4Score + c5Score) * 10) / 10;
+  }, [prerequisitePass, c1Score, c2Score, c3Score, c4Score, c5Score]);
 
   // Admin assign state
   const [newJudgeEmpCode, setNewJudgeEmpCode] = useState("");
@@ -771,23 +777,24 @@ function TabExpertReviewContent({
     }
   };
 
-  useEffect(() => {
-    fetchEvaluations();
-  }, [proposal.id]);
+  const handleResetForm = () => {
+    setC1Score(0);
+    setC2Score(0);
+    setC3Score(0);
+    setC4Score(0);
+    setC5Score(0);
+    setComments("");
+    setErrorMsg(null);
+  };
 
-  // Compute live total score
-  const totalScore = useMemo(() => {
-    if (!prerequisitePass) return 0;
-    return Math.round((c1Score + c2Score + c3Score + c4Score + c5Score) * 10) / 10;
-  }, [prerequisitePass, c1Score, c2Score, c3Score, c4Score, c5Score]);
-
-  // Handle Save Draft or Confirm
   const handleSubmitScore = async (action: "SAVE_DRAFT" | "CONFIRM") => {
-    if (action === "CONFIRM") {
-      const confirmOk = window.confirm(
-        `XÁC NHẬN KHÓA ĐIỂM (${totalScore}/100 ĐIỂM)?\n\nLưu ý: Sau khi xác nhận (CONFIRMED), bạn sẽ KHÔNG thể chỉnh sửa lại điểm số hay nhận xét chuyên môn này nữa.`
-      );
-      if (!confirmOk) return;
+    if (action === "CONFIRM" && !prerequisitePass) {
+      setErrorMsg("Hồ sơ không đạt điều kiện tiên quyết. Vui lòng kiểm tra lại!");
+      return;
+    }
+    if (action === "CONFIRM" && totalScore === 0) {
+      setErrorMsg("Vui lòng chọn điểm cho ít nhất 1 tiêu chí chuyên môn trước khi gửi!");
+      return;
     }
 
     setSaving(true);
@@ -799,6 +806,7 @@ function TabExpertReviewContent({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          action,
           proposalId: proposal.id,
           prerequisitePass,
           c1Score,
@@ -807,43 +815,27 @@ function TabExpertReviewContent({
           c4Score,
           c5Score,
           comments,
-          action,
         }),
       });
 
       const json = await res.json();
       if (json.success) {
-        setSuccessMsg(json.message || "Đã ghi nhận điểm số!");
-        setEvalStatus(action === "CONFIRM" ? "CONFIRMED" : "DRAFT");
+        setSuccessMsg(json.message);
+        if (action === "CONFIRM") {
+          setEvalStatus("CONFIRMED");
+        }
         await fetchEvaluations();
       } else {
-        setErrorMsg(json.message || "Lỗi khi lưu điểm số!");
+        setErrorMsg(json.message || "Lỗi khi lưu đánh giá!");
       }
     } catch (e: any) {
-      setErrorMsg("Không thể gửi dữ liệu chấm điểm!");
+      setErrorMsg("Không thể gửi dữ liệu đánh giá!");
     } finally {
       setSaving(false);
     }
   };
 
-  // Reset form
-  const handleResetForm = () => {
-    if (evalStatus === "CONFIRMED") return;
-    setReq1(true);
-    setReq2(true);
-    setReq3(true);
-    setReq4(true);
-    setC1Score(0);
-    setC2Score(0);
-    setC3Score(0);
-    setC4Score(0);
-    setC5Score(0);
-    setComments("");
-  };
-
   // Criterion 1 Options (Dynamic according to Category)
-  const catObj = CATEGORIES.find((c) => c.id === proposal.category) || CATEGORIES[0];
-
   const c1Options = useMemo(() => {
     const cat = proposal.category || "PRODUCTIVITY";
     if (cat === "PRODUCTIVITY") {
