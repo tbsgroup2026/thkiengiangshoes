@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" width="200" height="60">
+  <g transform="translate(10, 10)">
+    <text x="90" y="27" text-anchor="middle" font-family="'Helvetica Neue', 'Arial', sans-serif" font-weight="900" font-size="22" fill="#111111" letter-spacing="3">ROCKPORT</text>
+    <line x1="45" y1="36" x2="135" y2="36" stroke="#D32F2F" stroke-width="2.5"/>
+  </g>
+</svg>

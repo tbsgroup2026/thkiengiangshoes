@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" width="200" height="60">
+  <g transform="translate(10, 4)" fill="#111111">
+    <!-- Horse & Carriage mini silhouette -->
+    <path d="M 85 14 C 83 14 81 12 81 10 C 81 8 83 6 85 6 C 87 6 89 8 89 10 C 89 12 87 14 85 14 Z M 95 10 L 98 6 L 104 6 L 101 10 Z M 90 15 L 110 15 L 108 19 L 92 19 Z M 93 21 C 91 21 90 22 90 24 C 90 26 91 27 93 27 C 95 27 96 26 96 24 C 96 22 95 21 93 21 Z M 107 21 C 105 21 104 22 104 24 C 104 26 105 27 107 27 C 109 27 110 26 110 24 C 110 22 109 21 107 21 Z" />
+    <text x="95" y="38" text-anchor="middle" font-family="'Times New Roman', 'Georgia', serif" font-weight="700" font-size="18" letter-spacing="3">COACH</text>
+    <text x="95" y="47" text-anchor="middle" font-family="'Arial', sans-serif" font-weight="600" font-size="6" fill="#666666" letter-spacing="3">NEW YORK</text>
+  </g>
+</svg>

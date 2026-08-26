@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" width="200" height="60">
+  <g transform="translate(10, 4)" fill="#111111">
+    <!-- Osprey bird wings silhouette -->
+    <path d="M 90 22 C 85 17 75 14 65 16 C 75 19 82 23 88 28 C 84 25 76 24 70 26 C 78 29 84 32 89 36 C 90 31 90 26 90 22 Z M 100 22 C 105 17 115 14 125 16 C 115 19 108 23 102 28 C 106 25 114 24 120 26 C 112 29 106 32 101 36 C 100 31 100 26 100 22 Z" />
+    <text x="95" y="46" text-anchor="middle" font-family="'Arial', sans-serif" font-weight="800" font-size="14" letter-spacing="4">OSPREY</text>
+  </g>
+</svg>

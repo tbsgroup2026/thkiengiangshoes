@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>TBS Cyber Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    html, body, #map {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #040907;
+    }
+    
+    /* Cyber satellite style filter */
+    #map {
+      filter: brightness(0.7) contrast(1.3) saturate(1.2) hue-rotate(65deg);
+    }
+
+    /* Custom Neon Green Marker Style */
+    .neon-marker {
+      width: 14px;
+      height: 14px;
+      background: #2fd39a;
+      border: 2px solid #ffffff;
+      border-radius: 50%;
+      box-shadow: 0 0 15px #2fd39a, 0 0 25px #2fd39a;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.4); opacity: 0.6; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* Popup styling to match dark cyber cockpit */
+    .leaflet-popup-content-wrapper {
+      background: #0d1c16 !important;
+      color: #cbf4e2 !important;
+      border: 1px solid #2fd39a4d !important;
+      font-family: monospace;
+      font-size: 11px;
+      border-radius: 8px !important;
+      box-shadow: 0 0 15px rgba(47, 211, 154, 0.25) !important;
+    }
+    .leaflet-popup-tip {
+      background: #0d1c16 !important;
+      border-left: 1px solid #2fd39a4d !important;
+      border-bottom: 1px solid #2fd39a4d !important;
+    }
+
+    /* Customize Leaflet Zoom Controls to match cockpit */
+    .leaflet-control-zoom {
+      border: 1px solid #2fd39a4d !important;
+      border-radius: 8px !important;
+      overflow: hidden;
+      box-shadow: 0 0 10px rgba(47, 211, 154, 0.2) !important;
+    }
+    .leaflet-control-zoom-in, 
+    .leaflet-control-zoom-out {
+      background: #0d1c16 !important;
+      color: #2fd39a !important;
+      border-bottom: 1px solid #2fd39a22 !important;
+      font-weight: bold !important;
+    }
+    .leaflet-control-zoom-in:hover, 
+    .leaflet-control-zoom-out:hover {
+      background: #2fd39a !important;
+      color: #040907 !important;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script>
+    // Get query params
+    const params = new URLSearchParams(window.location.search);
+    const mode = params.get('mode') || 'single';
+
+    const markersData = [
+      { lat: 10.2731, lng: 105.2828, label: "TBS Thoai Son Shoes (Da Giay)" },
+      { lat: 10.9317, lng: 106.7122, label: "TBS Bags Factory (Tui Xach)" },
+      { lat: 10.9160, lng: 106.8200, label: "ICD Tan Van (Logistics)" },
+      { lat: 11.0020, lng: 106.6970, label: "KCN Song Than 3 (BDS & Ha Tang)" },
+      { lat: 11.0450, lng: 106.6980, label: "Harmonie Golf Park (Du Lich)" },
+      { lat: 10.9790, lng: 106.6660, label: "ECCO Becamex Store (Thuong Mai)" }
+    ];
+
+    // Initialize map
+    const map = L.map('map', {
+      zoomControl: true,
+      attributionControl: false,
+      scrollWheelZoom: true,
+      dragging: true
+    });
+
+    // Add Esri World Imagery (Satellite) tiles
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19
+    }).addTo(map);
+
+    // Custom glowing div icon
+    const customIcon = L.divIcon({
+      className: 'neon-marker',
+      iconSize: [14, 14],
+      iconAnchor: [7, 7]
+    });
+
+    if (mode === 'all') {
+      // Fit to Southern Operational Corridor (Vietnam South East / Mekong Delta)
+      map.setView([10.6500, 106.1000], 8);
+
+      // Add all markers
+      markersData.forEach(function(item) {
+        L.marker([item.lat, item.lng], { icon: customIcon })
+          .addTo(map)
+          .bindPopup('<b>' + item.label + '</b>');
+      });
+    } else {
+      const lat = parseFloat(params.get('lat') || '10.9790');
+      const lng = parseFloat(params.get('lng') || '106.6660');
+      const label = params.get('label') || 'TBS Group';
+      
+      map.setView([lat, lng], 16);
+      L.marker([lat, lng], { icon: customIcon })
+        .addTo(map)
+        .bindPopup('<b>' + label + '</b>')
+        .openPopup();
+    }
+  </script>
+</body>
+</html>

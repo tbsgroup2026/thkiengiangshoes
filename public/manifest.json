@@ -1,0 +1,29 @@
+{
+  "name": "Văn Phòng Chuỗi SKECHERS - TBS Group",
+  "short_name": "SKECHERS-TBS",
+  "description": "Hệ thống quản trị vận hành chuỗi cung ứng và sản xuất SKECHERS - TBS Group",
+  "start_url": "/work",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#08221a",
+  "theme_color": "#006838",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}
