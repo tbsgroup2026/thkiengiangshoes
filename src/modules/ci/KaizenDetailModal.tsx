@@ -400,12 +400,27 @@ export default function KaizenDetailModal({
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════════
-   3. NỘI DUNG TAB "THÔNG TIN" — 4 KHỐI THEO ĐÚNG THỨ TỰ REFERENCE
+   3. NỘI DUNG TAB "THÔNG TIN" — CẤU TRÚC ĐẦY ĐỦ 4 SECTIONS THEO CHUẨN REFERENCE
    ═══════════════════════════════════════════════════════════════════════════════════ */
 function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
-  const prodCode = (proposal as any).product_code || proposal.code || "---";
-  const qty = (proposal as any).quantity || proposal.vote_count || 0;
+  const prodCode = (proposal as any).product_code || proposal.code;
+  const qty = (proposal as any).quantity || proposal.vote_count;
   const pricingDir = (proposal as any).pricing_direction || "THOI_GIAN";
+
+  // Build overview cards list
+  const overviewCards = [];
+  if (prodCode && prodCode.trim() && prodCode !== "---") {
+    overviewCards.push({ label: "MÃ HÀNG", val: prodCode, key: "code" });
+  }
+  if (qty && Number(qty) > 0) {
+    overviewCards.push({ label: "SỐ LƯỢNG ĐH", val: Number(qty).toLocaleString("vi-VN"), key: "qty" });
+  }
+  overviewCards.push({
+    label: "HƯỚNG ĐÁNH GIÁ",
+    val: pricingDir === "TRI_GIA" || pricingDir === "Trị giá" ? "Trị giá" : "Thời gian",
+    key: "dir",
+    highlight: true,
+  });
 
   // Videos list parse
   let videos: { type: string; url: string; title?: string }[] = [];
@@ -421,27 +436,66 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
   return (
     <div className="p-5 md:p-6 space-y-6 text-xs">
       
-      {/* KHỐI A — Mô tả hiện trạng cũ (Before Description) */}
-      <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 space-y-2">
-        <p className="font-bold text-rose-900 leading-relaxed whitespace-pre-wrap text-xs">
-          {proposal.before_description || "Chưa có mô tả hiện trạng lãng phí trước cải tiến."}
-        </p>
-      </div>
-
-      {/* KHỐI B — Giải pháp hành động (SAU) */}
-      <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-2">
-        <h4 className="text-xs font-black uppercase text-emerald-800 tracking-wide">
-          GIẢI PHÁP HÀNH ĐỘNG (SAU)
+      {/* SECTION 1 — 📋 TỔNG QUAN CẢI TIẾN */}
+      <div className="space-y-3">
+        <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
+          <span>📋</span>
+          <span>TỔNG QUAN CẢI TIẾN</span>
         </h4>
-        <p className="font-medium text-slate-800 leading-relaxed whitespace-pre-wrap text-xs">
-          {proposal.after_solution || "Chưa có mô tả giải pháp sáng kiến cải tiến."}
-        </p>
+        <div className={`grid gap-3 ${overviewCards.length === 3 ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-1 sm:grid-cols-2"}`}>
+          {overviewCards.map((card) => (
+            <div
+              key={card.key}
+              className={`p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1 ${
+                card.highlight ? "border-r-4 border-r-amber-500 bg-amber-50/20" : ""
+              }`}
+            >
+              <span className="text-[10px] font-black uppercase text-slate-400 block tracking-wider">
+                {card.label}
+              </span>
+              <span className="text-sm font-black text-slate-900 block truncate">
+                {card.val}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* KHỐI C — "📈 HIỆU QUẢ CẢI TIẾN" */}
-      <div className="space-y-2">
-        <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1">
-          <IconTrendingUp size={16} />
+      {/* SECTION 2 — ☰ NỘI DUNG CHI TIẾT */}
+      <div className="space-y-3">
+        <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
+          <span>☰</span>
+          <span>NỘI DUNG CHI TIẾT</span>
+        </h4>
+        <div className="space-y-4">
+          {/* VẤN ĐỀ PHÁT HIỆN (TRƯỚC) */}
+          <div className="p-4 rounded-2xl bg-rose-50/80 border border-rose-200 space-y-2">
+            <h5 className="text-xs font-black uppercase text-rose-800 tracking-wide flex items-center gap-1.5">
+              <IconAlertCircle size={15} className="text-rose-600" />
+              <span>VẤN ĐỀ PHÁT HIỆN (TRƯỚC)</span>
+            </h5>
+            <p className="font-bold text-rose-950 leading-relaxed whitespace-pre-wrap text-xs">
+              {proposal.before_description || "Chưa có mô tả hiện trạng lãng phí trước cải tiến."}
+            </p>
+          </div>
+
+          {/* GIẢI PHÁP HÀNH ĐỘNG (SAU) */}
+          <div className="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200 space-y-2">
+            <h5 className="text-xs font-black uppercase text-emerald-800 tracking-wide flex items-center gap-1.5">
+              <IconThumbUp size={15} className="text-emerald-600" />
+              <span>GIẢI PHÁP HÀNH ĐỘNG (SAU)</span>
+            </h5>
+            <p className="font-bold text-emerald-950 leading-relaxed whitespace-pre-wrap text-xs">
+              {proposal.after_solution || "Chưa có mô tả giải pháp sáng kiến cải tiến."}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* SECTION 3 — 📈 HIỆU QUẢ CẢI TIẾN */}
+      <div className="space-y-3">
+        <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
+          <span>📈</span>
           <span>HIỆU QUẢ CẢI TIẾN</span>
         </h4>
 
@@ -462,7 +516,7 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {/* Thẻ 1: TRƯỚC */}
-            <div className="p-3.5 rounded-2xl bg-white border border-slate-200 space-y-1">
+            <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
               <span className="text-[10px] font-extrabold uppercase text-slate-400 block">TRƯỚC</span>
               <span className="text-xl font-black text-slate-900 block">
                 {proposal.time_before_seconds ? `${proposal.time_before_seconds}` : "0"}
@@ -471,7 +525,7 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
             </div>
 
             {/* Thẻ 2: SAU */}
-            <div className="p-3.5 rounded-2xl bg-white border border-slate-200 space-y-1">
+            <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
               <span className="text-[10px] font-extrabold uppercase text-slate-400 block">SAU</span>
               <span className="text-xl font-black text-slate-900 block">
                 {proposal.time_after_seconds ? `${proposal.time_after_seconds}` : "0"}
@@ -480,7 +534,7 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
             </div>
 
             {/* Thẻ 3: TIẾT KIỆM */}
-            <div className="p-3.5 rounded-2xl bg-purple-50 border border-purple-200 space-y-1">
+            <div className="p-3.5 rounded-2xl bg-purple-50 border border-purple-200 shadow-2xs space-y-1">
               <span className="text-[10px] font-extrabold uppercase text-purple-700 block">TIẾT KIỆM</span>
               <span className="text-xl font-black text-purple-900 block">
                 {proposal.saved_seconds ? `${proposal.saved_seconds}` : "0"}
@@ -491,7 +545,7 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
             </div>
 
             {/* Thẻ 4: HIỆU QUẢ - NỔI BẬT NỀN XANH EMERALD ĐẬM */}
-            <div className="p-3.5 rounded-2xl bg-[#006838] text-white space-y-1 shadow-sm">
+            <div className="p-3.5 rounded-2xl bg-[#006838] text-white space-y-1 shadow-md">
               <span className="text-[10px] font-extrabold uppercase text-emerald-200 block">HIỆU QUẢ</span>
               <span className="text-base sm:text-lg font-black text-white block truncate">
                 {Math.round((proposal.saved_seconds || 0) * 12.5).toLocaleString("vi-VN")} VNĐ
@@ -502,10 +556,10 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
         )}
       </div>
 
-      {/* KHỐI D — "🖼 So Sánh Hình Ảnh" */}
-      <div className="space-y-2">
-        <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1">
-          <IconPhoto size={16} />
+      {/* SECTION 4 — 🖼 So Sánh Hình Ảnh */}
+      <div className="space-y-3">
+        <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
+          <span>🖼</span>
           <span>So Sánh Hình Ảnh</span>
         </h4>
 
@@ -514,7 +568,7 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
           <div className="p-3 sm:p-3.5 rounded-2xl border-2 border-rose-200 bg-rose-50/20 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-black text-rose-900">Trước</span>
-              <span className="w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center">
+              <span className="w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center shadow-2xs">
                 {proposal.before_image_url ? "1" : "0"}
               </span>
             </div>
@@ -537,7 +591,7 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
           <div className="p-3 sm:p-3.5 rounded-2xl border-2 border-emerald-200 bg-emerald-50/20 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-black text-emerald-900">Sau</span>
-              <span className="w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] font-black flex items-center justify-center">
+              <span className="w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] font-black flex items-center justify-center shadow-2xs">
                 {proposal.after_image_url ? "1" : "0"}
               </span>
             </div>
@@ -560,9 +614,10 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
 
       {/* VIDEO CLIPS (NẾU CÓ) */}
       {videos.length > 0 && (
-        <div className="space-y-2 pt-2 border-t border-slate-200">
-          <h4 className="text-xs font-black uppercase tracking-wider text-purple-700">
-            VIDEO CLIPS MINH HỌA
+        <div className="space-y-3 pt-2 border-t border-slate-200">
+          <h4 className="text-xs font-black uppercase tracking-wider text-purple-700 flex items-center gap-2">
+            <span>🎬</span>
+            <span>VIDEO CLIPS MINH HỌA</span>
           </h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {videos.map((vid, idx) => (
