@@ -120,40 +120,6 @@ export default function KaizenDetailModal({
   const [feasibilityInitialDecision, setFeasibilityInitialDecision] = useState<"APPROVE" | "REJECT">("APPROVE");
   const [step3Msg, setStep3Msg] = useState<string | null>(null);
 
-  const handleFeasibilityDecision = async (decision: "APPROVE" | "REJECT") => {
-    if (!proposal) return;
-    try {
-      setApprovingStep3(true);
-      setStep3Msg(null);
-      const res = await fetch("/api/ci-kaizen/approve", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          proposalId: proposal.id,
-          decision,
-          note: decision === "APPROVE" ? "Đã phê duyệt tính khả thi (Bước 3)" : "Không đạt tính khả thi",
-        }),
-      });
-
-      const json = await res.json();
-      if (json.success) {
-        proposal.approval_status = json.approval_status;
-        proposal.sub_status = json.sub_status;
-        proposal.status = json.status;
-        setStep3Msg(json.message);
-        setTimeout(() => setStep3Msg(null), 3000);
-        if (onRate) onRate();
-        if (onEvaluate) onEvaluate();
-      } else {
-        setStep3Msg(`❌ ${json.message || "Không thể thực hiện phê duyệt"}`);
-      }
-    } catch (e: any) {
-      setStep3Msg("❌ Lỗi kết nối máy chủ!");
-    } finally {
-      setApprovingStep3(false);
-    }
-  };
-
   const handleToggleThiDua = async () => {
     if (!proposal) return;
     const isCurrentlyThiDua = Number(proposal.is_thi_dua) === 1;
