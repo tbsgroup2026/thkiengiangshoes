@@ -459,8 +459,8 @@ export default function KaizenPublicSubmitForm({
         beforeVideoUrl: "",
         afterVideoUrl: "",
         efficiencyValueVND: 0,
-        registrationType: "LUU_TRU",
-        sub_status: "LUU_TRU",
+        registrationType: "THI_DUA",
+        sub_status: "CHO_REVIEW",
         isPublicScan: true,
       };
 

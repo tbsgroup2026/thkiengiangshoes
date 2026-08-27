@@ -2549,6 +2549,30 @@ export default {
         try { await env.DB.prepare("ALTER TABLE ci_kaizen_proposals ADD COLUMN time_after_seconds INTEGER").run(); } catch(e) {}
         try { await env.DB.prepare("ALTER TABLE ci_kaizen_proposals ADD COLUMN efficiency_value_vnd INTEGER").run(); } catch(e) {}
         try { await env.DB.prepare("ALTER TABLE ci_kaizen_proposals ADD COLUMN plant_code TEXT DEFAULT 'VP2_SKECHERS'").run(); } catch(e) {}
+        // ✅ NEW: Add State Machine Columns (QĐ-TBKG/2026)
+        try { await env.DB.prepare("ALTER TABLE ci_kaizen_proposals ADD COLUMN approval_status TEXT DEFAULT 'PENDING'").run(); } catch(e) {}
+        try { await env.DB.prepare("ALTER TABLE ci_kaizen_proposals ADD COLUMN evaluation_result TEXT DEFAULT 'PENDING'").run(); } catch(e) {}
+        try { await env.DB.prepare("ALTER TABLE ci_kaizen_proposals ADD COLUMN approved_by TEXT").run(); } catch(e) {}
+        try { await env.DB.prepare("ALTER TABLE ci_kaizen_proposals ADD COLUMN approved_at TEXT").run(); } catch(e) {}
+        try { await env.DB.prepare("ALTER TABLE ci_kaizen_proposals ADD COLUMN evaluated_by TEXT").run(); } catch(e) {}
+        try { await env.DB.prepare("ALTER TABLE ci_kaizen_proposals ADD COLUMN evaluated_at TEXT").run(); } catch(e) {}
+
+        // Bảng audit log lịch sử chuyển trạng thái (QĐ-TBKG/2026)
+        try {
+          await env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS ci_kaizen_status_history (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              proposal_id TEXT NOT NULL,
+              from_status TEXT,
+              to_status TEXT NOT NULL,
+              action TEXT NOT NULL,
+              actor_id TEXT,
+              actor_name TEXT,
+              note TEXT,
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+          `).run();
+        } catch(e) {}
         try {
           await env.DB.prepare(`
             CREATE TABLE IF NOT EXISTS regional_kpi_targets (
@@ -2735,6 +2759,259 @@ export default {
         return val;
       };
 
+      // ════════════════════════════════════════════════════════════════
+      // 👑 DEDICATED STATE MACHINE ENDPOINTS (QĐ-TBKG/2026)
+      // ════════════════════════════════════════════════════════════════
+
+      // 1. POST /api/ci-kaizen/approve (Bước 3: Xem xét tính khả thi)
+      if (url.pathname.endsWith("/approve") && request.method === "POST") {
+        try {
+          const user = await verifyServerAuth(request, env);
+          if (!user || !user.authenticated) {
+            return new Response(JSON.stringify({ success: false, error: "UNAUTHORIZED", message: "Vui lòng đăng nhập để phê duyệt đề xuất!" }), { status: 401, headers: SECURE_JSON_HEADERS });
+          }
+
+          const userRole = (user.roleCode || "").toUpperCase();
+          const userEmp = (user.empCode || "").trim().toUpperCase();
+          const isManagerOrCI = user.isExecutiveOrAdmin || ["TEAM_CI", "QUAN_LY", "ADMIN", "TRUONG_PHONG", "CI_LEAD"].includes(userRole) || ["TGĐ-001", "ADMIN-2026", "202608001"].includes(userEmp);
+
+          if (!isManagerOrCI) {
+            return new Response(JSON.stringify({
+              success: false,
+              error: "FORBIDDEN",
+              message: "⛔ Bạn không có quyền phê duyệt sáng kiến. Chỉ Team CI / Quản lý / Ban Giám Đốc mới được thực hiện bước này."
+            }), { status: 403, headers: SECURE_JSON_HEADERS });
+          }
+
+          const body = await request.json();
+          const { proposalId, decision, note } = body; // decision: 'APPROVE' | 'REJECT'
+
+          if (!proposalId || !decision) {
+            return new Response(JSON.stringify({ success: false, error: "MISSING_PARAMS", message: "Thiếu proposalId hoặc decision (APPROVE/REJECT)" }), { status: 400, headers: SECURE_JSON_HEADERS });
+          }
+
+          const proposal = await env.DB.prepare("SELECT * FROM ci_kaizen_proposals WHERE id = ?").bind(proposalId).first();
+          if (!proposal) {
+            return new Response(JSON.stringify({ success: false, error: "NOT_FOUND", message: "Không tìm thấy sáng kiến!" }), { status: 404, headers: SECURE_JSON_HEADERS });
+          }
+
+          if (proposal.approval_status === "TU_CHOI" || proposal.status === "REJECTED") {
+            return new Response(JSON.stringify({
+              success: false,
+              error: "PROPOSAL_REJECTED",
+              message: "⛔ Đề xuất đã bị từ chối ở Bước 3, quy trình đã DỪNG theo quy định QĐ-TBKG và không thể tiếp tục."
+            }), { status: 422, headers: SECURE_JSON_HEADERS });
+          }
+
+          if (proposal.sub_status !== "CHO_REVIEW" && proposal.approval_status !== "PENDING") {
+            return new Response(JSON.stringify({
+              success: false,
+              error: "INVALID_STATE_TRANSITION",
+              message: "⛔ Sáng kiến không ở trạng thái chờ review (Bước 3), không thể phê duyệt/từ chối."
+            }), { status: 422, headers: SECURE_JSON_HEADERS });
+          }
+
+          const isApprove = decision === "APPROVE";
+          const newApprovalStatus = isApprove ? "PHE_DUYET" : "TU_CHOI";
+          const newSubStatus = isApprove ? "CHO_DANH_GIA" : "TU_CHOI_TRIEN_KHAI";
+          const newStatus = isApprove ? "APPROVED" : "REJECTED";
+
+          await env.DB.prepare(`
+            UPDATE ci_kaizen_proposals
+            SET approval_status = ?, sub_status = ?, status = ?, approved_by = ?, approved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+          `).bind(newApprovalStatus, newSubStatus, newStatus, user.empCode || user.id || "ADMIN", proposalId).run();
+
+          await env.DB.prepare(`
+            INSERT INTO ci_kaizen_status_history (proposal_id, from_status, to_status, action, actor_id, actor_name, note)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+          `).bind(proposalId, proposal.sub_status || "CHO_REVIEW", newSubStatus, isApprove ? "APPROVE" : "REJECT", user.empCode || "USER", user.name || "Cán bộ Quản lý", safeVal(note, isApprove ? "Phê duyệt triển khai sáng kiến" : "Từ chối triển khai sáng kiến")).run();
+
+          return new Response(JSON.stringify({
+            success: true,
+            message: isApprove ? "🎉 Đã Phê duyệt triển khai sáng kiến thành công! Sáng kiến chuyển sang Bước 4 (Chờ đánh giá hiệu quả)." : "❌ Đã Từ chối triển khai sáng kiến. Quy trình DỪNG theo Quy định QĐ-TBKG.",
+            proposalId,
+            approval_status: newApprovalStatus,
+            sub_status: newSubStatus,
+            status: newStatus
+          }), { headers: SECURE_JSON_HEADERS });
+
+        } catch(err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: SECURE_JSON_HEADERS });
+        }
+      }
+
+      // 2. POST /api/ci-kaizen/evaluate (Bước 5: Đánh giá hiệu quả)
+      if (url.pathname.endsWith("/evaluate") && request.method === "POST") {
+        try {
+          const user = await verifyServerAuth(request, env);
+          if (!user || !user.authenticated) {
+            return new Response(JSON.stringify({ success: false, error: "UNAUTHORIZED", message: "Vui lòng đăng nhập để đánh giá hiệu quả!" }), { status: 401, headers: SECURE_JSON_HEADERS });
+          }
+
+          const userRole = (user.roleCode || "").toUpperCase();
+          const userEmp = (user.empCode || "").trim().toUpperCase();
+          const isEvaluator = user.isExecutiveOrAdmin || ["TEAM_CI", "BGD", "ADMIN", "TRUONG_PHONG", "CI_LEAD"].includes(userRole) || ["TGĐ-001", "ADMIN-2026", "202608001"].includes(userEmp);
+
+          if (!isEvaluator) {
+            return new Response(JSON.stringify({
+              success: false,
+              error: "FORBIDDEN",
+              message: "⛔ Bạn không có quyền đánh giá hiệu quả sáng kiến. Chỉ Team CI / BGĐ / Admin mới có quyền thực hiện."
+            }), { status: 403, headers: SECURE_JSON_HEADERS });
+          }
+
+          const body = await request.json();
+          const { proposalId, result, note } = body; // result: 'DAT' | 'KHONG_DAT'
+
+          if (!proposalId || !result) {
+            return new Response(JSON.stringify({ success: false, error: "MISSING_PARAMS", message: "Thiếu proposalId hoặc result (DAT/KHONG_DAT)" }), { status: 400, headers: SECURE_JSON_HEADERS });
+          }
+
+          const proposal = await env.DB.prepare("SELECT * FROM ci_kaizen_proposals WHERE id = ?").bind(proposalId).first();
+          if (!proposal) {
+            return new Response(JSON.stringify({ success: false, error: "NOT_FOUND", message: "Không tìm thấy sáng kiến!" }), { status: 404, headers: SECURE_JSON_HEADERS });
+          }
+
+          if (proposal.approval_status === "TU_CHOI" || proposal.status === "REJECTED") {
+            return new Response(JSON.stringify({
+              success: false,
+              error: "PROPOSAL_REJECTED",
+              message: "⛔ Đề xuất đã bị từ chối ở Bước 3, quy trình đã DỪNG theo quy định QĐ-TBKG và không thể đánh giá hiệu quả."
+            }), { status: 422, headers: SECURE_JSON_HEADERS });
+          }
+
+          if (proposal.approval_status !== "PHE_DUYET" || proposal.sub_status !== "CHO_DANH_GIA") {
+            return new Response(JSON.stringify({
+              success: false,
+              error: "INVALID_STATE_TRANSITION",
+              message: "⛔ Sáng kiến chưa được Phê duyệt ở Bước 3 hoặc không ở trạng thái Chờ đánh giá hiệu quả."
+            }), { status: 422, headers: SECURE_JSON_HEADERS });
+          }
+
+          const isPass = result === "DAT";
+          const newEvalResult = isPass ? "DAT" : "KHONG_DAT";
+          const newSubStatus = isPass ? "DA_DANH_GIA" : "KHONG_DAT_YEU_CAU";
+
+          await env.DB.prepare(`
+            UPDATE ci_kaizen_proposals
+            SET evaluation_result = ?, sub_status = ?, evaluated_by = ?, evaluated_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+          `).bind(newEvalResult, newSubStatus, user.empCode || user.id || "ADMIN", proposalId).run();
+
+          await env.DB.prepare(`
+            INSERT INTO ci_kaizen_status_history (proposal_id, from_status, to_status, action, actor_id, actor_name, note)
+            VALUES (?, 'CHO_DANH_GIA', ?, ?, ?, ?, ?)
+          `).bind(proposalId, newSubStatus, isPass ? "EVALUATE_PASS" : "EVALUATE_FAIL", user.empCode || "USER", user.name || "Cán bộ Đánh giá", safeVal(note, isPass ? "Đánh giá hiệu quả ĐẠT" : "Đánh giá hiệu quả KHÔNG ĐẠT")).run();
+
+          return new Response(JSON.stringify({
+            success: true,
+            message: isPass ? "🏆 Đánh giá hiệu quả ĐẠT! Sáng kiến đã đủ điều kiện để Ban Giám Đốc nghiệm thu & Lưu trữ (Bước 6)." : "⛔ Đánh giá hiệu quả KHÔNG ĐẠT. Sáng kiến DỪNG theo Quy định QĐ-TBKG.",
+            proposalId,
+            evaluation_result: newEvalResult,
+            sub_status: newSubStatus
+          }), { headers: SECURE_JSON_HEADERS });
+
+        } catch(err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: SECURE_JSON_HEADERS });
+        }
+      }
+
+      // 3. POST /api/ci-kaizen/archive (Bước 6: Khen thưởng & Lưu trữ)
+      if (url.pathname.endsWith("/archive") && request.method === "POST") {
+        try {
+          const user = await verifyServerAuth(request, env);
+          if (!user || !user.authenticated) {
+            return new Response(JSON.stringify({ success: false, error: "UNAUTHORIZED", message: "Vui lòng đăng nhập để lưu trữ sáng kiến!" }), { status: 401, headers: SECURE_JSON_HEADERS });
+          }
+
+          const userRole = (user.roleCode || "").toUpperCase();
+          const userEmp = (user.empCode || "").trim().toUpperCase();
+          const isBGDOrAdmin = user.isExecutiveOrAdmin || ["BGD", "ADMIN", "TONG_GIAM_DOC", "SYSTEM_ADMIN"].includes(userRole) || ["TGĐ-001", "ADMIN-2026"].includes(userEmp);
+
+          if (!isBGDOrAdmin) {
+            return new Response(JSON.stringify({
+              success: false,
+              error: "FORBIDDEN",
+              message: "⛔ Chỉ Ban Giám Đốc hoặc Admin mới được phép nghiệm thu & đưa sáng kiến vào Lưu trữ (Bước 6)."
+            }), { status: 403, headers: SECURE_JSON_HEADERS });
+          }
+
+          const body = await request.json();
+          const { proposalId, note } = body;
+
+          if (!proposalId) {
+            return new Response(JSON.stringify({ success: false, error: "MISSING_PARAMS", message: "Thiếu proposalId" }), { status: 400, headers: SECURE_JSON_HEADERS });
+          }
+
+          const proposal = await env.DB.prepare("SELECT * FROM ci_kaizen_proposals WHERE id = ?").bind(proposalId).first();
+          if (!proposal) {
+            return new Response(JSON.stringify({ success: false, error: "NOT_FOUND", message: "Không tìm thấy sáng kiến!" }), { status: 404, headers: SECURE_JSON_HEADERS });
+          }
+
+          if (proposal.approval_status === "TU_CHOI" || proposal.status === "REJECTED") {
+            return new Response(JSON.stringify({
+              success: false,
+              error: "PROPOSAL_REJECTED",
+              message: "⛔ Đề xuất đã bị từ chối ở Bước 3, quy trình đã DỪNG theo quy định QĐ-TBKG và không thể lưu trữ."
+            }), { status: 422, headers: SECURE_JSON_HEADERS });
+          }
+
+          if (proposal.approval_status !== "PHE_DUYET" || (proposal.evaluation_result !== "DAT" && proposal.sub_status !== "DA_DANH_GIA")) {
+            return new Response(JSON.stringify({
+              success: false,
+              error: "INVALID_STATE_TRANSITION",
+              message: "⛔ Không thể đưa vào Lưu trữ! Sáng kiến phải được Phê duyệt (Bước 3) VÀ Đánh giá hiệu quả ĐẠT (Bước 5) theo Quy định QĐ-TBKG."
+            }), { status: 422, headers: SECURE_JSON_HEADERS });
+          }
+
+          await env.DB.prepare(`
+            UPDATE ci_kaizen_proposals
+            SET status = 'ARCHIVED', sub_status = 'LUU_TRU', registration_type = 'LUU_TRU', updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+          `).bind(proposalId).run();
+
+          await env.DB.prepare(`
+            INSERT INTO ci_kaizen_status_history (proposal_id, from_status, to_status, action, actor_id, actor_name, note)
+            VALUES (?, ?, 'LUU_TRU', 'ARCHIVE', ?, ?, ?)
+          `).bind(proposalId, proposal.sub_status || "DA_DANH_GIA", user.empCode || "BGD", user.name || "Ban Giám Đốc", safeVal(note, "Nghiệm thu & Lưu trữ sáng kiến theo Bước 6 QĐ-TBKG")).run();
+
+          return new Response(JSON.stringify({
+            success: true,
+            message: "📦 Đã nghiệm thu & đưa sáng kiến vào kho Lưu trữ thành công (Bước 6 hoàn tất)!",
+            proposalId,
+            status: "ARCHIVED",
+            sub_status: "LUU_TRU",
+            registration_type: "LUU_TRU"
+          }), { headers: SECURE_JSON_HEADERS });
+
+        } catch(err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: SECURE_JSON_HEADERS });
+        }
+      }
+
+      // 4. GET /api/ci-kaizen/history (Xem lịch sử chuyển trạng thái)
+      if (url.pathname.endsWith("/history") && request.method === "GET") {
+        try {
+          const proposalId = url.searchParams.get("proposalId");
+          if (!proposalId) {
+            return new Response(JSON.stringify({ success: false, error: "MISSING_PARAMS", message: "Thiếu proposalId" }), { status: 400, headers: SECURE_JSON_HEADERS });
+          }
+
+          const { results } = await env.DB.prepare(`
+            SELECT * FROM ci_kaizen_status_history WHERE proposal_id = ? ORDER BY created_at ASC
+          `).bind(proposalId).all().catch(() => ({ results: [] }));
+
+          return new Response(JSON.stringify({
+            success: true,
+            data: results || []
+          }), { headers: SECURE_JSON_HEADERS });
+
+        } catch(err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: SECURE_JSON_HEADERS });
+        }
+      }
+
       // Handle Increment View Count endpoint
       if (url.pathname.endsWith("/view") && request.method === "POST") {
         try {
@@ -2869,6 +3146,14 @@ export default {
           const proposal = await env.DB.prepare("SELECT * FROM ci_kaizen_proposals WHERE id = ?").bind(proposalId).first();
           if (!proposal) {
             return new Response(JSON.stringify({ success: false, error: "NOT_FOUND", message: "Không tìm thấy đề xuất cải tiến!" }), { status: 404, headers: SECURE_JSON_HEADERS });
+          }
+
+          if (proposal.approval_status === "TU_CHOI" || proposal.status === "REJECTED") {
+            return new Response(JSON.stringify({
+              success: false,
+              error: "PROPOSAL_REJECTED",
+              message: "⛔ Đề xuất đã bị từ chối ở Bước 3, quy trình đã DỪNG theo quy định QĐ-TBKG và không thể thực hiện đánh giá."
+            }), { status: 422, headers: SECURE_JSON_HEADERS });
           }
 
           let requiredReviewerIds = ["TGĐ-001", "PTGĐ-002", "GĐ-003", "PGĐ-004", "202608001"];
@@ -3054,6 +3339,14 @@ export default {
           const proposal = await env.DB.prepare("SELECT * FROM ci_kaizen_proposals WHERE id = ?").bind(proposalId).first();
           if (!proposal) {
             return new Response(JSON.stringify({ success: false, error: "NOT_FOUND", message: "Không tìm thấy đề xuất cải tiến!" }), { status: 404, headers: SECURE_JSON_HEADERS });
+          }
+
+          if (proposal.approval_status === "TU_CHOI" || proposal.status === "REJECTED") {
+            return new Response(JSON.stringify({
+              success: false,
+              error: "PROPOSAL_REJECTED",
+              message: "⛔ Đề xuất đã bị từ chối ở Bước 3, quy trình đã DỪNG theo quy định QĐ-TBKG và không thể thực hiện đánh giá."
+            }), { status: 422, headers: SECURE_JSON_HEADERS });
           }
 
           if (proposal.registration_type === "LUU_TRU") {
@@ -3393,22 +3686,21 @@ export default {
           });
           const legacyCode = code;
 
-          // ✅ Set registration_type = LUU_TRU and sub_status = LUU_TRU to archive immediately upon submit
-          const targetRegType = registrationType || "LUU_TRU";
-          const initialSubStatus = targetRegType === "LUU_TRU" ? "LUU_TRU" : "CHO_DANH_GIA";
+          // ✅ Enforce Strict Initial State Machine (QĐ-TBKG/2026)
+          // Client CANNOT pass registrationType to bypass review or jump directly to LUU_TRU.
+          const targetRegType = "THI_DUA";
+          const initialSubStatus = "CHO_REVIEW";
+          const initialApprovalStatus = "PENDING";
+          const initialEvaluationResult = "PENDING";
 
           // Snapshot required reviewers for THI_DUA at submission time
-          let snapshotReviewerIdsJson = null;
-          if (targetRegType === "THI_DUA") {
-            const defaultReviewers = ["TGĐ-001", "PTGĐ-002", "GĐ-003", "PGĐ-004", "202608001"];
-            if (region && region.includes("Kiên Giang")) {
-              defaultReviewers.push("KG-LEAD-01");
-            } else if (region && region.includes("Miền Đông")) {
-              defaultReviewers.push("MD-LEAD-01");
-            }
-            const uniqueReviewers = Array.from(new Set(defaultReviewers));
-            snapshotReviewerIdsJson = JSON.stringify(uniqueReviewers);
+          const defaultReviewers = ["TGĐ-001", "PTGĐ-002", "GĐ-003", "PGĐ-004", "202608001"];
+          if (region && region.includes("Kiên Giang")) {
+            defaultReviewers.push("KG-LEAD-01");
+          } else if (region && region.includes("Miền Đông")) {
+            defaultReviewers.push("MD-LEAD-01");
           }
+          const snapshotReviewerIdsJson = JSON.stringify(Array.from(new Set(defaultReviewers)));
 
           const finalProposerName = safeVal(proposerName || user?.name, "Công Nhân Sản Xuất");
           const finalProposerEmpCode = safeVal(proposerEmpCode || user?.empCode, "CN-2026-QR");
@@ -3435,8 +3727,8 @@ export default {
 
           await env.DB.prepare(`
             INSERT INTO ci_kaizen_proposals (
-              id, code, legacy_code, title, category, category_label, registration_type, sub_status, region, department, factory, proposer_name, proposer_emp_code, proposer_position, proposer_month, proposer_year, hr_suggestor, customer, dept_code, before_description, after_solution, saved_seconds, product_group, product_code, quantity, pricing_direction, time_before_seconds, time_after_seconds, efficiency_value_vnd, before_image_url, after_image_url, attachments_json, required_reviewer_ids_json, status, version
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'SUBMITTED', 1)
+              id, code, legacy_code, title, category, category_label, registration_type, sub_status, approval_status, evaluation_result, region, department, factory, proposer_name, proposer_emp_code, proposer_position, proposer_month, proposer_year, hr_suggestor, customer, dept_code, before_description, after_solution, saved_seconds, product_group, product_code, quantity, pricing_direction, time_before_seconds, time_after_seconds, efficiency_value_vnd, before_image_url, after_image_url, attachments_json, required_reviewer_ids_json, status, version
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'SUBMITTED', 1)
           `).bind(
             id,
             code,
@@ -3446,6 +3738,8 @@ export default {
             finalCategoryLabel,
             targetRegType,
             initialSubStatus,
+            initialApprovalStatus,
+            initialEvaluationResult,
             safeVal(region, "KG 1"),
             finalDept,
             safeVal(factory, "KG 1"),
@@ -3474,6 +3768,13 @@ export default {
           ).run();
 
           await recordAuditLog(user, "ci_kaizen", "CREATE_PROPOSAL", id, null, { code, title, status: "SUBMITTED" }, request);
+
+          try {
+            await env.DB.prepare(`
+              INSERT INTO ci_kaizen_status_history (proposal_id, from_status, to_status, action, actor_id, actor_name, note)
+              VALUES (?, NULL, 'SUBMITTED', 'SUBMIT', ?, ?, 'Nộp đề xuất mới qua cổng công khai')
+            `).bind(id, safeVal(user?.empCode, finalProposerEmpCode), safeVal(user?.name, finalProposerName)).run();
+          } catch(e) {}
           await createNotification("Trưởng Phòng CI", "ci_kaizen", "INFO", id, "🚀 Đề Xuất Cải Tiến Mới", `${user.name || 'Cán bộ'} vừa nộp đề xuất cải tiến Kaizen: "${title}" (${code}).`);
 
           const resPayload = JSON.stringify({ success: true, message: "Đã gửi đề xuất cải tiến Kaizen thành công!", id, code });
@@ -3527,6 +3828,29 @@ export default {
           }
 
           if (action === "UPDATE") {
+            const FORBIDDEN_FIELDS_ON_GENERIC_UPDATE = [
+              'approval_status', 'evaluation_result', 'status', 'sub_status',
+              'registration_type', 'registrationType', 'approved_by', 'approved_at', 'evaluated_by', 'evaluated_at'
+            ];
+
+            for (const field of FORBIDDEN_FIELDS_ON_GENERIC_UPDATE) {
+              if (field in body) {
+                return new Response(JSON.stringify({
+                  success: false,
+                  error: 'FORBIDDEN_FIELD',
+                  message: `⛔ Trường "${field}" không được phép sửa qua API cập nhật chung. Vui lòng sử dụng endpoint chuyên biệt (/approve, /evaluate, /archive).`
+                }), { status: 422, headers: SECURE_JSON_HEADERS });
+              }
+            }
+
+            if (proposal.approval_status === 'TU_CHOI' || proposal.status === 'REJECTED') {
+              return new Response(JSON.stringify({
+                success: false,
+                error: 'PROPOSAL_REJECTED',
+                message: '⛔ Đề xuất đã bị từ chối ở Bước 3, quy trình đã DỪNG theo quy định QĐ-TBKG và không thể chỉnh sửa hoặc tiếp tục.'
+              }), { status: 422, headers: SECURE_JSON_HEADERS });
+            }
+
             const {
               title, category, categoryLabel, region, department, factory,
               proposerName, proposerEmpCode, proposerPosition, proposerMonth, proposerYear,
