@@ -110,14 +110,14 @@ export default function CNCIWrapper() {
         <div className="space-y-6 animate-in zoom-in-95 duration-200">
           {/* TOP BANNER — Dark Emerald Gradient with Factory Background Image */}
           <div className="p-6 sm:p-7 rounded-3xl bg-slate-900 text-white shadow-lg relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 border border-emerald-800/40 group min-h-[160px]">
-            {/* Factory Real Background Photo */}
+            {/* Factory Real Background Photo - Clear & Crisp */}
             <img
               src="/images/brands/Nhà máy/1787810869511_5373416762128407822_5373416762128407822_f5d1738107b86346f69bf64f3e28dd0d.jpg"
               alt="CN-CI Cải tiến liên tục"
-              className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:scale-105 transition-transform duration-700 pointer-events-none"
+              className="absolute inset-0 w-full h-full object-cover opacity-75 sm:opacity-80 group-hover:scale-105 transition-transform duration-700 pointer-events-none"
             />
-            {/* Dark Emerald Left-to-Right Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-r from-[#042017]/95 via-[#004d29]/90 to-slate-950/85 pointer-events-none" />
+            {/* Lighter Gradient Overlay */}
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-[#004d29]/45 to-slate-950/50 pointer-events-none" />
             {/* Background Decorative Pattern & Growth Graphic */}
             <div className="absolute right-0 top-0 bottom-0 w-1/2 opacity-15 pointer-events-none flex items-center justify-end pr-6">
               <div className="relative w-full h-full flex items-center justify-end">

@@ -94,14 +94,14 @@ export default function OverviewDashboard({
           1. HERO BANNER CARD - AWWWARDS & HUMAN TASTE QUALITY
          ════════════════════════════════════════════════════════════════ */}
       <div className="relative w-full rounded-3xl overflow-hidden shadow-lg bg-slate-900 text-white p-6 sm:p-8 border border-emerald-600/30 flex flex-col md:flex-row items-center justify-between gap-6 min-h-[180px] group">
-        {/* Real Factory/Lobby Background Image */}
+        {/* Real Factory/Lobby Background Image - Clear & Crisp */}
         <img
           src="/images/brands/SẢNH/1787810869473_5373416762128407822_5373416762128407822_cc4e9457f6b6ec27ca152415bdff7a52.jpg"
           alt="Trung Tâm Điều Hành Tổ Hợp Kiên Giang - TBS Group"
-          className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:scale-105 transition-transform duration-700 pointer-events-none"
+          className="absolute inset-0 w-full h-full object-cover opacity-75 sm:opacity-80 group-hover:scale-105 transition-transform duration-700 pointer-events-none"
         />
-        {/* Dark Emerald Gradient Overlay (Left to Right) */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#006838]/95 via-[#004d29]/90 to-slate-950/85 pointer-events-none" />
+        {/* Lighter Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-[#004d29]/45 to-slate-950/50 pointer-events-none" />
 
         {/* Ambient Glows */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_right_center,rgba(141,198,63,0.18),transparent_65%)] pointer-events-none" />

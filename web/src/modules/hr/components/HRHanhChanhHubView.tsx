@@ -70,14 +70,14 @@ export default function HRHanhChanhHubView({
           1. HERO HEADER BANNER (GREEN GRADIENT SKECHERS SYSTEM BRANDING)
          ════════════════════════════════════════════════════════════════ */}
       <div className="relative w-full rounded-3xl overflow-hidden shadow-lg border border-emerald-800/20 bg-slate-900 text-white p-6 sm:p-8 lg:p-9 group">
-        {/* Office Real Background Photo */}
+        {/* Office Real Background Photo - Brighter & Clearer */}
         <img
           src="/images/brands/Văn phòng/1787810869509_5373416762128407822_5373416762128407822_4243291c07f467487e67e1e1e47b8905.jpg"
           alt="Phân Hệ Nghiệp Vụ Nhân Sự - Hành Chánh"
-          className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:scale-105 transition-transform duration-700 pointer-events-none"
+          className="absolute inset-0 w-full h-full object-cover opacity-75 sm:opacity-80 group-hover:scale-105 transition-transform duration-700 pointer-events-none"
         />
-        {/* Dark Emerald Left-to-Right Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[#004d29]/95 via-[#006838]/90 to-slate-950/85 pointer-events-none" />
+        {/* Lighter Gradient Overlay - Dark on left for text readability, clear on right for photo */}
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-[#004d29]/45 to-slate-950/50 pointer-events-none" />
 
         {/* Subtle Decorative Grid Pattern Background */}
         <div className="absolute inset-0 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:20px_20px] opacity-10 pointer-events-none" />
