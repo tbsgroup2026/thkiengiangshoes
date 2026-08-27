@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-static';
 
 function getDbBinding(): any {
   return (process.env as any).DB || (globalThis as any).DB || null;
