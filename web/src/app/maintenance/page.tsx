@@ -37,10 +37,10 @@ export default function OverviewPage() {
         setLoading(true);
         setError(null);
         const [machinesRes, incidentsRes, scheduleRes, proposalsRes] = await Promise.all([
-          fetch('/api/maintenance/machines').then((r) => r.json()),
-          fetch('/api/maintenance/tickets').then((r) => r.json()).catch(() => null),
-          fetch('/api/maintenance/schedule').then((r) => r.json()),
-          fetch('/api/maintenance/proposals').then((r) => r.json()),
+          fetch('/api/mmtb-kg/machines').then((r) => r.json()),
+          fetch('/api/mmtb-kg/tickets').then((r) => r.json()).catch(() => null),
+          fetch('/api/mmtb-kg/schedule').then((r) => r.json()),
+          fetch('/api/mmtb-kg/proposals').then((r) => r.json()),
         ]);
         if (machinesRes.success) setMachines(machinesRes.data || []);
         if (incidentsRes?.success) setIncidents(incidentsRes.data || []);

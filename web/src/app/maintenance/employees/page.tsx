@@ -72,9 +72,9 @@ export default function EmployeesPage() {
       setLoading(true);
       setError(null);
       const [empRes, facRes, areaRes] = await Promise.all([
-        fetch('/api/maintenance/employees').then((r) => r.json()),
-        fetch('/api/maintenance/categories?type=FACTORY').then((r) => r.json()),
-        fetch('/api/maintenance/categories?type=AREA').then((r) => r.json()),
+        fetch('/api/mmtb-kg/employees').then((r) => r.json()),
+        fetch('/api/mmtb-kg/categories?type=FACTORY').then((r) => r.json()),
+        fetch('/api/mmtb-kg/categories?type=AREA').then((r) => r.json()),
       ]);
       if (empRes.success) setEmployees(empRes.data || []);
       else setError(empRes.error || 'Không lấy được dữ liệu');
@@ -152,7 +152,7 @@ export default function EmployeesPage() {
         isTeamLead: formData.role === 'MAINTENANCE' ? formData.isTeamLead : false,
         extraAreaIds: formData.role === 'MAINTENANCE' && formData.isTeamLead ? formData.extraAreaIds : [],
       };
-      const url = editingId ? `/api/maintenance/employees/${editingId}` : '/api/maintenance/employees';
+      const url = editingId ? `/api/maintenance/employees/${editingId}` : '/api/mmtb-kg/employees';
       const res = await fetch(url, {
         method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },

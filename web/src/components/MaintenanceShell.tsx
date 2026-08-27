@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   IconTools,
   IconClipboardList,
@@ -24,6 +24,7 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconChevronDown,
+  IconLogout,
 } from '@tabler/icons-react';
 import { MMTB_NAV } from '@/lib/mmtbNav';
 
@@ -59,8 +60,46 @@ export default function MaintenanceShell({
   subtitle?: string;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ categories: true });
+
+  // MMTB có đăng nhập RIÊNG (cookie mmtb_token, xem /maintenance/login) — không dùng chung phiên
+  // đăng nhập của cả trang thkiengiangshoes. Mọi trang bọc trong MaintenanceShell đều tự kiểm tra
+  // ở đây, chưa đăng nhập thì đưa thẳng về /maintenance/login.
+  const [authChecked, setAuthChecked] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/mmtb-kg/me')
+      .then((r) => {
+        if (cancelled) return;
+        if (r.status === 401) {
+          router.replace('/maintenance/login');
+          return;
+        }
+        setAuthChecked(true);
+      })
+      .catch(() => {
+        if (!cancelled) setAuthChecked(true); // Lỗi mạng — vẫn cho vào, để trang tự báo lỗi khi gọi API thật
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handleLogout() {
+    await fetch('/api/mmtb-kg/logout', { method: 'POST' }).catch(() => {});
+    router.replace('/maintenance/login');
+  }
+
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen bg-tbs-light flex items-center justify-center">
+        <div className="text-xs font-semibold text-gray-400">Đang kiểm tra đăng nhập...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-tbs-light flex text-slate-800 font-sans antialiased">
@@ -151,7 +190,7 @@ export default function MaintenanceShell({
           })}
         </nav>
 
-        <div className="p-3 border-t border-slate-100">
+        <div className="p-3 border-t border-slate-100 space-y-0.5">
           <Link
             href="/work"
             className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-50 hover:text-tbs-dark"
@@ -159,6 +198,13 @@ export default function MaintenanceShell({
             <IconArrowLeft size={16} />
             {!collapsed && <span>Về Trang Chủ</span>}
           </Link>
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-rose-500 hover:bg-rose-50"
+          >
+            <IconLogout size={16} />
+            {!collapsed && <span>Đăng Xuất MMTB</span>}
+          </button>
         </div>
       </aside>
 

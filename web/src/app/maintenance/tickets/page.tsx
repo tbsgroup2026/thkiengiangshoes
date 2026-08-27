@@ -41,7 +41,7 @@ export default function MaintenanceTicketsPage() {
       try {
         setLoading(true);
         setError(null);
-        const res = await fetch('/api/maintenance/tickets');
+        const res = await fetch('/api/mmtb-kg/tickets');
         const result = await res.json();
         if (result.success && Array.isArray(result.data)) {
           setTickets(result.data);

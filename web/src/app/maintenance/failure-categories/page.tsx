@@ -26,7 +26,7 @@ export default function FailureCategoriesPage() {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch('/api/maintenance/failure-categories');
+      const res = await fetch('/api/mmtb-kg/failure-categories');
       const result = await res.json();
       if (result.success) setCategories(result.data || []);
       else setError(result.error || 'Không lấy được dữ liệu');
@@ -69,7 +69,7 @@ export default function FailureCategoriesPage() {
     setSubmitting(true);
     setFormError(null);
     try {
-      const url = editingId ? `/api/maintenance/failure-categories/${editingId}` : '/api/maintenance/failure-categories';
+      const url = editingId ? `/api/maintenance/failure-categories/${editingId}` : '/api/mmtb-kg/failure-categories';
       const body = { name: formName.trim(), isOther: formIsOther, order: Number(formOrder) || 0 };
       const res = await fetch(url, {
         method: editingId ? 'PUT' : 'POST',

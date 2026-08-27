@@ -48,8 +48,8 @@ export default function AnnouncementsPage() {
       setLoading(true);
       setError(null);
       const [annRes, facRes] = await Promise.all([
-        fetch('/api/maintenance/announcements').then((r) => r.json()),
-        fetch('/api/maintenance/categories?type=FACTORY').then((r) => r.json()),
+        fetch('/api/mmtb-kg/announcements').then((r) => r.json()),
+        fetch('/api/mmtb-kg/categories?type=FACTORY').then((r) => r.json()),
       ]);
       if (annRes.success) setAnnouncements(annRes.data || []);
       else setError(annRes.error || 'Không lấy được dữ liệu');
@@ -100,7 +100,7 @@ export default function AnnouncementsPage() {
         targetFactoryId: formData.targetFactoryId,
         targetRole: formData.targetRole || null,
       };
-      const url = editingId ? `/api/maintenance/announcements/${editingId}` : '/api/maintenance/announcements';
+      const url = editingId ? `/api/maintenance/announcements/${editingId}` : '/api/mmtb-kg/announcements';
       const res = await fetch(url, {
         method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -97,8 +97,8 @@ export default function MaintenanceSchedulePage() {
       setLoading(true);
       setError(null);
       const [scheduleRes, logsRes] = await Promise.all([
-        fetch('/api/maintenance/schedule').then((r) => r.json()),
-        fetch('/api/maintenance/logs').then((r) => r.json()),
+        fetch('/api/mmtb-kg/schedule').then((r) => r.json()),
+        fetch('/api/mmtb-kg/logs').then((r) => r.json()),
       ]);
       if (scheduleRes.success) {
         setMachines(scheduleRes.machines || []);
@@ -271,7 +271,7 @@ function AssignTab({
     setSubmitting(true);
     setFormError(null);
     try {
-      const res = await fetch('/api/maintenance/schedule', {
+      const res = await fetch('/api/mmtb-kg/schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ machineIds: Array.from(selected), maintenancePeriodId: periodId, anchorDate }),

@@ -47,7 +47,7 @@ export default function ResponseTimePage() {
       try {
         setLoading(true);
         setError(null);
-        const res = await fetch('/api/maintenance/response-time');
+        const res = await fetch('/api/mmtb-kg/response-time');
         const result = await res.json();
         if (result.success) {
           setIncidents(result.incidents || []);

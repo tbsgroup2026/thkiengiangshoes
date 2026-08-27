@@ -93,7 +93,7 @@ export default function FloorPlanPage() {
   const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
-    fetch('/api/maintenance/categories?type=FACTORY')
+    fetch('/api/mmtb-kg/categories?type=FACTORY')
       .then((r) => r.json())
       .then((r) => { if (r.success) setFactories(r.data || []); });
   }, []);
@@ -226,7 +226,7 @@ export default function FloorPlanPage() {
     if (pathPoints.length < 2) return alert('Cần tối thiểu 2 điểm để tạo 1 đoạn đường đi');
     setSavingPath(true);
     try {
-      const res = await fetch('/api/maintenance/map-path', {
+      const res = await fetch('/api/mmtb-kg/map-path', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ floorId, points: pathPoints, label: pathLabel.trim() || null }),
       });
@@ -260,7 +260,7 @@ export default function FloorPlanPage() {
     if (!pendingGeoPoint || !geoLat || !geoLng) return;
     setSavingGeo(true);
     try {
-      const res = await fetch('/api/maintenance/map-georef', {
+      const res = await fetch('/api/mmtb-kg/map-georef', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           floorId, mapXPercent: pendingGeoPoint.x, mapYPercent: pendingGeoPoint.y,
@@ -313,7 +313,7 @@ export default function FloorPlanPage() {
     if (!newFloorName.trim() || !factoryId) return;
     setSavingFloor(true);
     try {
-      const res = await fetch('/api/maintenance/floors', {
+      const res = await fetch('/api/mmtb-kg/floors', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ factoryId, name: newFloorName.trim() }),
       });
@@ -360,7 +360,7 @@ export default function FloorPlanPage() {
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
-      const uploadRes = await fetch('/api/maintenance/upload', {
+      const uploadRes = await fetch('/api/mmtb-kg/upload', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ base64, mimeType: file.type }),
       });
       const uploadResult = await uploadRes.json();

@@ -170,7 +170,7 @@ export default function CategoriesManager({
     setSubmitting(true);
     setFormError(null);
     try {
-      const url = editingId ? `/api/maintenance/categories/${editingId}` : '/api/maintenance/categories';
+      const url = editingId ? `/api/maintenance/categories/${editingId}` : '/api/mmtb-kg/categories';
       const extra = {
         ...(tabConfig.hasDays ? { days: Number(formDays) } : {}),
         ...(tabConfig.hasColor ? { colorHex: formColor } : {}),

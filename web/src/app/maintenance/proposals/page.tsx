@@ -49,7 +49,7 @@ export default function ProposalsPage() {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch('/api/maintenance/proposals');
+      const res = await fetch('/api/mmtb-kg/proposals');
       const result = await res.json();
       if (result.success) setProposals(result.data || []);
       else setError(result.error || 'Không lấy được dữ liệu');

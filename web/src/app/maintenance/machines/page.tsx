@@ -174,7 +174,7 @@ export default function MachinesPage() {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch('/api/maintenance/machines');
+      const res = await fetch('/api/mmtb-kg/machines');
       const result = await res.json();
       if (result.success && Array.isArray(result.data)) {
         setMachines(result.data);
@@ -351,7 +351,7 @@ export default function MachinesPage() {
         machineTypeId: formData.machineTypeId || null,
         statusId: formData.statusId,
       };
-      const url = editingId ? `/api/maintenance/machines/${editingId}` : '/api/maintenance/machines';
+      const url = editingId ? `/api/maintenance/machines/${editingId}` : '/api/mmtb-kg/machines';
       const res = await fetch(url, {
         method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -485,7 +485,7 @@ export default function MachinesPage() {
     const failed: string[] = [];
     for (const row of importRows) {
       try {
-        const res = await fetch('/api/maintenance/machines', {
+        const res = await fetch('/api/mmtb-kg/machines', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(row.payload),
