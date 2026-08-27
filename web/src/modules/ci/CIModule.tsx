@@ -957,7 +957,7 @@ export default function CIModule() {
                     </span>
                   </button>
 
-                  {/* Chờ phê duyệt */}
+                  {/* Chờ phê duyệt — sub of Thi đua */}
                   <button
                     onClick={() => { setSelectedRegType("THI_DUA"); setSelectedSubStatus("CHO_REVIEW"); }}
                     className={`w-full text-left px-3 py-1 rounded-lg flex items-center justify-between text-[11px] transition-colors ${
@@ -975,7 +975,25 @@ export default function CIModule() {
                     </span>
                   </button>
 
-                  {/* Đã đánh giá */}
+                  {/* Chờ đánh giá — top-level */}
+                  <button
+                    onClick={() => { setSelectedRegType("THI_DUA"); setSelectedSubStatus("CHO_DANH_GIA"); }}
+                    className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between transition-colors ${
+                      selectedSubStatus === "CHO_DANH_GIA"
+                        ? "bg-amber-950/80 text-amber-300 font-extrabold"
+                        : "text-amber-400/90 hover:bg-slate-800/60 hover:text-amber-300"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <IconClock size={13} className="text-amber-400 shrink-0" />
+                      <span>Chờ đánh giá</span>
+                    </span>
+                    <span className="px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-400 text-[9px] font-extrabold">
+                      {countChoDanhGia}
+                    </span>
+                  </button>
+
+                  {/* Đã đánh giá — sub of Chờ đánh giá */}
                   <button
                     onClick={() => { setSelectedRegType("THI_DUA"); setSelectedSubStatus("DA_DANH_GIA"); }}
                     className={`w-full text-left px-3 py-1 rounded-lg flex items-center justify-between text-[11px] transition-colors ${
@@ -990,24 +1008,6 @@ export default function CIModule() {
                     </span>
                     <span className="px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-400 text-[9px] font-extrabold">
                       {countDaDanhGia}
-                    </span>
-                  </button>
-
-                  {/* Chờ đánh giá */}
-                  <button
-                    onClick={() => { setSelectedRegType("THI_DUA"); setSelectedSubStatus("CHO_DANH_GIA"); }}
-                    className={`w-full text-left px-3 py-1 rounded-lg flex items-center justify-between text-[11px] transition-colors ${
-                      selectedSubStatus === "CHO_DANH_GIA"
-                        ? "bg-amber-950/80 text-amber-300 font-extrabold"
-                        : "text-amber-400/90 hover:bg-slate-800/60 hover:text-amber-300"
-                    }`}
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <IconClock size={13} className="text-amber-400 shrink-0" />
-                      <span>Chờ đánh giá</span>
-                    </span>
-                    <span className="px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-400 text-[9px] font-extrabold">
-                      {countChoDanhGia}
                     </span>
                   </button>
 
