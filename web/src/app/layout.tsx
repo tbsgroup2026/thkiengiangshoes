@@ -13,11 +13,11 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Tổ hợp Kiên Giang - TBS Group",
+  title: "TBS GROUP - Công Ty Cổ Phần Thái Bình Kiên Giang",
   description:
-    "Hệ thống quản trị vận hành Tổ hợp Kiên Giang - TBS Group (Gemba Walk, Cải tiến CI, Kaizen, Biểu mẫu, BI Dashboard 24/7).",
+    "Hệ thống quản trị vận hành TBS GROUP - Công Ty Cổ Phần Thái Bình Kiên Giang (Gemba Walk, Cải tiến CI, Kaizen, Biểu mẫu, BI Dashboard 24/7).",
   keywords:
-    "Tổ hợp Kiên Giang - TBS Group, Tổ hợp Kiên Giang, TBS Group, Gemba Walk, CI, Kaizen, Quản trị hằng ngày, Quản lý nhà máy",
+    "TBS GROUP - Công Ty Cổ Phần Thái Bình Kiên Giang, Công Ty Cổ Phần Thái Bình Kiên Giang, TBS Group, Gemba Walk, CI, Kaizen, Quản trị hằng ngày, Quản lý nhà máy",
   manifest: "/manifest.json",
   icons: {
     icon: [
@@ -30,12 +30,12 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Tổ hợp Kiên Giang - TBS Group",
+    title: "TBS GROUP - Công Ty Cổ Phần Thái Bình Kiên Giang",
   },
   openGraph: {
-    title: "Tổ hợp Kiên Giang - TBS Group",
+    title: "TBS GROUP - Công Ty Cổ Phần Thái Bình Kiên Giang",
     description:
-      "Trung tâm điều hành và quản trị số hoá vận hành Tổ hợp Kiên Giang - TBS Group.",
+      "Trung tâm điều hành và quản trị số hoá vận hành TBS GROUP - Công Ty Cổ Phần Thái Bình Kiên Giang.",
     type: "website",
     images: ["/icon.png"],
   },

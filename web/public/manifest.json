@@ -1,7 +1,7 @@
 {
-  "name": "Tổ hợp Kiên Giang - TBS Group",
-  "short_name": "THKG-TBS",
-  "description": "Hệ thống quản trị vận hành Tổ hợp Kiên Giang - TBS Group",
+  "name": "TBS GROUP - Công Ty Cổ Phần Thái Bình Kiên Giang",
+  "short_name": "TBSGROUP-TBKG",
+  "description": "Hệ thống quản trị vận hành TBS GROUP - Công Ty Cổ Phần Thái Bình Kiên Giang",
   "start_url": "/work",
   "display": "standalone",
   "orientation": "portrait-primary",
