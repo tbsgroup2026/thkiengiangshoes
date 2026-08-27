@@ -35,8 +35,6 @@ export const REAL_FACTORIES = [
   "KG 1",
   "KG 2",
   "Hoàn thiện đế",
-  "VP CHUỖI SKECHERS",
-  "THNM Kiên Giang",
 ];
 
 export const REAL_DEPARTMENTS = [
