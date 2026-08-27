@@ -43,7 +43,6 @@ import {
   DEFAULT_SHOE_LINES_CONFIG,
 } from "@/lib/landingCMS";
 import LandingCMSManager from "@/components/admin/LandingCMSManager";
-import BrandPartnersManager from "@/components/admin/BrandPartnersManager";
 import ShoeLinesManager from "@/components/admin/ShoeLinesManager";
 import WorkspaceCMSManager from "@/components/admin/WorkspaceCMSManager";
 import * as XLSX from "xlsx";
@@ -92,7 +91,7 @@ interface MediaAsset {
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<
-    "overview" | "users" | "news" | "media" | "workspace_gallery" | "brand_partners" | "shoe_lines" | "products" | "landing_cms" | "d1_control"
+    "overview" | "users" | "news" | "media" | "workspace_gallery" | "shoe_lines" | "products" | "landing_cms" | "d1_control"
   >("overview");
   const [cmsSubSection, setCmsSubSection] = useState<
     "hero" | "workspace" | "excellence" | "products"
@@ -114,9 +113,7 @@ export default function AdminPage() {
         setCmsSubSection("products");
       } else if (tabParam === "workspace" || tabParam === "workspace_gallery" || tabParam === "kglv") {
         setActiveTab("workspace_gallery");
-      } else if (tabParam === "brand_partners" || tabParam === "brands") {
-        setActiveTab("brand_partners");
-      } else if (tabParam === "shoe_lines" || tabParam === "shoes") {
+      } else if (tabParam === "brand_partners" || tabParam === "brands" || tabParam === "shoe_lines" || tabParam === "shoes") {
         setActiveTab("shoe_lines");
       } else if (tabParam === "landing_cms") {
         setActiveTab("landing_cms");
@@ -1207,22 +1204,7 @@ export default function AdminPage() {
             </span>
           </button>
 
-          <button
-            onClick={() => setActiveTab("brand_partners")}
-            className={`px-4 py-2.5 rounded-xl font-extrabold text-xs flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === "brand_partners"
-                ? "bg-[#006838] text-white shadow-md border border-[#004e2a]"
-                : "text-slate-700 hover:text-[#006838] hover:bg-white/70"
-            }`}
-          >
-            <IconBuildingStore size={16} />
-            <span>🤝 Đối Tác Thương Hiệu</span>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-              activeTab === "brand_partners" ? "bg-white/20 text-white" : "bg-emerald-100 text-[#006838]"
-            }`}>
-              {landingCMS.brandPartners?.length || 0}
-            </span>
-          </button>
+
 
           <button
             onClick={() => setActiveTab("shoe_lines")}
@@ -2180,20 +2162,7 @@ export default function AdminPage() {
           />
         )}
 
-        {/* ════════════════════════════════════════════════════════════════
-            TAB: QUẢN LÝ ĐỐI TÁC THƯƠNG HIỆU (BRAND PARTNERS)
-           ════════════════════════════════════════════════════════════════ */}
-        {activeTab === "brand_partners" && (
-          <BrandPartnersManager
-            brandPartners={landingCMS.brandPartners || []}
-            onChange={(updatedPartners) => {
-              const newCMS = { ...landingCMS, brandPartners: updatedPartners };
-              setLandingCMS(newCMS);
-              saveLandingCMS(newCMS);
-            }}
-            showToast={showToast}
-          />
-        )}
+
 
         {/* ════════════════════════════════════════════════════════════════
             TAB: QUẢN LÝ DÒNG GIÀY TIÊU BIỂU (FEATURED SHOE LINES)
