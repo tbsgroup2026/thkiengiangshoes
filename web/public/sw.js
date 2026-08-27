@@ -1,5 +1,5 @@
 // PWA Service Worker for Văn Phòng Chuỗi SKECHERS - TBS Group
-const CACHE_NAME = "skechers-tbs-v5";
+const CACHE_NAME = "skechers-tbs-v6";
 const ASSETS_TO_CACHE = [
   "/",
   "/favicon.ico",
@@ -109,28 +109,22 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
-          if (response.ok) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          // Handle 200 OK and 304 Not Modified from Cloudflare Edge Server correctly
+          if (response.ok || response.status === 304) {
+            if (response.ok) {
+              const copy = response.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+            }
             return response;
           }
-          // If 404 (chunk replaced after new deployment), fallback to cache or empty response
-          return caches.match(event.request).then((cached) => {
-            if (cached) return cached;
-            if (url.pathname.endsWith(".js")) {
-              return new Response("/* Chunk obsolete */", {
-                status: 200,
-                headers: { "Content-Type": "application/javascript" },
-              });
-            }
-            if (url.pathname.endsWith(".css")) {
-              return new Response("/* CSS obsolete */", {
-                status: 200,
-                headers: { "Content-Type": "text/css" },
-              });
-            }
-            return response;
-          });
+          // Only fallback if chunk returned 404 (obsolete chunk after deployment)
+          if (response.status === 404) {
+            return caches.match(event.request).then((cached) => {
+              if (cached) return cached;
+              return response;
+            });
+          }
+          return response;
         })
         .catch(() => caches.match(event.request))
     );
