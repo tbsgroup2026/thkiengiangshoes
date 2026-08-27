@@ -170,8 +170,8 @@ export function HalfStarRating({ value, onChange, readOnly = false, size = 22 }:
   );
 }
 
-const TH_KG_SUB_ITEMS = ["Kiên Giang 1", "Kiên Giang 2", "Kiên Giang 3", "Hoàn Thiện Đế"];
-const MAIN_REGIONS = ["TH-KG", "Nhà Máy Miền Đông", "VP Chuỗi (R&D)"];
+const TH_KG_SUB_ITEMS = ["Kiên Giang 1", "Kiên Giang 2", "Hoàn Thiện Đế"];
+const MAIN_REGIONS = ["THKG", "Nhà Máy Miền Đông", "VP Chuỗi (R&D)"];
 
 const matchRegionFilter = (propRegion: string, filterRegion: string) => {
   if (!filterRegion || filterRegion === "ALL") return true;
@@ -180,8 +180,9 @@ const matchRegionFilter = (propRegion: string, filterRegion: string) => {
   const pr = propRegion.toUpperCase();
   const fr = filterRegion.toUpperCase();
 
-  if (filterRegion === "TH-KG") {
+  if (filterRegion === "THKG" || filterRegion === "TH-KG") {
     return (
+      pr.includes("THKG") ||
       pr.includes("TH-KG") ||
       pr.includes("KIÊN GIANG") ||
       pr.includes("KIEN GIANG") ||
@@ -245,6 +246,12 @@ export default function CIModule() {
     empCode: "202608001",
     roleCode: "TONG_GIAM_DOC",
   });
+
+  useEffect(() => {
+    if (selectedRegion === "Kiên Giang 3") {
+      setSelectedRegion("ALL");
+    }
+  }, [selectedRegion]);
 
   useEffect(() => {
     function loadUser() {
@@ -1011,13 +1018,13 @@ export default function CIModule() {
 
               {(!isSidebarCollapsed && isRegionExpanded) && (
                 <div className="space-y-0.5 pl-2 text-xs font-bold">
-                  {/* TH-KG */}
+                  {/* THKG */}
                   <div>
                     <div
                       className={`w-full px-2 py-1 rounded-lg flex items-center justify-between transition-colors cursor-pointer ${
-                        selectedRegion === "TH-KG" ? "bg-[#006838] text-white font-extrabold" : "text-slate-300 hover:bg-slate-800/80 hover:text-white"
+                        (selectedRegion === "THKG" || selectedRegion === "TH-KG") ? "bg-[#006838] text-white font-extrabold" : "text-slate-300 hover:bg-slate-800/80 hover:text-white"
                       }`}
-                      onClick={() => setSelectedRegion(selectedRegion === "TH-KG" ? "ALL" : "TH-KG")}
+                      onClick={() => setSelectedRegion((selectedRegion === "THKG" || selectedRegion === "TH-KG") ? "ALL" : "THKG")}
                     >
                       <span className="flex items-center gap-1">
                         <button
@@ -1030,10 +1037,10 @@ export default function CIModule() {
                         >
                           {isThKgExpanded ? <IconChevronDown size={13} /> : <IconChevronRight size={13} />}
                         </button>
-                        <span>TH-KG</span>
+                        <span>THKG</span>
                       </span>
                       <span className="text-[10px] text-slate-400 font-mono">
-                        ({proposals.filter((p) => matchRegionFilter(p.region, "TH-KG")).length})
+                        ({proposals.filter((p) => matchRegionFilter(p.region, "THKG")).length})
                       </span>
                     </div>
 
@@ -1341,10 +1348,9 @@ export default function CIModule() {
             className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 text-[11px] font-bold text-slate-700 outline-none focus:border-[#006838]"
           >
             <option value="ALL">🏢 Khu vực</option>
-            <option value="TH-KG">TH-KG</option>
+            <option value="THKG">THKG</option>
             <option value="Kiên Giang 1">Kiên Giang 1</option>
             <option value="Kiên Giang 2">Kiên Giang 2</option>
-            <option value="Kiên Giang 3">Kiên Giang 3</option>
             <option value="Hoàn Thiện Đế">Hoàn Thiện Đế</option>
             <option value="Nhà Máy Miền Đông">Nhà Máy Miền Đông</option>
             <option value="VP Chuỗi (R&D)">VP Chuỗi (R&D)</option>
