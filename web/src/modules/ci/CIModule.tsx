@@ -736,6 +736,20 @@ export default function CIModule() {
     if (selectedRegion !== "ALL" && !matchRegionFilter(p.region, selectedRegion)) {
       return false;
     }
+    // Filter by registration type
+    if (selectedRegType !== "ALL") {
+      if (p.registration_type !== selectedRegType) return false;
+    }
+    // Filter by sub-status
+    if (selectedSubStatus !== "ALL") {
+      if (selectedSubStatus === "CHO_REVIEW") {
+        if (!(p.status === "SUBMITTED" || p.status === "UNDER_REVIEW" || !p.status)) return false;
+      } else if (selectedSubStatus === "CHO_DANH_GIA") {
+        if (p.sub_status !== "CHO_DANH_GIA") return false;
+      } else if (selectedSubStatus === "DA_DANH_GIA") {
+        if (p.sub_status !== "DA_DANH_GIA") return false;
+      }
+    }
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const matchSearch =
@@ -750,6 +764,10 @@ export default function CIModule() {
 
   // Calculate Badge Counters
   const countThiDua = proposals.filter((p) => p.registration_type === "THI_DUA").length;
+  const countChoReview = proposals.filter((p) =>
+    p.registration_type === "THI_DUA" &&
+    (p.status === "SUBMITTED" || p.status === "UNDER_REVIEW" || !p.status)
+  ).length;
   const countDaDanhGia = proposals.filter((p) => p.sub_status === "DA_DANH_GIA").length;
   const countChoDanhGia = proposals.filter((p) => p.sub_status === "CHO_DANH_GIA").length;
   const countLuuTru = proposals.filter((p) => p.registration_type === "LUU_TRU").length;
@@ -936,6 +954,24 @@ export default function CIModule() {
                     </span>
                     <span className="px-2 py-0.2 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-extrabold">
                       {countThiDua}
+                    </span>
+                  </button>
+
+                  {/* Chờ phê duyệt */}
+                  <button
+                    onClick={() => { setSelectedRegType("THI_DUA"); setSelectedSubStatus("CHO_REVIEW"); }}
+                    className={`w-full text-left px-3 py-1 rounded-lg flex items-center justify-between text-[11px] transition-colors ${
+                      selectedSubStatus === "CHO_REVIEW"
+                        ? "bg-blue-950/80 text-blue-300 font-extrabold"
+                        : "text-blue-400/80 hover:bg-slate-800/60 hover:text-blue-300"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <IconUserCheck size={13} className="text-blue-400 shrink-0" />
+                      <span>Chờ phê duyệt</span>
+                    </span>
+                    <span className="px-1.5 py-0.2 rounded-full bg-blue-500/20 text-blue-400 text-[9px] font-extrabold">
+                      {countChoReview}
                     </span>
                   </button>
 
