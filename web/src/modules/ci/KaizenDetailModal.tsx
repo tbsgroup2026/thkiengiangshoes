@@ -445,14 +445,30 @@ export default function KaizenDetailModal({
                 <span>{proposal.registration_type === "THI_DUA" ? "Thi đua" : "Lưu trữ"}</span>
               </span>
 
-              {/* Pill 3: Trạng thái tổng hợp */}
-              <span className={`px-3 py-1 rounded-full border text-xs font-black flex items-center gap-1 ${
-                proposal.sub_status === "DA_DANH_GIA" || proposal.score_points
-                  ? "bg-emerald-50 text-emerald-800 border-emerald-300"
-                  : "bg-amber-50 text-amber-800 border-amber-300"
-              }`}>
-                <span>{proposal.sub_status === "DA_DANH_GIA" || proposal.score_points ? "✅" : "⏳"}</span>
-                <span>{proposal.sub_status === "DA_DANH_GIA" || proposal.score_points ? "Đã tổng hợp điểm" : "Chờ đánh giá"}</span>
+              {/* Pill 3: Trạng thái quy trình (Chờ phê duyệt vs Chờ đánh giá vs Đã đánh giá) */}
+              <span
+                className={`px-3 py-1 rounded-full border text-xs font-black flex items-center gap-1.5 ${
+                  proposal.sub_status === "CHO_REVIEW" || proposal.approval_status === "PENDING" || proposal.status === "SUBMITTED"
+                    ? "bg-blue-50 text-blue-800 border-blue-300"
+                    : proposal.sub_status === "CHO_DANH_GIA" || proposal.approval_status === "PHE_DUYET"
+                    ? "bg-amber-50 text-amber-800 border-amber-300"
+                    : "bg-emerald-50 text-emerald-800 border-emerald-300"
+                }`}
+              >
+                <span>
+                  {proposal.sub_status === "CHO_REVIEW" || proposal.approval_status === "PENDING" || proposal.status === "SUBMITTED"
+                    ? "👤"
+                    : proposal.sub_status === "CHO_DANH_GIA" || proposal.approval_status === "PHE_DUYET"
+                    ? "⏳"
+                    : "✅"}
+                </span>
+                <span>
+                  {proposal.sub_status === "CHO_REVIEW" || proposal.approval_status === "PENDING" || proposal.status === "SUBMITTED"
+                    ? "Chờ phê duyệt"
+                    : proposal.sub_status === "CHO_DANH_GIA" || proposal.approval_status === "PHE_DUYET"
+                    ? "Chờ đánh giá"
+                    : "Đã đánh giá"}
+                </span>
               </span>
             </div>
 

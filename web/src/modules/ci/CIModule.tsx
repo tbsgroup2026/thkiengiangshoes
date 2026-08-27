@@ -8,6 +8,7 @@ import KaizenFiveStepSubmitForm from "./KaizenFiveStepSubmitForm";
 import KaizenPublicSubmitForm from "./KaizenPublicSubmitForm";
 import KaizenDetailModal from "./KaizenDetailModal";
 import EvaluationModal from "./EvaluationModal";
+import FeasibilityApprovalModal from "./FeasibilityApprovalModal";
 import {
   IconLayoutGrid,
   IconList,
@@ -53,6 +54,7 @@ import {
   IconExternalLink,
 } from "@tabler/icons-react";
 import { formatTitleWithDepartment } from "@/lib/userProfiles";
+import { usePermission } from "@/hooks/usePermission";
 
 export interface KaizenProposal {
   id: string;
@@ -218,6 +220,7 @@ const matchRegionFilter = (propRegion: string, filterRegion: string) => {
 };
 
 export default function CIModule() {
+  const { isExecutiveOrAdmin } = usePermission();
   const [proposals, setProposals] = useState<KaizenProposal[]>([]);
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState<"GRID" | "LIST">("GRID");
@@ -295,6 +298,8 @@ export default function CIModule() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [detailActiveTab, setDetailActiveTab] = useState<"INFO" | "EVALUATION" | "RATING">("INFO");
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
+  const [approvalModalProposal, setApprovalModalProposal] = useState<KaizenProposal | null>(null);
   const [activeProposal, setActiveProposal] = useState<KaizenProposal | null>(null);
   const [isCreateDropdownOpen, setIsCreateDropdownOpen] = useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
@@ -1489,19 +1494,25 @@ export default function CIModule() {
                             <span>{prop.view_count || 0}</span>
                           </span>
 
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveProposal(prop);
-                              setIsRatingModalOpen(true);
-                            }}
-                            className="px-2 py-0.5 rounded bg-amber-50 text-amber-700 hover:bg-amber-100 text-[10px] font-black border border-amber-200 transition-colors"
-                          >
-                            ⭐ Đánh giá
-                          </button>
+                          {/* 1. Nút "Phê duyệt" dành cho trạng thái CHỜ PHÊ DUYỆT (Bước 3 - QĐ-TBKG) */}
+                          {(prop.sub_status === "CHO_REVIEW" || prop.status === "SUBMITTED" || prop.approval_status === "PENDING") && isExecutiveOrAdmin && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setApprovalModalProposal(prop);
+                                setIsApprovalModalOpen(true);
+                              }}
+                              className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black shadow-2xs transition-colors flex items-center gap-1 cursor-pointer"
+                              title="Phê duyệt tính khả thi sáng kiến (Bước 3)"
+                            >
+                              <IconShieldCheck size={12} />
+                              <span>Phê duyệt</span>
+                            </button>
+                          )}
 
-                          {prop.sub_status === "CHO_DANH_GIA" && (
+                          {/* 2. Nút "Chấm điểm" dành cho trạng thái CHỜ ĐÁNH GIÁ (Bước 5 - QĐ-TBKG) */}
+                          {(prop.sub_status === "CHO_DANH_GIA" || prop.approval_status === "PHE_DUYET") && (
                             <button
                               type="button"
                               onClick={(e) => {
@@ -1509,9 +1520,11 @@ export default function CIModule() {
                                 setEvaluatingProposal(prop);
                                 setIsEvaluationModalOpen(true);
                               }}
-                              className="px-2 py-0.5 rounded bg-emerald-600 text-white hover:bg-emerald-700 text-[10px] font-black shadow-2xs transition-colors"
+                              className="px-2 py-0.5 rounded bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black shadow-2xs transition-colors flex items-center gap-1 cursor-pointer"
+                              title="Chấm điểm chuyên môn 5 tiêu chí QĐ-TBKG"
                             >
-                              ✓ Đánh giá
+                              <IconStar size={12} />
+                              <span>Chấm điểm</span>
                             </button>
                           )}
                         </div>
@@ -1540,36 +1553,79 @@ export default function CIModule() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium">
-                    {filteredProposals.map((prop) => (
-                      <tr key={prop.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="p-3 font-mono font-bold text-amber-700">#{prop.code}</td>
-                        <td className="p-3 font-bold text-slate-900">{prop.title}</td>
-                        <td className="p-3">
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-[#006838] text-[10px] font-bold border border-emerald-200">
-                            {prop.category_label}
-                          </span>
-                        </td>
-                        <td className="p-3">{prop.region}</td>
-                        <td className="p-3">{prop.proposer_name}</td>
-                        <td className="p-3 text-center">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                            prop.status === "APPROVED" ? "bg-emerald-100 text-[#006838]" :
-                            prop.status === "IMPLEMENTED" ? "bg-blue-100 text-blue-800" :
-                            "bg-amber-100 text-amber-900"
-                          }`}>
-                            {prop.status}
-                          </span>
-                        </td>
-                        <td className="p-3 text-center">
-                          <button
-                            onClick={() => handleRecordView(prop)}
-                            className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-[#006838] hover:text-white transition-colors cursor-pointer text-[11px] font-bold"
-                          >
-                            Xem
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {filteredProposals.map((prop) => {
+                      const isPendingFeasibility = prop.sub_status === "CHO_REVIEW" || prop.status === "SUBMITTED" || prop.approval_status === "PENDING";
+                      const isPendingEvaluation = prop.sub_status === "CHO_DANH_GIA" || prop.approval_status === "PHE_DUYET";
+
+                      return (
+                        <tr key={prop.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="p-3 font-mono font-bold text-amber-700">#{prop.code}</td>
+                          <td className="p-3 font-bold text-slate-900">{prop.title}</td>
+                          <td className="p-3">
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-[#006838] text-[10px] font-bold border border-emerald-200">
+                              {prop.category_label}
+                            </span>
+                          </td>
+                          <td className="p-3">{prop.region}</td>
+                          <td className="p-3">{prop.proposer_name}</td>
+                          <td className="p-3 text-center">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${
+                              isPendingFeasibility
+                                ? "bg-blue-50 text-blue-800 border-blue-200"
+                                : isPendingEvaluation
+                                ? "bg-amber-50 text-amber-900 border-amber-200"
+                                : prop.sub_status === "DA_DANH_GIA"
+                                ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                                : "bg-slate-100 text-slate-700 border-slate-200"
+                            }`}>
+                              {isPendingFeasibility
+                                ? "Chờ phê duyệt"
+                                : isPendingEvaluation
+                                ? "Chờ đánh giá"
+                                : prop.sub_status === "DA_DANH_GIA"
+                                ? "Đã đánh giá"
+                                : "Lưu trữ"}
+                            </span>
+                          </td>
+                          <td className="p-3 text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={() => handleRecordView(prop)}
+                                className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-[#006838] hover:text-white transition-colors cursor-pointer text-[11px] font-bold"
+                              >
+                                Xem
+                              </button>
+                              {isPendingFeasibility && isExecutiveOrAdmin && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setApprovalModalProposal(prop);
+                                    setIsApprovalModalOpen(true);
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors cursor-pointer text-[11px] font-extrabold flex items-center gap-1"
+                                >
+                                  <IconShieldCheck size={12} />
+                                  <span>Phê duyệt</span>
+                                </button>
+                              )}
+                              {isPendingEvaluation && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEvaluatingProposal(prop);
+                                    setIsEvaluationModalOpen(true);
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white transition-colors cursor-pointer text-[11px] font-extrabold flex items-center gap-1"
+                                >
+                                  <IconStar size={12} />
+                                  <span>Chấm điểm</span>
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -2003,6 +2059,20 @@ export default function CIModule() {
         }}
         onSuccess={() => {
           showToast("🎉 Đã lưu kết quả đánh giá hiệu quả sáng kiến!");
+          fetchProposals();
+        }}
+      />
+
+      {/* MODAL STEP 3: FEASIBILITY APPROVAL MODAL */}
+      <FeasibilityApprovalModal
+        isOpen={isApprovalModalOpen}
+        proposal={approvalModalProposal}
+        onClose={() => {
+          setIsApprovalModalOpen(false);
+          setApprovalModalProposal(null);
+        }}
+        onSuccess={() => {
+          showToast("🎉 Đã hoàn tất phê duyệt tính khả thi sáng kiến!");
           fetchProposals();
         }}
       />
