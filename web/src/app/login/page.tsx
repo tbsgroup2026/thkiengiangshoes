@@ -29,6 +29,7 @@ const EXECUTIVE_PERSONNEL_MAP: Record<string, Array<{ empCode: string; name: str
     { empCode: "200105001", name: "Lê Văn Phương", title: "GĐ KHCB VT", dept: "KHCB VT" },
   ],
   deputy_director: [
+    { empCode: "201809012", name: "Kiều Thanh Vũ", title: "PGĐ CN CI PPH", dept: "CN-CI & PPH" },
     { empCode: "201604020", name: "Phạm Thị Dương", title: "PGĐ QLCL & AUDIT", dept: "QLCL & LAB" },
     { empCode: "210608003", name: "Vũ Thành Lê", title: "PGĐ KHCB ĐHSX", dept: "KHCB ĐHSX" },
     { empCode: "201403017", name: "Lý Huỳnh Duy", title: "PGĐ KHCB VT", dept: "KHCB VT" },
