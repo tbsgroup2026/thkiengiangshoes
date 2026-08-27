@@ -41,6 +41,7 @@ import {
   saveLandingCMS,
   fetchLandingCMSFromServer,
   saveLandingCMSToServer,
+  checkAndMigrateLocalCMSToServer,
   DEFAULT_LANDING_CMS,
   DEFAULT_SHOE_LINES_CONFIG,
 } from "@/lib/landingCMS";
@@ -111,11 +112,25 @@ export default function AdminPage() {
 
   useEffect(() => {
     // 1. Instant local read
-    setLandingCMS(getLandingCMS());
+    const localConfig = getLandingCMS();
+    setLandingCMS(localConfig);
 
-    // 2. Fetch server D1 database config & auto-migrate if needed
-    fetchLandingCMSFromServer().then((srvConfig) => {
-      setLandingCMS(srvConfig);
+    // 2. Fetch server D1 database config & auto-migrate if D1 is empty but local has custom data
+    fetchLandingCMSFromServer().then(async (srvConfig) => {
+      const isSrvCustom = srvConfig && JSON.stringify(srvConfig) !== JSON.stringify(DEFAULT_LANDING_CMS);
+      if (isSrvCustom) {
+        setLandingCMS(srvConfig);
+      } else {
+        // D1 is empty/default -> Check if local browser has custom data to auto-migrate to D1 server
+        const migrated = await checkAndMigrateLocalCMSToServer();
+        if (migrated) {
+          setLandingCMS(migrated);
+          setToastMessage("🔄 Đã tự động chuyển toàn bộ dữ liệu cũ từ Trình duyệt lên CSDL Server D1 thành công!");
+          setTimeout(() => setToastMessage(null), 5000);
+        } else if (srvConfig) {
+          setLandingCMS(srvConfig);
+        }
+      }
     });
 
     // Check URL search parameters (e.g. /admin?tab=products or /admin?tab=workspace_gallery)

@@ -536,8 +536,7 @@ export function getLandingCMS(): LandingCMSConfig {
 
 /**
  * Fetch latest CMS configuration from Cloudflare D1 Server API.
- * If server D1 is empty BUT local localStorage has existing custom data,
- * auto-migrate local data to D1 server (Auto-migration).
+ * Pure read-only fetch — NEVER auto-posts default data to D1 server.
  */
 export async function fetchLandingCMSFromServer(): Promise<LandingCMSConfig> {
   if (typeof window === "undefined") return DEFAULT_LANDING_CMS;
@@ -551,7 +550,7 @@ export async function fetchLandingCMSFromServer(): Promise<LandingCMSConfig> {
       const json = await res.json();
       if (json && json.success && json.data) {
         const serverConfig = parseCMSConfig(json.data);
-        // Sync server data to localStorage for instant local read
+        // Sync server data to localStorage for instant local cache read
         localStorage.setItem(CMS_STORAGE_KEY, JSON.stringify(serverConfig));
         window.dispatchEvent(new Event("tbs_landing_cms_updated"));
         return serverConfig;
@@ -562,16 +561,41 @@ export async function fetchLandingCMSFromServer(): Promise<LandingCMSConfig> {
   }
 
   // Fallback to local storage if server is unreachable or empty
-  const localConfig = getLandingCMS();
+  return getLandingCMS();
+}
 
-  // Check if we need to auto-migrate local data to D1 server
+/**
+ * Migration helper:
+ * Called ONLY on /admin page mount.
+ * If D1 Server is empty BUT local localStorage has existing custom edits,
+ * auto-migrate local custom edits to D1 server once.
+ */
+export async function checkAndMigrateLocalCMSToServer(): Promise<LandingCMSConfig | null> {
+  if (typeof window === "undefined") return null;
   const rawLocal = localStorage.getItem(CMS_STORAGE_KEY);
-  if (rawLocal && typeof window !== "undefined") {
-    // Attempt auto-migration in background
-    saveLandingCMSToServer(localConfig).catch(() => {});
-  }
+  if (!rawLocal) return null;
 
-  return localConfig;
+  try {
+    const localConfig = getLandingCMS();
+    const isCustom = JSON.stringify(localConfig) !== JSON.stringify(DEFAULT_LANDING_CMS);
+    if (!isCustom) return null;
+
+    // Check if server D1 is empty
+    const res = await fetch("/api/landing-cms", { cache: "no-store" });
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.success && !json.data) {
+        console.log("[CMS MIGRATION] Migrating local CMS edits to D1 server database...");
+        const saveRes = await saveLandingCMSToServer(localConfig);
+        if (saveRes.success) {
+          return localConfig;
+        }
+      }
+    }
+  } catch (err) {
+    console.error("[CMS MIGRATION ERROR]", err);
+  }
+  return null;
 }
 
 /**
