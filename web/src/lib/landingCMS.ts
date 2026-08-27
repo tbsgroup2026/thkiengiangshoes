@@ -83,6 +83,24 @@ export interface LandingCMSConfig {
 
   // 6. Featured Shoe Lines (Dòng Giày Tiêu Biểu)
   shoeLines: ShoeLinesConfig;
+
+  // 7. Workspace Departments Gallery
+  workspaceDepartments?: WorkspaceDepartment[];
+}
+
+export interface WorkspaceImageItem {
+  id: string;
+  src: string;
+  caption?: string;
+  order: number;
+}
+
+export interface WorkspaceDepartment {
+  id: string;
+  name: string;
+  icon: string; // "building" | "factory" | "briefcase" | "check-shield" | "monitor" | "users" | "file-text" | "users-round"
+  order: number;
+  images: WorkspaceImageItem[];
 }
 
 export const DEFAULT_BRAND_PARTNERS: BrandPartner[] = [
@@ -169,6 +187,176 @@ export const DEFAULT_SHOE_LINES_CONFIG: ShoeLinesConfig = {
   groups: DEFAULT_SHOE_GROUPS,
 };
 
+export const DEFAULT_WORKSPACE_DEPARTMENTS: WorkspaceDepartment[] = [
+  {
+    id: "sanh",
+    name: "Sảnh",
+    icon: "building",
+    order: 1,
+    images: [
+      { id: "img-sanh-1", src: "/images/KGLV/MẶT TIỀN SẢNH.png", caption: "Không gian làm việc chuẩn mực", order: 1 },
+      { id: "img-sanh-2", src: "/images/KGLV/SẢNH GÓC TỪ TRONG NHÌN RA.png", caption: "Khu làm việc phối hợp", order: 2 },
+      { id: "img-sanh-3", src: "/images/KGLV/CĐTT 2 GÓC HÌNH VP2.png", caption: "Điểm nhấn thiết kế nội thất", order: 3 },
+      { id: "img-sanh-4", src: "/images/KGLV/3 DÒNG GIÀY CHÍNH.png", caption: "Góc nhìn môi trường VPTX", order: 4 },
+      { id: "img-sanh-5", src: "/images/KGLV/CĐTT 1 GÓC 4 ĐÔI GIÀY.png", caption: "Khu trưng bày 4 đôi giày kỷ niệm", order: 5 },
+      { id: "img-sanh-6", src: "/images/KGLV/CĐTT 2 GÓC HÌNH CHIẾC GIÀY.png", caption: "Biểu tượng chiếc giày kỷ niệm", order: 6 },
+      { id: "img-sanh-7", src: "/images/KGLV/CĐTT 2 GÓC 3 CHIẾC GIÀY.png", caption: "Góc trưng bày 3 chiếc giày", order: 7 },
+      { id: "img-sanh-8", src: "/images/KGLV/CĐTT 1 LỐI VÀO.png", caption: "Chuyên đề truyền thống 1 - Lối vào", order: 8 },
+      { id: "img-sanh-9", src: "/images/KGLV/CĐTT 2 LỐI VÀO.png", caption: "Chuyên đề truyền thống 2 - Lối vào", order: 9 },
+      { id: "img-sanh-10", src: "/images/KGLV/BẢNG LỊCH SỬ & KỈ NIỆM CHƯƠNG.png", caption: "Bảng lịch sử & kỷ niệm chương", order: 10 },
+    ],
+  },
+  {
+    id: "nhamay1",
+    name: "Nhà máy 1",
+    icon: "factory",
+    order: 2,
+    images: [
+      { id: "img-nm1-1", src: "/images/KGLV/CĐTT 2 GÓC QUI TRÌNH GIÀY.png", caption: "Quy trình sản xuất giày SKECHERS", order: 1 },
+      { id: "img-nm1-2", src: "/images/tbs-factory-plant.png", caption: "Toàn cảnh xưởng may Nhà máy 1", order: 2 },
+      { id: "img-nm1-3", src: "/images/tbs-gate.jpg", caption: "Lối vào khu vực sản xuất Nhà máy 1", order: 3 },
+      { id: "img-nm1-4", src: "/images/crawled/56.webp", caption: "Dây chuyền gò dán tự động", order: 4 },
+      { id: "img-nm1-5", src: "/images/crawled/58.webp", caption: "Khu vực kiểm định chất lượng hàng ngày", order: 5 },
+      { id: "img-nm1-6", src: "/images/crawled/60.webp", caption: "Hệ thống băng chuyền thông minh", order: 6 },
+      { id: "img-nm1-7", src: "/images/crawled/04.webp", caption: "Tổ máy may công nghệ cao", order: 7 },
+      { id: "img-nm1-8", src: "/images/crawled/05.webp", caption: "Khu hoàn thiện sản phẩm", order: 8 },
+      { id: "img-nm1-9", src: "/images/crawled/005.webp", caption: "Đội ngũ công nhân kỹ thuật lành nghề", order: 9 },
+      { id: "img-nm1-10", src: "/images/crawled/Da-giay1.jpg", caption: "Góc ép đế giày tự động", order: 10 },
+      { id: "img-nm1-11", src: "/images/crawled/04_LOGISTICS.jpg", caption: "Khu vực logistics Nhà máy 1", order: 11 },
+      { id: "img-nm1-12", src: "/images/crawled/05_HOSPITALITY.jpg", caption: "Khu tiếp nhận nguyên liệu xưởng 1", order: 12 },
+    ],
+  },
+  {
+    id: "nhamay2",
+    name: "Nhà máy 2",
+    icon: "factory",
+    order: 3,
+    images: [
+      { id: "img-nm2-1", src: "/images/tbs-factory-plant.png", caption: "Khu xưởng gò Nhà máy 2", order: 1 },
+      { id: "img-nm2-2", src: "/images/crawled/56.webp", caption: "Băng chuyền sản xuất thể thao SKECHERS", order: 2 },
+      { id: "img-nm2-3", src: "/images/crawled/58.webp", caption: "Khu vực sấy gò tự động", order: 3 },
+      { id: "img-nm2-4", src: "/images/crawled/60.webp", caption: "Tổ kiểm định 100% sản phẩm", order: 4 },
+      { id: "img-nm2-5", src: "/images/crawled/04.webp", caption: "Khu vực cắt laser tự động", order: 5 },
+      { id: "img-nm2-6", src: "/images/crawled/05.webp", caption: "Dây chuyền dán đế tự động", order: 6 },
+      { id: "img-nm2-7", src: "/images/crawled/005.webp", caption: "Bảng quản trị Kaizen tại chuyền", order: 7 },
+      { id: "img-nm2-8", src: "/images/crawled/Da-giay1.jpg", caption: "Khu vực đóng gói xuất khẩu", order: 8 },
+      { id: "img-nm2-9", src: "/images/tbs-gate.jpg", caption: "Khuôn viên xanh Nhà máy 2", order: 9 },
+      { id: "img-nm2-10", src: "/images/crawled/04_LOGISTICS.jpg", caption: "Kho nguyên liệu Nhà máy 2", order: 10 },
+      { id: "img-nm2-11", src: "/images/crawled/05_HOSPITALITY.jpg", caption: "Khu nghỉ giải lao xưởng 2", order: 11 },
+    ],
+  },
+  {
+    id: "nhamay3",
+    name: "Nhà máy 3",
+    icon: "factory",
+    order: 4,
+    images: [
+      { id: "img-nm3-1", src: "/images/crawled/56.webp", caption: "Tổ hợp xưởng may Nhà máy 3", order: 1 },
+      { id: "img-nm3-2", src: "/images/crawled/58.webp", caption: "Chuyền sản xuất dòng sản phẩm Work Shoes", order: 2 },
+      { id: "img-nm3-3", src: "/images/crawled/60.webp", caption: "Thiết bị kiểm tra độ bền kéo đế", order: 3 },
+      { id: "img-nm3-4", src: "/images/crawled/04.webp", caption: "Hệ thống chiếu sáng tự nhiên nhà xưởng", order: 4 },
+      { id: "img-nm3-5", src: "/images/crawled/05.webp", caption: "Khu vực phân loại bán thành phẩm", order: 5 },
+      { id: "img-nm3-6", src: "/images/crawled/005.webp", caption: "Tổ may tự động hóa", order: 6 },
+      { id: "img-nm3-7", src: "/images/crawled/Da-giay1.jpg", caption: "Máy kiểm tra kim loại tự động", order: 7 },
+      { id: "img-nm3-8", src: "/images/tbs-factory-plant.png", caption: "Cảnh quan xanh xung quanh Nhà máy 3", order: 8 },
+      { id: "img-nm3-9", src: "/images/crawled/04_LOGISTICS.jpg", caption: "Khu xuất hàng tập trung Nhà máy 3", order: 9 },
+      { id: "img-nm3-10", src: "/images/crawled/05_HOSPITALITY.jpg", caption: "Phòng họp kỹ thuật tại chuyền", order: 10 },
+    ],
+  },
+  {
+    id: "vpdieuhanh",
+    name: "Văn phòng Điều hành",
+    icon: "briefcase",
+    order: 5,
+    images: [
+      { id: "img-vp-1", src: "/images/KGLV/CĐTT 2 GÓC HÌNH VP2.png", caption: "Sảnh điều hành trung tâm TBS Kiên Giang", order: 1 },
+      { id: "img-vp-2", src: "/images/KGLV/SẢNH GÓC TỪ TRONG NHÌN RA.png", caption: "Hành lang kết nối khu văn phòng", order: 2 },
+      { id: "img-vp-3", src: "/images/tbs-hands.png", caption: "Phòng làm việc Ban Giám đốc", order: 3 },
+      { id: "img-vp-4", src: "/images/tbs-team-banner.png", caption: "Khu vực họp điều hành nhanh hằng ngày", order: 4 },
+      { id: "img-vp-5", src: "/images/crawled/03_INVESTMENT_ASSET_MANAGEMENT.jpg", caption: "Phòng quản lý dự án & đầu tư", order: 5 },
+      { id: "img-vp-6", src: "/images/crawled/2023.jpg", caption: "Góc làm việc hiện đại mở rộng", order: 6 },
+      { id: "img-vp-7", src: "/images/crawled/2024.jpg", caption: "Không gian làm việc sáng tạo", order: 7 },
+      { id: "img-vp-8", src: "/images/KGLV/MẶT TIỀN SẢNH.png", caption: "Khu vực tiếp đối tác quốc tế SKECHERS", order: 8 },
+    ],
+  },
+  {
+    id: "qc",
+    name: "Phòng QC",
+    icon: "check-shield",
+    order: 6,
+    images: [
+      { id: "img-qc-1", src: "/images/KGLV/PHÒNG R&D.png", caption: "Phòng Lab kiểm định chất lượng R&D", order: 1 },
+      { id: "img-qc-2", src: "/images/KGLV/CĐTT 1 LỐI ĐI XUỐNG KV MẪU.png", caption: "Khu vực kiểm tra mẫu thử nghiệm", order: 2 },
+      { id: "img-qc-3", src: "/images/crawled/58.webp", caption: "Bàn thử nghiệm độ co giãn da & vải", order: 3 },
+      { id: "img-qc-4", src: "/images/crawled/60.webp", caption: "Máy đo màu quang phổ chuẩn SKECHERS", order: 4 },
+      { id: "img-qc-5", src: "/images/crawled/56.webp", caption: "Khu thử nghiệm mài mòn đế giày", order: 5 },
+      { id: "img-qc-6", src: "/images/crawled/04.webp", caption: "Phòng kiểm tra khả năng chống nước", order: 6 },
+      { id: "img-qc-7", src: "/images/crawled/05.webp", caption: "Tủ thử nghiệm lão hóa nhiệt độ", order: 7 },
+      { id: "img-qc-8", src: "/images/crawled/005.webp", caption: "Bảng lưu trữ mẫu chuẩn Golden Sample", order: 8 },
+      { id: "img-qc-9", src: "/images/crawled/Da-giay1.jpg", caption: "Khu vực cấp chứng nhận QC theo lô", order: 9 },
+    ],
+  },
+  {
+    id: "it",
+    name: "Phòng IT",
+    icon: "monitor",
+    order: 7,
+    images: [
+      { id: "img-it-1", src: "/images/crawled/03_INVESTMENT_ASSET_MANAGEMENT.jpg", caption: "Phòng máy chủ Server Data Center", order: 1 },
+      { id: "img-it-2", src: "/images/crawled/2024.jpg", caption: "Khu vực hỗ trợ hạ tầng công nghệ thông tin", order: 2 },
+      { id: "img-it-3", src: "/images/crawled/2023.jpg", caption: "Hệ thống màn hình giám sát MES thời gian thực", order: 3 },
+      { id: "img-it-4", src: "/images/crawled/2022.jpg", caption: "Góc phát triển phần mềm Kaizen & ERP", order: 4 },
+      { id: "img-it-5", src: "/images/crawled/2021.jpg", caption: "Tủ mạng & thiết bị kết nối IoT nhà máy", order: 5 },
+      { id: "img-it-6", src: "/images/crawled/2020.jpg", caption: "Phòng trực điều hành an ninh mạng", order: 6 },
+    ],
+  },
+  {
+    id: "hr",
+    name: "Phòng Nhân sự",
+    icon: "users",
+    order: 8,
+    images: [
+      { id: "img-hr-1", src: "/images/tbs-team-banner.png", caption: "Phòng tiếp đón nhân sự & tuyển dụng", order: 1 },
+      { id: "img-hr-2", src: "/images/crawled/06_RETAIL.jpg", caption: "Khu vực đào tạo kỹ năng công nhân mới", order: 2 },
+      { id: "img-hr-3", src: "/images/crawled/2019.jpg", caption: "Góc làm việc bộ phận chế độ & chính sách", order: 3 },
+      { id: "img-hr-4", src: "/images/crawled/2018.jpg", caption: "Phòng truyền thông nội bộ & văn hóa", order: 4 },
+      { id: "img-hr-5", src: "/images/crawled/2017.jpg", caption: "Không gian sinh hoạt công đoàn TBS", order: 5 },
+      { id: "img-hr-6", src: "/images/crawled/bg-2024.jpg", caption: "Khu tư vấn & giải đáp chế độ người lao động", order: 6 },
+      { id: "img-hr-7", src: "/images/crawled/bg-2023.jpg", caption: "Phòng lưu trữ hồ sơ nhân sự bảo mật", order: 7 },
+    ],
+  },
+  {
+    id: "ketoan",
+    name: "Phòng Kế toán",
+    icon: "file-text",
+    order: 9,
+    images: [
+      { id: "img-kt-1", src: "/images/KGLV/PHÒNG THƯ VIỆN VẬT TƯ.png", caption: "Khu vực đối soát tài sản & chứng từ vật tư", order: 1 },
+      { id: "img-kt-2", src: "/images/crawled/2023.jpg", caption: "Phòng kế toán tổng hợp & tài chính", order: 2 },
+      { id: "img-kt-3", src: "/images/crawled/2022.jpg", caption: "Góc nghiệp vụ thanh toán quốc tế SKECHERS", order: 3 },
+      { id: "img-kt-4", src: "/images/crawled/2021.jpg", caption: "Tủ lưu trữ hóa đơn & chứng từ thuế", order: 4 },
+      { id: "img-kt-5", src: "/images/crawled/2020.jpg", caption: "Bàn làm việc bộ phận chi phí & ngân sách", order: 5 },
+      { id: "img-kt-6", src: "/images/crawled/2019.jpg", caption: "Phòng họp kiểm toán & tài chính định kỳ", order: 6 },
+    ],
+  },
+  {
+    id: "phonghop",
+    name: "Phòng Họp",
+    icon: "users-round",
+    order: 10,
+    images: [
+      { id: "img-ph-1", src: "/images/KGLV/CĐTT 2 GÓC HÌNH VP2.png", caption: "Phòng họp hội nghị quốc tế 50 chỗ", order: 1 },
+      { id: "img-ph-2", src: "/images/KGLV/SẢNH GÓC TỪ TRONG NHÌN RA.png", caption: "Phòng họp điều hành nhanh Ban Giám đốc", order: 2 },
+      { id: "img-ph-3", src: "/images/crawled/05_HOSPITALITY.jpg", caption: "Phòng họp nhóm thiết kế & kỹ thuật", order: 3 },
+      { id: "img-ph-4", src: "/images/crawled/06_RETAIL.jpg", caption: "Phòng họp trao đổi đối tác SKECHERS", order: 4 },
+      { id: "img-ph-5", src: "/images/crawled/2024.jpg", caption: "Phòng họp trực tuyến Video Conference", order: 5 },
+      { id: "img-ph-6", src: "/images/crawled/2023.jpg", caption: "Phòng họp sáng tạo & Kaizen", order: 6 },
+      { id: "img-ph-7", src: "/images/crawled/2022.jpg", caption: "Khu vực thảo luận mở hành lang phòng họp", order: 7 },
+      { id: "img-ph-8", src: "/images/crawled/2021.jpg", caption: "Phòng họp đào tạo quy trình sản xuất", order: 8 },
+    ],
+  },
+];
+
 export const DEFAULT_LANDING_CMS: LandingCMSConfig = {
   hero: {
     titlePrefix: "Tổ hợp Kiên Giang",
@@ -210,6 +398,7 @@ export const DEFAULT_LANDING_CMS: LandingCMSConfig = {
       },
     ],
   },
+  workspaceDepartments: DEFAULT_WORKSPACE_DEPARTMENTS,
   excellence: {
     title: "Dấu Ấn Thương Hiệu & Đẳng Cấp Chuỗi Cung Ứng",
     description:
@@ -218,31 +407,27 @@ export const DEFAULT_LANDING_CMS: LandingCMSConfig = {
     points: [
       {
         title: "Vận Hành Chuẩn Hóa 4.0",
-        desc: "Tự động hóa báo cáo sự cố Gemba Walk và đánh giá Cải tiến CI.",
+        desc: "Áp dụng hệ thống quản trị sản xuất số hóa (MES) và tự động hóa quy trình giúp kiểm soát thời gian thực.",
       },
       {
-        title: "Kiểm Soát Chất Lượng Thời Gian Thực",
-        desc: "BI Dashboard đo lường chỉ số OEE và tỷ lệ lỗi trên từng chuyền sản xuất.",
+        title: "Cam Kết Bền Vững (ESG)",
+        desc: "Sử dụng năng lượng mặt trời áp mái, giảm phát thải carbon và tuân thủ các chứng nhận an toàn hóa chất quốc tế.",
       },
       {
-        title: "Tối Ưu Kaizen Bằng Trí Tuệ Nhân Tạo",
-        desc: "Tích hợp AI Groq so sánh trùng lặp ý tưởng Kaizen thông minh.",
+        title: "Phát Triển Con Người",
+        desc: "Liên tục đào tạo nâng cao tay nghề cho hơn 5,000 cán bộ công nhân viên với môi trường nhân văn.",
       },
     ],
   },
   products: {
-    title: "Dòng Sản Phẩm Tiêu Biểu SKECHERS",
+    title: "Sản Phẩm Skechers Nổi Bật",
     description:
-      "Các mẫu sản phẩm thuộc chuỗi cung ứng SKECHERS được sản xuất và kiểm soát chất lượng tại hệ thống nhà máy TBS Group.",
+      "Các dòng sản phẩm giày thể thao, thời trang và bảo hộ lao động đạt tiêu chuẩn xuất khẩu sang các thị trường toàn cầu.",
     items: [
-      { name: "Performance Footwear", code: "SK-PERF-01", image: "/images/crawled/Da-giay1.jpg" },
-      { name: "Lifestyle Casual Shoes", code: "SK-LIFE-02", image: "/images/crawled/04.webp" },
-      { name: "Athletic Sport Line", code: "SK-SPORT-03", image: "/images/crawled/05.webp" },
-      { name: "Work & Safety Shoes", code: "SK-WORK-04", image: "/images/crawled/56.webp" },
-      { name: "Outdoor Trekking Series", code: "SK-OUT-05", image: "/images/crawled/58.webp" },
-      { name: "Kids Comfort Collection", code: "SK-KIDS-06", image: "/images/crawled/60.webp" },
-      { name: "Handbag & Accessories", code: "SK-ACC-07", image: "/images/crawled/Tui-xach1.jpg" },
-      { name: "Special Edition Series", code: "SK-SPEC-08", image: "/images/crawled/005.webp" },
+      { name: "Skechers Performance GoRun", code: "SK-P001", image: "/images/brands/256000.png" },
+      { name: "Skechers Lifestyle Arch Fit", code: "SK-L002", image: "/images/crawled/56.webp" },
+      { name: "Skechers Work Steel Toe", code: "SK-W003", image: "/images/brands/256026.png" },
+      { name: "Skechers Outdoor Trail", code: "SK-O004", image: "/images/brands/256133.jpg" },
     ],
   },
   brandPartners: DEFAULT_BRAND_PARTNERS,
@@ -257,36 +442,20 @@ export function getLandingCMS(): LandingCMSConfig {
     const raw = localStorage.getItem(CMS_STORAGE_KEY);
     if (!raw) return DEFAULT_LANDING_CMS;
     const parsed = JSON.parse(raw);
+
     const storedProducts = parsed.products || {};
-    const rawItems = Array.isArray(storedProducts.items) && storedProducts.items.length > 0
-      ? storedProducts.items
-      : DEFAULT_LANDING_CMS.products.items;
+    const storedItems = storedProducts.items || [];
+    const mergedItems = [...storedItems];
+    for (const defItem of DEFAULT_LANDING_CMS.products.items) {
+      if (!mergedItems.some((i: any) => i.code === defItem.code)) {
+        mergedItems.push(defItem);
+      }
+    }
 
-    const mergedItems = rawItems.map((item: any, idx: number) => {
-      const defaultItem = DEFAULT_LANDING_CMS.products.items[idx] || DEFAULT_LANDING_CMS.products.items[0];
-      return {
-        name: item.name || defaultItem.name,
-        code: item.code || defaultItem.code,
-        image: item.image || defaultItem?.image || "/images/crawled/Da-giay1.jpg",
-      };
-    });
-
-    const rawPartners = Array.isArray(parsed.brandPartners) && parsed.brandPartners.length > 0
-      ? parsed.brandPartners
+    const cleanedPartners = Array.isArray(parsed.brandPartners)
+      ? parsed.brandPartners.filter((p: any) => p && p.id && p.name && p.logo)
       : DEFAULT_BRAND_PARTNERS;
 
-    // Sanitize any stale logo paths saved in client localStorage
-    const cleanedPartners = rawPartners.map((partner: BrandPartner) => {
-      let logo = partner.logo;
-      if (logo === "/images/brands/decathlon.svg") logo = "/images/brands/256000.png";
-      if (logo === "/images/brands/wolverine.svg") logo = "/images/brands/256133.jpg";
-      return {
-        ...partner,
-        logo,
-      };
-    });
-
-    // If stored partners list is missing newer default partners, merge them
     const existingIds = new Set(cleanedPartners.map((p: BrandPartner) => p.id));
     const mergedPartners = [...cleanedPartners];
     for (const defPartner of DEFAULT_BRAND_PARTNERS) {
@@ -299,9 +468,14 @@ export function getLandingCMS(): LandingCMSConfig {
       ? parsed.shoeLines
       : DEFAULT_SHOE_LINES_CONFIG;
 
+    const rawWorkspaceDeps = Array.isArray(parsed.workspaceDepartments) && parsed.workspaceDepartments.length > 0
+      ? parsed.workspaceDepartments
+      : DEFAULT_WORKSPACE_DEPARTMENTS;
+
     return {
       hero: { ...DEFAULT_LANDING_CMS.hero, ...(parsed.hero || {}) },
       workspace: { ...DEFAULT_LANDING_CMS.workspace, ...(parsed.workspace || {}) },
+      workspaceDepartments: rawWorkspaceDeps,
       excellence: { ...DEFAULT_LANDING_CMS.excellence, ...(parsed.excellence || {}) },
       products: {
         title: storedProducts.title || DEFAULT_LANDING_CMS.products.title,

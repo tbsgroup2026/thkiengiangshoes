@@ -45,6 +45,7 @@ import {
 import LandingCMSManager from "@/components/admin/LandingCMSManager";
 import BrandPartnersManager from "@/components/admin/BrandPartnersManager";
 import ShoeLinesManager from "@/components/admin/ShoeLinesManager";
+import WorkspaceCMSManager from "@/components/admin/WorkspaceCMSManager";
 import * as XLSX from "xlsx";
 import { INITIAL_370_EMPLOYEES } from "@/lib/initialEmployees";
 
@@ -91,7 +92,7 @@ interface MediaAsset {
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<
-    "overview" | "users" | "news" | "media" | "brand_partners" | "shoe_lines" | "products" | "landing_cms" | "d1_control"
+    "overview" | "users" | "news" | "media" | "workspace_gallery" | "brand_partners" | "shoe_lines" | "products" | "landing_cms" | "d1_control"
   >("overview");
   const [cmsSubSection, setCmsSubSection] = useState<
     "hero" | "workspace" | "excellence" | "products"
@@ -104,13 +105,15 @@ export default function AdminPage() {
   useEffect(() => {
     setLandingCMS(getLandingCMS());
 
-    // Check URL search parameters (e.g. /admin?tab=products or /admin?tab=shoe_lines)
+    // Check URL search parameters (e.g. /admin?tab=products or /admin?tab=workspace_gallery)
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const tabParam = params.get("tab");
       if (tabParam === "products") {
         setActiveTab("products");
         setCmsSubSection("products");
+      } else if (tabParam === "workspace" || tabParam === "workspace_gallery" || tabParam === "kglv") {
+        setActiveTab("workspace_gallery");
       } else if (tabParam === "brand_partners" || tabParam === "brands") {
         setActiveTab("brand_partners");
       } else if (tabParam === "shoe_lines" || tabParam === "shoes") {
@@ -1188,6 +1191,23 @@ export default function AdminPage() {
           </button>
 
           <button
+            onClick={() => setActiveTab("workspace_gallery")}
+            className={`px-4 py-2.5 rounded-xl font-extrabold text-xs flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === "workspace_gallery"
+                ? "bg-[#006838] text-white shadow-md border border-[#004e2a]"
+                : "text-slate-700 hover:text-[#006838] hover:bg-white/70"
+            }`}
+          >
+            <IconBuilding size={16} />
+            <span>🏢 Không Gian Làm Việc</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+              activeTab === "workspace_gallery" ? "bg-white/20 text-white" : "bg-emerald-100 text-[#006838]"
+            }`}>
+              {landingCMS.workspaceDepartments?.length || 10} Phòng
+            </span>
+          </button>
+
+          <button
             onClick={() => setActiveTab("brand_partners")}
             className={`px-4 py-2.5 rounded-xl font-extrabold text-xs flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
               activeTab === "brand_partners"
@@ -2142,6 +2162,21 @@ export default function AdminPage() {
             onBulkUploadProductImages={handleBulkUploadProductImages}
             isUploading={isUploadingCloudinary}
             initialSubSection={activeTab === "products" ? "products" : cmsSubSection}
+          />
+        )}
+
+        {/* ════════════════════════════════════════════════════════════════
+            TAB: QUẢN LÝ KHÔNG GIAN LÀM VIỆC (WORKSPACE GALLERY)
+           ════════════════════════════════════════════════════════════════ */}
+        {activeTab === "workspace_gallery" && (
+          <WorkspaceCMSManager
+            departments={landingCMS.workspaceDepartments || []}
+            onChange={(updatedDeps) => {
+              const newCMS = { ...landingCMS, workspaceDepartments: updatedDeps };
+              setLandingCMS(newCMS);
+              saveLandingCMS(newCMS);
+            }}
+            showToast={showToast}
           />
         )}
 
