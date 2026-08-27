@@ -197,7 +197,7 @@ export default function HRRecruitmentView() {
                     title: newTitle || "Chuyên Viên QC Lead Ca 2",
                     quantity: Number(newQuantity) || 2,
                     salaryRange: newSalary || "15,000,000 - 20,000,000 đ",
-                    department: "Văn Phòng Chuỗi SKECHERS",
+                    department: "Tổ hợp Kiên Giang - TBS Group",
                     status: "Pending_Manager"
                   })
                 });

@@ -163,7 +163,7 @@ export default function LoginPage() {
           <div className="space-y-1.5 mb-6">
             <h1 className="text-xl sm:text-2xl font-extrabold text-[#08221a] tracking-tight">
               Đăng Nhập Hệ Thống <br />
-              <span className="text-[#0f4133]">Văn Phòng Chuỗi SKECHERS</span>
+              <span className="text-[#0f4133]">Tổ hợp Kiên Giang - TBS Group</span>
             </h1>
             <p className="text-xs text-gray-500 leading-relaxed">
               Chọn vai trò và nhập thông tin tài khoản bên dưới để bắt đầu làm việc
@@ -302,7 +302,7 @@ export default function LoginPage() {
 
         {/* Footer nhỏ cuối form */}
         <div className="pt-6 border-t border-gray-100 text-center text-[11px] text-gray-400">
-          © 2026 TBS Group · Văn Phòng Chuỗi SKECHERS · v1.0
+          © 2026 TBS Group · Tổ hợp Kiên Giang · v1.0
         </div>
       </div>
 
@@ -317,7 +317,7 @@ export default function LoginPage() {
 
         {/* Top Header */}
         <div className="relative z-10 flex items-center justify-between">
-          <span className="text-xs font-semibold text-emerald-300/80">Văn Phòng Chuỗi SKECHERS - TBS Group</span>
+          <span className="text-xs font-semibold text-emerald-300/80">Tổ hợp Kiên Giang - TBS Group</span>
         </div>
 
         {/* Center Main Content */}

@@ -13,11 +13,11 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Văn Phòng Chuỗi SKECHERS - TBS Group",
+  title: "Tổ hợp Kiên Giang - TBS Group",
   description:
-    "Hệ thống quản trị vận hành chuỗi cung ứng và sản xuất SKECHERS - TBS Group (Gemba Walk, Cải tiến CI, Kaizen, Biểu mẫu, BI Dashboard 24/7).",
+    "Hệ thống quản trị vận hành Tổ hợp Kiên Giang - TBS Group (Gemba Walk, Cải tiến CI, Kaizen, Biểu mẫu, BI Dashboard 24/7).",
   keywords:
-    "Văn Phòng Chuỗi SKECHERS - TBS Group, SKECHERS, TBS Group, Gemba Walk, CI, Kaizen, Quản trị hằng ngày, Quản lý nhà máy",
+    "Tổ hợp Kiên Giang - TBS Group, Tổ hợp Kiên Giang, TBS Group, Gemba Walk, CI, Kaizen, Quản trị hằng ngày, Quản lý nhà máy",
   manifest: "/manifest.json",
   icons: {
     icon: [
@@ -30,12 +30,12 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "SKECHERS TBS Group",
+    title: "Tổ hợp Kiên Giang - TBS Group",
   },
   openGraph: {
-    title: "Văn Phòng Chuỗi SKECHERS - TBS Group",
+    title: "Tổ hợp Kiên Giang - TBS Group",
     description:
-      "Trung tâm điều hành và quản trị số hoá vận hành chuỗi cung ứng SKECHERS - TBS Group.",
+      "Trung tâm điều hành và quản trị số hoá vận hành Tổ hợp Kiên Giang - TBS Group.",
     type: "website",
     images: ["/icon.png"],
   },

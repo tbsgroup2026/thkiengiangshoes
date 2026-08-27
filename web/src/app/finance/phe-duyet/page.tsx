@@ -24,7 +24,7 @@ export default function PheDuyetPage() {
       id: "PC-250815-0001",
       title: "Phiếu chi: Chi phí dịch vụ phần mềm quản lý dự án tháng 08/2026",
       requester: "Nguyễn Thị Mai (Kế toán)",
-      dept: "Văn phòng Chuỗi SKECHERS - R&D Center",
+      dept: "Tổ hợp Kiên Giang - TBS Group",
       amount: 19800000,
       date: "15/08/2026 09:15",
       step: "Kế toán trưởng duyệt",

@@ -194,7 +194,7 @@ export default function MeetingRoomsPage() {
   const [currentUser, setCurrentUser] = useState<{ name: string; title: string; department: string; avatar: string; roles?: string[]; roleCode?: string; empCode?: string }>({
     name: "Cán Bộ Công Nhân Viên",
     title: "Cán Bộ Công Nhân Viên",
-    department: "Văn Phòng Chuỗi SKECHERS",
+    department: "Tổ hợp Kiên Giang - TBS Group",
     avatar: "/images/tbs-logo.png",
   });
 
@@ -205,7 +205,7 @@ export default function MeetingRoomsPage() {
         setCurrentUser({
           ...cur,
           title: cur.title || "Cán Bộ Công Nhân Viên",
-          department: cur.department || "Văn Phòng Chuỗi SKECHERS",
+          department: cur.department || "Tổ hợp Kiên Giang - TBS Group",
           avatar: cur.avatar || "/images/tbs-logo.png",
         });
 
@@ -3763,7 +3763,7 @@ export default function MeetingRoomsPage() {
 
       {/* FOOTER */}
       <footer className="py-3 px-6 border-t border-slate-200 text-xs text-slate-500 text-center bg-white">
-        <span>© 2026 TBS Group System - Văn Phòng Chuỗi SKECHERS. Tất cả các quyền được bảo lưu.</span>
+        <span>© 2026 TBS Group System - Tổ hợp Kiên Giang. Tất cả các quyền được bảo lưu.</span>
       </footer>
     </div>
   );

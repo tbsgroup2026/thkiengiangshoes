@@ -37,7 +37,7 @@ export default function CareersCTA() {
 
             <p className="text-lg text-white/60 leading-relaxed max-w-[55ch]">
               Trở thành một phần của tập đoàn đa ngành hàng đầu Việt Nam. Làm việc tại
-              Văn phòng chuỗi SKECHERS với công nghệ 4.0, môi trường chuyên nghiệp
+              Tổ hợp Kiên Giang - TBS Group với công nghệ 4.0, môi trường chuyên nghiệp
               và lộ trình phát triển bền vững.
             </p>
 

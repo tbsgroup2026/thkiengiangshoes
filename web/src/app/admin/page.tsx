@@ -906,7 +906,7 @@ export default function AdminPage() {
   const [mediaList, setMediaList] = useState<MediaAsset[]>([
     {
       id: "media_1",
-      title: "Hero Banner Văn Phòng Chuỗi SKECHERS",
+      title: "Hero Banner Tổ hợp Kiên Giang - TBS Group",
       category: "HERO_BANNER",
       url: "/images/crawled/banner.jpg",
       createdAt: "15/08/2026",
@@ -993,7 +993,7 @@ export default function AdminPage() {
               <img src="/images/tbs-logo.png" alt="TBS" className="w-full h-full object-contain brightness-200" />
             </div>
             <h1 className="text-2xl font-black text-white tracking-tight">ĐĂNG NHẬP QUẢN TRỊ ADMIN</h1>
-            <p className="text-xs text-slate-400">Văn Phòng Chuỗi SKECHERS - TBS Group System Admin Portal</p>
+            <p className="text-xs text-slate-400">Tổ hợp Kiên Giang - TBS Group System Admin Portal</p>
           </div>
 
           <form onSubmit={handleAdminLogin} className="space-y-4">

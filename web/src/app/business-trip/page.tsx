@@ -292,7 +292,7 @@ export default function BusinessTripRegistrationPage() {
   const [currentUser, setCurrentUser] = useState<{ name: string; title: string; department: string; avatar: string; roleCode?: string; empCode?: string }>({
     name: "Cán Bộ Công Nhân Viên",
     title: "Cán Bộ Công Nhân Viên",
-    department: "Văn Phòng Chuỗi SKECHERS",
+    department: "Tổ hợp Kiên Giang - TBS Group",
     avatar: "/images/tbs-logo.png",
     empCode: "",
   });
@@ -336,7 +336,7 @@ export default function BusinessTripRegistrationPage() {
         } catch (e) {}
       }
 
-      if (!userDept || userDept === "TBS Group" || userDept === "Văn Phòng Chuỗi SKECHERS" || userDept === "Hành chính") {
+      if (!userDept || userDept === "TBS Group" || userDept === "Tổ hợp Kiên Giang - TBS Group" || userDept === "Hành chính") {
         userDept = "NHÂN SỰ-HC";
       }
 
@@ -2985,7 +2985,7 @@ export default function BusinessTripRegistrationPage() {
 
       {/* FOOTER */}
       <footer className="py-3 px-6 border-t border-slate-200 text-xs text-slate-500 text-center bg-white">
-        <span>© 2026 TBS Group System - Văn Phòng Chuỗi SKECHERS. Tất cả các quyền được bảo lưu.</span>
+        <span>© 2026 TBS Group System - Tổ hợp Kiên Giang. Tất cả các quyền được bảo lưu.</span>
       </footer>
     </div>
   );

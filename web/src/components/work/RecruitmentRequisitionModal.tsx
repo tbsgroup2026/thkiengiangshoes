@@ -277,7 +277,7 @@ export default function RecruitmentRequisitionModal({
                   : "Đề Xuất / Yêu Cầu Tuyển Dụng Nhân Sự"}
               </h3>
               <p className="text-xs text-emerald-200 font-medium mt-0.5">
-                Văn phòng Chuỗi SKECHERS - Quy trình phê duyệt &amp; số hóa tuyển dụng
+                Tổ hợp Kiên Giang - TBS Group - Quy trình phê duyệt &amp; số hóa tuyển dụng
               </p>
             </div>
           </div>

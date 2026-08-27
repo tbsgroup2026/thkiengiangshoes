@@ -335,7 +335,7 @@ export default function HRHanhChanhHubView({
          ════════════════════════════════════════════════════════════════ */}
       <div className="pt-4 border-t border-slate-200/70 flex items-center justify-between text-xs text-slate-500 font-semibold">
         <span className="text-[11px] text-slate-500 font-medium">
-          Văn Phòng Chuỗi SKECHERS – TBS Group Dashboard v2.4
+          Tổ hợp Kiên Giang - TBS Group Dashboard v2.4
         </span>
 
         <div className="flex items-center gap-2 text-[11px]">

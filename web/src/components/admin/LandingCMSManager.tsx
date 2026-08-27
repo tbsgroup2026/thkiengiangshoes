@@ -288,7 +288,7 @@ export default function LandingCMSManager({
                   value={hero.titlePrefix}
                   onChange={(e) => updateHero("titlePrefix", e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-bold focus:border-[#006838] focus:bg-white outline-none"
-                  placeholder="Văn Phòng Chuỗi"
+                  placeholder="Tổ hợp Kiên Giang"
                 />
               </div>
 
@@ -657,7 +657,7 @@ export default function LandingCMSManager({
                   value={excellence.description}
                   onChange={(e) => updateExcellence("description", e.target.value)}
                   className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-medium focus:border-[#006838] focus:bg-white outline-none"
-                  placeholder="Văn Phòng Chuỗi SKECHERS - TBS Group tuân thủ nghiêm ngặt..."
+                  placeholder="Tổ hợp Kiên Giang - TBS Group tuân thủ nghiêm ngặt..."
                 />
               </div>
             </div>

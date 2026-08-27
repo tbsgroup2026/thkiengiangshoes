@@ -435,7 +435,7 @@ export default function FinanceShell({
                 Xin chào, <span className="text-[#006838]">{userInfo.name}!</span>
               </h1>
               <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium truncate max-w-[170px] sm:max-w-none">
-                Văn phòng Chuỗi SKECHERS - R&amp;D Center | Kế toán &amp; Quản trị
+                Tổ hợp Kiên Giang - R&amp;D Center | Kế toán &amp; Quản trị
               </p>
             </div>
           </div>

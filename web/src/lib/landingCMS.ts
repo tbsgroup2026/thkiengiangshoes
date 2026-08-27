@@ -54,11 +54,11 @@ export interface LandingCMSConfig {
 
 export const DEFAULT_LANDING_CMS: LandingCMSConfig = {
   hero: {
-    titlePrefix: "Văn Phòng Chuỗi",
-    titleHighlight: "SKECHERS - TBS Group",
+    titlePrefix: "Tổ hợp Kiên Giang",
+    titleHighlight: "TBS Group",
     quoteItalic: "“Excellence in Manufacturing. Excellence in Leadership.”",
     description:
-      "Không gian điều hành đại diện cho năng lực quản trị, văn hóa doanh nghiệp và tiêu chuẩn vận hành của ngành SKECHERS - TBS Group. Thiết kế hướng đến sự tinh gọn, hiện đại và chuyên nghiệp, phản ánh vị thế của một doanh nghiệp sản xuất trong chuỗi cung ứng toàn cầu.",
+      "Không gian điều hành đại diện cho năng lực quản trị, văn hóa doanh nghiệp và tiêu chuẩn vận hành của Tổ hợp Kiên Giang - TBS Group. Thiết kế hướng đến sự tinh gọn, hiện đại và chuyên nghiệp, phản ánh vị thế của một doanh nghiệp sản xuất trong chuỗi cung ứng toàn cầu.",
     bgImage: "/images/tbs-gate.jpg",
     handsImage: "/images/tbs-hands.png",
     teamImage: "/images/tbs-team-banner.png",
@@ -96,7 +96,7 @@ export const DEFAULT_LANDING_CMS: LandingCMSConfig = {
   excellence: {
     title: "Dấu Ấn Thương Hiệu & Đẳng Cấp Chuỗi Cung Ứng",
     description:
-      "Văn Phòng Chuỗi SKECHERS - TBS Group tuân thủ nghiêm ngặt các tiêu chuẩn chất lượng cao nhất của đối tác SKECHERS toàn cầu. Hệ thống áp dụng quy trình số hóa 100%, nâng cao năng suất và đảm bảo an toàn lao động.",
+      "Tổ hợp Kiên Giang - TBS Group tuân thủ nghiêm ngặt các tiêu chuẩn chất lượng cao nhất của các đối tác chiến lược toàn cầu. Hệ thống áp dụng quy trình số hóa 100%, nâng cao năng suất và đảm bảo an toàn lao động.",
     image: "/images/tbs-factory-plant.png",
     points: [
       {

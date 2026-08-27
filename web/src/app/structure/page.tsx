@@ -26,7 +26,7 @@ export default function StructurePage() {
       color: "from-emerald-800 to-emerald-950 text-white",
     },
     {
-      title: "Khối Văn Phòng Chuỗi SKECHERS",
+      title: "Khối Tổ hợp Kiên Giang - TBS Group",
       role: "Điều phối chuỗi cung ứng toàn cầu & Quản lý đơn hàng",
       lead: "Giám Đốc Chuỗi SKECHERS",
       members: "Bộ phận Kế hoạch (PMC), Logistics & Quản lý Chuỗi",
@@ -78,7 +78,7 @@ export default function StructurePage() {
             <span>Cơ cấu tổ chức &amp; Bộ máy</span>
           </div>
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">
-            Sơ Đồ Tổ Chức Chuỗi Cung Ứng SKECHERS - TBS Group
+            Sơ Đồ Tổ Chức Tổ hợp Kiên Giang - TBS Group
           </h1>
           <p className="text-sm text-slate-500 font-medium">
             Mô hình quản trị liên thông, kết nối từ Văn phòng Chuỗi điều hành, Trung tâm R&amp;D đến các Nhà máy sản xuất

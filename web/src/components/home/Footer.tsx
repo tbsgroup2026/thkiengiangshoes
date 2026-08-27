@@ -39,7 +39,7 @@ const FOOTER_LINKS = {
 };
 
 const CONTACTS = [
-  { icon: IconMapPin, text: "Văn Phòng Chuỗi SKECHERS - TBS Group, Việt Nam" },
+  { icon: IconMapPin, text: "Tổ hợp Kiên Giang - TBS Group, Việt Nam" },
   { icon: IconPhone, text: "0296 3878 099" },
   { icon: IconMail, text: "contact@tbsgroup.vn" },
 ];
@@ -68,7 +68,7 @@ export default function Footer() {
             </div>
 
             <p className="text-[11px] text-white/50 leading-tight line-clamp-1">
-              Văn Phòng Chuỗi SKECHERS thuộc hệ thống TBS Group - tập đoàn đa ngành hàng đầu Việt Nam.
+              Tổ hợp Kiên Giang thuộc hệ thống TBS Group - tập đoàn đa ngành hàng đầu Việt Nam.
             </p>
 
             <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-white/60">

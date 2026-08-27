@@ -147,7 +147,7 @@ export default function RDModule({
               <span>R&D (Phát triển sản phẩm)</span>
             </h2>
             <p className="text-xs text-emerald-100/90 font-medium leading-relaxed">
-              Nghiên cứu, thiết kế mẫu & kỹ thuật cùng Văn phòng Chuỗi SKECHERS – TBS Group.
+              Nghiên cứu, thiết kế mẫu & kỹ thuật cùng Tổ hợp Kiên Giang - TBS Group.
             </p>
           </div>
 
@@ -650,7 +650,7 @@ export default function RDModule({
 
             <div className="space-y-2">
               {[
-                { title: "Khai trương mô hình số hóa Văn phòng Chuỗi SKECHERS", date: "20/05/2025", icon: IconSpeakerphone, color: "text-[#006838]", bg: "bg-emerald-50" },
+                { title: "Khai trương mô hình số hóa Tổ hợp Kiên Giang - TBS Group", date: "20/05/2025", icon: IconSpeakerphone, color: "text-[#006838]", bg: "bg-emerald-50" },
                 { title: "Cập nhật quy trình nhập liệu tài chính kế toán", date: "20/05/2025", icon: IconInfoCircle, color: "text-blue-700", bg: "bg-blue-50" },
                 { title: "Lịch đào tạo nội bộ tháng 6", date: "20/05/2025", icon: IconCalendar, color: "text-purple-700", bg: "bg-purple-50" },
               ].map((news, idx) => {

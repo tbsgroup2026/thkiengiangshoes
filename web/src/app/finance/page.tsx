@@ -1026,7 +1026,7 @@ function FinanceHubContent() {
                 <div className="flex justify-between items-start border-b pb-3 border-slate-300">
                   <div className="space-y-0.5 font-sans">
                     <p className="font-extrabold text-[11px] text-slate-900 uppercase">TẬP ĐOÀN TBS GROUP</p>
-                    <p className="text-[10px] text-slate-600 font-bold">Văn Phòng Chuỗi SKECHERS - R&amp;D Center</p>
+                    <p className="text-[10px] text-slate-600 font-bold">Tổ hợp Kiên Giang - TBS Group</p>
                     <p className="text-[9px] text-slate-500">KCN Sông Mây, Trảng Bom, Đồng Nai</p>
                   </div>
                   <div className="text-right font-sans space-y-0.5">

@@ -44,7 +44,7 @@ export default function HoaDonPage() {
     supplier: "Công ty TNHH Vật Tư Da Giày Minh Long",
     taxCode: "3700147988",
     address: "KCN Sóng Thần 2, Dĩ An, Bình Dương",
-    buyer: "Văn phòng Chuỗi SKECHERS - TBS Group",
+    buyer: "Tổ hợp Kiên Giang - TBS Group",
     paymentTerm: "30 ngày kể từ ngày xuất HĐ",
     note: "Hóa đơn vật tư da PU ép nhiệt lô sản xuất Skechers D'Lites",
   });

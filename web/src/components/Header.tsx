@@ -279,7 +279,7 @@ export default function Header() {
             empCode: currentUser.empCode,
             name: currentUser.name,
             roleCode: currentUser.roleCode || currentUser.roles?.[0] || 'CBCNV',
-            departmentCode: currentUser.department || 'Văn Phòng Chuỗi SKECHERS',
+            departmentCode: currentUser.department || 'Tổ hợp Kiên Giang - TBS Group',
             avatar: currentUser.avatar || '/images/tbs-logo.png',
             email: currentUser.email || `${currentUser.empCode}@tbsgroup.vn`,
             title: currentUser.title || 'Cán Bộ Công Nhân Viên',

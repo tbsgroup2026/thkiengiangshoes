@@ -14,7 +14,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 import { COMPANY_INFO } from "@/lib/companyData";
 
 const CONTACTS = [
-  { icon: IconMapPin, text: "Văn Phòng Chuỗi SKECHERS - TBS Group, Việt Nam" },
+  { icon: IconMapPin, text: "Tổ hợp Kiên Giang - TBS Group, Việt Nam" },
   { icon: IconPhone, text: "0296 3878 099" },
   { icon: IconMail, text: "info@tbsgroup.vn" },
 ];

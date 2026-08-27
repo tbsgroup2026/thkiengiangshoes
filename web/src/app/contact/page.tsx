@@ -12,9 +12,9 @@ import { COMPANY_INFO } from "@/lib/companyData";
 const LOCATIONS = [
   {
     icon: IconBuildingFactory,
-    title: "Văn Phòng Chuỗi SKECHERS - TBS Group",
+    title: "Tổ hợp Kiên Giang - TBS Group",
     address:
-      "Văn Phòng Chuỗi SKECHERS, TBS Group, Việt Nam",
+      "Tổ hợp Kiên Giang - TBS Group, Tỉnh Kiên Giang, Việt Nam",
   },
   {
     icon: IconMapPin,

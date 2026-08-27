@@ -77,7 +77,7 @@ export const SYSTEM_USERS: Record<string, UserProfile> = {
     empCode: "LT-001",
     name: "Lễ Tân Văn Phòng",
     title: "Chuyên Viên Lễ Tân Văn Phòng",
-    department: "Văn Phòng Chuỗi SKECHERS",
+    department: "Tổ hợp Kiên Giang - TBS Group",
     email: "letan@tbsgroup.vn",
     phone: "0522511246",
     roleCode: "LE_TAN",
@@ -618,7 +618,7 @@ export function getCurrentUser(): UserProfile | null {
       finalAvatar = parsed.avatar;
     }
     const rawTitle = (baseInfo && baseInfo.title) ? baseInfo.title : (parsed.title || "Cán Bộ Công Nhân Viên");
-    const rawDept = (parsed.department && parsed.department !== "TBS Group" && parsed.department !== "Văn Phòng Chuỗi SKECHERS") ? parsed.department : (baseInfo?.department || "NHÂN SỰ-HC");
+    const rawDept = (parsed.department && parsed.department !== "TBS Group" && parsed.department !== "Tổ hợp Kiên Giang - TBS Group") ? parsed.department : (baseInfo?.department || "NHÂN SỰ-HC");
 
     const resolved = resolveEmployeeLevel({
       title: rawTitle,
@@ -685,7 +685,7 @@ export function loginUserProfile(empCodeOrRole: string, password?: string): User
       empCode: targetEmpCode || "202608001",
       name: `Cán Bộ Nhân Viên (${targetEmpCode})`,
       title: "Cán Bộ Công Nhân Viên",
-      department: "Văn Phòng Chuỗi SKECHERS",
+      department: "Tổ hợp Kiên Giang - TBS Group",
       email: `${targetEmpCode.toLowerCase()}@tbsgroup.vn`,
       roleCode: "CBCNV",
       roles: ["employee"],

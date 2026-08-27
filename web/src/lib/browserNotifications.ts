@@ -175,7 +175,7 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
       await syncPushSubscriptionToServer();
       await sendDesktopNotification({
         title: "🔔 Đã bật thông báo Điện thoại & PC thành công!",
-        message: "Hệ thống Văn Phòng Chuỗi SKECHERS đã kết nối Push Notification với trung tâm thông báo màn hình chính điện thoại của bạn.",
+        message: "Hệ thống Tổ hợp Kiên Giang - TBS Group đã kết nối Push Notification với trung tâm thông báo màn hình chính điện thoại của bạn.",
         tag: "welcome_test",
       });
     } else if (permission === "denied") {

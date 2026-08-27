@@ -419,7 +419,7 @@ export async function POST(request: Request) {
       roleLevel: 4,
       departmentId: 11,
       departmentCode: 'TO_HOP_NHA_MAY',
-      departmentName: 'Văn Phòng Chuỗi SKECHERS',
+      departmentName: 'Tổ hợp Kiên Giang - TBS Group',
       redirectUrl: '/work',
     };
 

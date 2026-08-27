@@ -332,7 +332,7 @@ export default function NotificationCenter() {
                   {/* Bottom Sheet Footer */}
                   <div className="p-3 text-center bg-slate-50 border-t border-slate-200 flex-shrink-0">
                     <span className="text-xs text-slate-500 font-bold">
-                      Văn Phòng Chuỗi SKECHERS – TBS Group 24/7
+                      Tổ hợp Kiên Giang – TBS Group 24/7
                     </span>
                   </div>
                 </div>
@@ -468,7 +468,7 @@ export default function NotificationCenter() {
             {/* Desktop Footer */}
             <div className="p-2.5 text-center bg-slate-50 border-t border-slate-100">
               <span className="text-[11px] text-slate-500 font-medium">
-                Văn Phòng Chuỗi SKECHERS - Notification System 24/7
+                Tổ hợp Kiên Giang - Notification System 24/7
               </span>
             </div>
           </div>

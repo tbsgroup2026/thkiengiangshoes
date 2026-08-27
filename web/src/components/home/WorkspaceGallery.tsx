@@ -36,7 +36,7 @@ export const WORKSPACE_ITEMS: WorkspaceItem[] = [
     categoryLabel: "Sảnh & Điều Hành",
     tag: "Lobby Front",
     image: "/images/KGLV/MẶT TIỀN SẢNH.png",
-    desc: "Mặt tiền sảnh tiếp đón thiết kế hiện đại, thể hiện diện mạo chuyên nghiệp và quy mô vận hành của Văn phòng Chuỗi SKECHERS - TBS Group.",
+    desc: "Mặt tiền sảnh tiếp đón thiết kế hiện đại, thể hiện diện mạo chuyên nghiệp và quy mô vận hành của Tổ hợp Kiên Giang - TBS Group.",
   },
   {
     id: "kglv-2",

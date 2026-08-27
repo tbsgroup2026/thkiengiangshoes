@@ -56,7 +56,7 @@ function ThuChiContent() {
     voucherDate: "2026-08-15",
     paymentMethod: "Chuyển khoản",
     bankAccount: "Vietcombank - 1023 456 789",
-    dept: "Văn phòng Chuỗi SKECHERS - R&D Center",
+    dept: "Tổ hợp Kiên Giang - TBS Group",
     receiver: "Công ty TNHH Giải pháp Công nghệ ABC",
     address: "123 Nguyễn Văn Linh, P. Tân Phong, Quận 7, TP. HCM",
     taxCode: "0312345678",
@@ -302,7 +302,7 @@ function ThuChiContent() {
                       onChange={(e) => setGeneralInfo({ ...generalInfo, dept: e.target.value })}
                       className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-900 outline-none focus:border-[#006838] bg-slate-50/50"
                     >
-                      <option value="Văn phòng Chuỗi SKECHERS - R&D Center">Văn phòng Chuỗi SKECHERS - R&amp;D Center</option>
+                      <option value="Tổ hợp Kiên Giang - TBS Group">Tổ hợp Kiên Giang - TBS Group</option>
                       <option value="Nhà Máy 1 (TBS Sài Gòn)">Nhà Máy 1 (TBS Sài Gòn)</option>
                       <option value="Nhà Máy 2 (TBS Bình Dương)">Nhà Máy 2 (TBS Bình Dương)</option>
                       <option value="Phòng Kế Toán Tổng Hợp">Phòng Kế Toán Tổng Hợp</option>

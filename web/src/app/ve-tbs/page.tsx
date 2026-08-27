@@ -74,7 +74,7 @@ const PILLARS = [
     title: "Thương Mại & Bán Lẻ Skechers",
     subtitle: "Chuỗi phân phối & trải nghiệm khách hàng",
     description:
-      "Văn Phòng Chuỗi Skechers - TBS Group vận hành hệ thống cửa hàng bán lẻ hiện đại trên toàn quốc, mang lại dịch vụ khách hàng xuất sắc và giải pháp quản lý hàng hóa thời gian thực.",
+      "Tổ hợp Kiên Giang - TBS Group vận hành hệ thống cửa hàng bán lẻ hiện đại trên toàn quốc, mang lại dịch vụ khách hàng xuất sắc và giải pháp quản lý hàng hóa thời gian thực.",
     image: "/images/tbs-skechers-store.png",
     icon: IconBuildingStore,
     badge: "Hệ Thống Chuỗi Chuẩn Quốc Tế",
@@ -274,13 +274,13 @@ export default function VeTBSPage() {
               <div className="lg:col-span-7 space-y-5">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-emerald-200 text-xs font-bold border border-white/20">
                   <IconShieldCheck size={16} />
-                  <span>Văn Phòng Chuỗi Skechers - TBS Group</span>
+                  <span>Tổ hợp Kiên Giang - TBS Group</span>
                 </div>
                 <h3 className="text-2xl sm:text-4xl font-black text-white uppercase leading-tight">
                   Đối Tác Sản Xuất &amp; Phân Phối Chuỗi Skechers Toàn Cầu
                 </h3>
                 <p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed font-medium">
-                  Với năng lực sản xuất chuẩn mực và quản lý vận hành hiện đại, Văn Phòng Chuỗi Skechers thuộc TBS Group giữ vai trò then chốt trong việc duy trì chuỗi cung ứng ổn định, chất lượng đồng nhất và chuyển đổi số quy trình bảo trì, kiểm toán Gemba Walk thời gian thực.
+                  Với năng lực sản xuất chuẩn mực và quản lý vận hành hiện đại, Tổ hợp Kiên Giang thuộc TBS Group giữ vai trò then chốt trong việc duy trì chuỗi cung ứng ổn định, chất lượng đồng nhất và chuyển đổi số quy trình bảo trì, kiểm toán Gemba Walk thời gian thực.
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">

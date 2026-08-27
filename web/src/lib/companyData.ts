@@ -23,18 +23,18 @@ export interface TimelineEvent {
 }
 
 export const COMPANY_INFO = {
-  name: "Văn Phòng Chuỗi SKECHERS - TBS Group",
-  shortName: "Văn Phòng Chuỗi SKECHERS - TBS Group",
-  subTitle: "Hệ Thống Quản Trị Vận Hành Chuỗi Cung Ứng & Sản Xuất SKECHERS",
+  name: "Tổ hợp Kiên Giang - TBS Group",
+  shortName: "Tổ hợp Kiên Giang - TBS Group",
+  subTitle: "Hệ Thống Quản Trị Vận Hành Tổ Hợp Kiên Giang",
   slogan: "Nâng Tầm Chuỗi Cung Ứng — Vận Hành Chuẩn Quốc Tế",
   intro:
-    "Văn Phòng Chuỗi SKECHERS - TBS Group là trung tâm điều hành vận hành chuỗi cung ứng sản xuất các dòng sản phẩm SKECHERS tại khu vực ZONE II của TBS Group, chuyển đổi số toàn diện quy trình Gemba Walk, Cải tiến CI, Kaizen và quản trị hằng ngày.",
+    "Tổ hợp Kiên Giang - TBS Group là trung tâm điều hành vận hành sản xuất tại khu vực Kiên Giang của TBS Group, chuyển đổi số toàn diện quy trình Gemba Walk, Cải tiến CI, Kaizen và quản trị hằng ngày.",
   contact: {
     address:
-      "Khu Công Nghiệp TBS Group — Khu Vực ZONE II, An Giang / Bình Dương, Việt Nam",
-    headquarter: "Số 5, Đường ĐT 743, Phường An Bình, TP. Dĩ An, Bình Dương",
+      "Tổ hợp Kiên Giang — TBS Group, Tỉnh Kiên Giang, Việt Nam",
+    headquarter: "Tổ hợp Kiên Giang — TBS Group, Tỉnh Kiên Giang",
     phone: "0296 3878 099",
-    email: "skechers-office@tbsgroup.vn",
+    email: "kiengiang-office@tbsgroup.vn",
     website: "https://www.tbsgroup.vn",
   },
 };
@@ -62,13 +62,13 @@ export const COMPANY_STATS: CompanyStat[] = [
     value: "10.3M",
     label: "Sản phẩm mỗi năm",
     description:
-      "Sản lượng Chuỗi SKECHERS cung ứng cho các đối tác chiến lược quốc tế.",
+      "Sản lượng Tổ hợp Kiên Giang cung ứng cho các đối tác chiến lược quốc tế.",
   },
   {
     value: "51,200",
     label: "Nhân sự toàn cầu",
     description:
-      "Đội ngũ chuyên nghiệp toàn hệ thống, trong đó 5,000 nhân sự tại Văn Phòng Chuỗi SKECHERS.",
+      "Đội ngũ chuyên nghiệp toàn hệ thống, trong đó 5,000 nhân sự tại Tổ hợp Kiên Giang.",
   },
   {
     value: "218,500 m²",
@@ -144,10 +144,10 @@ export const COMPANY_SECTORS: CompanySector[] = [
 export const COMPANY_TIMELINE: TimelineEvent[] = [
   {
     year: "2017",
-    title: "Khởi nguồn hành trình SKECHERS",
+    title: "Khởi nguồn hành trình Tổ hợp Kiên Giang",
     subtitle: "Đặt nền móng cơ sở hạ tầng & đào tạo nhân lực",
     description:
-      "TBS Group chính thức triển khai dự án Văn Phòng Chuỗi SKECHERS. Đón đoàn đánh giá của đối tác chiến lược quốc tế Decathlon và khởi công Block 1 nhà máy.",
+      "TBS Group chính thức triển khai dự án Tổ hợp Kiên Giang - TBS Group. Đón đoàn đánh giá của đối tác chiến lược quốc tế Decathlon và khởi công Block 1 nhà máy.",
     image: "https://tbs-thoaisonshoes.com/images/slides/05.webp",
   },
   {
@@ -187,7 +187,7 @@ export const COMPANY_TIMELINE: TimelineEvent[] = [
     title: "Mở rộng quy mô & nâng cao chất lượng",
     subtitle: "Chạm mốc 10 triệu sản phẩm mỗi năm",
     description:
-      "Nâng cấp trang thiết bị hiện đại, mở rộng công suất sản xuất chạm mốc 10 triệu đôi giày mỗi năm cho Văn Phòng Chuỗi SKECHERS.",
+      "Nâng cấp trang thiết bị hiện đại, mở rộng công suất sản xuất chạm mốc 10 triệu đôi giày mỗi năm cho Tổ hợp Kiên Giang - TBS Group.",
     image: "https://tbs-thoaisonshoes.com/images/slides/005.webp",
   },
   {

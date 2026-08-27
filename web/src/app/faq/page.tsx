@@ -21,7 +21,7 @@ export default function FAQPage() {
 
   const faqs = [
     {
-      q: "Hệ thống Quản trị Văn phòng Chuỗi Skechers - TBS Group có những phân hệ nào?",
+      q: "Hệ thống Quản trị Tổ hợp Kiên Giang - TBS Group có những phân hệ nào?",
       a: "Hệ thống gồm 10 phân hệ số hóa toàn diện: Quản trị Nhân sự & Tuyển dụng, Tài chính - Kế toán chuỗi, Lịch công tác & Di chuyển, Đặt phòng họp thông minh, Quản lý R&D phát triển mẫu, Kiểm soát chất lượng (QC), Quản lý tài sản & máy móc thiết bị, Quản trị văn bản & phê duyệt điện tử, Báo cáo BI & KPI điều hành.",
     },
     {
@@ -38,7 +38,7 @@ export default function FAQPage() {
     },
     {
       q: "Tôi cần hỗ trợ kỹ thuật hoặc cấp quyền tài khoản thì liên hệ bộ phận nào?",
-      a: "Vui lòng gửi email đến it.support@tbsgroup.vn hoặc liên hệ Tổng đài nội bộ Văn phòng Chuỗi Skechers: (0274) 3788 888 (Ext: 102 - Khối CNTT & Chuyển đổi số).",
+      a: "Vui lòng gửi email đến it.support@tbsgroup.vn hoặc liên hệ Tổng đài nội bộ Tổ hợp Kiên Giang - TBS Group: (0274) 3788 888 (Ext: 102 - Khối CNTT & Chuyển đổi số).",
     },
   ];
 

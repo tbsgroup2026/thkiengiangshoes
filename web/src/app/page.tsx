@@ -67,7 +67,7 @@ export default function HomePage() {
                 <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
                   {excellence.description ||
                     (lang === "VN"
-                      ? "Văn Phòng Chuỗi SKECHERS - TBS Group tuân thủ nghiêm ngặt các tiêu chuẩn chất lượng cao nhất của đối tác SKECHERS toàn cầu."
+                      ? "Tổ hợp Kiên Giang - TBS Group tuân thủ nghiêm ngặt các tiêu chuẩn chất lượng cao nhất của đối tác chiến lược toàn cầu."
                       : "SKECHERS Supply Chain Office - TBS Group strictly adheres to the highest quality standards of SKECHERS global partners.")}
                 </p>
 

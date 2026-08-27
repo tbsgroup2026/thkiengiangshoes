@@ -103,7 +103,7 @@ export default function OverviewDashboard({
           <div className="space-y-1.5">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-emerald-200 text-xs font-black uppercase tracking-wider backdrop-blur-md">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              Trung Tâm Điều Hành Chuỗi SKECHERS
+              Trung Tâm Điều Hành Tổ Hợp Kiên Giang - TBS Group
             </div>
             <h2 className="text-2xl sm:text-3xl font-sans font-black tracking-tight text-white">
               Xin chào, {userName}
@@ -564,7 +564,7 @@ export default function OverviewDashboard({
           <div className="space-y-2.5">
             {[
               {
-                title: "Khai trương mô hình số hóa Văn phòng Chuỗi SKECHERS",
+                title: "Khai trương mô hình số hóa Tổ hợp Kiên Giang - TBS Group",
                 date: "26/08/2025",
                 icon: IconSpeakerphone,
                 iconBg: "bg-emerald-50 text-[#006838] border-emerald-100",
@@ -613,7 +613,7 @@ export default function OverviewDashboard({
           <span>Sống tinh gọn – Làm việc hiệu quả – Cùng phát triển bền vững</span>
         </div>
         <div className="flex items-center gap-1.5 text-slate-600 font-medium">
-          <span>© 2026 TBS Group – Văn phòng Chuỗi SKECHERS – R&amp;D Center</span>
+          <span>© 2026 TBS Group – Tổ hợp Kiên Giang – R&amp;D Center</span>
         </div>
       </div>
     </div>

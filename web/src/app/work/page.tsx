@@ -979,8 +979,7 @@ export default function WorkDashboardPage() {
             {/* Desktop System Title */}
             <div className="hidden lg:block min-w-0 flex-1">
               <h1 className="text-base lg:text-xl font-black text-slate-900 tracking-tight leading-tight truncate">
-                <span>Văn phòng Chuỗi </span>
-                <span className="text-[#006838]">SKECHERS</span>
+                <span>Tổ hợp Kiên Giang</span>
                 <span className="text-slate-400 font-normal"> – </span>
                 <span>TBS Group</span>
               </h1>
@@ -1551,7 +1550,7 @@ export default function WorkDashboardPage() {
                         Danh Mục 10 Phân Hệ Kế Toán &amp; Quản Trị
                       </h3>
                       <p className="text-[11px] text-slate-500 font-medium">
-                        Hệ thống phân hệ nghiệp vụ số hóa hoàn chỉnh cho Văn phòng chuỗi SKECHERS - TBS Group
+                        Hệ thống phân hệ nghiệp vụ số hóa hoàn chỉnh cho Tổ hợp Kiên Giang - TBS Group
                       </p>
                     </div>
                   </div>
@@ -2073,7 +2072,7 @@ export default function WorkDashboardPage() {
 
         {/* Footer info bar inside dashboard */}
         <footer className="py-2.5 px-6 border-t border-slate-200/70 text-xs text-slate-500 flex items-center justify-between bg-[#f4f7f5] flex-shrink-0">
-          <span>Văn Phòng Chuỗi SKECHERS - TBS Group Dashboard v2.4</span>
+          <span>Tổ hợp Kiên Giang - TBS Group Dashboard v2.4</span>
           <span className="font-mono text-[#006838] font-bold">● System Online 24/7</span>
         </footer>
       </main>
@@ -2333,7 +2332,7 @@ export default function WorkDashboardPage() {
                       CÔNG TY CP ĐẦU TƯ THÁI BÌNH (TBS GROUP)
                     </h4>
                     <p className="text-[11px] text-slate-600 font-sans">
-                      Văn Phòng Chuỗi SKECHERS - 5A Xuyên Á, Dĩ An, Bình Dương
+                      Tổ hợp Kiên Giang - TBS Group, Tỉnh Kiên Giang
                     </p>
                     <p className="text-[10px] text-slate-500 font-sans">Mã số thuế: 3700147988</p>
                   </div>

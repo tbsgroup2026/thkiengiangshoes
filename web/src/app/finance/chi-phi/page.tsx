@@ -57,7 +57,7 @@ export default function ChiPhiPage() {
       amount: 72000000,
       ratio: 3.2,
       trend: "-1.1%",
-      dept: "Văn phòng chuỗi",
+      dept: "Tổ hợp Kiên Giang",
     },
   ];
 

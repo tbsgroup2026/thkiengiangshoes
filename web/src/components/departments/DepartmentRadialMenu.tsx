@@ -162,7 +162,7 @@ export default function DepartmentRadialMenu({
         items={menuItems}
         centerTotalCount={14}
         onCenterClick={() => {
-          alert("Danh sách 14 Phòng Ban Văn Phòng Chuỗi SKECHERS - TBS Group");
+          alert("Danh sách 14 Phòng Ban Tổ hợp Kiên Giang - TBS Group");
         }}
       />
     </div>

@@ -138,7 +138,7 @@ export default function DonutChartModal({ isOpen, onClose }: DonutChartModalProp
                 Phân Bổ Chỉ Số Cải Tiến Theo Khu Vực
               </h3>
               <p className="text-xs text-emerald-100 font-medium">
-                Văn Phòng Chuỗi SKECHERS - TBS Group Dashboard 24/7
+                Tổ hợp Kiên Giang - TBS Group Dashboard 24/7
               </p>
             </div>
           </div>
