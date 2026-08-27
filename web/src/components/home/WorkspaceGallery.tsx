@@ -112,25 +112,73 @@ export default function WorkspaceGallery() {
         </p>
       </div>
 
-      {/* Top 3 Cards Row matching exact design in reference image */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch">
-        {/* Card 1: Bản sắc thương hiệu (Intro Text Card) */}
-        <div className="md:col-span-4 p-6 sm:p-7 rounded-[26px] bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-4">
+      {/* 4 Corporate Content Cards Grid (2x2 or 4 cols) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {/* Card 1: Chuẩn mực không gian */}
+        <div className="p-6 rounded-[24px] bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-3.5 hover:border-emerald-500/40 hover:shadow-md transition-all duration-300">
+          <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-[#006838] border border-emerald-100 flex items-center justify-center">
+            <IconBuilding size={22} strokeWidth={2} />
+          </div>
+          <div className="space-y-1.5 flex-1">
+            <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+              Chuẩn mực không gian
+            </h3>
+            <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed font-normal">
+              Thiết kế hiện đại, tối giản theo tiêu chuẩn corporate, tạo nên môi trường làm việc chuyên nghiệp, đồng bộ và hiệu quả.
+            </p>
+          </div>
+        </div>
+
+        {/* Card 2: Hiệu quả vận hành */}
+        <div className="p-6 rounded-[24px] bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-3.5 hover:border-emerald-500/40 hover:shadow-md transition-all duration-300">
+          <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-[#006838] border border-emerald-100 flex items-center justify-center">
+            <IconBriefcase size={22} strokeWidth={2} />
+          </div>
+          <div className="space-y-1.5 flex-1">
+            <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+              Hiệu quả vận hành
+            </h3>
+            <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed font-normal">
+              Không gian được quy hoạch khoa học, tối ưu kết nối giữa các phòng ban, hỗ trợ quy trình điều hành nhanh chóng và chính xác.
+            </p>
+          </div>
+        </div>
+
+        {/* Card 3: Bản sắc thương hiệu */}
+        <div className="p-6 rounded-[24px] bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-3.5 hover:border-emerald-500/40 hover:shadow-md transition-all duration-300">
           <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-[#006838] border border-emerald-100 flex items-center justify-center">
             <IconSparkles size={22} strokeWidth={2} />
           </div>
-          <div className="space-y-2 flex-1">
-            <h3 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+          <div className="space-y-1.5 flex-1">
+            <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
               Bản sắc thương hiệu
             </h3>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
+            <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed font-normal">
               Hệ thống nhận diện được ứng dụng xuyên suốt, phản ánh giá trị thương hiệu TBS và vị thế của doanh nghiệp trong chuỗi cung ứng toàn cầu.
             </p>
           </div>
         </div>
 
-        {/* Card 2: Điểm nhấn thiết kế nội thất (Featured Card 1) */}
-        <div className="md:col-span-4 relative h-[220px] sm:h-[240px] rounded-[26px] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 group border border-slate-200/90">
+        {/* Card 4: Môi trường truyền cảm hứng */}
+        <div className="p-6 rounded-[24px] bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-3.5 hover:border-emerald-500/40 hover:shadow-md transition-all duration-300">
+          <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-[#006838] border border-emerald-100 flex items-center justify-center">
+            <IconUsers size={22} strokeWidth={2} />
+          </div>
+          <div className="space-y-1.5 flex-1">
+            <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+              Môi trường truyền cảm hứng
+            </h3>
+            <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed font-normal">
+              Không gian mở, tiện nghi và thân thiện, khuyến khích sự hợp tác, sáng tạo và phát triển bền vững của đội ngũ.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* 2 Featured Visual Showcase Cards Row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch">
+        {/* Card Feature 1: Điểm nhấn thiết kế nội thất */}
+        <div className="relative h-[220px] sm:h-[240px] rounded-[26px] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 group border border-slate-200/90">
           <img
             src="/images/KGLV/CĐTT 2 GÓC HÌNH VP2.png"
             alt="Điểm nhấn thiết kế nội thất"
@@ -148,8 +196,8 @@ export default function WorkspaceGallery() {
           </div>
         </div>
 
-        {/* Card 3: Góc nhìn môi trường VPTX (Featured Card 2) */}
-        <div className="md:col-span-4 relative h-[220px] sm:h-[240px] rounded-[26px] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 group border border-slate-200/90">
+        {/* Card Feature 2: Góc nhìn môi trường VPTX */}
+        <div className="relative h-[220px] sm:h-[240px] rounded-[26px] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 group border border-slate-200/90">
           <img
             src="/images/KGLV/3 DÒNG GIÀY CHÍNH.png"
             alt="Góc nhìn môi trường VPTX"
