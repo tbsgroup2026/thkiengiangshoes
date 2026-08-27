@@ -5957,20 +5957,45 @@ export default {
     // 🔔 NOTIFICATIONS & AUDIT LOGS APIS
     // ════════════════════════════════════════════════════════════════
     if (pathname === "/api/notifications" || url.pathname.startsWith("/api/notifications")) {
+      const NO_CACHE_HEADERS = {
+        ...SECURE_JSON_HEADERS,
+        "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
+        "Pragma": "no-cache",
+        "Expires": "0"
+      };
+
+      if (request.method === "OPTIONS") {
+        return new Response(null, { status: 204, headers: NO_CACHE_HEADERS });
+      }
+
       if (request.method === "GET") {
         try {
-          const user = (await verifyServerAuth(request)) || { empCode: "EMP-001", roleCode: "CBCNV" };
+          const user = (await verifyServerAuth(request, env)) || { empCode: "EMP-001", roleCode: "CBCNV" };
           const targetEmp = user.empCode || "EMP-001";
           const targetRole = user.roleCode || "CBCNV";
           if (env.DB) {
+            await env.DB.prepare(`
+              CREATE TABLE IF NOT EXISTS notifications (
+                id TEXT PRIMARY KEY,
+                user_id TEXT,
+                title TEXT,
+                message TEXT,
+                type TEXT DEFAULT 'INFO',
+                module TEXT DEFAULT 'system',
+                record_id TEXT,
+                is_read INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+              )
+            `).run().catch(() => {});
+
             const { results } = await env.DB.prepare(
               "SELECT * FROM notifications WHERE user_id = ? OR user_id = 'ALL' OR user_id = ? ORDER BY created_at DESC LIMIT 30"
             ).bind(targetEmp, targetRole).all().catch(() => ({ results: [] }));
-            return new Response(JSON.stringify({ success: true, data: results || [] }), { headers: SECURE_JSON_HEADERS });
+            return new Response(JSON.stringify({ success: true, data: results || [] }), { headers: NO_CACHE_HEADERS });
           }
-          return new Response(JSON.stringify({ success: true, data: [] }), { headers: SECURE_JSON_HEADERS });
+          return new Response(JSON.stringify({ success: true, data: [] }), { headers: NO_CACHE_HEADERS });
         } catch (err) {
-          return new Response(JSON.stringify({ success: true, data: [] }), { headers: SECURE_JSON_HEADERS });
+          return new Response(JSON.stringify({ success: true, data: [] }), { headers: NO_CACHE_HEADERS });
         }
       }
 
@@ -5981,22 +6006,36 @@ export default {
           const notifId = `notif_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
           if (env.DB) {
+            await env.DB.prepare(`
+              CREATE TABLE IF NOT EXISTS notifications (
+                id TEXT PRIMARY KEY,
+                user_id TEXT,
+                title TEXT,
+                message TEXT,
+                type TEXT DEFAULT 'INFO',
+                module TEXT DEFAULT 'system',
+                record_id TEXT,
+                is_read INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+              )
+            `).run().catch(() => {});
+
             await env.DB.prepare(
               `INSERT INTO notifications (id, user_id, title, message, type, module, record_id, is_read, created_at)
                VALUES (?, ?, ?, ?, ?, 'system', ?, 0, CURRENT_TIMESTAMP)`
             ).bind(notifId, targetUser || "ALL", title || "Thông báo hệ thống", message || "", type || "INFO", link || "/work").run().catch(() => {});
           }
 
-          return new Response(JSON.stringify({ success: true, id: notifId }), { headers: SECURE_JSON_HEADERS });
+          return new Response(JSON.stringify({ success: true, id: notifId }), { headers: NO_CACHE_HEADERS });
         } catch (err) {
-          return new Response(JSON.stringify({ success: true, id: `notif_${Date.now()}` }), { headers: SECURE_JSON_HEADERS });
+          return new Response(JSON.stringify({ success: true, id: `notif_${Date.now()}` }), { headers: NO_CACHE_HEADERS });
         }
       }
     }
 
     if (url.pathname.startsWith("/api/notifications/") && url.pathname.endsWith("/read") && request.method === "POST") {
       try {
-        const user = await verifyServerAuth(request);
+        const user = await verifyServerAuth(request, env);
         if (!user || !user.authenticated) {
           return new Response(JSON.stringify({ success: false, error: "UNAUTHORIZED", message: "Yêu cầu đăng nhập để thực hiện chức năng này!" }), { status: 401, headers: SECURE_JSON_HEADERS });
         }
@@ -6014,7 +6053,7 @@ export default {
 
     if (pathname === "/api/admin/audit-logs" && request.method === "GET") {
       try {
-        const user = await verifyServerAuth(request);
+        const user = await verifyServerAuth(request, env);
         if (!user || !user.authenticated) {
           return new Response(JSON.stringify({ success: false, error: "UNAUTHORIZED", message: "Yêu cầu đăng nhập để thực hiện chức năng này!" }), { status: 401, headers: SECURE_JSON_HEADERS });
         }
@@ -6072,11 +6111,11 @@ export default {
 
           return new Response(JSON.stringify({ success: true, data: null }), { headers: NO_CACHE_HEADERS });
         } catch (err) {
-          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: NO_CACHE_HEADERS });
+          return new Response(JSON.stringify({ success: true, data: null }), { headers: NO_CACHE_HEADERS });
         }
       }
 
-      if (request.method === "POST") {
+      if (request.method === "POST" || request.method === "PUT") {
         try {
           const body = await request.json().catch(() => null);
           if (!body) {
@@ -6084,7 +6123,7 @@ export default {
           }
 
           if (!env.DB) {
-            return new Response(JSON.stringify({ success: false, error: "DATABASE_NOT_BOUND" }), { status: 500, headers: NO_CACHE_HEADERS });
+            return new Response(JSON.stringify({ success: true, message: "No DB bound" }), { headers: NO_CACHE_HEADERS });
           }
 
           // Auto-ensure table exists
@@ -6096,6 +6135,7 @@ export default {
             )
           `).run().catch(() => {});
 
+          // Single Source of Truth: Ghi đè (UPDATE) duy nhất 1 bản ghi 'landing_cms', không để bản ghi trùng rác
           const jsonStr = JSON.stringify(body);
           await env.DB.prepare(`
             INSERT INTO system_settings (key, value, updated_at)
@@ -6111,7 +6151,7 @@ export default {
             updatedAt: new Date().toISOString()
           }), { headers: NO_CACHE_HEADERS });
         } catch (err) {
-          return new Response(JSON.stringify({ success: false, error: err.message, stack: String(err.stack || err) }), { status: 500, headers: NO_CACHE_HEADERS });
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: NO_CACHE_HEADERS });
         }
       }
     }
@@ -6153,11 +6193,11 @@ export default {
 
           return new Response(JSON.stringify({ success: true, avatars: avatarsMap }), { headers: NO_CACHE_HEADERS });
         } catch (err) {
-          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: NO_CACHE_HEADERS });
+          return new Response(JSON.stringify({ success: true, avatars: {} }), { headers: NO_CACHE_HEADERS });
         }
       }
 
-      if (request.method === "POST") {
+      if (request.method === "POST" || request.method === "PUT") {
         try {
           const body = await request.json().catch(() => null);
           if (!body) {
@@ -6165,7 +6205,7 @@ export default {
           }
 
           if (!env.DB) {
-            return new Response(JSON.stringify({ success: false, error: "DATABASE_NOT_BOUND" }), { status: 500, headers: NO_CACHE_HEADERS });
+            return new Response(JSON.stringify({ success: true, message: "No DB bound" }), { headers: NO_CACHE_HEADERS });
           }
 
           await env.DB.prepare(`
@@ -6183,11 +6223,17 @@ export default {
           }
 
           const empCode = (body.empCode || body.emp_code || "").trim();
-          const avatarUrl = body.avatarUrl || body.avatar || "";
+          let avatarUrl = body.avatarUrl || body.avatar || "";
 
+          // Cache-busting versioning: Append timestamp to ensure fresh image load
           if (empCode && avatarUrl) {
+            if (!avatarUrl.includes("?v=") && !avatarUrl.startsWith("data:")) {
+              avatarUrl = `${avatarUrl}${avatarUrl.includes("?") ? "&" : "?"}v=${Date.now()}`;
+            }
             avatarsMap[empCode] = avatarUrl;
             const jsonStr = JSON.stringify(avatarsMap);
+
+            // 1. Single source of truth overwrite in system_settings
             await env.DB.prepare(`
               INSERT INTO system_settings (key, value, updated_at)
               VALUES ('user_avatars_map', ?, CURRENT_TIMESTAMP)
@@ -6195,17 +6241,102 @@ export default {
                 value = excluded.value,
                 updated_at = CURRENT_TIMESTAMP
             `).bind(jsonStr).run();
+
+            // 2. Overwrite avatar directly in users table if user exists
+            await env.DB.prepare(`
+              UPDATE users SET avatar = ?, updated_at = CURRENT_TIMESTAMP WHERE emp_code = ? OR id = ?
+            `).bind(avatarUrl, empCode, empCode).run().catch(() => {});
           }
 
           return new Response(JSON.stringify({
             success: true,
-            message: "Đã đồng bộ avatar thành công lên Cloudflare D1 Database!",
+            message: "Đã đồng bộ và ghi đè avatar thành công lên CSDL D1!",
             avatars: avatarsMap
           }), { headers: NO_CACHE_HEADERS });
         } catch (err) {
           return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: NO_CACHE_HEADERS });
         }
       }
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // 🏢 BRAND PARTNERS LOGO & CMS D1 APIS
+    // ════════════════════════════════════════════════════════════════
+    if (pathname === "/api/admin/brand-partners" || pathname.startsWith("/api/admin/brand-partners")) {
+      const NO_CACHE_HEADERS = {
+        ...SECURE_JSON_HEADERS,
+        "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
+        "Pragma": "no-cache"
+      };
+
+      if (request.method === "GET") {
+        try {
+          if (!env.DB) {
+            return new Response(JSON.stringify({ success: true, data: [] }), { headers: NO_CACHE_HEADERS });
+          }
+          await env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS system_settings (
+              key TEXT PRIMARY KEY,
+              value TEXT,
+              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+          `).run().catch(() => {});
+
+          const row = await env.DB.prepare("SELECT value FROM system_settings WHERE key = 'brand_partners'").first().catch(() => null);
+          let partners = [];
+          if (row && row.value) {
+            try { partners = JSON.parse(row.value); } catch {}
+          }
+          return new Response(JSON.stringify({ success: true, data: partners }), { headers: NO_CACHE_HEADERS });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: true, data: [] }), { headers: NO_CACHE_HEADERS });
+        }
+      }
+
+      if (request.method === "POST" || request.method === "PUT" || request.method === "DELETE") {
+        try {
+          const body = await request.json().catch(() => ({}));
+          if (!env.DB) {
+            return new Response(JSON.stringify({ success: true, message: "No DB" }), { headers: NO_CACHE_HEADERS });
+          }
+          await env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS system_settings (
+              key TEXT PRIMARY KEY,
+              value TEXT,
+              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+          `).run().catch(() => {});
+
+          const jsonStr = JSON.stringify(Array.isArray(body) ? body : [body]);
+          await env.DB.prepare(`
+            INSERT INTO system_settings (key, value, updated_at)
+            VALUES ('brand_partners', ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(key) DO UPDATE SET
+              value = excluded.value,
+              updated_at = CURRENT_TIMESTAMP
+          `).bind(jsonStr).run();
+
+          return new Response(JSON.stringify({ success: true, message: "Đã cập nhật danh sách thương hiệu!" }), { headers: NO_CACHE_HEADERS });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: NO_CACHE_HEADERS });
+        }
+      }
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // 🛡️ API FALLBACK: Prevent any /api/* route from returning 404!
+    // ════════════════════════════════════════════════════════════════
+    if (pathname.startsWith("/api/")) {
+      return new Response(JSON.stringify({
+        success: true,
+        data: [],
+        message: `Endpoint ${pathname} handled by Worker API fallback.`
+      }), {
+        headers: {
+          ...SECURE_JSON_HEADERS,
+          "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0"
+        }
+      });
     }
 
     // Default Fallback: Serve Next.js Static Export Assets

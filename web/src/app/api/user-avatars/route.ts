@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 export const dynamic = "force-static";
 
 export async function GET() {
-  return NextResponse.json({ success: true, data: null });
+  return NextResponse.json({ success: true, avatars: {} });
 }
 
 export async function POST(req: Request) {
@@ -11,11 +11,10 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => null);
     return NextResponse.json({
       success: true,
-      message: "Lưu cấu hình CMS thành công (local stub).",
-      data: body,
-      updatedAt: new Date().toISOString(),
+      message: "Avatar updated (local stub)",
+      avatars: body ? { [body.empCode || "user"]: body.avatarUrl || body.avatar } : {},
     });
   } catch (err: any) {
-    return NextResponse.json({ success: true, data: null });
+    return NextResponse.json({ success: true, avatars: {} });
   }
 }

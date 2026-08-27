@@ -1,5 +1,5 @@
 // PWA Service Worker for Văn Phòng Chuỗi SKECHERS - TBS Group
-const CACHE_NAME = "skechers-tbs-v16";
+const CACHE_NAME = "skechers-tbs-v17-no-api-404-cache";
 const ASSETS_TO_CACHE = [
   "/",
   "/favicon.ico",
@@ -97,11 +97,11 @@ self.addEventListener("notificationclick", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  // Pass through GET requests for API routes and Next.js internal build assets directly to browser network
+  // CRITICAL RULE: NEVER intercept or cache API requests or non-GET requests. Pass directly to browser network!
   if (
     event.request.method !== "GET" ||
     event.request.url.includes("/api/") ||
-    event.request.url.includes("/_next/")
+    event.request.url.includes("/_next/data/")
   ) {
     return;
   }
@@ -111,7 +111,8 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
-          if (response.ok) {
+          // NEVER cache 404, 500, or error responses! Only cache 200 OK
+          if (response.status === 200) {
             const copy = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
           }
@@ -133,9 +134,17 @@ self.addEventListener("fetch", (event) => {
       if (cachedResponse) {
         return cachedResponse;
       }
-      return fetch(event.request).catch(() => {
-        return caches.match("/");
-      });
+      return fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse.status === 200) {
+            const copy = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          return caches.match("/");
+        });
     })
   );
 });
