@@ -211,7 +211,7 @@ export const DEFAULT_WORKSPACE_DEPARTMENTS: WorkspaceDepartment[] = [
       { id: "img-sanh-1", src: "/images/KGLV/MẶT TIỀN SẢNH.png", caption: "Không gian làm việc chuẩn mực", order: 1 },
       { id: "img-sanh-2", src: "/images/KGLV/SẢNH GÓC TỪ TRONG NHÌN RA.png", caption: "Khu làm việc phối hợp", order: 2 },
       { id: "img-sanh-3", src: "/images/KGLV/CĐTT 2 GÓC HÌNH VP2.png", caption: "Điểm nhấn thiết kế nội thất", order: 3 },
-      { id: "img-sanh-4", src: "/images/KGLV/3 DÒNG GIÀY CHÍNH.png", caption: "Góc nhìn môi trường VPTX", order: 4 },
+      { id: "img-sanh-4", src: "/images/KGLV/3 DÒNG GIÀY CHÍNH.png", caption: "Góc nhìn môi trường", order: 4 },
       { id: "img-sanh-5", src: "/images/KGLV/CĐTT 1 GÓC 4 ĐÔI GIÀY.png", caption: "Khu trưng bày 4 đôi giày kỷ niệm", order: 5 },
       { id: "img-sanh-6", src: "/images/KGLV/CĐTT 2 GÓC HÌNH CHIẾC GIÀY.png", caption: "Biểu tượng chiếc giày kỷ niệm", order: 6 },
       { id: "img-sanh-7", src: "/images/KGLV/CĐTT 2 GÓC 3 CHIẾC GIÀY.png", caption: "Góc trưng bày 3 chiếc giày", order: 7 },

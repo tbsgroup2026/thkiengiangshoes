@@ -216,18 +216,18 @@ export default function WorkspaceGallery() {
           </div>
         </div>
 
-        {/* Card Feature 2: Góc nhìn môi trường VPTX */}
+        {/* Card Feature 2: Góc nhìn môi trường */}
         <div className="relative h-[220px] sm:h-[240px] rounded-[26px] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 group border border-slate-200/90">
           <img
             src="/images/KGLV/3 DÒNG GIÀY CHÍNH.png"
-            alt="Góc nhìn môi trường VPTX"
+            alt="Góc nhìn môi trường"
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
             loading="lazy"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
           <div className="absolute bottom-4 left-4 right-4 p-4 bg-[#0b3226]/90 backdrop-blur-md rounded-[18px] border border-white/15 text-white">
             <h4 className="text-sm font-extrabold text-white tracking-wide">
-              Góc nhìn môi trường VPTX
+              Góc nhìn môi trường
             </h4>
             <span className="text-[11px] text-emerald-300 font-mono block mt-0.5 font-bold">
               Khu Trưng Bày
