@@ -1,4 +1,12 @@
-"use client";
+export interface BrandPartner {
+  id: string;
+  name: string;
+  logo: string;
+  displayOrder: number;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 export interface LandingCMSConfig {
   // 1. Hero Section
@@ -50,7 +58,23 @@ export interface LandingCMSConfig {
       image?: string;
     }>;
   };
+
+  // 5. Brand Partners Carousel
+  brandPartners: BrandPartner[];
 }
+
+export const DEFAULT_BRAND_PARTNERS: BrandPartner[] = [
+  { id: "bp-1", name: "256026", logo: "/images/brands/256026.png", displayOrder: 1, isActive: true },
+  { id: "bp-2", name: "256133", logo: "/images/brands/256133.png", displayOrder: 2, isActive: true },
+  { id: "bp-3", name: "ecco", logo: "/images/brands/ecco.svg", displayOrder: 3, isActive: true },
+  { id: "bp-4", name: "Cole Haan", logo: "/images/brands/cole-haan.svg", displayOrder: 4, isActive: true },
+  { id: "bp-5", name: "Rockport", logo: "/images/brands/rockport.svg", displayOrder: 5, isActive: true },
+  { id: "bp-6", name: "Skechers", logo: "/images/brands/skechers.svg", displayOrder: 6, isActive: true },
+  { id: "bp-7", name: "Coach", logo: "/images/brands/coach.svg", displayOrder: 7, isActive: true },
+  { id: "bp-8", name: "Osprey", logo: "/images/brands/osprey.svg", displayOrder: 8, isActive: true },
+  { id: "bp-9", name: "Kate Spade", logo: "/images/brands/kate-spade.svg", displayOrder: 9, isActive: true },
+  { id: "bp-10", name: "Vera Bradley", logo: "/images/brands/vera-bradley.svg", displayOrder: 10, isActive: true },
+];
 
 export const DEFAULT_LANDING_CMS: LandingCMSConfig = {
   hero: {
@@ -128,6 +152,7 @@ export const DEFAULT_LANDING_CMS: LandingCMSConfig = {
       { name: "Special Edition Series", code: "SK-SPEC-08", image: "/images/crawled/005.webp" },
     ],
   },
+  brandPartners: DEFAULT_BRAND_PARTNERS,
 };
 
 export const CMS_STORAGE_KEY = "tbs_landing_cms";
@@ -152,6 +177,10 @@ export function getLandingCMS(): LandingCMSConfig {
       };
     });
 
+    const rawPartners = Array.isArray(parsed.brandPartners) && parsed.brandPartners.length > 0
+      ? parsed.brandPartners
+      : DEFAULT_BRAND_PARTNERS;
+
     return {
       hero: { ...DEFAULT_LANDING_CMS.hero, ...(parsed.hero || {}) },
       workspace: { ...DEFAULT_LANDING_CMS.workspace, ...(parsed.workspace || {}) },
@@ -161,6 +190,7 @@ export function getLandingCMS(): LandingCMSConfig {
         description: storedProducts.description || DEFAULT_LANDING_CMS.products.description,
         items: mergedItems,
       },
+      brandPartners: rawPartners,
     };
   } catch (e) {
     return DEFAULT_LANDING_CMS;

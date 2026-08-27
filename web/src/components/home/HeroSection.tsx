@@ -22,12 +22,16 @@ const BRAND_PARTNERS = [
 export default function HeroSection() {
   const { t, lang } = useTranslation();
   const [cmsHero, setCmsHero] = useState(DEFAULT_LANDING_CMS.hero);
+  const [brandPartners, setBrandPartners] = useState(DEFAULT_LANDING_CMS.brandPartners);
 
   useEffect(() => {
     const loadCMS = () => {
       const config = getLandingCMS();
       if (config?.hero) {
         setCmsHero(config.hero);
+      }
+      if (Array.isArray(config?.brandPartners)) {
+        setBrandPartners(config.brandPartners);
       }
     };
     loadCMS();
@@ -37,6 +41,15 @@ export default function HeroSection() {
       return () => window.removeEventListener("tbs_landing_cms_updated", loadCMS);
     }
   }, []);
+
+  // Filter active partners sorted by displayOrder
+  const activePartners = brandPartners
+    .filter((b) => b.isActive !== false)
+    .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+
+  const displayList = activePartners.length > 0
+    ? [...activePartners, ...activePartners]
+    : [...DEFAULT_LANDING_CMS.brandPartners, ...DEFAULT_LANDING_CMS.brandPartners];
 
   return (
     <>
@@ -186,9 +199,9 @@ export default function HeroSection() {
           {/* Continuous Marquee Row of White Stadium Pills */}
           <div className="overflow-hidden w-full flex items-center py-1">
             <div className="animate-marquee-left flex items-center gap-5 sm:gap-6">
-              {[...BRAND_PARTNERS, ...BRAND_PARTNERS].map((brand, idx) => (
+              {displayList.map((brand, idx) => (
                 <div
-                  key={`${brand.name}-${idx}`}
+                  key={`${brand.id || brand.name}-${idx}`}
                   className="flex-shrink-0 flex items-center justify-center w-[160px] h-[68px] rounded-[18px] px-5 py-2 bg-white shadow-lg border border-white/30 hover:-translate-y-1 hover:shadow-xl hover:scale-105 transition-all duration-300 select-none cursor-pointer group"
                   title={brand.name}
                 >
@@ -196,6 +209,18 @@ export default function HeroSection() {
                     src={brand.logo}
                     alt={`${brand.name} Logo`}
                     className="max-h-[38px] max-w-[124px] w-auto h-auto object-contain transition-transform duration-300 group-hover:scale-105"
+                    onError={(e) => {
+                      // Fallback text preview if image fails to load
+                      const target = e.target as HTMLElement;
+                      target.style.display = "none";
+                      const parent = target.parentElement;
+                      if (parent && !parent.querySelector(".brand-fallback")) {
+                        const txt = document.createElement("span");
+                        txt.className = "brand-fallback font-black text-[#006838] text-xs uppercase tracking-wider text-center";
+                        txt.innerText = brand.name;
+                        parent.appendChild(txt);
+                      }
+                    }}
                   />
                 </div>
               ))}
