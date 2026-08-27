@@ -5,7 +5,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import HeroSection from "@/components/home/HeroSection";
 import WorkspaceGallery from "@/components/home/WorkspaceGallery";
-import { getLandingCMS, DEFAULT_LANDING_CMS } from "@/lib/landingCMS";
+import { getLandingCMS, fetchLandingCMSFromServer, DEFAULT_LANDING_CMS } from "@/lib/landingCMS";
 import { useTranslation } from "@/hooks/useTranslation";
 
 export default function HomePage() {
@@ -20,6 +20,11 @@ export default function HomePage() {
       }
     };
     loadCMS();
+
+    // Fetch latest D1 Server CMS data & update state
+    fetchLandingCMSFromServer().then((srvData) => {
+      if (srvData) setCmsData(srvData);
+    });
 
     if (typeof window !== "undefined") {
       window.addEventListener("tbs_landing_cms_updated", loadCMS);

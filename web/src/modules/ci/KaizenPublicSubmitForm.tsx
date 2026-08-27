@@ -32,9 +32,14 @@ const CATEGORIES = [
 ];
 
 export const REAL_FACTORIES = [
-  "KG 1",
-  "KG 2",
+  "Kiên Giang 1",
+  "Kiên Giang 2",
+  "Kiên Giang 3",
   "Hoàn thiện đế",
+  "Phòng kế hoạch",
+  "Phòng CN-CI",
+  "Phòng chất lượng",
+  "Phòng nhân sự",
 ];
 
 export const REAL_DEPARTMENTS = [
@@ -116,6 +121,18 @@ export default function KaizenPublicSubmitForm({
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [unitTitle, setUnitTitle] = useState<string>("THNM Kiên Giang");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const host = window.location.hostname.toLowerCase();
+      if (host.includes("vpchuoi")) {
+        setUnitTitle("VP CHUỖI SKECHERS");
+      } else {
+        setUnitTitle("THNM Kiên Giang");
+      }
+    }
+  }, []);
 
   // Auto-Fill States for MSNV Lookup
   const [lookupLoading, setLookupLoading] = useState(false);
@@ -447,8 +464,8 @@ export default function KaizenPublicSubmitForm({
         beforeVideoUrl: "",
         afterVideoUrl: "",
         efficiencyValueVND: 0,
-        registrationType: "LUU_TRU",
-        sub_status: "LUU_TRU",
+        registrationType: "THI_DUA",
+        sub_status: "CHO_REVIEW",
         isPublicScan: true,
       };
 
@@ -534,7 +551,7 @@ export default function KaizenPublicSubmitForm({
               <img src="/images/tbs-logo.png" alt="TBS Group" className="h-6 w-auto object-contain" />
             </div>
             <span className="text-xs font-black uppercase tracking-wider text-amber-300">
-              VP CHUỖI SKECHERS - CỔNG CẢI TIẾN KAIZEN
+              {unitTitle} - CỔNG CẢI TIẾN KAIZEN
             </span>
           </div>
 

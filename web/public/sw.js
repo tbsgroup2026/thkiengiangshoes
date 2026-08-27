@@ -1,5 +1,5 @@
 // PWA Service Worker for Văn Phòng Chuỗi SKECHERS - TBS Group
-const CACHE_NAME = "skechers-tbs-v3";
+const CACHE_NAME = "skechers-tbs-v17-no-api-404-cache";
 const ASSETS_TO_CACHE = [
   "/",
   "/favicon.ico",
@@ -58,7 +58,7 @@ self.addEventListener("push", (event) => {
     vibrate: isUrgent ? [500, 150, 500, 150, 500, 150, 500] : [200, 100, 200],
     tag: payload.tag || `tbs_push_${Date.now()}`,
     data: { url: payload.url || "/work" },
-    requireInteraction: isUrgent, // Keeps banner on lock screen until clicked for urgent alerts
+    requireInteraction: isUrgent,
     renotify: true,
     actions: [
       { action: "open", title: "Xem ngay" },
@@ -97,27 +97,54 @@ self.addEventListener("notificationclick", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  // Only handle GET requests for static assets, skip API routes
-  if (event.request.method !== "GET" || event.request.url.includes("/api/")) {
+  // CRITICAL RULE: NEVER intercept or cache API requests or non-GET requests. Pass directly to browser network!
+  if (
+    event.request.method !== "GET" ||
+    event.request.url.includes("/api/") ||
+    event.request.url.includes("/_next/data/")
+  ) {
     return;
   }
 
+  // Network-First for HTML navigation to guarantee latest HTML and CSS/JS hashes
+  if (event.request.mode === "navigate" || (event.request.headers.get("accept") || "").includes("text/html")) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          // NEVER cache 404, 500, or error responses! Only cache 200 OK
+          if (response.status === 200) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          }
+          return response;
+        })
+        .catch(() => {
+          return caches.match(event.request).then((cached) => {
+            if (cached) return cached;
+            return caches.match("/");
+          });
+        })
+    );
+    return;
+  }
+
+  // Fallback cache handler for static assets (images, icons, fonts)
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
         return cachedResponse;
       }
-      return fetch(event.request).catch(() => {
-        return (
-          caches.match("/work") ||
-          caches.match("/") ||
-          new Response("Offline", {
-            status: 503,
-            statusText: "Offline",
-            headers: { "Content-Type": "text/plain; charset=utf-8" },
-          })
-        );
-      });
+      return fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse.status === 200) {
+            const copy = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          return caches.match("/");
+        });
     })
   );
 });

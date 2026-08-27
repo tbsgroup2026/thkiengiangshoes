@@ -33,14 +33,21 @@ import {
   IconShoe,
   IconChevronLeft,
   IconChevronRight,
+  IconBuildingStore,
 } from "@tabler/icons-react";
 import {
   LandingCMSConfig,
   getLandingCMS,
   saveLandingCMS,
+  fetchLandingCMSFromServer,
+  saveLandingCMSToServer,
+  checkAndMigrateLocalCMSToServer,
   DEFAULT_LANDING_CMS,
+  DEFAULT_SHOE_LINES_CONFIG,
 } from "@/lib/landingCMS";
 import LandingCMSManager from "@/components/admin/LandingCMSManager";
+import ShoeLinesManager from "@/components/admin/ShoeLinesManager";
+import WorkspaceCMSManager from "@/components/admin/WorkspaceCMSManager";
 import * as XLSX from "xlsx";
 import { INITIAL_370_EMPLOYEES } from "@/lib/initialEmployees";
 
@@ -50,10 +57,13 @@ interface EmployeeAccount {
   name: string;
   email: string;
   phone: string;
-  title: string;
+  position?: string;
   department: string;
   roleCode: string;
-  status: "ACTIVE" | "LOCKED";
+  roleName?: string;
+  status: "ACTIVE" | "INACTIVE" | "LOCKED";
+  joinedDate?: string;
+  title?: string;
   ngayVao?: string;
   vtcvHienTai?: string;
   phongBanHienTai?: string;
@@ -87,26 +97,53 @@ interface MediaAsset {
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<
-    "overview" | "users" | "news" | "media" | "products" | "landing_cms" | "d1_control"
-  >("overview");
-  const [cmsSubSection, setCmsSubSection] = useState<
-    "hero" | "workspace" | "excellence" | "products"
-  >("hero");
+    "overview" | "users" | "news" | "media" | "workspace_gallery" | "shoe_lines" | "products" | "landing_cms" | "d1_control" | "roles" | "departments"
+  >("landing_cms");
+
+  const [cmsSubSection, setCmsSubSection] = useState<"hero" | "workspace" | "excellence" | "products">("hero");
+
+  // Toast Notification State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Landing Page CMS State
   const [landingCMS, setLandingCMS] = useState<LandingCMSConfig>(DEFAULT_LANDING_CMS);
+  const [isSavingCMS, setIsSavingCMS] = useState(false);
+  const [saveErrorCMS, setSaveErrorCMS] = useState<string | null>(null);
 
   useEffect(() => {
-    setLandingCMS(getLandingCMS());
+    // 1. Instant local read
+    const localConfig = getLandingCMS();
+    setLandingCMS(localConfig);
 
-    // Check URL search parameters (e.g. /admin?tab=products)
+    // 2. Fetch server D1 database config & auto-migrate if D1 is empty but local has custom data
+    fetchLandingCMSFromServer().then(async (srvConfig) => {
+      const isSrvCustom = srvConfig && JSON.stringify(srvConfig) !== JSON.stringify(DEFAULT_LANDING_CMS);
+      if (isSrvCustom) {
+        setLandingCMS(srvConfig);
+      } else {
+        // D1 is empty/default -> Check if local browser has custom data to auto-migrate to D1 server
+        const migrated = await checkAndMigrateLocalCMSToServer();
+        if (migrated) {
+          setLandingCMS(migrated);
+          setToastMessage("🔄 Đã tự động chuyển toàn bộ dữ liệu cũ từ Trình duyệt lên CSDL Server D1 thành công!");
+          setTimeout(() => setToastMessage(null), 5000);
+        } else if (srvConfig) {
+          setLandingCMS(srvConfig);
+        }
+      }
+    });
+
+    // Check URL search parameters (e.g. /admin?tab=products or /admin?tab=workspace_gallery)
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const tabParam = params.get("tab");
       if (tabParam === "products") {
         setActiveTab("products");
         setCmsSubSection("products");
+      } else if (tabParam === "workspace" || tabParam === "workspace_gallery" || tabParam === "kglv") {
+        setActiveTab("workspace_gallery");
+      } else if (tabParam === "brand_partners" || tabParam === "brands" || tabParam === "shoe_lines" || tabParam === "shoes") {
+        setActiveTab("shoe_lines");
       } else if (tabParam === "landing_cms") {
         setActiveTab("landing_cms");
       }
@@ -265,17 +302,34 @@ export default function AdminPage() {
     }
   };
 
-  const handleSaveLandingCMS = (e: React.FormEvent) => {
-    e.preventDefault();
-    saveLandingCMS(landingCMS);
-    showToast("💾 Đã lưu cấu hình Trang Chủ! Nội dung & hình ảnh đã được cập nhật ngay lập tức.");
+  const handleSaveLandingCMS = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setIsSavingCMS(true);
+    setSaveErrorCMS(null);
+    showToast("⏳ Đang gửi và đồng bộ dữ liệu lên Máy chủ (D1 Database)...");
+
+    const res = await saveLandingCMSToServer(landingCMS);
+    setIsSavingCMS(false);
+
+    if (res.success) {
+      showToast("💾 Đã lưu & đồng bộ thành công lên Máy chủ (Cloudflare D1)! Mọi thiết bị/trình duyệt sẽ thấy dữ liệu mới.");
+    } else {
+      setSaveErrorCMS(res.error || "Lỗi lưu máy chủ");
+      showToast("❌ Lưu thất bại: " + (res.error || "Không thể lưu vào D1 Database!"));
+    }
   };
 
-  const handleResetLandingCMS = () => {
-    if (confirm("Bạn có chắc chắn muốn khôi phục toàn bộ nội dung & hình ảnh Trang Chủ về mặc định gốc?")) {
+  const handleResetLandingCMS = async () => {
+    if (confirm("Bạn có chắc chắn muốn khôi phục toàn bộ nội dung & hình ảnh Trang Chủ về mặc định gốc trên Server D1?")) {
       setLandingCMS(DEFAULT_LANDING_CMS);
-      saveLandingCMS(DEFAULT_LANDING_CMS);
-      showToast("🔄 Đã khôi phục cài đặt Trang Chủ về mặc định gốc!");
+      setIsSavingCMS(true);
+      const res = await saveLandingCMSToServer(DEFAULT_LANDING_CMS);
+      setIsSavingCMS(false);
+      if (res.success) {
+        showToast("🔄 Đã khôi phục cài đặt Trang Chủ về mặc định gốc trên Máy chủ thành công!");
+      } else {
+        showToast("❌ Khôi phục thất bại: " + (res.error || "Lỗi kết nối máy chủ"));
+      }
     }
   };
 
@@ -1176,6 +1230,42 @@ export default function AdminPage() {
               activeTab === "media" ? "bg-white/20 text-white" : "bg-slate-300 text-slate-800"
             }`}>
               {mediaList.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("workspace_gallery")}
+            className={`px-4 py-2.5 rounded-xl font-extrabold text-xs flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === "workspace_gallery"
+                ? "bg-[#006838] text-white shadow-md border border-[#004e2a]"
+                : "text-slate-700 hover:text-[#006838] hover:bg-white/70"
+            }`}
+          >
+            <IconBuilding size={16} />
+            <span>🏢 Không Gian Làm Việc</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+              activeTab === "workspace_gallery" ? "bg-white/20 text-white" : "bg-emerald-100 text-[#006838]"
+            }`}>
+              {landingCMS.workspaceDepartments?.length || 10} Phòng
+            </span>
+          </button>
+
+
+
+          <button
+            onClick={() => setActiveTab("shoe_lines")}
+            className={`px-4 py-2.5 rounded-xl font-extrabold text-xs flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === "shoe_lines"
+                ? "bg-[#006838] text-white shadow-md border border-[#004e2a]"
+                : "text-slate-700 hover:text-[#006838] hover:bg-white/70"
+            }`}
+          >
+            <IconShoe size={16} />
+            <span>👟 Dòng Giày Tiêu Biểu</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+              activeTab === "shoe_lines" ? "bg-white/20 text-white" : "bg-emerald-100 text-[#006838]"
+            }`}>
+              {landingCMS.shoeLines?.groups?.length || 5} Nhóm
             </span>
           </button>
 
@@ -2090,6 +2180,22 @@ export default function AdminPage() {
         {/* ════════════════════════════════════════════════════════════════
             TAB 5: QUẢN TRỊ NỘI DUNG & HÌNH ẢNH TRANG CHỦ & DÒNG SẢN PHẨM
            ════════════════════════════════════════════════════════════════ */}
+        {saveErrorCMS && (
+          <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center justify-between flex-wrap gap-2 mb-4">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-rose-600 animate-ping" />
+              <span>❌ Lỗi đồng bộ máy chủ: {saveErrorCMS}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleSaveLandingCMS()}
+              className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs cursor-pointer transition shadow-2xs"
+            >
+              🔄 Thử Lưu Lại Ngay (Retry)
+            </button>
+          </div>
+        )}
+
         {(activeTab === "landing_cms" || activeTab === "products") && (
           <LandingCMSManager
             landingCMS={landingCMS}
@@ -2100,6 +2206,38 @@ export default function AdminPage() {
             onBulkUploadProductImages={handleBulkUploadProductImages}
             isUploading={isUploadingCloudinary}
             initialSubSection={activeTab === "products" ? "products" : cmsSubSection}
+          />
+        )}
+
+        {/* ════════════════════════════════════════════════════════════════
+            TAB: QUẢN LÝ KHÔNG GIAN LÀM VIỆC (WORKSPACE GALLERY)
+           ════════════════════════════════════════════════════════════════ */}
+        {activeTab === "workspace_gallery" && (
+          <WorkspaceCMSManager
+            departments={landingCMS.workspaceDepartments || []}
+            onChange={(updatedDeps) => {
+              const newCMS = { ...landingCMS, workspaceDepartments: updatedDeps };
+              setLandingCMS(newCMS);
+            }}
+            onSave={() => handleSaveLandingCMS()}
+            showToast={showToast}
+          />
+        )}
+
+
+
+        {/* ════════════════════════════════════════════════════════════════
+            TAB: QUẢN LÝ DÒNG GIÀY TIÊU BIỂU (FEATURED SHOE LINES)
+           ════════════════════════════════════════════════════════════════ */}
+        {activeTab === "shoe_lines" && (
+          <ShoeLinesManager
+            shoeLines={landingCMS.shoeLines || DEFAULT_SHOE_LINES_CONFIG}
+            onChange={(updatedShoeLines) => {
+              const newCMS = { ...landingCMS, shoeLines: updatedShoeLines };
+              setLandingCMS(newCMS);
+              saveLandingCMS(newCMS);
+            }}
+            showToast={showToast}
           />
         )}
 

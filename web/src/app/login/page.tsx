@@ -17,6 +17,8 @@ import {
 } from "@tabler/icons-react";
 import { loginWithD1Database, loginUserProfile, SYSTEM_USERS } from "@/lib/userProfiles";
 
+// EXECUTIVE_PERSONNEL_MAP (chọn tay Chức vụ/Vai trò trước khi đăng nhập) đã bỏ hẳn — vai trò lấy
+// đúng từ chính tài khoản (SYSTEM_USERS/userProfiles.ts) khi đăng nhập, không cần chọn tay nữa.
 export default function LoginPage() {
   const router = useRouter();
   const [empCode, setEmpCode] = useState("");

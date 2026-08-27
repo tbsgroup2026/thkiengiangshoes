@@ -2,216 +2,149 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  IconBuildingSkyscraper,
-  IconSitemap,
-  IconAward,
-  IconBulb,
+  IconBuilding,
+  IconBuildingWarehouse,
+  IconBriefcase,
+  IconShieldCheck,
+  IconDeviceDesktop,
+  IconUsers,
+  IconFileText,
+  IconUsersGroup,
+  IconSparkles,
   IconZoomIn,
   IconX,
   IconChevronLeft,
   IconChevronRight,
-  IconSparkles,
   IconEye,
-  IconBuildingWarehouse,
+  IconCheck,
+  IconArrowRight,
 } from "@tabler/icons-react";
 import { useTranslation } from "@/hooks/useTranslation";
+import {
+  getLandingCMS,
+  fetchLandingCMSFromServer,
+  DEFAULT_LANDING_CMS,
+  WorkspaceDepartment,
+  WorkspaceImageItem,
+} from "@/lib/landingCMS";
 
-export interface WorkspaceItem {
-  id: string;
-  title: string;
-  subtitle: string;
-  category: "sanh" | "trung-bay" | "truyen-thong" | "rd" | "van-hanh";
-  categoryLabel: string;
-  tag: string;
-  image: string;
-  desc: string;
+const DEPARTMENT_ICON_MAP: Record<string, any> = {
+  building: IconBuilding,
+  factory: IconBuildingWarehouse,
+  briefcase: IconBriefcase,
+  "check-shield": IconShieldCheck,
+  monitor: IconDeviceDesktop,
+  users: IconUsers,
+  "file-text": IconFileText,
+  "users-round": IconUsersGroup,
+};
+
+const WORKSPACE_MODULE_MAPPING: Record<string, string> = {
+  sanh: "overview",
+  vpdieuhanh: "hr",
+  vanphong: "hr",
+  hr: "hr",
+  nhamay1: "production",
+  nhamay2: "production",
+  nhamay3: "production",
+  factory: "production",
+  qc: "qc",
+  it: "ci",
+  ketoan: "finance",
+  phonghop: "hr",
+};
+
+function getModuleUrlForDepartment(depId: string, depName?: string): string {
+  const normId = (depId || "").toLowerCase().trim();
+  const normName = (depName || "").toLowerCase().trim();
+
+  let moduleCode = WORKSPACE_MODULE_MAPPING[normId];
+  if (!moduleCode) {
+    if (normName.includes("sảnh") || normName.includes("lobby")) moduleCode = "overview";
+    else if (normName.includes("văn phòng") || normName.includes("nhân sự") || normName.includes("office") || normName.includes("hr")) moduleCode = "hr";
+    else if (normName.includes("kế toán") || normName.includes("tài chính") || normName.includes("finance")) moduleCode = "finance";
+    else if (normName.includes("qc") || normName.includes("chất lượng") || normName.includes("quality")) moduleCode = "qc";
+    else if (normName.includes("nhà máy") || normName.includes("xưởng") || normName.includes("sản xuất") || normName.includes("factory")) moduleCode = "production";
+    else if (normName.includes("r&d") || normName.includes("phát triển")) moduleCode = "rd";
+    else if (normName.includes("it") || normName.includes("cải tiến") || normName.includes("ci")) moduleCode = "ci";
+    else if (normName.includes("logistics") || normName.includes("kho")) moduleCode = "logistics";
+    else moduleCode = "overview";
+  }
+
+  return `/work?module=${moduleCode}`;
 }
 
-export const WORKSPACE_ITEMS: WorkspaceItem[] = [
-  {
-    id: "kglv-1",
-    title: "Không gian làm việc chuẩn mực",
-    subtitle: "Lối Vào Điều Hành SKECHERS",
-    category: "sanh",
-    categoryLabel: "Sảnh & Điều Hành",
-    tag: "Lobby Front",
-    image: "/images/KGLV/MẶT TIỀN SẢNH.png",
-    desc: "Mặt tiền sảnh tiếp đón thiết kế hiện đại, thể hiện diện mạo chuyên nghiệp và quy mô vận hành của Tổ hợp Kiên Giang - TBS Group.",
-  },
-  {
-    id: "kglv-2",
-    title: "Khu làm việc phối hợp",
-    subtitle: "Không Gian Đón Tiếp Đối Tác",
-    category: "sanh",
-    categoryLabel: "Sảnh & Điều Hành",
-    tag: "Interior Lobby",
-    image: "/images/KGLV/SẢNH GÓC TỪ TRONG NHÌN RA.png",
-    desc: "Góc nhìn từ bên trong sảnh ra khu vực sân chính, ngập tràn ánh sáng tự nhiên và điểm xuyết cây xanh thân thiện với môi trường.",
-  },
-  {
-    id: "kglv-3",
-    title: "Điểm nhấn thiết kế nội thất",
-    subtitle: "Khu Làm Việc Trung Tâm",
-    category: "sanh",
-    categoryLabel: "Sảnh & Điều Hành",
-    tag: "Management Hub",
-    image: "/images/KGLV/CĐTT 2 GÓC HÌNH VP2.png",
-    desc: "Khu vực điều hành sản xuất và kết nối liên phòng ban, hỗ trợ theo dõi tiến độ đơn hàng SKECHERS thời gian thực.",
-  },
-  {
-    id: "kglv-4",
-    title: "Góc nhìn môi trường VPTX",
-    subtitle: "Bộ Báo Cáo & Mẫu Tiêu Biểu",
-    category: "trung-bay",
-    categoryLabel: "Khu Trưng Bày",
-    tag: "Key Collections",
-    image: "/images/KGLV/3 DÒNG GIÀY CHÍNH.png",
-    desc: "Bàn trưng bày 3 dòng sản phẩm cốt lõi: Skechers Performance (thể thao), Lifestyle (thời trang) và Work Series (bảo hộ).",
-  },
-  {
-    id: "kglv-5",
-    title: "Khu trưng bày 4 đôi giày kỷ niệm",
-    subtitle: "Cột Mốc Sản Xuất Tiêu Biểu",
-    category: "trung-bay",
-    categoryLabel: "Khu Trưng Bày",
-    tag: "Milestone Shoes",
-    image: "/images/KGLV/CĐTT 1 GÓC 4 ĐÔI GIÀY.png",
-    desc: "Góc lưu giữ 4 mẫu giày đánh dấu những bước tiến đột phá về công nghệ sản xuất và sản lượng chuỗi SKECHERS tại TBS Group.",
-  },
-  {
-    id: "kglv-6",
-    title: "Biểu tượng chiếc giày kỷ niệm",
-    subtitle: "Biểu Trưng Nghệ Thuật Chế Tác",
-    category: "trung-bay",
-    categoryLabel: "Khu Trưng Bày",
-    tag: "Brand Icon",
-    image: "/images/KGLV/CĐTT 2 GÓC HÌNH CHIẾC GIÀY.png",
-    desc: "Mô hình biểu tượng chiếc giày khổng lồ thể hiện tinh thần sáng tạo và tay nghề tinh xảo của đội ngũ kỹ sư TBS.",
-  },
-  {
-    id: "kglv-7",
-    title: "Góc trưng bày 3 chiếc giày",
-    subtitle: "Thiết Kế Mới Nhất",
-    category: "trung-bay",
-    categoryLabel: "Khu Trưng Bày",
-    tag: "Product Showcase",
-    image: "/images/KGLV/CĐTT 2 GÓC 3 CHIẾC GIÀY.png",
-    desc: "Showcase trưng bày sản phẩm mới nhất được kiểm định khắt khe trước khi xuất khẩu ra các thị trường toàn cầu.",
-  },
-  {
-    id: "kglv-8",
-    title: "Chuyên đề truyền thống 1 - Lối vào",
-    subtitle: "Hành Lang Lịch Sử",
-    category: "truyen-thong",
-    categoryLabel: "Khu Truyền Thống",
-    tag: "Heritage Walk 1",
-    image: "/images/KGLV/CĐTT 1 LỐI VÀO.png",
-    desc: "Lối vào không gian truyền thống tái hiện chặng đường hình thành và phát triển của chuỗi cung ứng SKECHERS.",
-  },
-  {
-    id: "kglv-9",
-    title: "Chuyên đề truyền thống 2 - Lối vào",
-    subtitle: "Hành Lang Thành Tựu",
-    category: "truyen-thong",
-    categoryLabel: "Khu Truyền Thống",
-    tag: "Heritage Walk 2",
-    image: "/images/KGLV/CĐTT 2 LỐI VÀO.png",
-    desc: "Khu vực giới thiệu văn hóa doanh nghiệp, các giá trị cốt lõi và quan hệ đối tác bền chặt cùng SKECHERS Global.",
-  },
-  {
-    id: "kglv-10",
-    title: "Bảng lịch sử & kỷ niệm chương",
-    subtitle: "Ghi Nhận Đóng Góp Xuất Sắc",
-    category: "truyen-thong",
-    categoryLabel: "Khu Truyền Thống",
-    tag: "Awards & History",
-    image: "/images/KGLV/BẢNG LỊCH SỬ & KỈ NIỆM CHƯƠNG.png",
-    desc: "Bảng danh dự lưu danh các giải thưởng uy tín, bằng khen quốc tế và kỷ niệm chương qua từng giai đoạn phát triển.",
-  },
-  {
-    id: "kglv-11",
-    title: "Phòng Research & Development (R&D)",
-    subtitle: "Trung Tâm Nghiên Cứu Mẫu",
-    category: "rd",
-    categoryLabel: "Khu Mẫu & R&D",
-    tag: "R&D Lab",
-    image: "/images/KGLV/PHÒNG R&D.png",
-    desc: "Phòng nghiên cứu & phát triển với trang thiết bị hiện đại, phát triển các mẫu giày thử nghiệm và tối ưu quy trình may.",
-  },
-  {
-    id: "kglv-12",
-    title: "Lối đi xuống khu vực mẫu",
-    subtitle: "Kết Nối Kỹ Thuật & Sản Xuất",
-    category: "rd",
-    categoryLabel: "Khu Mẫu & R&D",
-    tag: "Sample Room Access",
-    image: "/images/KGLV/CĐTT 1 LỐI ĐI XUỐNG KV MẪU.png",
-    desc: "Hành lang dẫn xuống khu vực may mẫu thử nghiệm, đảm bảo tính liền mạch giữa ý tưởng thiết kế và thực thi sản xuất.",
-  },
-  {
-    id: "kglv-13",
-    title: "Quy trình sản xuất giày SKECHERS",
-    subtitle: "Sơ Đồ Vận Hành 12 Bước",
-    category: "van-hanh",
-    categoryLabel: "Vận Hành & Sản Xuất",
-    tag: "Process Flow",
-    image: "/images/KGLV/CĐTT 2 GÓC QUI TRÌNH GIÀY.png",
-    desc: "Trực quan hóa quy trình sản xuất chuẩn hóa từ khâu kiểm định nguyên vật liệu đầu vào đến hoàn thiện xuất hàng.",
-  },
-  {
-    id: "kglv-14",
-    title: "Phòng thư viện vật tư & nguyên liệu",
-    subtitle: "Kho Lưu Trữ Chuẩn Quốc Tế",
-    category: "van-hanh",
-    categoryLabel: "Vận Hành & Sản Xuất",
-    tag: "Material Library",
-    image: "/images/KGLV/PHÒNG THƯ VIỆN VẬT TƯ.png",
-    desc: "Thư viện vật tư với hàng ngàn mẫu vải, da, phụ liệu đạt chứng nhận xanh và tiêu chuẩn chất lượng khắt khe của SKECHERS.",
-  },
-];
-
-import { getLandingCMS, DEFAULT_LANDING_CMS } from "@/lib/landingCMS";
-
-const CORPORATE_PILLAR_ICONS = [
-  IconBuildingSkyscraper,
-  IconSitemap,
-  IconAward,
-  IconBulb,
-];
-
-const CATEGORIES = [
-  { key: "all", label: "Tất Cả (14)", count: 14 },
-  { key: "sanh", label: "Sảnh & Điều Hành", count: 3 },
-  { key: "trung-bay", label: "Khu Trưng Bày", count: 4 },
-  { key: "truyen-thong", label: "Khu Truyền Thống", count: 3 },
-  { key: "rd", label: "Khu Mẫu & R&D", count: 2 },
-  { key: "van-hanh", label: "Vận Hành & Sản Xuất", count: 2 },
-];
-
 export default function WorkspaceGallery() {
-  const { t, lang } = useTranslation();
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const { t } = useTranslation();
+  const [cmsConfig, setCmsConfig] = useState(DEFAULT_LANDING_CMS);
+  const [activeDepId, setActiveDepId] = useState<string>("all");
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  const [cmsWorkspace, setCmsWorkspace] = useState(DEFAULT_LANDING_CMS.workspace);
+  const [lightboxDepId, setLightboxDepId] = useState<string>("sanh");
 
   useEffect(() => {
     const loadCMS = () => {
       const config = getLandingCMS();
-      if (config?.workspace) {
-        setCmsWorkspace(config.workspace);
+      if (config) {
+        setCmsConfig(config);
       }
     };
     loadCMS();
 
+    const fetchServerData = () => {
+      fetchLandingCMSFromServer().then((config) => {
+        if (config) {
+          setCmsConfig(config);
+        }
+      });
+    };
+
+    fetchServerData();
+
+    // Background server polling every 60s + sync on window focus
+    const interval = setInterval(fetchServerData, 60000);
+    const handleFocus = () => fetchServerData();
+
     if (typeof window !== "undefined") {
       window.addEventListener("tbs_landing_cms_updated", loadCMS);
-      return () => window.removeEventListener("tbs_landing_cms_updated", loadCMS);
+      window.addEventListener("focus", handleFocus);
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener("tbs_landing_cms_updated", loadCMS);
+        window.removeEventListener("focus", handleFocus);
+      };
     }
   }, []);
 
-  const filteredItems = selectedCategory === "all"
-    ? WORKSPACE_ITEMS
-    : WORKSPACE_ITEMS.filter((item) => item.category === selectedCategory);
+  const departments: WorkspaceDepartment[] =
+    cmsConfig.workspaceDepartments && cmsConfig.workspaceDepartments.length > 0
+      ? cmsConfig.workspaceDepartments
+      : DEFAULT_LANDING_CMS.workspaceDepartments || [];
+
+  const displayDepartments =
+    activeDepId === "all"
+      ? departments.filter((d) => d.images && d.images.length > 0)
+      : departments.filter((d) => d.id === activeDepId);
+
+  const lightboxDepartment =
+    departments.find((d) => d.id === lightboxDepId) || departments[0] || {
+      id: "sanh",
+      name: "Sảnh",
+      images: [],
+    };
+
+  const lightboxImages: WorkspaceImageItem[] = lightboxDepartment.images || [];
+
+  const handleSelectDept = (depId: string) => {
+    setActiveDepId(depId);
+    if (depId !== "all") {
+      setTimeout(() => {
+        const el = document.getElementById(`dept-section-${depId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 50);
+    }
+  };
 
   // Keyboard navigation for lightbox
   useEffect(() => {
@@ -223,160 +156,330 @@ export default function WorkspaceGallery() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [lightboxIndex, filteredItems.length]);
+  }, [lightboxIndex, lightboxImages.length]);
 
   const handlePrev = () => {
     if (lightboxIndex === null) return;
-    setLightboxIndex((prev) => (prev === 0 ? filteredItems.length - 1 : (prev as number) - 1));
+    setLightboxIndex((prev) => (prev === 0 ? lightboxImages.length - 1 : (prev as number) - 1));
   };
 
   const handleNext = () => {
     if (lightboxIndex === null) return;
-    setLightboxIndex((prev) => (prev === filteredItems.length - 1 ? 0 : (prev as number) + 1));
+    setLightboxIndex((prev) => (prev === lightboxImages.length - 1 ? 0 : (prev as number) + 1));
   };
-
-  const pillarsToRender = cmsWorkspace.pillars || DEFAULT_LANDING_CMS.workspace.pillars;
 
   return (
     <section
       id="workspace"
-      className="py-20 lg:py-28 bg-[#fbfcfb] max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-12 space-y-16"
+      className="py-16 sm:py-20 lg:py-24 bg-[#f8faf9] max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 space-y-10 sm:space-y-12"
     >
-      {/* 2-Column Main Section Header matching reference image */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start">
-        {/* Left Side: Headline, Intro text & 4 Corporate Pillars */}
-        <div className="lg:col-span-6 space-y-8">
-          {/* Main Headline & Intro Paragraph */}
-          <div className="space-y-4">
-            <h2 className="text-3xl sm:text-4xl lg:text-[44px] font-black text-[#152e25] tracking-tight leading-[1.18]">
-              {cmsWorkspace.headline || t("workspace.corporate_environment")}
-            </h2>
-            <p className="text-slate-600 text-base sm:text-lg leading-relaxed font-normal max-w-xl">
-              {cmsWorkspace.description || t("workspace.each_space_created")}
+      {/* Main Section Headline & Intro */}
+      <div className="space-y-3">
+        <h2 className="text-3xl sm:text-4xl lg:text-[42px] font-black text-[#152e25] tracking-tight leading-[1.18]">
+          {cmsConfig.workspace.headline || "Môi trường làm việc chuẩn Corporate"}
+        </h2>
+        <p className="text-slate-600 text-base sm:text-lg leading-relaxed font-normal max-w-3xl">
+          {cmsConfig.workspace.description ||
+            "Mỗi không gian được kiến tạo nhằm thúc đẩy hiệu suất, sự kết nối và tinh thần đổi mới. Đây là nơi đội ngũ cùng chia sẻ mục tiêu, nâng cao chất lượng và không ngừng hoàn thiện để mang đến những giá trị vượt kỳ vọng."}
+        </p>
+      </div>
+
+      {/* 4 Corporate Content Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="p-6 rounded-[24px] bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-3.5 hover:border-emerald-500/40 hover:shadow-md transition-all duration-300">
+          <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-[#006838] border border-emerald-100 flex items-center justify-center">
+            <IconBuilding size={22} strokeWidth={2} />
+          </div>
+          <div className="space-y-1.5 flex-1">
+            <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+              Chuẩn mực không gian
+            </h3>
+            <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed font-normal">
+              Thiết kế hiện đại, tối giản theo tiêu chuẩn corporate, tạo nên môi trường làm việc chuyên nghiệp, đồng bộ và hiệu quả.
             </p>
           </div>
+        </div>
 
-          {/* 4 Feature Cards Grid (2x2) matching exact design in screenshot */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 pt-2">
-            {pillarsToRender.map((pillar, i) => {
-              const IconComp = CORPORATE_PILLAR_ICONS[i % CORPORATE_PILLAR_ICONS.length];
+        <div className="p-6 rounded-[24px] bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-3.5 hover:border-emerald-500/40 hover:shadow-md transition-all duration-300">
+          <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-[#006838] border border-emerald-100 flex items-center justify-center">
+            <IconBriefcase size={22} strokeWidth={2} />
+          </div>
+          <div className="space-y-1.5 flex-1">
+            <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+              Hiệu quả vận hành
+            </h3>
+            <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed font-normal">
+              Không gian được quy hoạch khoa học, tối ưu kết nối giữa các phòng ban, hỗ trợ quy trình điều hành nhanh chóng và chính xác.
+            </p>
+          </div>
+        </div>
+
+        <div className="p-6 rounded-[24px] bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-3.5 hover:border-emerald-500/40 hover:shadow-md transition-all duration-300">
+          <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-[#006838] border border-emerald-100 flex items-center justify-center">
+            <IconSparkles size={22} strokeWidth={2} />
+          </div>
+          <div className="space-y-1.5 flex-1">
+            <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+              Bản sắc thương hiệu
+            </h3>
+            <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed font-normal">
+              Hệ thống nhận diện được ứng dụng xuyên suốt, phản ánh giá trị thương hiệu TBS và vị thế của doanh nghiệp trong chuỗi cung ứng toàn cầu.
+            </p>
+          </div>
+        </div>
+
+        <div className="p-6 rounded-[24px] bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-3.5 hover:border-emerald-500/40 hover:shadow-md transition-all duration-300">
+          <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-[#006838] border border-emerald-100 flex items-center justify-center">
+            <IconUsers size={22} strokeWidth={2} />
+          </div>
+          <div className="space-y-1.5 flex-1">
+            <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+              Môi trường truyền cảm hứng
+            </h3>
+            <p className="text-xs sm:text-[13px] text-slate-600 leading-relaxed font-normal">
+              Không gian mở, tiện nghi và thân thiện, khuyến khích sự hợp tác, sáng tạo và phát triển bền vững của đội ngũ.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* 2 Featured Visual Showcase Cards Row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch">
+        <div className="relative h-[220px] sm:h-[240px] rounded-[26px] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 group border border-slate-200/90">
+          <img
+            src="/images/KGLV/CĐTT 2 GÓC HÌNH VP2.png"
+            alt="Điểm nhấn thiết kế nội thất"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+            loading="lazy"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+          <div className="absolute bottom-4 left-4 right-4 p-4 bg-[#0b3226]/90 backdrop-blur-md rounded-[18px] border border-white/15 text-white">
+            <h4 className="text-sm font-extrabold text-white tracking-wide">
+              Điểm nhấn thiết kế nội thất
+            </h4>
+            <span className="text-[11px] text-emerald-300 font-mono block mt-0.5 font-bold">
+              Sảnh & Điều Hành
+            </span>
+          </div>
+        </div>
+
+        <div className="relative h-[220px] sm:h-[240px] rounded-[26px] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 group border border-slate-200/90">
+          <img
+            src="/images/KGLV/3 DÒNG GIÀY CHÍNH.png"
+            alt="Góc nhìn môi trường"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+            loading="lazy"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+          <div className="absolute bottom-4 left-4 right-4 p-4 bg-[#0b3226]/90 backdrop-blur-md rounded-[18px] border border-white/15 text-white">
+            <h4 className="text-sm font-extrabold text-white tracking-wide">
+              Góc nhìn môi trường
+            </h4>
+            <span className="text-[11px] text-emerald-300 font-mono block mt-0.5 font-bold">
+              Khu Trưng Bày
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Main 2-Column Gallery Layout matching reference screenshot */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+        {/* Left Column (Sidebar): KHÔNG GIAN THEO PHÒNG BAN */}
+        <div className="lg:col-span-3 bg-white rounded-[26px] p-4 sm:p-5 border border-slate-200/90 shadow-2xs space-y-4">
+          <div className="px-2 pt-1 pb-2 border-b border-slate-100 flex items-center justify-between">
+            <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">
+              KHÔNG GIAN THEO PHÒNG BAN
+            </h3>
+            <span className="text-[11px] font-mono text-slate-400 font-bold">
+              {departments.length}
+            </span>
+          </div>
+
+          {/* Desktop Vertical Department List */}
+          <div className="hidden lg:flex flex-col space-y-1.5 max-h-[640px] overflow-y-auto pr-1 scrollbar-thin">
+            {/* All Spaces Button */}
+            <button
+              type="button"
+              onClick={() => handleSelectDept("all")}
+              className={`w-full px-3.5 py-3 rounded-2xl text-left transition-all duration-200 flex items-center justify-between group cursor-pointer ${
+                activeDepId === "all"
+                  ? "bg-[#0b3d2e] text-white shadow-md font-extrabold scale-[1.01]"
+                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-bold"
+              }`}
+            >
+              <div className="flex items-center gap-3 truncate">
+                <IconBuilding
+                  size={18}
+                  className={activeDepId === "all" ? "text-[#2fd39a]" : "text-slate-400 group-hover:text-slate-700"}
+                />
+                <span className="text-xs sm:text-[13px] truncate">Tất cả không gian</span>
+              </div>
+              <span
+                className={`px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold ml-2 flex-shrink-0 ${
+                  activeDepId === "all"
+                    ? "bg-white/20 text-white"
+                    : "bg-slate-100 text-slate-500 group-hover:bg-slate-200"
+                }`}
+              >
+                {departments.reduce((sum, d) => sum + (d.images?.length || 0), 0)}
+              </span>
+            </button>
+
+            {departments.map((dep) => {
+              const IconComponent = DEPARTMENT_ICON_MAP[dep.icon] || IconBuilding;
+              const isSelected = dep.id === activeDepId;
+              const imgCount = dep.images?.length || 0;
+
               return (
-                <div
-                  key={i}
-                  className="p-6 rounded-[22px] bg-white border border-slate-200/80 shadow-sm hover:border-emerald-500/40 hover:shadow-md transition-all duration-300 space-y-3"
+                <button
+                  key={dep.id}
+                  type="button"
+                  onClick={() => handleSelectDept(dep.id)}
+                  className={`w-full px-3.5 py-3 rounded-2xl text-left transition-all duration-200 flex items-center justify-between group cursor-pointer ${
+                    isSelected
+                      ? "bg-[#0b3d2e] text-white shadow-md font-extrabold scale-[1.01]"
+                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-bold"
+                  }`}
                 >
-                  <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#006838] flex items-center justify-center">
-                    <IconComp size={22} strokeWidth={1.8} />
+                  <div className="flex items-center gap-3 truncate">
+                    <IconComponent
+                      size={18}
+                      className={isSelected ? "text-[#2fd39a]" : "text-slate-400 group-hover:text-slate-700"}
+                    />
+                    <span className="text-xs sm:text-[13px] truncate">{dep.name}</span>
                   </div>
-                  <h3 className="text-base font-extrabold text-slate-900 tracking-tight">
-                    {pillar.title}
-                  </h3>
-                  <p className="text-xs sm:text-[13px] text-slate-500 leading-relaxed">
-                    {pillar.desc}
-                  </p>
-                </div>
+
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold ml-2 flex-shrink-0 ${
+                      isSelected
+                        ? "bg-white/20 text-white"
+                        : "bg-slate-100 text-slate-500 group-hover:bg-slate-200"
+                    }`}
+                  >
+                    {imgCount}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Mobile Horizontal Scrollable Department List */}
+          <div className="flex lg:hidden overflow-x-auto gap-2 py-1 scrollbar-none">
+            <button
+              type="button"
+              onClick={() => handleSelectDept("all")}
+              className={`flex-shrink-0 px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                activeDepId === "all"
+                  ? "bg-[#0b3d2e] text-white shadow-sm"
+                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+              }`}
+            >
+              <IconBuilding size={15} />
+              <span>Tất cả</span>
+            </button>
+            {departments.map((dep) => {
+              const IconComponent = DEPARTMENT_ICON_MAP[dep.icon] || IconBuilding;
+              const isSelected = dep.id === activeDepId;
+              const imgCount = dep.images?.length || 0;
+
+              return (
+                <button
+                  key={dep.id}
+                  type="button"
+                  onClick={() => handleSelectDept(dep.id)}
+                  className={`flex-shrink-0 px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                    isSelected
+                      ? "bg-[#0b3d2e] text-white shadow-sm"
+                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                  }`}
+                >
+                  <IconComponent size={15} />
+                  <span>{dep.name}</span>
+                  <span className="px-1.5 py-0.5 rounded-full bg-white/20 text-[10px] font-mono">
+                    {imgCount}
+                  </span>
+                </button>
               );
             })}
           </div>
         </div>
 
-        {/* Right Side: Visual Workspace Cards Grid matching image layout */}
-        <div className="lg:col-span-6 space-y-6">
-          {/* Top Bar with Category Filters & Photo Counter */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-slate-200/70">
-            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1">
-              {CATEGORIES.map((cat) => (
-                <button
-                  key={cat.key}
-                  onClick={() => setSelectedCategory(cat.key)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                    selectedCategory === cat.key
-                      ? "bg-[#1f3a30] text-white shadow-sm"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
+        {/* Right Column: Stacked Department Sections matching Screenshot 2 */}
+        <div className="lg:col-span-9 space-y-6">
+          {displayDepartments.length > 0 ? (
+            displayDepartments.map((dep) => {
+              const images = dep.images || [];
+              if (images.length === 0) return null;
+
+              let gridColsClass = "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4";
+              if (images.length === 2) gridColsClass = "grid-cols-1 sm:grid-cols-2";
+              if (images.length === 3) gridColsClass = "grid-cols-1 sm:grid-cols-3";
+              if (images.length === 4) gridColsClass = "grid-cols-2 sm:grid-cols-4";
+
+              return (
+                <div
+                  key={dep.id}
+                  id={`dept-section-${dep.id}`}
+                  className="bg-white rounded-[26px] p-5 sm:p-6 border border-slate-200/90 shadow-2xs space-y-5 scroll-mt-24"
                 >
-                  {cat.label}
-                </button>
-              ))}
-            </div>
+                  {/* Header Bar matching Screenshot 2 */}
+                  <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#006838]" />
+                      <span>
+                        {dep.name} ({images.length})
+                      </span>
+                    </h3>
 
-            <div className="text-xs font-mono font-bold text-[#006838] bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-200/60">
-              {filteredItems.length} {t("workspace.photos_count")}
-            </div>
-          </div>
-
-          {/* 2x2 Image Showcase Grid matching screenshot overlay dark pill layout */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            {filteredItems.slice(0, 4).map((item, idx) => (
-              <div
-                key={item.id}
-                onClick={() => setLightboxIndex(idx)}
-                className="group relative h-[260px] sm:h-[280px] rounded-[24px] overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 cursor-pointer border border-slate-200"
-              >
-                {/* Image */}
-                <img
-                  src={item.image}
-                  alt={item.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                />
-
-                {/* Dark Gradient Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent group-hover:from-black/80 transition-colors" />
-
-                {/* Zoom Icon Top Right */}
-                <div className="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-900/60 backdrop-blur-md border border-white/20 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <IconZoomIn size={18} />
-                </div>
-
-                {/* Dark Pill Overlay Badge at bottom matching exact image reference */}
-                <div className="absolute bottom-4 left-4 right-4 bg-[#1f3a30]/90 backdrop-blur-md border border-white/10 rounded-[16px] px-4 py-3 text-white transition-all group-hover:bg-[#152e25]">
-                  <h4 className="text-xs sm:text-sm font-bold text-white tracking-wide truncate">
-                    {item.title}
-                  </h4>
-                  <span className="text-[10px] text-emerald-300 font-mono block mt-0.5">
-                    {item.categoryLabel}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* If there are more than 4 items, render remaining in expandable grid */}
-          {filteredItems.length > 4 && (
-            <div className="pt-2">
-              <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
-                {t("workspace.additional_views")} ({filteredItems.length - 4})
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                {filteredItems.slice(4).map((item, idx) => {
-                  const realIndex = idx + 4;
-                  return (
-                    <div
-                      key={item.id}
-                      onClick={() => setLightboxIndex(realIndex)}
-                      className="group relative aspect-square rounded-2xl overflow-hidden cursor-pointer border border-slate-200 hover:border-[#006838]"
+                    <a
+                      href={getModuleUrlForDepartment(dep.id, dep.name)}
+                      className="px-3.5 py-1.5 rounded-full bg-[#f4fbf7] hover:bg-emerald-100/80 text-[#006838] border border-emerald-200/60 text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
                     >
-                      <img
-                        src={item.image}
-                        alt={item.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                      />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                        <IconEye size={18} />
+                      <span>Vào nhanh</span>
+                      <IconArrowRight size={14} className="stroke-[2.5]" />
+                    </a>
+                  </div>
+
+                  {/* Dynamic Column Responsive Grid matching Reference Screenshot 2 */}
+                  <div className={`grid ${gridColsClass} gap-3.5 sm:gap-4`}>
+                    {images.map((imgItem, idx) => (
+                      <div
+                        key={imgItem.id || idx}
+                        onClick={() => {
+                          setLightboxDepId(dep.id);
+                          setLightboxIndex(idx);
+                        }}
+                        className="group relative h-[155px] sm:h-[180px] rounded-[22px] overflow-hidden cursor-pointer border border-slate-200/90 shadow-2xs hover:shadow-xl hover:border-[#006838] transition-all duration-300 bg-slate-50"
+                      >
+                        <img
+                          src={imgItem.src}
+                          alt={imgItem.caption || `${dep.name} ${idx + 1}`}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          loading="lazy"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = "/images/KGLV/MẶT TIỀN SẢNH.png";
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                          <IconZoomIn size={22} className="drop-shadow-md" />
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="bg-white rounded-[26px] p-12 text-center text-slate-400 font-medium text-xs border border-slate-200/90">
+              Chưa có hình ảnh nào cho phòng ban này. Vui lòng cập nhật trong trang /admin.
             </div>
           )}
         </div>
       </div>
 
       {/* Lightbox Modal for Full View */}
-      {lightboxIndex !== null && filteredItems[lightboxIndex] && (
-        <div className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-4 sm:p-6 lg:p-10 animate-fade-in">
-          {/* Close Button */}
+      {lightboxIndex !== null && lightboxImages[lightboxIndex] && (
+        <div className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-4 sm:p-6 lg:p-10 animate-in fade-in duration-200">
           <button
             onClick={() => setLightboxIndex(null)}
             className="absolute top-5 right-5 z-50 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white flex items-center justify-center transition-all cursor-pointer"
@@ -385,7 +488,6 @@ export default function WorkspaceGallery() {
             <IconX size={24} />
           </button>
 
-          {/* Prev Button */}
           <button
             onClick={handlePrev}
             className="absolute left-4 sm:left-8 top-1/2 -translate-y-1/2 z-50 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white flex items-center justify-center transition-all cursor-pointer"
@@ -394,7 +496,6 @@ export default function WorkspaceGallery() {
             <IconChevronLeft size={28} />
           </button>
 
-          {/* Next Button */}
           <button
             onClick={handleNext}
             className="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 z-50 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white flex items-center justify-center transition-all cursor-pointer"
@@ -403,38 +504,28 @@ export default function WorkspaceGallery() {
             <IconChevronRight size={28} />
           </button>
 
-          {/* Main Lightbox Content Container */}
           <div className="max-w-5xl w-full max-h-[90vh] flex flex-col bg-slate-900 rounded-3xl overflow-hidden border border-slate-800 shadow-2xl">
-            {/* Image Viewport */}
-            <div className="relative flex-1 bg-black flex items-center justify-center min-h-[300px] max-h-[65vh] overflow-hidden">
+            <div className="relative flex-1 bg-black flex items-center justify-center min-h-[300px] max-h-[68vh] overflow-hidden p-4">
               <img
-                src={filteredItems[lightboxIndex].image}
-                alt={filteredItems[lightboxIndex].title}
+                src={lightboxImages[lightboxIndex].src}
+                alt={lightboxImages[lightboxIndex].caption || lightboxDepartment.name}
                 className="max-h-[65vh] w-auto max-w-full object-contain select-none"
               />
 
-              {/* Counter Badge */}
               <div className="absolute bottom-4 left-4 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md border border-white/20 text-xs font-mono font-bold text-white">
-                {lightboxIndex + 1} / {filteredItems.length}
+                {lightboxIndex + 1} / {lightboxImages.length}
               </div>
             </div>
 
-            {/* Captions & Info */}
             <div className="p-6 bg-slate-900 border-t border-slate-800 space-y-2">
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-3">
                 <span className="px-3 py-1 rounded-full bg-[#006838] text-white text-xs font-extrabold uppercase tracking-wider">
-                  {filteredItems[lightboxIndex].categoryLabel}
-                </span>
-                <span className="px-2.5 py-0.5 rounded-md bg-slate-800 text-slate-300 font-mono text-xs">
-                  {filteredItems[lightboxIndex].tag}
+                  {lightboxDepartment.name}
                 </span>
               </div>
-              <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                {filteredItems[lightboxIndex].title}
+              <h3 className="text-lg sm:text-xl font-black text-white tracking-tight">
+                {lightboxImages[lightboxIndex].caption || `${lightboxDepartment.name} - Ảnh ${lightboxIndex + 1}`}
               </h3>
-              <p className="text-slate-300 text-sm leading-relaxed max-w-3xl">
-                {filteredItems[lightboxIndex].desc}
-              </p>
             </div>
           </div>
         </div>

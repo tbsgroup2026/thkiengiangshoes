@@ -5,6 +5,7 @@ import Link from "next/link";
 import NotificationCenter from "@/components/NotificationCenter";
 import DonutChartModal from "@/components/DonutChartModal";
 import UserAvatar from "@/components/UserAvatar";
+import ThemeFontControlModal from "@/components/ThemeFontControlModal";
 import { getCurrentUser, formatTitleWithDepartment } from "@/lib/userProfiles";
 import Can from "@/components/Can";
 import { PERMISSIONS } from "@/lib/permissions";
@@ -19,6 +20,8 @@ import HRContractsView from "@/modules/hr/components/HRContractsView";
 import QualityModule from "@/modules/quality/QualityModule";
 import RDModule from "@/modules/rd/RDModule";
 import CNCIWrapper from "@/modules/ci/CNCIWrapper";
+import MobileBottomNav from "@/components/mobile/MobileBottomNav";
+import MobileNavDrawer from "@/components/mobile/MobileNavDrawer";
 import {
   IconHome,
   IconLeaf,
@@ -43,6 +46,7 @@ import {
   IconBriefcase,
   IconPlane,
   IconId,
+  IconAdjustments,
   IconCalendarEvent,
   IconClockCheck,
   IconSchool,
@@ -178,8 +182,71 @@ function HRModuleView() {
   );
 }
 
+function parseModuleFromUrl(): string | null {
+  if (typeof window === "undefined") return null;
+  const urlParams = new URLSearchParams(window.location.search);
+  const rawMod = (urlParams.get("module") || urlParams.get("dept") || "").toLowerCase().trim();
+
+  if (!rawMod || rawMod === "overview" || rawMod === "sanh" || rawMod === "00") {
+    return null;
+  }
+  if (rawMod === "hr" || rawMod === "nhansu" || rawMod === "vanphong" || rawMod === "vpdieuhanh" || rawMod === "01") {
+    return "hr";
+  }
+  if (rawMod === "finance" || rawMod === "ketoan" || rawMod === "taichinh" || rawMod === "02") {
+    return "finance";
+  }
+  if (rawMod === "rd" || rawMod === "03") {
+    return "rd";
+  }
+  if (rawMod === "ci" || rawMod === "kaizen" || rawMod === "it" || rawMod === "04") {
+    return "ci";
+  }
+  if (rawMod === "qc" || rawMod === "quality" || rawMod === "05") {
+    return "qc";
+  }
+  if (rawMod === "logistics" || rawMod === "kho" || rawMod === "06") {
+    return "logistics";
+  }
+  if (rawMod === "production" || rawMod === "factory" || rawMod === "nhamay" || rawMod === "07") {
+    return "production";
+  }
+
+  return null;
+}
+
 export default function WorkDashboardPage() {
   const [selectedDept, setSelectedDept] = useState<string | null>(null);
+
+  const changeDepartment = (deptId: string | null, pushHistory: boolean = true) => {
+    const targetDept = deptId === "overview" ? null : deptId;
+    setSelectedDept(targetDept);
+
+    if (typeof window !== "undefined" && pushHistory) {
+      const targetModule = targetDept || "overview";
+      const currentQuery = new URLSearchParams(window.location.search).get("module");
+      if (currentQuery !== targetModule) {
+        const newUrl = `/work?module=${targetModule}`;
+        window.history.pushState({ module: targetModule }, "", newUrl);
+      }
+    }
+  };
+
+  // Synchronize state with URL parameters on mount and browser back/forward (popstate)
+  useEffect(() => {
+    const initialMod = parseModuleFromUrl();
+    setSelectedDept(initialMod);
+
+    const handlePopState = () => {
+      const mod = parseModuleFromUrl();
+      setSelectedDept(mod);
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("popstate", handlePopState);
+      return () => window.removeEventListener("popstate", handlePopState);
+    }
+  }, []);
 
   const [plantFilter, setPlantFilter] = useState("Toàn nhà máy");
   const [timeFilter, setTimeFilter] = useState("Tháng này");
@@ -251,6 +318,7 @@ export default function WorkDashboardPage() {
 
   // Donut Chart Modal State & Interactive Chart Hover States
   const [isDonutModalOpen, setIsDonutModalOpen] = useState(false);
+  const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [hoveredQcIndex, setHoveredQcIndex] = useState<number | null>(null);
   const [hoveredCiIndex, setHoveredCiIndex] = useState<number | null>(null);
 
@@ -615,46 +683,58 @@ export default function WorkDashboardPage() {
     showToast("Đổi mật khẩu tài khoản thành công!");
   };
 
-  // Department Hero Banner Configurations (Screenshot 1 matching)
+  // Department Hero Banner Configurations (Authentic Local Images matching SẢNH/Văn phòng/Nhà máy)
   const deptBanners: Record<string, { bg: string; title: string; sub: string; appCount: number }> = {
     hr: {
-      bg: "/images/crawled/Da-giay1.jpg",
+      bg: "/images/brands/Văn phòng/1787810869509_5373416762128407822_5373416762128407822_4243291c07f467487e67e1e1e47b8905.jpg",
       title: "Nhân Sự - Hành Chánh",
       sub: "Quản lý văn thư, tài sản, phòng họp, tuyển dụng và lịch công tác toàn chuỗi.",
       appCount: 10,
     },
     finance: {
-      bg: "/images/crawled/Vat-tu.jpg",
+      bg: "/images/brands/Văn phòng/1787810869515_5373416762128407822_5373416762128407822_6da05db9aa42d610e93fbea9c4a9866e.jpg",
       title: "Kế Toán & Quản Trị",
       sub: "Quản lý tài chính, ngân sách, chi phí sản xuất và báo cáo tài chính hợp nhất.",
       appCount: 10,
     },
     rd: {
-      bg: "/images/crawled/De-giay.jpg",
+      bg: "/images/brands/Phòng Đào Tạo/1787810869499_5373416762128407822_5373416762128407822_49d7659c53b21702dff5c8f39212d143.jpg",
       title: "R&D (Phát Triển Sản Phẩm)",
       sub: "Nghiên cứu công nghệ đế giày SKECHERS, thiết kế mẫu & chuyển giao kỹ thuật.",
       appCount: 6,
     },
     ci: {
-      bg: "/images/crawled/Da-giay2.jpg",
+      bg: "/images/brands/Nhà máy/1787810869511_5373416762128407822_5373416762128407822_f5d1738107b86346f69bf64f3e28dd0d.jpg",
       title: "CN-CI (Cải Tiến Liên Tục)",
       sub: "Thúc đẩy phong trào Kaizen, cải tiến Gemba Walk và năng suất tự động hóa 4.0.",
       appCount: 4,
     },
     qc: {
-      bg: "/images/crawled/Muitat.jpg",
+      bg: "/images/brands/Nhà máy/1787810869517_5373416762128407822_5373416762128407822_41abd142fb008caa305e9bf9ea4c9a85.jpg",
       title: "Quản Lý Chất Lượng (QC)",
       sub: "Kiểm soát tiêu chuẩn chất lượng SKECHERS, chỉ số OEE và tỷ lệ lỗi trên chuyền.",
       appCount: 8,
     },
+    logistics: {
+      bg: "/images/brands/Nhà máy/1787810869519_5373416762128407822_5373416762128407822_5785e047e50798460c205ce3bbebc186.jpg",
+      title: "Kho & Logistics",
+      sub: "Điều phối logistics, vật tư & chuỗi cung ứng nhà máy SKECHERS Kiên Giang.",
+      appCount: 7,
+    },
+    production: {
+      bg: "/images/brands/Nhà máy/1787810869521_5373416762128407822_5373416762128407822_d92bcaa1035c5426a9529806beab4645.jpg",
+      title: "Tổ Hợp Nhà Máy",
+      sub: "Quản lý chuỗi xưởng sản xuất, máy móc thiết bị và điều hành ca sản xuất.",
+      appCount: 9,
+    },
     supply: {
-      bg: "/images/tbs-logistics-hub.png",
+      bg: "/images/brands/Nhà máy/1787810869523_5373416762128407822_5373416762128407822_d7fb8deb4933b3043195a08e573c4a74.jpg",
       title: "Kế Hoạch Chuẩn Bị - TTPP",
       sub: "Điều phối logistics, cung ứng vật tư & chuỗi cung ứng chuỗi nhà máy SKECHERS.",
       appCount: 7,
     },
     factory: {
-      bg: "/images/tbs-factory-plant.png",
+      bg: "/images/brands/Nhà máy/1787810869525_5373416762128407822_5373416762128407822_3d8c02353c2266fec97bdab159909d67.jpg",
       title: "Tổ Hợp Nhà Máy",
       sub: "Quản lý chuỗi xưởng sản xuất, máy móc thiết bị và điều hành ca sản xuất.",
       appCount: 9,
@@ -832,7 +912,7 @@ export default function WorkDashboardPage() {
               return (
                 <button
                   key={dept.id}
-                  onClick={() => setSelectedDept(isSelected ? null : dept.id)}
+                  onClick={() => changeDepartment(isSelected ? null : dept.id)}
                   className={`w-11 h-11 mx-auto rounded-2xl flex items-center justify-center transition-all duration-200 group relative cursor-pointer ${isSelected
                     ? "bg-[#006838] text-white shadow-md shadow-emerald-900/30 ring-2 ring-emerald-600/30 scale-105"
                     : "bg-white hover:bg-[#e6f4ed] text-[#006838] border border-slate-200/90 shadow-2xs"
@@ -868,7 +948,7 @@ export default function WorkDashboardPage() {
             return (
               <button
                 key={dept.id}
-                onClick={() => setSelectedDept(isSelected ? null : dept.id)}
+                onClick={() => changeDepartment(isSelected ? null : dept.id)}
                 className={`w-full text-left rounded-2xl flex items-center p-3.5 sm:p-4 gap-3.5 transition-all duration-200 group relative cursor-pointer ${isSelected
                   ? "bg-[#006838] text-white shadow-md shadow-emerald-900/20 border border-[#006838]"
                   : "bg-white hover:bg-[#e6f4ed]/50 text-slate-700 hover:text-slate-900 border border-slate-200/90 shadow-xs"
@@ -1005,10 +1085,19 @@ export default function WorkDashboardPage() {
             {/* Fullscreen Toggle (Hidden on Mobile < 768px) */}
             <button
               onClick={toggleFullscreen}
-              className="hidden md:flex min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors shadow-2xs items-center justify-center"
+              className="hidden md:flex min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors shadow-2xs items-center justify-center cursor-pointer"
               title="Toàn màn hình"
             >
               <IconMaximize size={20} />
+            </button>
+
+            {/* System Theme & Font Size Button */}
+            <button
+              onClick={() => setIsThemeModalOpen(true)}
+              className="hidden md:flex min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-200 text-[#006838] hover:bg-emerald-100 transition-colors shadow-2xs items-center justify-center cursor-pointer"
+              title="Cấu hình màu sắc & chữ hệ thống"
+            >
+              <IconAdjustments size={20} />
             </button>
 
             {/* User Avatar & Executive Dropdown Menu (Min 44x44px Touch Target) */}
@@ -1192,9 +1281,9 @@ export default function WorkDashboardPage() {
               <img
                 src={deptBanners[activeDeptObj.id]?.bg || "/images/tbs-factory-plant.png"}
                 alt={activeDeptObj.name}
-                className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:scale-105 transition-transform duration-700 pointer-events-none"
+                className="absolute inset-0 w-full h-full object-cover object-[center_60%] opacity-85 group-hover:scale-105 transition-transform duration-700 pointer-events-none"
               />
-              <div className="absolute inset-0 bg-gradient-to-r from-[#006838]/90 via-[#004d29]/80 to-slate-950/85 pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-[#004d29]/40 to-slate-950/40 pointer-events-none" />
 
               {/* Banner Content Layer */}
               <div className="relative z-10 p-5 sm:p-6 lg:p-7 flex flex-col justify-between min-h-[160px] sm:min-h-[180px] text-white">
@@ -2485,67 +2574,67 @@ export default function WorkDashboardPage() {
       />
 
       {/* ════════════════════════════════════════════════════════════════
-          MOBILE DEPARTMENT DRAWER OVERLAY (FOR PHONE SCREENS)
+          MOBILE APP NATIVE NAVIGATION (DRAWER & BOTTOM NAV BAR)
          ════════════════════════════════════════════════════════════════ */}
-      {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-[100] lg:hidden flex">
-          <div
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200"
-            onClick={() => setIsMobileMenuOpen(false)}
-          />
-          <div className="relative w-80 max-w-[85vw] bg-white h-full shadow-2xl flex flex-col z-10 p-5 space-y-4 animate-in slide-in-from-left duration-250">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-              <div className="flex items-center gap-2">
-                <img src="/images/tbs-logo.png" alt="TBS" className="h-6 w-auto" />
-                <span className="text-xs font-black text-slate-900 uppercase">Danh Mục Phân Hệ</span>
-              </div>
-              <button
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="p-1.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200"
-              >
-                <IconX size={18} />
-              </button>
-            </div>
+      <MobileNavDrawer
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+        currentUser={userInfo}
+        departments={visibleDepartments}
+        selectedDeptId={selectedDept || "overview"}
+        onSelectDepartment={(deptId) => {
+          changeDepartment(deptId === "overview" ? null : deptId);
+        }}
+        onOpenThemeModal={() => setIsThemeModalOpen(true)}
+        onLogout={() => {
+          if (typeof window !== "undefined") {
+            sessionStorage.clear();
+            localStorage.clear();
+            window.location.href = "/login";
+          }
+        }}
+      />
 
-            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-              {visibleDepartments.map((dept) => {
-                const IconComp = dept.icon;
-                const isSelected = selectedDept === dept.id;
-                return (
-                  <button
-                    key={dept.id}
-                    onClick={() => {
-                      setSelectedDept(dept.id);
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className={`w-full p-3 rounded-2xl flex items-center gap-3 transition-all text-left cursor-pointer ${
-                      isSelected
-                        ? "bg-[#006838] text-white font-bold shadow-md"
-                        : "bg-slate-50 text-slate-800 hover:bg-emerald-50/50"
-                    }`}
-                  >
-                    <IconComp size={20} className="flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-extrabold truncate">{dept.name}</div>
-                      <div className={`text-[10px] truncate ${isSelected ? "text-emerald-100" : "text-slate-500"}`}>{dept.sub}</div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+      <MobileBottomNav
+        activeTab={
+          selectedDept === "ci"
+            ? "ci-kaizen"
+            : selectedDept === "qc"
+            ? "qc-quality"
+            : selectedDept === "hr"
+            ? "hr-hanhchanh"
+            : selectedDept === null
+            ? "overview"
+            : "overview"
+        }
+        onSelectTab={(tabId) => {
+          if (tabId === "overview") changeDepartment(null);
+          else if (tabId === "ci-kaizen") changeDepartment("ci");
+          else if (tabId === "qc-quality") changeDepartment("qc");
+          else if (tabId === "hr-hanhchanh") changeDepartment("hr");
+        }}
+        onOpenMenu={() => setIsMobileMenuOpen(true)}
+        badgeCounts={{
+          kaizen: 12,
+          quality: 20,
+        }}
+      />
 
       {/* TOAST NOTIFICATION MESSAGE */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl z-50 flex items-center gap-3 animate-in slide-in-from-bottom-3 duration-200 border border-slate-700">
+        <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl z-50 flex items-center gap-3 animate-in slide-in-from-bottom-3 duration-200 border border-slate-700">
           <div className="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center flex-shrink-0">
             <IconCheck size={16} />
           </div>
           <span className="text-xs font-bold">{toastMessage}</span>
         </div>
       )}
+
+      {/* System Theme Color & Font Size Modal */}
+      <ThemeFontControlModal
+        isOpen={isThemeModalOpen}
+        onClose={() => setIsThemeModalOpen(false)}
+      />
     </div>
   );
 }

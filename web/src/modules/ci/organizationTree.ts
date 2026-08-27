@@ -17,9 +17,14 @@ export interface OrgNodeMap {
 }
 
 export const KIEN_GIANG_FACTORIES = [
-  "KG 1",
-  "KG 2",
+  "Kiên Giang 1",
+  "Kiên Giang 2",
+  "Kiên Giang 3",
   "Hoàn thiện đế",
+  "Phòng kế hoạch",
+  "Phòng CN-CI",
+  "Phòng chất lượng",
+  "Phòng nhân sự",
 ];
 
 export function isKienGiangFactory(factory: string): boolean {
@@ -29,12 +34,16 @@ export function isKienGiangFactory(factory: string): boolean {
     normalized.includes("kiên giang") ||
     normalized.includes("kg") ||
     normalized.includes("hoàn thiện đế") ||
-    normalized.includes("htđ")
+    normalized.includes("htđ") ||
+    normalized.includes("kế hoạch") ||
+    normalized.includes("ci") ||
+    normalized.includes("chất lượng") ||
+    normalized.includes("nhân sự")
   );
 }
 
 export const INITIAL_ORG_TREE: OrgNodeMap = {
-  "KG 1": {
+  "Kiên Giang 1": {
     "Xưởng Đế KG1": {
       "Line Ép 1": {
         "Chuyền Cán Ép 1": ["Tổ Cán Ép A", "Tổ Cán Ép B"],
@@ -61,7 +70,7 @@ export const INITIAL_ORG_TREE: OrgNodeMap = {
     },
   },
 
-  "KG 2": {
+  "Kiên Giang 2": {
     "Xưởng Mũi KG2": {
       "Line May 1": {
         "Chuyền May KG2-1": ["Tổ May 1", "Tổ May 2"],
@@ -74,12 +83,44 @@ export const INITIAL_ORG_TREE: OrgNodeMap = {
     },
   },
 
+  "Kiên Giang 3": {
+    "Xưởng Sản Xuất KG3": {
+      "Line Sản Xuất 1": {
+        "Chuyền Sản Xuất 1": ["Tổ Sản Xuất A"],
+      },
+    },
+  },
+
   "Hoàn thiện đế": {
     "Xưởng Hoàn Thiện Đế": {
       "Line Sơn & Ép": {
         "Chuyền Sơn Đế": ["Tổ Phun Sơn 1", "Tổ Phun Sơn 2"],
         "Chuyền Ép Thành Phẩm": ["Tổ Ép Đế 1"],
       },
+    },
+  },
+
+  "Phòng kế hoạch": {
+    "Bộ Phận Kế Hoạch Sản Xuất (PPC)": {
+      "Tổ Lập Kế Hoạch": ["Bộ Phận PPC"],
+    },
+  },
+
+  "Phòng CN-CI": {
+    "Bộ Phận Chuyển Đổi Số & Kaizen": {
+      "Tổ Cải Tiến CI": ["Bộ Phận CI"],
+    },
+  },
+
+  "Phòng chất lượng": {
+    "Bộ Phận Quản Lý Chất Lượng (QA/QC)": {
+      "Tổ Kiểm Hàng QC": ["Bộ Phận QA/QC"],
+    },
+  },
+
+  "Phòng nhân sự": {
+    "Bộ Phận Nhân Sự & Hành Chính (HR)": {
+      "Tổ Tuyển Dụng & Đào Tạo": ["Bộ Phận HR"],
     },
   },
 };

@@ -36,14 +36,21 @@ import {
   getTosForChuyens,
 } from "./organizationTree";
 
-export const STANDARD_6_REGIONS = [
-  "KG 1",
-  "KG 2",
+export const STANDARD_8_REGIONS = [
+  "Kiên Giang 1",
+  "Kiên Giang 2",
+  "Kiên Giang 3",
   "Hoàn thiện đế",
+  "Phòng kế hoạch",
+  "Phòng CN-CI",
+  "Phòng chất lượng",
+  "Phòng nhân sự",
 ];
 
-// Authoritative 6 Regions matching System Standard for Dashboard Regional Charts
-const DASHBOARD_REGIONS = STANDARD_6_REGIONS;
+export const STANDARD_6_REGIONS = STANDARD_8_REGIONS;
+
+// Authoritative 8 Regions matching System Standard for Dashboard Regional Charts
+const DASHBOARD_REGIONS = STANDARD_8_REGIONS;
 
 // Authoritative list of 7 Factories for Multi-Select Filter
 const FACTORY_OPTIONS = REAL_FACTORIES;
@@ -58,15 +65,6 @@ const DASHBOARD_CATEGORIES = [
   { id: "5S", label: "5.5S", color: "#06b6d4" },
   { id: "EQUIPMENT", label: "7.MMTB CCDC", color: "#ec4899" },
   { id: "OTHER", label: "8.Khác", color: "#64748b" },
-];
-
-// Customers list matching system codes
-const DASHBOARD_CUSTOMERS = [
-  "DP",
-  "WR",
-  "RB",
-  "SK",
-  "Khác",
 ];
 
 // Helper to format currency in Million VNĐ (Tr)
@@ -86,40 +84,26 @@ const getProposalValue = (p: any): number => {
   return 0;
 };
 
-// Helper to match region string to 6 standard region buckets
+// Helper to match region string to 8 standard region/department buckets
 const normalizeRegion = (p: KaizenProposal | any): string => {
-  if (!p) return "VP Chuỗi (R&D)";
+  if (!p) return "Kiên Giang 1";
   const regionStr = typeof p === "string" ? p : p.region;
   const factoryStr = typeof p === "object" ? p.factory : "";
   const deptStr = typeof p === "object" ? p.department : "";
 
   const combined = `${regionStr || ""} ${factoryStr || ""} ${deptStr || ""}`.toUpperCase();
-  if (!combined.trim()) return "VP Chuỗi (R&D)";
+  if (!combined.trim()) return "Kiên Giang 1";
 
-  if (combined.includes("KIÊN GIANG 1") || combined.includes("KIEN GIANG 1") || combined.includes("KG 1") || combined.includes("KG1")) return "Kiên Giang 1";
-  if (combined.includes("KIÊN GIANG 2") || combined.includes("KIEN GIANG 2") || combined.includes("KG 2") || combined.includes("KG2")) return "Kiên Giang 2";
   if (combined.includes("KIÊN GIANG 3") || combined.includes("KIEN GIANG 3") || combined.includes("KG 3") || combined.includes("KG3")) return "Kiên Giang 3";
-  if (combined.includes("HOÀN THIỆN ĐẾ") || combined.includes("HOAN THIEN DE") || combined.includes("HTĐ") || combined.includes("HTD") || combined.includes("ĐẾ") || combined.includes("DE")) return "Hoàn Thiện Đế";
-  if (
-    combined.includes("MIỀN ĐÔNG") ||
-    combined.includes("MIEN DONG") ||
-    combined.includes("SK MĐ") ||
-    combined.includes("SK MD") ||
-    combined.includes("LONG XUYÊN") ||
-    combined.includes("LONG XUYEN") ||
-    combined.includes("ĐÀ NẴNG") ||
-    combined.includes("DA NANG") ||
-    combined.includes("HỘI AN") ||
-    combined.includes("HOI AN") ||
-    combined.includes("ĐỒNG XOÀI") ||
-    combined.includes("DONG XOAI")
-  ) {
-    return "Nhà Máy Miền Đông";
-  }
-  if (combined.includes("VP CHUỖI") || combined.includes("VP CHUOI") || combined.includes("VP2") || combined.includes("R&D") || combined.includes("SXCN") || combined.includes("NGÀNH S")) {
-    return "VP Chuỗi (R&D)";
-  }
-  return "VP Chuỗi (R&D)";
+  if (combined.includes("KIÊN GIANG 2") || combined.includes("KIEN GIANG 2") || combined.includes("KG 2") || combined.includes("KG2")) return "Kiên Giang 2";
+  if (combined.includes("KIÊN GIANG 1") || combined.includes("KIEN GIANG 1") || combined.includes("KG 1") || combined.includes("KG1")) return "Kiên Giang 1";
+  if (combined.includes("HOÀN THIỆN ĐẾ") || combined.includes("HOAN THIEN DE") || combined.includes("HTĐ") || combined.includes("HTD") || combined.includes("ĐẾ") || combined.includes("DE")) return "Hoàn thiện đế";
+  if (combined.includes("KẾ HOẠCH") || combined.includes("KE HOACH") || combined.includes("PPC")) return "Phòng kế hoạch";
+  if (combined.includes("CN-CI") || combined.includes("CN CI") || combined.includes("CONTINUOUS IMPROVEMENT") || combined.includes("P. CN-CI")) return "Phòng CN-CI";
+  if (combined.includes("CHẤT LƯỢNG") || combined.includes("CHAT LUONG") || combined.includes("QA") || combined.includes("QC")) return "Phòng chất lượng";
+  if (combined.includes("NHÂN SỰ") || combined.includes("NHAN SU") || combined.includes("HR") || combined.includes("HÀNH CHÍNH")) return "Phòng nhân sự";
+
+  return "Kiên Giang 1";
 };
 
 // Helper to match proposal against 5-level cascading organizational filter
@@ -307,10 +291,10 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
       }
     }
 
-    // Level 1: Default -> Display by Nhà Máy
+    // Level 1: Default -> Display by Nhà Máy / Khu Vực
     return {
-      chartItems: STANDARD_6_REGIONS,
-      levelName: "NHÀ MÁY",
+      chartItems: STANDARD_8_REGIONS,
+      levelName: "NHÀ MÁY / KHU VỰC",
       contextLabel: "",
     };
   }, [cascadingFilterState]);
@@ -424,44 +408,38 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
     return Math.max(max, 400);
   }, [monthlyDataMap]);
 
-  // 4. Data per Customer (Count & Value)
-  const customerDataMap = useMemo(() => {
-    const map: Record<string, { count: number; value: number }> = {};
-    DASHBOARD_CUSTOMERS.forEach((c) => {
-      map[c] = { count: 0, value: 0 };
-    });
-
-    filteredProposals.forEach((p) => {
-      const cust = getCustomerCode(p);
-      if (map[cust]) {
-        map[cust].count += 1;
-        map[cust].value += getProposalValue(p);
-      } else {
-        map["Khác"].count += 1;
-        map["Khác"].value += getProposalValue(p);
-      }
-    });
-
-    return map;
-  }, [filteredProposals]);
-
-  const maxCustomerCount = useMemo(() => {
-    const max = Math.max(...DASHBOARD_CUSTOMERS.map((c) => customerDataMap[c].count), 0);
-    return Math.max(max, 9);
-  }, [customerDataMap]);
-
-  const maxCustomerValue = useMemo(() => {
-    const max = Math.max(...DASHBOARD_CUSTOMERS.map((c) => customerDataMap[c].value), 0);
-    return Math.max(max, 250);
-  }, [customerDataMap]);
-
-  // 5. Top 5 Thi Đua Proposals
+  // 5. Top 5 Thi Đua Proposals (Sorted by Estimated Value DESC)
   const top5Proposals = useMemo(() => {
-    const thiDuaList = filteredProposals.filter((p) => p.registration_type === "THI_DUA");
-    return thiDuaList
-      .sort((a, b) => (b.score_points || 0) - (a.score_points || 0) || (b.avg_rating || 0) - (a.avg_rating || 0))
+    let thiDuaList = proposals.filter((p) => {
+      if (!p) return false;
+      const regType = String(p.registration_type || (p as any).registrationType || "").toUpperCase();
+      return regType === "THI_DUA" || regType === "" || regType === "CHO_DANH_GIA" || regType !== "LUU_TRU";
+    });
+
+    if (thiDuaList.length === 0 && proposals.length > 0) {
+      thiDuaList = proposals;
+    }
+
+    return [...thiDuaList]
+      .sort((a, b) => {
+        const valA = getProposalValue(a);
+        const valB = getProposalValue(b);
+        if (valB !== valA) return valB - valA;
+
+        const scoreA = Number(a.score_points || (a as any).scorePoints || 0);
+        const scoreB = Number(b.score_points || (b as any).scorePoints || 0);
+        if (scoreB !== scoreA) return scoreB - scoreA;
+
+        const voteA = Number(a.vote_count || 0);
+        const voteB = Number(b.vote_count || 0);
+        if (voteB !== voteA) return voteB - voteA;
+
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return dateB - dateA;
+      })
       .slice(0, 5);
-  }, [filteredProposals]);
+  }, [proposals]);
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -948,112 +926,7 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
       </div>
 
       {/* ════════════════════════════════════════════════════════════════
-          ROW 4: CUSTOMER CHARTS & TOP 5 THI ĐUA TABLE (Matching Image 3)
-         ════════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* CHART 3.1: Số Lượng Theo Khách Hàng */}
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden flex flex-col">
-          <div className="bg-[#0b1739] text-white px-4 py-2.5 flex items-center gap-2">
-            <IconUsers size={18} className="text-indigo-400" />
-            <h3 className="text-xs font-black tracking-wide uppercase">
-              Số Lượng Theo Khách Hàng
-            </h3>
-          </div>
-
-          <div className="p-4 flex-1 flex flex-col justify-between min-h-[220px]">
-            <div className="space-y-2">
-              {DASHBOARD_CUSTOMERS.map((cust, idx) => {
-                const cnt = customerDataMap[cust]?.count || 0;
-                const widthPercent = maxCustomerCount > 0 ? (cnt / maxCustomerCount) * 100 : 0;
-                const colors = ["#3b82f6", "#2563eb", "#60a5fa", "#93c5fd", "#10b981", "#f59e0b"];
-
-                return (
-                  <div key={cust} className="flex items-center gap-3 text-xs">
-                    <span className="w-28 text-[10px] font-bold text-slate-700 text-right truncate">
-                      {cust}
-                    </span>
-
-                    <div className="flex-1 bg-slate-100 h-5 rounded-r-lg overflow-hidden relative flex items-center">
-                      <div
-                        className="h-full rounded-r-lg transition-all duration-500"
-                        style={{ width: `${Math.max(widthPercent, 0)}%`, backgroundColor: colors[idx % colors.length] }}
-                      />
-                    </div>
-
-                    <span className="w-6 text-[11px] font-black text-slate-800 text-left">
-                      {cnt}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="pt-3 border-t border-slate-200 flex justify-between text-[9px] font-bold text-slate-400 pl-28 pr-6">
-              <span>0</span>
-              <span>1</span>
-              <span>2</span>
-              <span>3</span>
-              <span>4</span>
-              <span>5</span>
-              <span>6</span>
-              <span>7</span>
-              <span>8</span>
-              <span>9</span>
-            </div>
-          </div>
-        </div>
-
-        {/* CHART 3.2: Giá Trị Theo Khách Hàng */}
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden flex flex-col">
-          <div className="bg-[#0b1739] text-white px-4 py-2.5 flex items-center gap-2">
-            <IconCoins size={18} className="text-amber-400" />
-            <h3 className="text-xs font-black tracking-wide uppercase">
-              Giá Trị Theo Khách Hàng
-            </h3>
-          </div>
-
-          <div className="p-4 flex-1 flex flex-col justify-between min-h-[220px]">
-            <div className="space-y-2">
-              {DASHBOARD_CUSTOMERS.map((cust, idx) => {
-                const val = customerDataMap[cust]?.value || 0;
-                const widthPercent = maxCustomerValue > 0 ? (val / maxCustomerValue) * 100 : 0;
-                const colors = ["#3b82f6", "#2563eb", "#60a5fa", "#93c5fd", "#10b981", "#f59e0b"];
-
-                return (
-                  <div key={cust} className="flex items-center gap-3 text-xs">
-                    <span className="w-28 text-[10px] font-bold text-slate-700 text-right truncate">
-                      {cust}
-                    </span>
-
-                    <div className="flex-1 bg-slate-100 h-5 rounded-r-lg overflow-hidden relative flex items-center">
-                      <div
-                        className="h-full rounded-r-lg transition-all duration-500"
-                        style={{ width: `${Math.max(widthPercent, 0)}%`, backgroundColor: colors[idx % colors.length] }}
-                      />
-                    </div>
-
-                    <span className="w-16 text-[11px] font-black text-emerald-600 text-left">
-                      {formatMillion(val)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="pt-3 border-t border-slate-200 flex justify-between text-[9px] font-bold text-slate-400 pl-28 pr-16">
-              <span>0</span>
-              <span>50,0 Tr</span>
-              <span>100,0 Tr</span>
-              <span>150,0 Tr</span>
-              <span>200,0 Tr</span>
-              <span>250,0 Tr</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ════════════════════════════════════════════════════════════════
-          ROW 5: TABLE CẢI TIẾN TIÊU BIỂU (TOP 5 THI ĐUA) (Matching Image 3)
+          ROW 4: TABLE CẢI TIẾN TIÊU BIỂU (TOP 5 THI ĐUA)
          ════════════════════════════════════════════════════════════════ */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
         <div className="bg-[#0b1739] text-white px-4 py-3 flex items-center justify-between">
@@ -1078,69 +951,71 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-extrabold text-[10px] uppercase tracking-wider">
-                <th className="py-3 px-4 w-12 text-center">#</th>
+                <th className="py-3 px-4 w-16 text-center">HẠNG</th>
+                <th className="py-3 px-4">HỌ VÀ TÊN</th>
+                <th className="py-3 px-4 text-center">MSNV</th>
                 <th className="py-3 px-4">CẢI TIẾN</th>
-                <th className="py-3 px-4">NHÓM SP/DV</th>
-                <th className="py-3 px-4 text-center">CHUYÊN MÔN</th>
-                <th className="py-3 px-4 text-center">ĐIỂM TB</th>
                 <th className="py-3 px-4 text-right">GIÁ TRỊ</th>
               </tr>
             </thead>
 
             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
               {top5Proposals.length > 0 ? (
-                top5Proposals.map((item, idx) => (
-                  <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3 px-4 text-center">
-                      {idx === 0 ? (
-                        <span className="text-amber-500 font-black text-sm">🏆</span>
-                      ) : idx === 1 ? (
-                        <span className="text-slate-400 font-black text-sm">🥈</span>
-                      ) : idx === 2 ? (
-                        <span className="text-amber-700 font-black text-sm">🥉</span>
-                      ) : (
-                        <span className="text-slate-500 font-bold">{idx + 1}</span>
-                      )}
-                    </td>
+                top5Proposals.map((item, idx) => {
+                  const val = getProposalValue(item);
+                  return (
+                    <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                      {/* Column 1: Hạng */}
+                      <td className="py-3 px-4 text-center font-extrabold">
+                        {idx === 0 ? (
+                          <span className="text-amber-500 font-black text-sm">🏆 1</span>
+                        ) : idx === 1 ? (
+                          <span className="text-slate-400 font-black text-sm">🥈 2</span>
+                        ) : idx === 2 ? (
+                          <span className="text-amber-700 font-black text-sm">🥉 3</span>
+                        ) : (
+                          <span className="text-slate-500 font-bold">{idx + 1}</span>
+                        )}
+                      </td>
 
-                    <td className="py-3 px-4 max-w-md">
-                      <span className="font-extrabold text-slate-900 block text-xs leading-snug">
-                        {item.title}
-                      </span>
-                      <span className="text-[11px] text-slate-400 block pt-0.5">
-                        {item.proposer_name} · {item.region} · {item.created_at ? `T${new Date(item.created_at).getMonth() + 1}/${new Date(item.created_at).getFullYear()}` : "T8/2026"}
-                      </span>
-                    </td>
+                      {/* Column 2: Họ và Tên */}
+                      <td className="py-3 px-4">
+                        <span className="font-extrabold text-slate-900 text-xs block leading-snug truncate max-w-[180px]" title={item.proposer_name || (item as any).proposerName || "Nhân viên"}>
+                          {item.proposer_name || (item as any).proposerName || "Nhân viên"}
+                        </span>
+                        <span className="text-[11px] text-slate-400 block pt-0.5 truncate max-w-[180px]">
+                          {item.department || item.region || "Tổ hợp Kiên Giang"}
+                        </span>
+                      </td>
 
-                    <td className="py-3 px-4">
-                      <span className="inline-block px-2.5 py-0.5 rounded-full bg-blue-600 text-white font-extrabold text-[10px]">
-                        {item.dept_code || "Chặt"}
-                      </span>
-                    </td>
+                      {/* Column 3: MSNV */}
+                      <td className="py-3 px-4 text-center">
+                        <span className="inline-block px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-mono font-extrabold text-[11px] border border-slate-200">
+                          {item.proposer_emp_code || (item as any).proposerEmpCode || item.code || "CBCNV"}
+                        </span>
+                      </td>
 
-                    <td className="py-3 px-4 text-center font-extrabold text-slate-800">
-                      <span className="inline-flex items-center gap-1">
-                        <span className="text-amber-500">👑</span>
-                        <span>{(item.score_points || 95.0).toFixed(2)}</span>
-                      </span>
-                    </td>
+                      {/* Column 4: Cải tiến */}
+                      <td className="py-3 px-4 max-w-md">
+                        <span className="font-extrabold text-slate-900 block text-xs leading-snug truncate" title={item.title}>
+                          {item.title}
+                        </span>
+                        <span className="text-[11px] text-[#006838] font-bold block pt-0.5">
+                          {item.category_label || item.category || "Cải tiến quy trình"}
+                        </span>
+                      </td>
 
-                    <td className="py-3 px-4 text-center font-extrabold text-slate-800">
-                      <span className="inline-flex items-center gap-1">
-                        <span className="text-amber-400">⭐</span>
-                        <span>{(item.avg_rating || 4.5).toFixed(1)}</span>
-                      </span>
-                    </td>
-
-                    <td className="py-3 px-4 text-right font-black text-emerald-600 text-sm">
-                      {formatMillion(getProposalValue(item))}
-                    </td>
-                  </tr>
-                ))
+                      {/* Column 5: Giá trị */}
+                      <td className="py-3 px-4 text-right font-black text-emerald-600 text-sm whitespace-nowrap">
+                        {formatMillion(val)}
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 /* Empty state when database has no proposals */
                 <tr>
-                  <td colSpan={6} className="py-10 text-center text-slate-400">
+                  <td colSpan={5} className="py-10 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center font-bold">
                         0

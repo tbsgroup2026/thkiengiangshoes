@@ -7,6 +7,8 @@ import KaizenEarlyWarning from "./KaizenEarlyWarning";
 import KaizenFiveStepSubmitForm from "./KaizenFiveStepSubmitForm";
 import KaizenPublicSubmitForm from "./KaizenPublicSubmitForm";
 import KaizenDetailModal from "./KaizenDetailModal";
+import EvaluationModal from "./EvaluationModal";
+import FeasibilityApprovalModal from "./FeasibilityApprovalModal";
 import {
   IconLayoutGrid,
   IconList,
@@ -52,6 +54,7 @@ import {
   IconExternalLink,
 } from "@tabler/icons-react";
 import { formatTitleWithDepartment } from "@/lib/userProfiles";
+import { usePermission } from "@/hooks/usePermission";
 
 export interface KaizenProposal {
   id: string;
@@ -89,6 +92,11 @@ export interface KaizenProposal {
   rejection_reason?: string;
   required_reviewer_ids_json?: string;
   evaluated_at?: string;
+  is_thi_dua?: number;
+  propose_thi_dua?: number;
+  scores_json?: string;
+  evaluation_result?: string;
+  approval_status?: string;
   version: number;
   created_at: string;
 }
@@ -170,18 +178,52 @@ export function HalfStarRating({ value, onChange, readOnly = false, size = 22 }:
   );
 }
 
-const TH_KG_SUB_ITEMS = ["Kiên Giang 1", "Kiên Giang 2", "Kiên Giang 3", "Hoàn Thiện Đế"];
-const MAIN_REGIONS = ["TH-KG", "Nhà Máy Miền Đông", "VP Chuỗi (R&D)"];
+const TH_KG_SUB_ITEMS = [
+  "Kiên Giang 1",
+  "Kiên Giang 2",
+  "Kiên Giang 3",
+  "Hoàn thiện đế",
+  "Phòng kế hoạch",
+  "Phòng CN-CI",
+  "Phòng chất lượng",
+  "Phòng nhân sự",
+];
+const MAIN_REGIONS = ["THKG"];
 
 const matchRegionFilter = (propRegion: string, filterRegion: string) => {
   if (!filterRegion || filterRegion === "ALL") return true;
   if (!propRegion) return false;
 
   const pr = propRegion.toUpperCase();
-  const fr = filterRegion.toUpperCase();
 
-  if (filterRegion === "TH-KG") {
+  if (filterRegion === "Kiên Giang 1" || filterRegion === "KG 1") {
+    return pr.includes("KIÊN GIANG 1") || pr.includes("KIEN GIANG 1") || pr.includes("KG 1") || pr.includes("KG1");
+  }
+  if (filterRegion === "Kiên Giang 2" || filterRegion === "KG 2") {
+    return pr.includes("KIÊN GIANG 2") || pr.includes("KIEN GIANG 2") || pr.includes("KG 2") || pr.includes("KG2");
+  }
+  if (filterRegion === "Kiên Giang 3" || filterRegion === "KG 3") {
+    return pr.includes("KIÊN GIANG 3") || pr.includes("KIEN GIANG 3") || pr.includes("KG 3") || pr.includes("KG3");
+  }
+  if (filterRegion === "Hoàn thiện đế" || filterRegion === "Hoàn Thiện Đế") {
+    return pr.includes("HOÀN THIỆN ĐẾ") || pr.includes("HOAN THIEN DE") || pr.includes("HTĐ") || pr.includes("HTD") || pr === "ĐẾ" || pr === "DE";
+  }
+  if (filterRegion === "Phòng kế hoạch") {
+    return pr.includes("KẾ HOẠCH") || pr.includes("KE HOACH") || pr.includes("PPC");
+  }
+  if (filterRegion === "Phòng CN-CI") {
+    return pr.includes("CN-CI") || pr.includes("CN CI") || pr.includes("CONTINUOUS IMPROVEMENT");
+  }
+  if (filterRegion === "Phòng chất lượng") {
+    return pr.includes("CHẤT LƯỢNG") || pr.includes("CHAT LUONG") || pr.includes("QA") || pr.includes("QC");
+  }
+  if (filterRegion === "Phòng nhân sự") {
+    return pr.includes("NHÂN SỰ") || pr.includes("NHAN SU") || pr.includes("HR") || pr.includes("HÀNH CHÍNH");
+  }
+
+  if (filterRegion === "THKG" || filterRegion === "TH-KG") {
     return (
+      pr.includes("THKG") ||
       pr.includes("TH-KG") ||
       pr.includes("KIÊN GIANG") ||
       pr.includes("KIEN GIANG") ||
@@ -207,10 +249,11 @@ const matchRegionFilter = (propRegion: string, filterRegion: string) => {
     return pr.includes("VP CHUỖI") || pr.includes("VP CHUOI") || pr.includes("R&D") || pr.includes("NGÀNH S");
   }
 
-  return pr.includes(fr);
+  return pr.includes(filterRegion.toUpperCase());
 };
 
 export default function CIModule() {
+  const { isExecutiveOrAdmin } = usePermission();
   const [proposals, setProposals] = useState<KaizenProposal[]>([]);
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState<"GRID" | "LIST">("GRID");
@@ -225,6 +268,10 @@ export default function CIModule() {
   const [selectedRegType, setSelectedRegType] = useState("ALL");
   const [selectedSubStatus, setSelectedSubStatus] = useState("CHO_DANH_GIA");
   const [selectedStatus, setSelectedStatus] = useState("ALL");
+
+  // Evaluation Modal State (Step 5 Rating)
+  const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false);
+  const [evaluatingProposal, setEvaluatingProposal] = useState<KaizenProposal | null>(null);
     // Sidebar States
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isRegTypeExpanded, setIsRegTypeExpanded] = useState(true);
@@ -245,6 +292,12 @@ export default function CIModule() {
     empCode: "202608001",
     roleCode: "TONG_GIAM_DOC",
   });
+
+  useEffect(() => {
+    if (selectedRegion === "Kiên Giang 3" || selectedRegion === "Nhà Máy Miền Đông" || selectedRegion === "VP Chuỗi (R&D)") {
+      setSelectedRegion("ALL");
+    }
+  }, [selectedRegion]);
 
   useEffect(() => {
     function loadUser() {
@@ -278,6 +331,8 @@ export default function CIModule() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [detailActiveTab, setDetailActiveTab] = useState<"INFO" | "EVALUATION" | "RATING">("INFO");
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
+  const [approvalModalProposal, setApprovalModalProposal] = useState<KaizenProposal | null>(null);
   const [activeProposal, setActiveProposal] = useState<KaizenProposal | null>(null);
   const [isCreateDropdownOpen, setIsCreateDropdownOpen] = useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
@@ -729,6 +784,22 @@ export default function CIModule() {
     if (selectedRegion !== "ALL" && !matchRegionFilter(p.region, selectedRegion)) {
       return false;
     }
+    // Filter by registration type or Thi đua flag
+    if (selectedRegType === "THI_DUA") {
+      if (Number(p.is_thi_dua) !== 1) return false;
+    } else if (selectedRegType !== "ALL") {
+      if (p.registration_type !== selectedRegType) return false;
+    }
+    // Filter by sub-status
+    if (selectedSubStatus !== "ALL") {
+      if (selectedSubStatus === "CHO_REVIEW") {
+        if (!(p.status === "SUBMITTED" || p.status === "UNDER_REVIEW" || !p.status || p.sub_status === "CHO_REVIEW")) return false;
+      } else if (selectedSubStatus === "CHO_DANH_GIA") {
+        if (p.sub_status !== "CHO_DANH_GIA") return false;
+      } else if (selectedSubStatus === "DA_DANH_GIA") {
+        if (p.sub_status !== "DA_DANH_GIA") return false;
+      }
+    }
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const matchSearch =
@@ -742,7 +813,10 @@ export default function CIModule() {
   });
 
   // Calculate Badge Counters
-  const countThiDua = proposals.filter((p) => p.registration_type === "THI_DUA").length;
+  const countThiDua = proposals.filter((p) => Number(p.is_thi_dua) === 1).length;
+  const countChoReview = proposals.filter((p) =>
+    p.status === "SUBMITTED" || p.status === "UNDER_REVIEW" || p.sub_status === "CHO_REVIEW" || p.approval_status === "PENDING"
+  ).length;
   const countDaDanhGia = proposals.filter((p) => p.sub_status === "DA_DANH_GIA").length;
   const countChoDanhGia = proposals.filter((p) => p.sub_status === "CHO_DANH_GIA").length;
   const countLuuTru = proposals.filter((p) => p.registration_type === "LUU_TRU").length;
@@ -932,7 +1006,43 @@ export default function CIModule() {
                     </span>
                   </button>
 
-                  {/* Đã đánh giá */}
+                  {/* Chờ phê duyệt — top-level / sub */}
+                  <button
+                    onClick={() => { setSelectedRegType("ALL"); setSelectedSubStatus("CHO_REVIEW"); }}
+                    className={`w-full text-left px-3 py-1 rounded-lg flex items-center justify-between text-[11px] transition-colors ${
+                      selectedSubStatus === "CHO_REVIEW"
+                        ? "bg-blue-950/80 text-blue-300 font-extrabold"
+                        : "text-blue-400/80 hover:bg-slate-800/60 hover:text-blue-300"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <IconUserCheck size={13} className="text-blue-400 shrink-0" />
+                      <span>Chờ phê duyệt</span>
+                    </span>
+                    <span className="px-1.5 py-0.2 rounded-full bg-blue-500/20 text-blue-400 text-[9px] font-extrabold">
+                      {countChoReview}
+                    </span>
+                  </button>
+
+                  {/* Chờ đánh giá — top-level */}
+                  <button
+                    onClick={() => { setSelectedRegType("THI_DUA"); setSelectedSubStatus("CHO_DANH_GIA"); }}
+                    className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between transition-colors ${
+                      selectedSubStatus === "CHO_DANH_GIA"
+                        ? "bg-amber-950/80 text-amber-300 font-extrabold"
+                        : "text-amber-400/90 hover:bg-slate-800/60 hover:text-amber-300"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <IconClock size={13} className="text-amber-400 shrink-0" />
+                      <span>Chờ đánh giá</span>
+                    </span>
+                    <span className="px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-400 text-[9px] font-extrabold">
+                      {countChoDanhGia}
+                    </span>
+                  </button>
+
+                  {/* Đã đánh giá — sub of Chờ đánh giá */}
                   <button
                     onClick={() => { setSelectedRegType("THI_DUA"); setSelectedSubStatus("DA_DANH_GIA"); }}
                     className={`w-full text-left px-3 py-1 rounded-lg flex items-center justify-between text-[11px] transition-colors ${
@@ -947,24 +1057,6 @@ export default function CIModule() {
                     </span>
                     <span className="px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-400 text-[9px] font-extrabold">
                       {countDaDanhGia}
-                    </span>
-                  </button>
-
-                  {/* Chờ đánh giá */}
-                  <button
-                    onClick={() => { setSelectedRegType("THI_DUA"); setSelectedSubStatus("CHO_DANH_GIA"); }}
-                    className={`w-full text-left px-3 py-1 rounded-lg flex items-center justify-between text-[11px] transition-colors ${
-                      selectedSubStatus === "CHO_DANH_GIA"
-                        ? "bg-amber-950/80 text-amber-300 font-extrabold"
-                        : "text-amber-400/90 hover:bg-slate-800/60 hover:text-amber-300"
-                    }`}
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <IconClock size={13} className="text-amber-400 shrink-0" />
-                      <span>Chờ đánh giá</span>
-                    </span>
-                    <span className="px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-400 text-[9px] font-extrabold">
-                      {countChoDanhGia}
                     </span>
                   </button>
 
@@ -1011,78 +1103,28 @@ export default function CIModule() {
 
               {(!isSidebarCollapsed && isRegionExpanded) && (
                 <div className="space-y-0.5 pl-2 text-xs font-bold">
-                  {/* TH-KG */}
-                  <div>
-                    <div
-                      className={`w-full px-2 py-1 rounded-lg flex items-center justify-between transition-colors cursor-pointer ${
-                        selectedRegion === "TH-KG" ? "bg-[#006838] text-white font-extrabold" : "text-slate-300 hover:bg-slate-800/80 hover:text-white"
-                      }`}
-                      onClick={() => setSelectedRegion(selectedRegion === "TH-KG" ? "ALL" : "TH-KG")}
-                    >
-                      <span className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setIsThKgExpanded(!isThKgExpanded);
-                          }}
-                          className="p-0.5 hover:bg-slate-700 rounded transition-colors text-slate-400"
-                        >
-                          {isThKgExpanded ? <IconChevronDown size={13} /> : <IconChevronRight size={13} />}
-                        </button>
-                        <span>TH-KG</span>
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-mono">
-                        ({proposals.filter((p) => matchRegionFilter(p.region, "TH-KG")).length})
-                      </span>
-                    </div>
-
-                    {isThKgExpanded && (
-                      <div className="pl-4 space-y-0.5 border-l border-slate-700/80 ml-2 my-0.5">
-                        {TH_KG_SUB_ITEMS.map((subItem) => {
-                          const cnt = proposals.filter((p) => matchRegionFilter(p.region, subItem)).length;
-                          return (
-                            <button
-                              key={subItem}
-                              onClick={() => setSelectedRegion(selectedRegion === subItem ? "ALL" : subItem)}
-                              className={`w-full text-left px-2 py-0.5 rounded flex items-center justify-between text-[11px] transition-colors ${
-                                selectedRegion === subItem ? "bg-emerald-900/80 text-emerald-200 font-black" : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 font-medium"
-                              }`}
-                            >
-                              <span>{subItem}</span>
-                              <span className="text-[9px] text-slate-400 font-mono">({cnt})</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
+                  {/* THKG header - non-clickable label */}
+                  <div className="px-2 py-1 text-slate-400 text-[11px] font-extrabold tracking-wider uppercase">
+                    THKG
                   </div>
-
-                  {/* Nhà Máy Miền Đông */}
-                  <button
-                    onClick={() => setSelectedRegion(selectedRegion === "Nhà Máy Miền Đông" ? "ALL" : "Nhà Máy Miền Đông")}
-                    className={`w-full text-left px-2 py-1 rounded-lg flex items-center justify-between transition-colors ${
-                      selectedRegion === "Nhà Máy Miền Đông" ? "bg-[#006838] text-white font-extrabold" : "text-slate-300 hover:bg-slate-800/80 hover:text-white"
-                    }`}
-                  >
-                    <span>Nhà Máy Miền Đông</span>
-                    <span className="text-[10px] text-slate-400 font-mono">
-                      ({proposals.filter((p) => matchRegionFilter(p.region, "Nhà Máy Miền Đông")).length})
-                    </span>
-                  </button>
-
-                  {/* VP Chuỗi (R&D) */}
-                  <button
-                    onClick={() => setSelectedRegion(selectedRegion === "VP Chuỗi (R&D)" ? "ALL" : "VP Chuỗi (R&D)")}
-                    className={`w-full text-left px-2 py-1 rounded-lg flex items-center justify-between transition-colors ${
-                      selectedRegion === "VP Chuỗi (R&D)" ? "bg-[#006838] text-white font-extrabold" : "text-slate-300 hover:bg-slate-800/80 hover:text-white"
-                    }`}
-                  >
-                    <span>VP Chuỗi (R&D)</span>
-                    <span className="text-[10px] text-slate-400 font-mono">
-                      ({proposals.filter((p) => matchRegionFilter(p.region, "VP Chuỗi (R&D)")).length})
-                    </span>
-                  </button>
+                  {/* Sub-items */}
+                  <div className="pl-4 space-y-0.5 border-l border-slate-700/80 ml-2 mb-1">
+                    {TH_KG_SUB_ITEMS.map((subItem) => {
+                      const cnt = proposals.filter((p) => matchRegionFilter(p.region, subItem)).length;
+                      return (
+                        <button
+                          key={subItem}
+                          onClick={() => setSelectedRegion(selectedRegion === subItem ? "ALL" : subItem)}
+                          className={`w-full text-left px-2 py-0.5 rounded flex items-center justify-between text-[11px] transition-colors ${
+                            selectedRegion === subItem ? "bg-emerald-900/80 text-emerald-200 font-black" : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 font-medium"
+                          }`}
+                        >
+                          <span>{subItem}</span>
+                          <span className="text-[9px] text-slate-400 font-mono">({cnt})</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
@@ -1341,13 +1383,10 @@ export default function CIModule() {
             className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 text-[11px] font-bold text-slate-700 outline-none focus:border-[#006838]"
           >
             <option value="ALL">🏢 Khu vực</option>
-            <option value="TH-KG">TH-KG</option>
+            <option value="THKG">THKG</option>
             <option value="Kiên Giang 1">Kiên Giang 1</option>
             <option value="Kiên Giang 2">Kiên Giang 2</option>
-            <option value="Kiên Giang 3">Kiên Giang 3</option>
             <option value="Hoàn Thiện Đế">Hoàn Thiện Đế</option>
-            <option value="Nhà Máy Miền Đông">Nhà Máy Miền Đông</option>
-            <option value="VP Chuỗi (R&D)">VP Chuỗi (R&D)</option>
           </select>
 
           {/* Nhóm SP */}
@@ -1432,9 +1471,15 @@ export default function CIModule() {
                         <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider shadow-2xs ${catObj.color}`}>
                           {prop.category_label || catObj.label}
                         </span>
-                        <span className="px-1.5 py-0.5 rounded bg-slate-900/80 text-white text-[9px] font-mono font-bold shadow-2xs">
-                          T8/2026
-                        </span>
+                        {Number(prop.is_thi_dua) === 1 ? (
+                          <span className="px-1.5 py-0.5 rounded bg-amber-400 text-amber-950 text-[9px] font-black shadow-2xs flex items-center gap-0.5">
+                            🏆 Thi đua
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 rounded bg-slate-900/80 text-white text-[9px] font-mono font-bold shadow-2xs">
+                            T8/2026
+                          </span>
+                        )}
                       </div>
 
                       {/* Proposer Info Bar Overlay at Bottom of Image */}
@@ -1482,29 +1527,39 @@ export default function CIModule() {
                             <span>{prop.view_count || 0}</span>
                           </span>
 
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveProposal(prop);
-                              setIsRatingModalOpen(true);
-                            }}
-                            className="px-2 py-0.5 rounded bg-amber-50 text-amber-700 hover:bg-amber-100 text-[10px] font-black border border-amber-200 transition-colors"
-                          >
-                            ⭐ Đánh giá
-                          </button>
+                          {/* 1. Nút "Phê duyệt" dành cho trạng thái CHỜ PHÊ DUYỆT (Bước 3 - QĐ-TBKG) */}
+                          {(prop.sub_status === "CHO_REVIEW" || prop.status === "SUBMITTED" || prop.approval_status === "PENDING") && isExecutiveOrAdmin && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setApprovalModalProposal(prop);
+                                setIsApprovalModalOpen(true);
+                              }}
+                              className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black shadow-2xs transition-colors flex items-center gap-1 cursor-pointer"
+                              title="Phê duyệt tính khả thi sáng kiến (Bước 3)"
+                            >
+                              <IconShieldCheck size={12} />
+                              <span>Phê duyệt</span>
+                            </button>
+                          )}
 
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveProposal(prop);
-                              setIsEvalModalOpen(true);
-                            }}
-                            className="px-2 py-0.5 rounded bg-[#006838]/10 text-[#006838] hover:bg-[#006838] hover:text-white text-[10px] font-black border border-[#006838]/20 transition-colors"
-                          >
-                            Chấm điểm
-                          </button>
+                          {/* 2. Nút "Chấm điểm" dành cho trạng thái CHỜ ĐÁNH GIÁ (Bước 5 - QĐ-TBKG) */}
+                          {(prop.sub_status === "CHO_DANH_GIA" || prop.approval_status === "PHE_DUYET") && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEvaluatingProposal(prop);
+                                setIsEvaluationModalOpen(true);
+                              }}
+                              className="px-2 py-0.5 rounded bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black shadow-2xs transition-colors flex items-center gap-1 cursor-pointer"
+                              title="Chấm điểm chuyên môn 5 tiêu chí QĐ-TBKG"
+                            >
+                              <IconStar size={12} />
+                              <span>Chấm điểm</span>
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1531,36 +1586,79 @@ export default function CIModule() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium">
-                    {filteredProposals.map((prop) => (
-                      <tr key={prop.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="p-3 font-mono font-bold text-amber-700">#{prop.code}</td>
-                        <td className="p-3 font-bold text-slate-900">{prop.title}</td>
-                        <td className="p-3">
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-[#006838] text-[10px] font-bold border border-emerald-200">
-                            {prop.category_label}
-                          </span>
-                        </td>
-                        <td className="p-3">{prop.region}</td>
-                        <td className="p-3">{prop.proposer_name}</td>
-                        <td className="p-3 text-center">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                            prop.status === "APPROVED" ? "bg-emerald-100 text-[#006838]" :
-                            prop.status === "IMPLEMENTED" ? "bg-blue-100 text-blue-800" :
-                            "bg-amber-100 text-amber-900"
-                          }`}>
-                            {prop.status}
-                          </span>
-                        </td>
-                        <td className="p-3 text-center">
-                          <button
-                            onClick={() => handleRecordView(prop)}
-                            className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-[#006838] hover:text-white transition-colors cursor-pointer text-[11px] font-bold"
-                          >
-                            Xem
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {filteredProposals.map((prop) => {
+                      const isPendingFeasibility = prop.sub_status === "CHO_REVIEW" || prop.status === "SUBMITTED" || prop.approval_status === "PENDING";
+                      const isPendingEvaluation = prop.sub_status === "CHO_DANH_GIA" || prop.approval_status === "PHE_DUYET";
+
+                      return (
+                        <tr key={prop.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="p-3 font-mono font-bold text-amber-700">#{prop.code}</td>
+                          <td className="p-3 font-bold text-slate-900">{prop.title}</td>
+                          <td className="p-3">
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-[#006838] text-[10px] font-bold border border-emerald-200">
+                              {prop.category_label}
+                            </span>
+                          </td>
+                          <td className="p-3">{prop.region}</td>
+                          <td className="p-3">{prop.proposer_name}</td>
+                          <td className="p-3 text-center">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${
+                              isPendingFeasibility
+                                ? "bg-blue-50 text-blue-800 border-blue-200"
+                                : isPendingEvaluation
+                                ? "bg-amber-50 text-amber-900 border-amber-200"
+                                : prop.sub_status === "DA_DANH_GIA"
+                                ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                                : "bg-slate-100 text-slate-700 border-slate-200"
+                            }`}>
+                              {isPendingFeasibility
+                                ? "Chờ phê duyệt"
+                                : isPendingEvaluation
+                                ? "Chờ đánh giá"
+                                : prop.sub_status === "DA_DANH_GIA"
+                                ? "Đã đánh giá"
+                                : "Lưu trữ"}
+                            </span>
+                          </td>
+                          <td className="p-3 text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={() => handleRecordView(prop)}
+                                className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-[#006838] hover:text-white transition-colors cursor-pointer text-[11px] font-bold"
+                              >
+                                Xem
+                              </button>
+                              {isPendingFeasibility && isExecutiveOrAdmin && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setApprovalModalProposal(prop);
+                                    setIsApprovalModalOpen(true);
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors cursor-pointer text-[11px] font-extrabold flex items-center gap-1"
+                                >
+                                  <IconShieldCheck size={12} />
+                                  <span>Phê duyệt</span>
+                                </button>
+                              )}
+                              {isPendingEvaluation && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEvaluatingProposal(prop);
+                                    setIsEvaluationModalOpen(true);
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white transition-colors cursor-pointer text-[11px] font-extrabold flex items-center gap-1"
+                                >
+                                  <IconStar size={12} />
+                                  <span>Chấm điểm</span>
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1984,6 +2082,33 @@ export default function CIModule() {
           </div>
         </div>
       )}
+      {/* MODAL STEP 5: EVALUATION MODAL */}
+      <EvaluationModal
+        isOpen={isEvaluationModalOpen}
+        proposal={evaluatingProposal}
+        onClose={() => {
+          setIsEvaluationModalOpen(false);
+          setEvaluatingProposal(null);
+        }}
+        onSuccess={() => {
+          showToast("🎉 Đã lưu kết quả đánh giá hiệu quả sáng kiến!");
+          fetchProposals();
+        }}
+      />
+
+      {/* MODAL STEP 3: FEASIBILITY APPROVAL MODAL */}
+      <FeasibilityApprovalModal
+        isOpen={isApprovalModalOpen}
+        proposal={approvalModalProposal}
+        onClose={() => {
+          setIsApprovalModalOpen(false);
+          setApprovalModalProposal(null);
+        }}
+        onSuccess={() => {
+          showToast("🎉 Đã hoàn tất phê duyệt tính khả thi sáng kiến!");
+          fetchProposals();
+        }}
+      />
     </div>
   );
 }

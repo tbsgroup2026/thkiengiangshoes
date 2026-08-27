@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import UserAvatar from '@/components/UserAvatar';
 import LanguageSelector from '@/components/LanguageSelector';
+import ThemeFontControlModal from '@/components/ThemeFontControlModal';
 import { useTranslation } from "@/hooks/useTranslation";
 import {
   IconArrowRight,
@@ -23,11 +24,12 @@ import {
   IconUserCircle,
   IconUser,
   IconKey,
+  IconAdjustments,
   IconLock,
   IconShieldCheck,
   IconBuildingStore,
 } from '@tabler/icons-react';
-import { getCurrentUser, setUserAvatar, logoutUserProfile, formatTitleWithDepartment } from '@/lib/userProfiles';
+import { getCurrentUser, setUserAvatar, fetchUserAvatarsFromServer, logoutUserProfile, formatTitleWithDepartment } from '@/lib/userProfiles';
 
 interface NotificationItem {
   id: number;
@@ -54,6 +56,7 @@ export default function Header() {
   const [otherDropdownOpen, setOtherDropdownOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
 
   // Dropdown timeout refs for smooth hover grace period (350ms delay)
   const otherTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -294,6 +297,7 @@ export default function Header() {
     };
 
     checkAuth();
+    fetchUserAvatarsFromServer().then(() => checkAuth());
     window.addEventListener('tbs_profile_updated', checkAuth);
 
     const fetchNotifications = async () => {
@@ -507,6 +511,16 @@ export default function Header() {
           <div className="hidden xl:flex items-center gap-2.5">
             {/* Language Selector (VN / ENG) */}
             <LanguageSelector variant="header-dark" />
+
+            {/* Theme & Font Size Control Button */}
+            <button
+              type="button"
+              onClick={() => setIsThemeModalOpen(true)}
+              className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all duration-200 cursor-pointer flex items-center justify-center"
+              title={lang === "VN" ? "Cấu hình màu sắc & chữ hệ thống" : "Theme & Font Settings"}
+            >
+              <IconAdjustments size={16} className="text-[#2fd39a]" />
+            </button>
 
             {/* Notification Bell — ONLY VISIBLE WHEN LOGGED IN */}
             {isLoggedIn && (
@@ -1109,6 +1123,12 @@ export default function Header() {
           </div>
         </div>
       )}
+
+      {/* System Theme & Font Control Modal */}
+      <ThemeFontControlModal
+        isOpen={isThemeModalOpen}
+        onClose={() => setIsThemeModalOpen(false)}
+      />
     </>
   );
 }

@@ -29,6 +29,7 @@ import {
 } from "@tabler/icons-react";
 import { KaizenProposal } from "./CIModule";
 import { usePermission } from "@/hooks/usePermission";
+import FeasibilityApprovalModal from "./FeasibilityApprovalModal";
 
 interface KaizenDetailModalProps {
   proposal: KaizenProposal;
@@ -110,6 +111,48 @@ export default function KaizenDetailModal({
     };
   }, [proposal?.id]);
 
+  // Mark / Unmark Thi dua state & function
+  const [markingThiDua, setMarkingThiDua] = useState(false);
+  const [thiDuaMsg, setThiDuaMsg] = useState<string | null>(null);
+
+  // Step 3: Feasibility Review Action State & Handler
+  const [isFeasibilityModalOpen, setIsFeasibilityModalOpen] = useState(false);
+  const [feasibilityInitialDecision, setFeasibilityInitialDecision] = useState<"APPROVE" | "REJECT">("APPROVE");
+  const [step3Msg, setStep3Msg] = useState<string | null>(null);
+
+  const handleToggleThiDua = async () => {
+    if (!proposal) return;
+    const isCurrentlyThiDua = Number(proposal.is_thi_dua) === 1;
+    const action = isCurrentlyThiDua ? "REMOVE" : "ADD";
+
+    try {
+      setMarkingThiDua(true);
+      setThiDuaMsg(null);
+      const res = await fetch("/api/ci-kaizen/mark-thi-dua", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          proposalId: proposal.id,
+          action,
+        }),
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        proposal.is_thi_dua = isCurrentlyThiDua ? 0 : 1;
+        setThiDuaMsg(json.message);
+        setTimeout(() => setThiDuaMsg(null), 3000);
+        if (onRate) onRate();
+      } else {
+        setThiDuaMsg(`❌ ${json.message || "Không thể thực hiện"}`);
+      }
+    } catch (e: any) {
+      setThiDuaMsg("❌ Lỗi kết nối!");
+    } finally {
+      setMarkingThiDua(false);
+    }
+  };
+
   const isAssignedJudge = useMemo(() => {
     if (evalData?.assignedJudges && Array.isArray(evalData.assignedJudges) && evalData.assignedJudges.length > 0) {
       if (evalData.isExecutiveManager) return true;
@@ -120,9 +163,11 @@ export default function KaizenDetailModal({
     return isJudgeOrExecutive;
   }, [evalData, user, isJudgeOrExecutive]);
 
-  // Tab 2 & 3: ONLY visible if current account has judging permission for this proposal
-  const canSeeExpertTab = isAssignedJudge;
-  const canSeeAwardTab = isAssignedJudge;
+  const isApprovedStep3 = proposal?.sub_status !== "CHO_REVIEW" && proposal?.approval_status !== "PENDING" && proposal?.status !== "SUBMITTED";
+
+  // Tab 2 & 3: ONLY visible if proposal is ALREADY approved (Step 3 completed) AND current account has judging permission
+  const canSeeExpertTab = isApprovedStep3 && isAssignedJudge;
+  const canSeeAwardTab = isApprovedStep3 && isAssignedJudge;
 
   // Fallback activeTab if selected tab is hidden or user lacks permission
   useEffect(() => {
@@ -321,6 +366,35 @@ export default function KaizenDetailModal({
 
           {/* Action Buttons & Close Button at Bottom */}
           <div className="space-y-2 pt-2 mt-auto border-t border-slate-200">
+            {thiDuaMsg && (
+              <div className="p-2 rounded-xl bg-amber-100 border border-amber-300 text-amber-900 text-[11px] font-bold text-center animate-in fade-in">
+                {thiDuaMsg}
+              </div>
+            )}
+
+            {/* BGK / BGĐ Action: Chuyển sang Thi đua (chỉ khi đã Lưu trữ) */}
+            {(proposal.status === "ARCHIVED" || proposal.sub_status === "LUU_TRU" || proposal.registration_type === "LUU_TRU") && isJudgeOrExecutive && (
+              <button
+                type="button"
+                disabled={markingThiDua}
+                onClick={handleToggleThiDua}
+                className={`w-full py-2.5 px-3 rounded-xl font-black text-xs shadow-2xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  Number(proposal.is_thi_dua) === 1
+                    ? "bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300"
+                    : "bg-amber-500 hover:bg-amber-600 text-white shadow-md"
+                }`}
+              >
+                <IconTrophy size={16} />
+                <span>
+                  {markingThiDua
+                    ? "Đang xử lý..."
+                    : Number(proposal.is_thi_dua) === 1
+                    ? "ℹ️ Bỏ khỏi Thi đua"
+                    : "🏆 Chuyển sang Thi đua"}
+                </span>
+              </button>
+            )}
+
             {isOwner || isExecutiveOrAdmin ? (
               <div className="grid grid-cols-2 gap-2">
                 <button
@@ -373,14 +447,30 @@ export default function KaizenDetailModal({
                 <span>{proposal.registration_type === "THI_DUA" ? "Thi đua" : "Lưu trữ"}</span>
               </span>
 
-              {/* Pill 3: Trạng thái tổng hợp */}
-              <span className={`px-3 py-1 rounded-full border text-xs font-black flex items-center gap-1 ${
-                proposal.sub_status === "DA_DANH_GIA" || proposal.score_points
-                  ? "bg-emerald-50 text-emerald-800 border-emerald-300"
-                  : "bg-amber-50 text-amber-800 border-amber-300"
-              }`}>
-                <span>{proposal.sub_status === "DA_DANH_GIA" || proposal.score_points ? "✅" : "⏳"}</span>
-                <span>{proposal.sub_status === "DA_DANH_GIA" || proposal.score_points ? "Đã tổng hợp điểm" : "Chờ đánh giá"}</span>
+              {/* Pill 3: Trạng thái quy trình (Chờ phê duyệt vs Chờ đánh giá vs Đã đánh giá) */}
+              <span
+                className={`px-3 py-1 rounded-full border text-xs font-black flex items-center gap-1.5 ${
+                  proposal.sub_status === "CHO_REVIEW" || proposal.approval_status === "PENDING" || proposal.status === "SUBMITTED"
+                    ? "bg-blue-50 text-blue-800 border-blue-300"
+                    : proposal.sub_status === "CHO_DANH_GIA" || proposal.approval_status === "PHE_DUYET"
+                    ? "bg-amber-50 text-amber-800 border-amber-300"
+                    : "bg-emerald-50 text-emerald-800 border-emerald-300"
+                }`}
+              >
+                <span>
+                  {proposal.sub_status === "CHO_REVIEW" || proposal.approval_status === "PENDING" || proposal.status === "SUBMITTED"
+                    ? "👤"
+                    : proposal.sub_status === "CHO_DANH_GIA" || proposal.approval_status === "PHE_DUYET"
+                    ? "⏳"
+                    : "✅"}
+                </span>
+                <span>
+                  {proposal.sub_status === "CHO_REVIEW" || proposal.approval_status === "PENDING" || proposal.status === "SUBMITTED"
+                    ? "Chờ phê duyệt"
+                    : proposal.sub_status === "CHO_DANH_GIA" || proposal.approval_status === "PHE_DUYET"
+                    ? "Chờ đánh giá"
+                    : "Đã đánh giá"}
+                </span>
               </span>
             </div>
 
@@ -393,6 +483,46 @@ export default function KaizenDetailModal({
             <p className="text-xs font-bold text-slate-400">
               MSNV: <span className="font-mono text-slate-700">{proposal.proposer_emp_code}</span> &bull; KV: <span className="text-slate-700">{proposal.region || "Kiên Giang 1"}</span> &bull; Tháng {pMonth}/{pYear}
             </p>
+
+            {/* BANNER XEM XÉT TÍNH KHẢ THI (BƯỚC 3 QĐ-TBKG) */}
+            {(proposal.sub_status === "CHO_REVIEW" || proposal.approval_status === "PENDING" || proposal.status === "SUBMITTED") && isJudgeOrExecutive && (
+              <div className="mt-4 p-4 rounded-2xl bg-blue-50/90 border border-blue-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                <div className="space-y-0.5">
+                  <span className="text-xs font-black text-blue-900 flex items-center gap-1.5">
+                    <IconShieldCheck size={16} className="text-blue-600 shrink-0" />
+                    <span>Xem xét tính khả thi sáng kiến (Bước 3 - QĐ-TBKG)</span>
+                  </span>
+                  <p className="text-[11px] text-blue-700 font-medium">
+                    Đề xuất đang ở trạng thái <strong>Chờ phê duyệt</strong>. Bạn có muốn phê duyệt tính khả thi để cho phép thử nghiệm và đánh giá?
+                  </p>
+                  {step3Msg && <div className="text-xs font-extrabold text-emerald-700 mt-1">{step3Msg}</div>}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFeasibilityInitialDecision("APPROVE");
+                      setIsFeasibilityModalOpen(true);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-extrabold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <IconCheck size={14} />
+                    <span>Phê Duyệt Triển Khai</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFeasibilityInitialDecision("REJECT");
+                      setIsFeasibilityModalOpen(true);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-extrabold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <IconX size={14} />
+                    <span>Từ Chối Triển Khai</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Thanh Tab - Active Navy #0b1739 */}
@@ -465,6 +595,27 @@ export default function KaizenDetailModal({
           </div>
         </div>
       </div>
+
+      {/* POPUP PHÊ DUYỆT TÍNH KHẢ THI (BƯỚC 3 QĐ-TBKG) */}
+      <FeasibilityApprovalModal
+        isOpen={isFeasibilityModalOpen}
+        proposal={proposal}
+        initialDecision={feasibilityInitialDecision}
+        onClose={() => setIsFeasibilityModalOpen(false)}
+        onSuccess={(updated) => {
+          proposal.approval_status = updated.approval_status;
+          proposal.sub_status = updated.sub_status;
+          proposal.status = updated.status;
+          setStep3Msg(
+            updated.approval_status === "PHE_DUYET"
+              ? "✅ Đã phê duyệt tính khả thi (Bước 3) thành công!"
+              : "❌ Đã từ chối triển khai sáng kiến."
+          );
+          setTimeout(() => setStep3Msg(null), 4000);
+          if (onRate) onRate();
+          if (onEvaluate) onEvaluate();
+        }}
+      />
     </div>
   );
 }
@@ -1822,7 +1973,6 @@ function TabAwardReviewContent({
           </button>
         </form>
       </div>
-
     </div>
   );
 }

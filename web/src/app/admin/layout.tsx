@@ -16,6 +16,7 @@ import {
   IconHome,
   IconMenu2,
   IconX,
+  IconAward,
 } from "@tabler/icons-react";
 import { usePermission } from "@/hooks/usePermission";
 import { PERMISSIONS } from "@/lib/permissions";
@@ -180,6 +181,18 @@ export default function AdminLayout({
             >
               <IconBuilding size={18} />
               Phòng ban
+            </Link>
+
+            <Link
+              href="/admin/judges"
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition ${
+                pathname === "/admin/judges"
+                  ? "bg-white/20 text-white font-black shadow-md border border-white/25"
+                  : "hover:bg-white/10 text-emerald-100/90 hover:text-white"
+              }`}
+            >
+              <IconAward size={18} />
+              Hội đồng đánh giá (BGK)
             </Link>
 
             <Link

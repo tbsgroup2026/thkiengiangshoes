@@ -23,9 +23,9 @@ export interface TimelineEvent {
 }
 
 export const COMPANY_INFO = {
-  name: "Tổ hợp Kiên Giang - TBS Group",
-  shortName: "Tổ hợp Kiên Giang - TBS Group",
-  subTitle: "Hệ Thống Quản Trị Vận Hành Tổ Hợp Kiên Giang",
+  name: "TBS GROUP - Công Ty Cổ Phần Thái Bình Kiên Giang",
+  shortName: "TBS GROUP - Công Ty Cổ Phần Thái Bình Kiên Giang",
+  subTitle: "Hệ Thống Quản Trị Vận Hành Công Ty Cổ Phần Thái Bình Kiên Giang",
   slogan: "Nâng Tầm Chuỗi Cung Ứng — Vận Hành Chuẩn Quốc Tế",
   intro:
     "Tổ hợp Kiên Giang - TBS Group là trung tâm điều hành vận hành sản xuất tại khu vực Kiên Giang của TBS Group, chuyển đổi số toàn diện quy trình Gemba Walk, Cải tiến CI, Kaizen và quản trị hằng ngày.",
