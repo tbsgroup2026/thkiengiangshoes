@@ -20,6 +20,8 @@ import HRContractsView from "@/modules/hr/components/HRContractsView";
 import QualityModule from "@/modules/quality/QualityModule";
 import RDModule from "@/modules/rd/RDModule";
 import CNCIWrapper from "@/modules/ci/CNCIWrapper";
+import MobileBottomNav from "@/components/mobile/MobileBottomNav";
+import MobileNavDrawer from "@/components/mobile/MobileNavDrawer";
 import {
   IconHome,
   IconLeaf,
@@ -2509,61 +2511,55 @@ export default function WorkDashboardPage() {
       />
 
       {/* ════════════════════════════════════════════════════════════════
-          MOBILE DEPARTMENT DRAWER OVERLAY (FOR PHONE SCREENS)
+          MOBILE APP NATIVE NAVIGATION (DRAWER & BOTTOM NAV BAR)
          ════════════════════════════════════════════════════════════════ */}
-      {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-[100] lg:hidden flex">
-          <div
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200"
-            onClick={() => setIsMobileMenuOpen(false)}
-          />
-          <div className="relative w-80 max-w-[85vw] bg-white h-full shadow-2xl flex flex-col z-10 p-5 space-y-4 animate-in slide-in-from-left duration-250">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-              <div className="flex items-center gap-2">
-                <img src="/images/tbs-logo.png" alt="TBS" className="h-6 w-auto" />
-                <span className="text-xs font-black text-slate-900 uppercase">Danh Mục Phân Hệ</span>
-              </div>
-              <button
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="p-1.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200"
-              >
-                <IconX size={18} />
-              </button>
-            </div>
+      <MobileNavDrawer
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+        currentUser={userInfo}
+        departments={visibleDepartments}
+        selectedDeptId={selectedDept || "overview"}
+        onSelectDepartment={(deptId) => {
+          setSelectedDept(deptId === "overview" ? null : deptId);
+        }}
+        onOpenThemeModal={() => setIsThemeModalOpen(true)}
+        onLogout={() => {
+          if (typeof window !== "undefined") {
+            sessionStorage.clear();
+            localStorage.clear();
+            window.location.href = "/login";
+          }
+        }}
+      />
 
-            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-              {visibleDepartments.map((dept) => {
-                const IconComp = dept.icon;
-                const isSelected = selectedDept === dept.id;
-                return (
-                  <button
-                    key={dept.id}
-                    onClick={() => {
-                      setSelectedDept(dept.id);
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className={`w-full p-3 rounded-2xl flex items-center gap-3 transition-all text-left cursor-pointer ${
-                      isSelected
-                        ? "bg-[#006838] text-white font-bold shadow-md"
-                        : "bg-slate-50 text-slate-800 hover:bg-emerald-50/50"
-                    }`}
-                  >
-                    <IconComp size={20} className="flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-extrabold truncate">{dept.name}</div>
-                      <div className={`text-[10px] truncate ${isSelected ? "text-emerald-100" : "text-slate-500"}`}>{dept.sub}</div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+      <MobileBottomNav
+        activeTab={
+          selectedDept === "ci"
+            ? "ci-kaizen"
+            : selectedDept === "qc"
+            ? "qc-quality"
+            : selectedDept === "hr"
+            ? "hr-hanhchanh"
+            : selectedDept === null
+            ? "overview"
+            : "overview"
+        }
+        onSelectTab={(tabId) => {
+          if (tabId === "overview") setSelectedDept(null);
+          else if (tabId === "ci-kaizen") setSelectedDept("ci");
+          else if (tabId === "qc-quality") setSelectedDept("qc");
+          else if (tabId === "hr-hanhchanh") setSelectedDept("hr");
+        }}
+        onOpenMenu={() => setIsMobileMenuOpen(true)}
+        badgeCounts={{
+          kaizen: 12,
+          quality: 20,
+        }}
+      />
 
       {/* TOAST NOTIFICATION MESSAGE */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl z-50 flex items-center gap-3 animate-in slide-in-from-bottom-3 duration-200 border border-slate-700">
+        <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl z-50 flex items-center gap-3 animate-in slide-in-from-bottom-3 duration-200 border border-slate-700">
           <div className="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center flex-shrink-0">
             <IconCheck size={16} />
           </div>
