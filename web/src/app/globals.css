@@ -180,7 +180,7 @@ body {
 .animate-marquee-left {
   display: flex;
   width: max-content;
-  animation: marquee-left 25s linear infinite;
+  animation: marquee-left 50s linear infinite;
 }
 
 .animate-marquee-left:hover {
