@@ -408,13 +408,38 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
     return Math.max(max, 400);
   }, [monthlyDataMap]);
 
-  // 5. Top 5 Thi Đua Proposals
+  // 5. Top 5 Thi Đua Proposals (Sorted by Estimated Value DESC)
   const top5Proposals = useMemo(() => {
-    const thiDuaList = filteredProposals.filter((p) => p.registration_type === "THI_DUA");
-    return thiDuaList
-      .sort((a, b) => (b.score_points || 0) - (a.score_points || 0) || (b.avg_rating || 0) - (a.avg_rating || 0))
+    let thiDuaList = proposals.filter((p) => {
+      if (!p) return false;
+      const regType = String(p.registration_type || (p as any).registrationType || "").toUpperCase();
+      return regType === "THI_DUA" || regType === "" || regType === "CHO_DANH_GIA" || regType !== "LUU_TRU";
+    });
+
+    if (thiDuaList.length === 0 && proposals.length > 0) {
+      thiDuaList = proposals;
+    }
+
+    return [...thiDuaList]
+      .sort((a, b) => {
+        const valA = getProposalValue(a);
+        const valB = getProposalValue(b);
+        if (valB !== valA) return valB - valA;
+
+        const scoreA = Number(a.score_points || (a as any).scorePoints || 0);
+        const scoreB = Number(b.score_points || (b as any).scorePoints || 0);
+        if (scoreB !== scoreA) return scoreB - scoreA;
+
+        const voteA = Number(a.vote_count || 0);
+        const voteB = Number(b.vote_count || 0);
+        if (voteB !== voteA) return voteB - voteA;
+
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return dateB - dateA;
+      })
       .slice(0, 5);
-  }, [filteredProposals]);
+  }, [proposals]);
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -936,54 +961,57 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
 
             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
               {top5Proposals.length > 0 ? (
-                top5Proposals.map((item, idx) => (
-                  <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
-                    {/* Column 1: Hạng */}
-                    <td className="py-3 px-4 text-center font-extrabold">
-                      {idx === 0 ? (
-                        <span className="text-amber-500 font-black text-sm">🏆 1</span>
-                      ) : idx === 1 ? (
-                        <span className="text-slate-400 font-black text-sm">🥈 2</span>
-                      ) : idx === 2 ? (
-                        <span className="text-amber-700 font-black text-sm">🥉 3</span>
-                      ) : (
-                        <span className="text-slate-500 font-bold">{idx + 1}</span>
-                      )}
-                    </td>
+                top5Proposals.map((item, idx) => {
+                  const val = getProposalValue(item);
+                  return (
+                    <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                      {/* Column 1: Hạng */}
+                      <td className="py-3 px-4 text-center font-extrabold">
+                        {idx === 0 ? (
+                          <span className="text-amber-500 font-black text-sm">🏆 1</span>
+                        ) : idx === 1 ? (
+                          <span className="text-slate-400 font-black text-sm">🥈 2</span>
+                        ) : idx === 2 ? (
+                          <span className="text-amber-700 font-black text-sm">🥉 3</span>
+                        ) : (
+                          <span className="text-slate-500 font-bold">{idx + 1}</span>
+                        )}
+                      </td>
 
-                    {/* Column 2: Họ và Tên */}
-                    <td className="py-3 px-4">
-                      <span className="font-extrabold text-slate-900 text-xs block leading-snug">
-                        {item.proposer_name || "Nhân viên"}
-                      </span>
-                      <span className="text-[11px] text-slate-400 block pt-0.5">
-                        {item.department || item.region || "Tổ hợp Kiên Giang"}
-                      </span>
-                    </td>
+                      {/* Column 2: Họ và Tên */}
+                      <td className="py-3 px-4">
+                        <span className="font-extrabold text-slate-900 text-xs block leading-snug truncate max-w-[180px]" title={item.proposer_name || (item as any).proposerName || "Nhân viên"}>
+                          {item.proposer_name || (item as any).proposerName || "Nhân viên"}
+                        </span>
+                        <span className="text-[11px] text-slate-400 block pt-0.5 truncate max-w-[180px]">
+                          {item.department || item.region || "Tổ hợp Kiên Giang"}
+                        </span>
+                      </td>
 
-                    {/* Column 3: MSNV */}
-                    <td className="py-3 px-4 text-center">
-                      <span className="inline-block px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-mono font-extrabold text-[11px] border border-slate-200">
-                        {item.proposer_emp_code || item.code || "CBCNV"}
-                      </span>
-                    </td>
+                      {/* Column 3: MSNV */}
+                      <td className="py-3 px-4 text-center">
+                        <span className="inline-block px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-mono font-extrabold text-[11px] border border-slate-200">
+                          {item.proposer_emp_code || (item as any).proposerEmpCode || item.code || "CBCNV"}
+                        </span>
+                      </td>
 
-                    {/* Column 4: Cải tiến */}
-                    <td className="py-3 px-4 max-w-md">
-                      <span className="font-extrabold text-slate-900 block text-xs leading-snug truncate" title={item.title}>
-                        {item.title}
-                      </span>
-                      <span className="text-[11px] text-[#006838] font-bold block pt-0.5">
-                        {item.category_label || item.category || "Cải tiến quy trình"}
-                      </span>
-                    </td>
+                      {/* Column 4: Cải tiến */}
+                      <td className="py-3 px-4 max-w-md">
+                        <span className="font-extrabold text-slate-900 block text-xs leading-snug truncate" title={item.title}>
+                          {item.title}
+                        </span>
+                        <span className="text-[11px] text-[#006838] font-bold block pt-0.5">
+                          {item.category_label || item.category || "Cải tiến quy trình"}
+                        </span>
+                      </td>
 
-                    {/* Column 5: Giá trị */}
-                    <td className="py-3 px-4 text-right font-black text-emerald-600 text-sm">
-                      {formatMillion(getProposalValue(item))}
-                    </td>
-                  </tr>
-                ))
+                      {/* Column 5: Giá trị */}
+                      <td className="py-3 px-4 text-right font-black text-emerald-600 text-sm whitespace-nowrap">
+                        {formatMillion(val)}
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 /* Empty state when database has no proposals */
                 <tr>
