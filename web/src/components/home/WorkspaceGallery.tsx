@@ -101,6 +101,17 @@ export default function WorkspaceGallery() {
       id="workspace"
       className="py-16 sm:py-20 lg:py-24 bg-[#f8faf9] max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 space-y-10 sm:space-y-12"
     >
+      {/* Main Section Headline & Intro */}
+      <div className="space-y-3">
+        <h2 className="text-3xl sm:text-4xl lg:text-[42px] font-black text-[#152e25] tracking-tight leading-[1.18]">
+          {cmsConfig.workspace.headline || "Môi trường làm việc chuẩn Corporate"}
+        </h2>
+        <p className="text-slate-600 text-base sm:text-lg leading-relaxed font-normal max-w-3xl">
+          {cmsConfig.workspace.description ||
+            "Mỗi không gian được kiến tạo nhằm thúc đẩy hiệu suất, sự kết nối và tinh thần đổi mới. Đây là nơi đội ngũ cùng chia sẻ mục tiêu, nâng cao chất lượng và không ngừng hoàn thiện để mang đến những giá trị vượt kỳ vọng."}
+        </p>
+      </div>
+
       {/* Top 3 Cards Row matching exact design in reference image */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch">
         {/* Card 1: Bản sắc thương hiệu (Intro Text Card) */}
@@ -113,8 +124,7 @@ export default function WorkspaceGallery() {
               Bản sắc thương hiệu
             </h3>
             <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
-              {cmsConfig.workspace.description ||
-                "Hệ thống nhận diện được ứng dụng xuyên suốt, phản ánh giá trị thương hiệu TBS và vị thế của doanh nghiệp trong chuỗi cung ứng toàn cầu."}
+              Hệ thống nhận diện được ứng dụng xuyên suốt, phản ánh giá trị thương hiệu TBS và vị thế của doanh nghiệp trong chuỗi cung ứng toàn cầu.
             </p>
           </div>
         </div>
