@@ -655,7 +655,42 @@ export default {
         const HTPH_CLSK_API_URL = (env && env.HTPH_CLSK_API_URL) || "https://hethongphanhoiclsk.tbsgroup2026.workers.dev";
         const HTPH_CLSK_SERVICE_TOKEN = (env && (env.HTPH_CLSK_SERVICE_TOKEN || env.HTPH_CLSK_API_KEY)) || "";
 
-        // 1. Try fetching from external HTPH-CLSK system if service token exists
+        // 1. Primary: Direct Cloudflare Worker Service Binding Invocation (Zero Latency Edge RPC)
+        if (env && env.HTPH_CLSK_SERVICE) {
+          try {
+            const targetEndpoint = `${HTPH_CLSK_API_URL}/api/v1/quality-summary?factory=${encodeURIComponent(factory)}`;
+            const srvReq = new Request(targetEndpoint, {
+              method: "GET",
+              headers: {
+                "Accept": "application/json",
+                "X-Cloudflare-Source-Worker": "thkiengiangshoes",
+                "X-Cloudflare-Account-Id": "3b346f8398b8d1143acd52516011cfb4"
+              }
+            });
+            const srvRes = await env.HTPH_CLSK_SERVICE.fetch(srvReq);
+            if (srvRes.ok) {
+              const liveData = await srvRes.json();
+              return new Response(JSON.stringify({
+                success: true,
+                source: "live_htph_clsk",
+                binding: "HTPH_CLSK_SERVICE_BINDING",
+                factoryId: factory,
+                timestamp: new Date().toISOString(),
+                ...liveData
+              }), {
+                headers: {
+                  "Content-Type": "application/json; charset=utf-8",
+                  "Cache-Control": "public, max-age=60, s-maxage=120",
+                  "Access-Control-Allow-Origin": "*"
+                }
+              });
+            }
+          } catch (bindErr) {
+            console.warn("[qc-dashboard] Service binding fetch notice:", bindErr);
+          }
+        }
+
+        // 2. Secondary: External HTTP fetch via Service Token / API Key
         if (HTPH_CLSK_SERVICE_TOKEN) {
           try {
             const extRes = await fetch(`${HTPH_CLSK_API_URL}/api/v1/quality-summary?factory=${encodeURIComponent(factory)}`, {
@@ -671,6 +706,7 @@ export default {
               return new Response(JSON.stringify({
                 success: true,
                 source: "live_htph_clsk",
+                binding: "HTTP_SERVICE_TOKEN",
                 factoryId: factory,
                 timestamp: new Date().toISOString(),
                 ...extData
