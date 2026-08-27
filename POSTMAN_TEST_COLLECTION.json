@@ -1,0 +1,470 @@
+{
+  "info": {
+    "name": "TBS II Push Notifications - Phase 1 Testing",
+    "description": "Complete test collection for push notification backend services",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "your_jwt_token_here",
+      "type": "string"
+    },
+    {
+      "key": "device_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "notification_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1️⃣ Device Management",
+      "item": [
+        {
+          "name": "Register Device Token (Android)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"platform\": \"ANDROID\",\n  \"device_token\": \"fcm-token-test-android-12345\",\n  \"device_id\": \"device-uuid-android-001\",\n  \"device_name\": \"Samsung Galaxy S23\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notifications/register-device",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "register-device"]
+            },
+            "description": "Register a new Android device for push notifications"
+          }
+        },
+        {
+          "name": "Register Device Token (iOS)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"platform\": \"IOS\",\n  \"device_token\": \"apns-token-test-ios-67890\",\n  \"device_id\": \"device-uuid-ios-002\",\n  \"device_name\": \"iPhone 14 Pro\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notifications/register-device",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "register-device"]
+            },
+            "description": "Register a new iOS device for push notifications"
+          }
+        },
+        {
+          "name": "Get User Devices",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/notifications/devices",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "devices"]
+            },
+            "description": "Get all active devices for the current user"
+          }
+        },
+        {
+          "name": "Unregister Device",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/notifications/unregister-device/{{device_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "unregister-device", "{{device_id}}"]
+            },
+            "description": "Unregister (deactivate) a device token. Replace {{device_id}} with actual ID from 'Get User Devices' response"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2️⃣ Notification Management",
+      "item": [
+        {
+          "name": "Send Test Notification (ORDER)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"ORDER\",\n  \"title\": \"Đơn hàng mới\",\n  \"body\": \"Có đơn hàng từ SKECHERS: OR-2026-08-001\",\n  \"priority\": \"HIGH\",\n  \"data\": {\n    \"action\": \"open_order\",\n    \"deepLink\": \"/work/orders/OR-2026-08-001\",\n    \"orderId\": \"OR-2026-08-001\",\n    \"customerName\": \"SKECHERS\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notifications/test",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "test"]
+            },
+            "description": "Send a test ORDER notification"
+          }
+        },
+        {
+          "name": "Send Test Notification (ALERT - CRITICAL)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"ALERT\",\n  \"title\": \"⚠️ Hạn chót SLA sắp tới\",\n  \"body\": \"Tài liệu 'Đơn xin phép' cần hoàn thành trong 1 giờ nữa\",\n  \"priority\": \"CRITICAL\",\n  \"data\": {\n    \"action\": \"open_document\",\n    \"deepLink\": \"/documents/doc-123\",\n    \"documentId\": \"doc-123\",\n    \"slaMinutesRemaining\": 60\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notifications/test",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "test"]
+            },
+            "description": "Send a test CRITICAL SLA ALERT notification"
+          }
+        },
+        {
+          "name": "Send Test Notification (KAIZEN)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"KAIZEN\",\n  \"title\": \"💡 Ý tưởng cải tiến mới\",\n  \"body\": \"Tối ưu quy trình đóng gói - từ Nguyễn Văn A\",\n  \"priority\": \"MEDIUM\",\n  \"data\": {\n    \"action\": \"open_kaizen\",\n    \"deepLink\": \"/kaizen/kaizen-456\",\n    \"kaizenId\": \"kaizen-456\",\n    \"author\": \"Nguyễn Văn A\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notifications/test",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "test"]
+            },
+            "description": "Send a test KAIZEN notification"
+          }
+        },
+        {
+          "name": "Send Test Notification (BOOKING)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"BOOKING\",\n  \"title\": \"✅ Phòng họp đã được xác nhận\",\n  \"body\": \"Phòng A3 - Thứ Ba, 24/08/2026 từ 14:00-15:30\",\n  \"priority\": \"LOW\",\n  \"data\": {\n    \"action\": \"open_booking\",\n    \"deepLink\": \"/bookings/booking-789\",\n    \"bookingId\": \"booking-789\",\n    \"roomName\": \"A3\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notifications/test",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "test"]
+            },
+            "description": "Send a test BOOKING notification"
+          }
+        },
+        {
+          "name": "Get Notification History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/notifications/history?limit=20&offset=0",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "history"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "type",
+                  "value": "ORDER",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "SENT",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get notification history for the current user (with optional filtering)"
+          }
+        },
+        {
+          "name": "Mark Notification as Read",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/notifications/{{notification_id}}/read",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "{{notification_id}}", "read"]
+            },
+            "description": "Mark a notification as read. Replace {{notification_id}} with actual ID from history response"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3️⃣ Preferences Management",
+      "item": [
+        {
+          "name": "Get Notification Preferences",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/notifications/preferences",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "preferences"]
+            },
+            "description": "Get the current user's notification preferences"
+          }
+        },
+        {
+          "name": "Update Preferences (Disable Push)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"push_enabled\": false,\n  \"email_enabled\": true,\n  \"sms_enabled\": false,\n  \"channel_types\": [\"ORDER\", \"ALERT\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notifications/preferences",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "preferences"]
+            },
+            "description": "Update notification preferences (disable push, keep email/SMS, enable ORDER and ALERT only)"
+          }
+        },
+        {
+          "name": "Update Preferences (Enable All)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"push_enabled\": true,\n  \"email_enabled\": true,\n  \"sms_enabled\": false,\n  \"channel_types\": [\"ORDER\", \"ALERT\", \"KAIZEN\", \"BOOKING\", \"SLA\", \"DOCUMENT\", \"CHAT\", \"NEWS\", \"INCIDENT\", \"BUSINESS_TRIP\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notifications/preferences",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "preferences"]
+            },
+            "description": "Update notification preferences (enable all channels)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4️⃣ Monitoring & Health",
+      "item": [
+        {
+          "name": "Queue Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/notifications/queue/stats",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "queue", "stats"]
+            },
+            "description": "Get push notification queue statistics and recent jobs"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5️⃣ Error Cases (Testing)",
+      "item": [
+        {
+          "name": "Send to User with No Devices",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"ORDER\",\n  \"title\": \"Test\",\n  \"body\": \"This should fail - no devices registered\",\n  \"priority\": \"HIGH\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notifications/test",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "test"]
+            },
+            "description": "Expected Result: success: false, reason: 'No active devices'\nNote: First register a device, then unregister it to test this"
+          }
+        },
+        {
+          "name": "Register with Missing Fields",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"platform\": \"ANDROID\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notifications/register-device",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "register-device"]
+            },
+            "description": "Expected Result: HTTP 400, Missing required fields: platform, device_token"
+          }
+        },
+        {
+          "name": "Register with Invalid Platform",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"platform\": \"WINDOWS\",\n  \"device_token\": \"test-token\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notifications/register-device",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "register-device"]
+            },
+            "description": "Expected Result: HTTP 400, Invalid platform. Must be ANDROID or IOS"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -9,23 +9,69 @@ import {
   IconTrash,
   IconUpload,
   IconUserCheck,
+  IconClock,
   IconRefresh,
+  IconVideo,
   IconX,
   IconLoader2,
   IconAlertCircle,
+  IconLock,
+  IconLockOpen,
   IconBuildingFactory,
 } from "@tabler/icons-react";
 import { INITIAL_ORG_TREE } from "./organizationTree";
 
-export const REAL_FACTORIES = [
-  "Kiên Giang 1",
-  "Kiên Giang 2",
-  "Kiên Giang 3",
-  "HTĐ KG",
-  "VP KV KG",
+const CATEGORIES = [
+  { id: "PRODUCTIVITY", label: "3.Tăng Năng suất", color: "bg-blue-600 text-white" },
+  { id: "COST_SAVING", label: "2.Tiết kiệm Chi phí", color: "bg-emerald-600 text-white" },
+  { id: "MATERIAL_SAVING", label: "1.Tiết kiệm Vật tư", color: "bg-blue-500 text-white" },
+  { id: "SAFETY", label: "4.An toàn lao động", color: "bg-[#006838] text-white" },
+  { id: "5S", label: "5.5S", color: "bg-sky-500 text-white" },
+  { id: "AUTOMATION", label: "6.Tự động hoá", color: "bg-indigo-600 text-white" },
+  { id: "EQUIPMENT", label: "7.MMTB CCDC", color: "bg-purple-600 text-white" },
 ];
 
-export const REAL_DEPARTMENTS = REAL_FACTORIES;
+export const REAL_FACTORIES = [
+  "KG 1",
+  "KG 2",
+  "KG 3",
+  "HTĐ KG",
+  "VP KV KG",
+  "SK MĐ",
+  "VP2",
+];
+
+export const REAL_DEPARTMENTS = [
+  "VP CHUỖI",
+  "VP R&D",
+  "ĐẾ - XƯỞNG SẢN XUẤT ĐẾ",
+  "ĐẾ - TỔ CÁN ÉP",
+  "ĐẾ - TỔ ÉP ĐẾ DÁN",
+  "MŨI - XƯỞNG SẢN XUẤT MŨI",
+  "MŨI - TỔ CHẶT",
+  "MŨI - TỔ CHUẨN BỊ",
+  "MŨI - TỔ MAY 1",
+  "MŨI - TỔ MAY 2",
+  "MŨI - TỔ MAY 3",
+  "GÒ - XƯỞNG SẢN XUẤT GÒ",
+  "GÒ - TỔ GÒ CHUYỀN 1",
+  "GÒ - TỔ GÒ CHUYỀN 2",
+  "GÒ - TỔ GÒ CHUYỀN 3",
+  "BẢO TRÌ - TỔ BẢO TRÌ MMTB",
+  "BẢO TRÌ - TỔ BẢO TRÌ ĐIỆN",
+  "QC - TỔ QC MŨI",
+  "QC - TỔ QC ĐẾ",
+  "QC - TỔ QC GÒ",
+  "KHO - TỔ KHO VẬT TƯ",
+  "KHO - TỔ KHO THÀNH PHẨM",
+  "KHO - TỔ KHO PHỤ LIỆU",
+  "P. CN-CI (CONTINUOUS IMPROVEMENT)",
+  "P. QUẢN LÝ CHẤT LƯỢNG (QA)",
+  "P. KĨ THUẬT CÔNG NGHỆ (IE)",
+  "P. NHÂN SỰ & HÀNH CHÍNH (HR)",
+  "P. KẾ TOÁN & TÀI CHÍNH",
+  "P. KẾ HOẠCH SẢN XUẤT (PPC)",
+];
 
 const VTCV_OPTIONS = [
   "Cán bộ quản lý",
@@ -33,10 +79,24 @@ const VTCV_OPTIONS = [
   "Nhân viên",
 ];
 
+const CUSTOMER_OPTIONS = ["DP", "WR", "RB", "SK", "Khác"];
+
+const PRODUCT_GROUPS = [
+  "Quai",
+  "Mũi",
+  "Gót",
+  "Đế",
+  "Thành phẩm",
+  "Phụ liệu",
+  "Dịch vụ",
+  "Khác",
+];
+
 // Cloudinary Configuration
 const CLOUDINARY_CLOUD_NAME = "dwl2xtbqa";
 const CLOUDINARY_PRESETS = {
   image: "vpchuoisk",
+  video: "vpchuoisk",
 };
 
 export interface KaizenPublicSubmitFormProps {
@@ -65,11 +125,14 @@ export default function KaizenPublicSubmitForm({
   const [lookupLoading, setLookupLoading] = useState(false);
   const [notFoundMsg, setNotFoundMsg] = useState<string | null>(null);
   const [autoFilled, setAutoFilled] = useState(false);
+  const [isReadOnlyAutoFill, setIsReadOnlyAutoFill] = useState(false);
 
   // Single-select cascading org selection for submission form
-  const [selectedFormFactory, setSelectedFormFactory] = useState<string>("Kiên Giang 1");
+  const [selectedFormFactory, setSelectedFormFactory] = useState<string>("KG 1");
   const [selectedFormWorkshop, setSelectedFormWorkshop] = useState<string>("Xưởng Đế KG1");
   const [selectedFormLine, setSelectedFormLine] = useState<string>("");
+  const [selectedFormChuyen, setSelectedFormChuyen] = useState<string>("");
+  const [selectedFormTo, setSelectedFormTo] = useState<string>("");
 
   // Available sub-level items
   const availableFormWorkshops = useMemo(() => {
@@ -94,27 +157,76 @@ export default function KaizenPublicSubmitForm({
     return [];
   }, [selectedFormFactory, selectedFormWorkshop]);
 
+  const availableFormChuyens = useMemo(() => {
+    if (!selectedFormFactory || !selectedFormWorkshop || !selectedFormLine) return [];
+    const fNode = INITIAL_ORG_TREE[selectedFormFactory];
+    if (fNode && typeof fNode === "object" && !Array.isArray(fNode)) {
+      const wsNode = fNode[selectedFormWorkshop];
+      if (wsNode && typeof wsNode === "object" && !Array.isArray(wsNode)) {
+        const lineNode = wsNode[selectedFormLine];
+        if (lineNode && typeof lineNode === "object" && !Array.isArray(lineNode)) {
+          return Object.keys(lineNode);
+        }
+        if (Array.isArray(lineNode)) return lineNode;
+      }
+    }
+    return [];
+  }, [selectedFormFactory, selectedFormWorkshop, selectedFormLine]);
+
+  const availableFormTos = useMemo(() => {
+    if (!selectedFormFactory || !selectedFormWorkshop || !selectedFormLine || !selectedFormChuyen) return [];
+    const fNode = INITIAL_ORG_TREE[selectedFormFactory];
+    if (fNode && typeof fNode === "object" && !Array.isArray(fNode)) {
+      const wsNode = fNode[selectedFormWorkshop];
+      if (wsNode && typeof wsNode === "object" && !Array.isArray(wsNode)) {
+        const lineNode = wsNode[selectedFormLine];
+        if (lineNode && typeof lineNode === "object" && !Array.isArray(lineNode)) {
+          const chuyenNode = lineNode[selectedFormChuyen];
+          if (Array.isArray(chuyenNode)) return chuyenNode;
+        }
+      }
+    }
+    return [];
+  }, [selectedFormFactory, selectedFormWorkshop, selectedFormLine, selectedFormChuyen]);
+
   const [form, setForm] = useState({
     // Section A: Thông tin người đăng ký
+    region: "KG 1",
     proposerEmpCode: "",
-    proposerName: "",
     proposerPosition: "Công nhân",
-    factory: "Kiên Giang 1",
+    proposerMonth: new Date().getMonth() + 1,
+    proposerYear: new Date().getFullYear(),
+    proposerName: "",
+    customer: "",
+    factory: "KG 1",
     department: "Xưởng Đế KG1",
 
     // Section B: Thông tin cải tiến
     title: "",
-    productCode: "", // Mã giày
-    beforeDescription: "", // Mô tả hiện trạng trước cải tiến
-    afterSolution: "", // Nội dung ý tưởng đề xuất cải tiến
+    category: "PRODUCTIVITY",
+    categoryLabel: "3.Tăng Năng suất",
+    productGroup: "",
+    productCode: "",
+    quantity: 0,
+    beforeDescription: "",
+    afterSolution: "",
+    pricingDirection: "THOI_GIAN",
+    savedSeconds: 0,
+    timeBeforeSeconds: 0,
+    timeAfterSeconds: 0,
+    efficiencyValueVND: 0,
     beforeImageUrl: "",
     afterImageUrl: "",
     beforeImageLink: "",
     afterImageLink: "",
+    beforeVideoUrl: "",
+    afterVideoUrl: "",
+    beforeVideoLink: "",
+    afterVideoLink: "",
     registrationType: "LUU_TRU",
   });
 
-  // Debounced Employee Auto-Fill Lookup by MSNV (Blur + Debounce ~400ms, >= 4 chars)
+  // Debounced Employee Auto-Fill Lookup by MSNV (Blur + Debounce ~500ms, >= 4 chars)
   React.useEffect(() => {
     const code = form.proposerEmpCode.trim();
     if (!code || code.length < 4) {
@@ -124,6 +236,7 @@ export default function KaizenPublicSubmitForm({
       return;
     }
 
+    // Skip auto-fill lookup if editing existing proposal
     if (isEdit && initialData && (initialData.proposer_emp_code === code || initialData.proposerEmpCode === code)) {
       return;
     }
@@ -141,23 +254,40 @@ export default function KaizenPublicSubmitForm({
           if (emp.factory_id) setSelectedFormFactory(emp.factory_id);
           if (emp.workshop_id) setSelectedFormWorkshop(emp.workshop_id);
           if (emp.line_id) setSelectedFormLine(emp.line_id);
+          if (emp.chuyen_id) setSelectedFormChuyen(emp.chuyen_id);
+          if (emp.to_id) setSelectedFormTo(emp.to_id);
+
+          let mappedPos = "Công nhân";
+          if (emp.vtcv || emp.position) {
+            const rawPos = (emp.vtcv || emp.position).toLowerCase();
+            if (rawPos.includes("quản lý") || rawPos.includes("cán bộ") || rawPos.includes("chuyền trưởng") || rawPos.includes("tổ trưởng")) {
+              mappedPos = "Cán bộ quản lý";
+            } else if (rawPos.includes("nhân viên") || rawPos.includes("vp") || rawPos.includes("văn phòng")) {
+              mappedPos = "Nhân viên";
+            } else {
+              mappedPos = "Công nhân";
+            }
+          }
 
           setForm((prev) => ({
             ...prev,
             proposerName: emp.name || prev.proposerName,
-            proposerPosition: emp.vtcv === "Cán bộ quản lý" || emp.vtcv === "Nhân viên" ? emp.vtcv : "Công nhân",
+            proposerPosition: mappedPos,
+            region: emp.factory_id || prev.region,
             factory: emp.factory_id || prev.factory,
             department: emp.workshop_id || prev.department,
           }));
           setAutoFilled(true);
           setNotFoundMsg(null);
-          showToast("✨ Đã tự động điền thông tin nhân sự theo MSNV!");
+          showToast("✨ Đã tự động điền thông tin nhân sự và tổ xưởng theo MSNV!");
         } else {
-          setNotFoundMsg("Không tìm thấy MSNV, vui lòng nhập thủ công");
+          // 404: Show gentle warning toast, do NOT wipe existing values, do NOT block form
+          setNotFoundMsg("Không tìm thấy MSNV, vui lòng chọn thủ công");
+          showToast("⚠️ Không tìm thấy MSNV, vui lòng chọn tổ xưởng thủ công");
           setAutoFilled(false);
         }
       } catch (err) {
-        setNotFoundMsg("Không tìm thấy MSNV, vui lòng nhập thủ công");
+        setNotFoundMsg("Không tìm thấy MSNV, vui lòng chọn thủ công");
         setAutoFilled(false);
       } finally {
         setLookupLoading(false);
@@ -170,19 +300,36 @@ export default function KaizenPublicSubmitForm({
   React.useEffect(() => {
     if (isEdit && initialData) {
       setForm({
+        region: initialData.region || "KG 1",
         proposerEmpCode: initialData.proposer_emp_code || initialData.proposerEmpCode || "",
-        proposerName: initialData.proposer_name || initialData.proposerName || "",
         proposerPosition: initialData.proposer_position || initialData.proposerPosition || "Công nhân",
-        factory: initialData.factory || "Kiên Giang 1",
-        department: initialData.department || "Xưởng Đế KG1",
+        proposerMonth: initialData.proposer_month || new Date().getMonth() + 1,
+        proposerYear: initialData.proposer_year || new Date().getFullYear(),
+        proposerName: initialData.proposer_name || initialData.proposerName || "",
+        customer: "",
+        factory: initialData.factory || "KG 1",
+        department: initialData.department || "",
         title: initialData.title || "",
+        category: "PRODUCTIVITY",
+        categoryLabel: "3.Tăng Năng suất",
+        productGroup: "",
         productCode: initialData.product_code || initialData.productCode || "",
+        quantity: 0,
         beforeDescription: initialData.before_description || initialData.beforeDescription || "",
         afterSolution: initialData.after_solution || initialData.afterSolution || "",
+        pricingDirection: "THOI_GIAN",
+        savedSeconds: 0,
+        timeBeforeSeconds: 0,
+        timeAfterSeconds: 0,
+        efficiencyValueVND: 0,
         beforeImageUrl: initialData.before_image_url || initialData.beforeImageUrl || "",
         afterImageUrl: initialData.after_image_url || initialData.afterImageUrl || "",
         beforeImageLink: "",
         afterImageLink: "",
+        beforeVideoUrl: "",
+        afterVideoUrl: "",
+        beforeVideoLink: "",
+        afterVideoLink: "",
         registrationType: "LUU_TRU",
       });
     }
@@ -194,10 +341,10 @@ export default function KaizenPublicSubmitForm({
   };
 
   // Upload file to Cloudinary
-  const uploadToCloudinary = async (fileOrDataUrl: File | string, fileType: "image"): Promise<string> => {
+  const uploadToCloudinary = async (fileOrDataUrl: File | string, fileType: "image" | "video"): Promise<string> => {
     try {
       const formData = new FormData();
-      const preset = CLOUDINARY_PRESETS.image;
+      const preset = CLOUDINARY_PRESETS[fileType];
 
       if (typeof fileOrDataUrl === "string") {
         const response = await fetch(fileOrDataUrl);
@@ -243,7 +390,7 @@ export default function KaizenPublicSubmitForm({
 
     try {
       setUploading(true);
-      showToast("☁️ Đang tải ảnh lên...");
+      showToast("☁️ Đang tải ảnh lên Cloudinary...");
       const cloudinaryUrl = await uploadToCloudinary(file, "image");
       setForm((prev) => ({
         ...prev,
@@ -259,15 +406,23 @@ export default function KaizenPublicSubmitForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const targetDept = selectedFormWorkshop
+      ? `${selectedFormWorkshop}${selectedFormLine ? ` - ${selectedFormLine}` : ""}`
+      : form.department || "Xưởng Sản Xuất";
+
+    const targetFactory = selectedFormFactory || form.factory || "KG 1";
+
     if (
       !form.proposerEmpCode.trim() ||
       !form.proposerName.trim() ||
       !form.proposerPosition.trim() ||
-      !form.title.trim() ||
+      !targetFactory ||
+      !targetDept ||
       !form.beforeDescription.trim() ||
       !form.afterSolution.trim()
     ) {
-      showToast("⚠️ Vui lòng điền đầy đủ các trường thông tin bắt buộc có dấu (*) màu đỏ!");
+      showToast("⚠️ Vui lòng điền đầy đủ các trường thông tin bắt buộc!");
       return;
     }
 
@@ -276,24 +431,28 @@ export default function KaizenPublicSubmitForm({
       const finalBeforeImg = form.beforeImageUrl || form.beforeImageLink.trim();
       const finalAfterImg = form.afterImageUrl || form.afterImageLink.trim();
 
-      const method = isEdit ? "PUT" : "POST";
-      const now = new Date();
-      const currentMonth = now.getMonth() + 1;
-      const currentYear = now.getFullYear();
+      const currentMonth = new Date().getMonth() + 1;
+      const currentYear = new Date().getFullYear();
+      const finalTitle = form.title.trim() || "Ý tưởng đề xuất cải tiến Kaizen";
 
+      const method = isEdit ? "PUT" : "POST";
       const payload = {
         ...form,
         id: isEdit ? proposalId : undefined,
         action: isEdit ? "UPDATE" : undefined,
+        title: finalTitle,
+        factory: targetFactory,
+        region: targetFactory,
+        department: targetDept,
         proposerMonth: currentMonth,
         proposerYear: currentYear,
-        factory: selectedFormFactory || "Kiên Giang 1",
-        department: selectedFormWorkshop || "Xưởng Sản Xuất KG",
         beforeImageUrl: finalBeforeImg,
         afterImageUrl: finalAfterImg,
-        registrationType: "LUU_TRU", // Đưa thẳng vào kho lưu trữ (archive)
-        status: "IMPLEMENTED", // Trạng thái lưu trữ đã thực hiện ngay lập tức
-        sub_status: "DA_DANH_GIA",
+        beforeVideoUrl: "",
+        afterVideoUrl: "",
+        efficiencyValueVND: 0,
+        registrationType: "LUU_TRU",
+        sub_status: "LUU_TRU",
         isPublicScan: true,
       };
 
@@ -312,7 +471,7 @@ export default function KaizenPublicSubmitForm({
           if (onSuccess) onSuccess();
           if (onClose) onClose();
         } else {
-          setSubmittedCode(json.code || "KZ-2026-ARCHIVE");
+          setSubmittedCode(json.code || "CI-2026-OK");
           if (onSuccess) onSuccess();
         }
       } else {
@@ -328,19 +487,36 @@ export default function KaizenPublicSubmitForm({
   const handleResetForm = () => {
     setSubmittedCode(null);
     setForm({
+      region: "Kiên Giang 1",
       proposerEmpCode: "",
+      proposerPosition: "Công Nhân Sản Xuất",
+      proposerMonth: new Date().getMonth() + 1,
+      proposerYear: new Date().getFullYear(),
       proposerName: "",
-      proposerPosition: "Công nhân",
-      factory: "Kiên Giang 1",
-      department: "Xưởng Đế KG1",
+      customer: "Skechers",
+      factory: "VP2 SKECHERS",
+      department: "",
       title: "",
+      category: "PRODUCTIVITY",
+      categoryLabel: "3.Tăng Năng suất",
+      productGroup: "Quai",
       productCode: "",
+      quantity: 0,
       beforeDescription: "",
       afterSolution: "",
+      pricingDirection: "THOI_GIAN",
+      savedSeconds: 30,
+      timeBeforeSeconds: 0,
+      timeAfterSeconds: 0,
+      efficiencyValueVND: 0,
       beforeImageUrl: "",
       afterImageUrl: "",
       beforeImageLink: "",
       afterImageLink: "",
+      beforeVideoUrl: "",
+      afterVideoUrl: "",
+      beforeVideoLink: "",
+      afterVideoLink: "",
       registrationType: "LUU_TRU",
     });
   };
@@ -362,7 +538,7 @@ export default function KaizenPublicSubmitForm({
               <img src="/images/tbs-logo.png" alt="TBS Group" className="h-6 w-auto object-contain" />
             </div>
             <span className="text-xs font-black uppercase tracking-wider text-amber-300">
-              VP CHUỖI SKECHERS - ĐĂNG KÝ CẢI TIẾN KAIZEN
+              VP CHUỖI SKECHERS - CỔNG CẢI TIẾN KAIZEN
             </span>
           </div>
 
@@ -383,7 +559,7 @@ export default function KaizenPublicSubmitForm({
             Đăng Ký Đề Xuất Cải Tiến Kaizen
           </h1>
           <p className="text-xs text-slate-300 font-medium mt-0.5">
-            Cổng tiếp nhận sáng kiến cải tiến — Tự động ghi nhận &amp; đưa thẳng vào Kho Lưu Trữ Kaizen
+            Cổng tiếp nhận sáng kiến cải tiến chuẩn hóa dành cho công nhân & cán bộ nhà máy
           </p>
         </div>
       </div>
@@ -397,11 +573,11 @@ export default function KaizenPublicSubmitForm({
 
           <div className="space-y-1">
             <span className="px-3 py-1 rounded-full bg-emerald-100 text-[#006838] text-xs font-black font-mono">
-              MÃ BẢN GHI LƯU TRỮ: {submittedCode}
+              MÃ ĐỀ XUẤT: {submittedCode}
             </span>
-            <h2 className="text-xl font-black text-slate-900 pt-2">Đăng Ký &amp; Lưu Trữ Thành Công!</h2>
+            <h2 className="text-xl font-black text-slate-900 pt-2">Gửi Đề Xuất Thành Công!</h2>
             <p className="text-xs text-slate-600 max-w-md mx-auto leading-relaxed">
-              Đề xuất Kaizen của bạn đã được lưu trực tiếp vào **Kho Lưu Trữ Cải Tiến**. Cảm ơn đóng góp của bạn!
+              Đề xuất Kaizen của bạn đã được ghi nhận trực tiếp vào hệ thống cơ sở dữ liệu và đang chuyển đến luồng phê duyệt &amp; chấm điểm thi đua. Cảm ơn đóng góp của bạn!
             </p>
           </div>
 
@@ -421,7 +597,7 @@ export default function KaizenPublicSubmitForm({
                 className="px-5 py-3 rounded-2xl bg-slate-900 text-white font-black text-xs hover:bg-slate-800 shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <IconX size={16} />
-                <span>ĐÓNG CỬA SỔ</span>
+                <span>ĐÓNG VÀ HOÀN TẤT</span>
               </button>
             )}
           </div>
@@ -429,7 +605,7 @@ export default function KaizenPublicSubmitForm({
       ) : (
         <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-5 text-xs text-slate-700 flex-1 overflow-y-auto">
           {/* ════════════════════════════════════════════════════════════════
-              MỤC A: THÔNG TIN NGƯỜI ĐĂNG KÝ
+              SECTION A: THÔNG TIN NGƯỜI ĐĂNG KÝ
              ════════════════════════════════════════════════════════════════ */}
           <div className="space-y-3 pb-4 border-b border-slate-200">
             <div className="flex items-center gap-2 text-[#006838]">
@@ -439,15 +615,15 @@ export default function KaizenPublicSubmitForm({
               </h3>
             </div>
 
-            {/* CASCADING ORGANIZATIONAL SELECTION (Nhà Máy → Xưởng Sản Xuất → Line Sản Xuất) */}
+            {/* CASCADING ORGANIZATIONAL SELECTION (Nhà máy → Xưởng → Line) */}
             <div className="bg-slate-50/80 p-3 rounded-2xl border border-slate-200 space-y-2 mb-3">
               <div className="flex items-center gap-1.5 text-slate-800 font-extrabold text-[11px] uppercase tracking-wider">
                 <IconBuildingFactory size={15} className="text-[#006838]" />
-                <span>Đơn Vị &amp; Khu Vực Sản Xuất (Nhà Máy → Xưởng → Line)</span>
+                <span>Đơn Vị & Khu Vực Sản Xuất Phân Cấp (Nhà máy → Xưởng → Line)</span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                {/* 1. Dropdown Nhà Máy */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                {/* 1. Dropdown Nhà Máy* */}
                 <div className="space-y-1">
                   <label className="font-black text-slate-900 text-[11px]">
                     1. Nhà Máy <span className="text-rose-600 font-bold ml-0.5">*</span>
@@ -459,9 +635,12 @@ export default function KaizenPublicSubmitForm({
                       setSelectedFormFactory(e.target.value);
                       setSelectedFormWorkshop("");
                       setSelectedFormLine("");
+                      setSelectedFormChuyen("");
+                      setSelectedFormTo("");
                     }}
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold outline-none focus:border-[#006838] bg-white"
                   >
+                    <option value="">-- Chọn Nhà Máy --</option>
                     {REAL_FACTORIES.map((fac) => (
                       <option key={fac} value={fac}>
                         {fac}
@@ -470,7 +649,7 @@ export default function KaizenPublicSubmitForm({
                   </select>
                 </div>
 
-                {/* 2. Dropdown Xưởng Sản Xuất */}
+                {/* 2. Dropdown Xưởng* */}
                 <div className="space-y-1">
                   <label className="font-black text-slate-900 text-[11px]">
                     2. Xưởng Sản Xuất <span className="text-rose-600 font-bold ml-0.5">*</span>
@@ -482,6 +661,8 @@ export default function KaizenPublicSubmitForm({
                     onChange={(e) => {
                       setSelectedFormWorkshop(e.target.value);
                       setSelectedFormLine("");
+                      setSelectedFormChuyen("");
+                      setSelectedFormTo("");
                     }}
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold outline-none focus:border-[#006838] bg-white disabled:bg-slate-100 disabled:opacity-60"
                   >
@@ -500,26 +681,32 @@ export default function KaizenPublicSubmitForm({
                   </select>
                 </div>
 
-                {/* 3. Dropdown Line Sản Xuất */}
-                <div className="space-y-1">
-                  <label className="font-black text-slate-900 text-[11px]">3. Line Sản Xuất</label>
-                  <select
-                    value={selectedFormLine}
-                    onChange={(e) => setSelectedFormLine(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold outline-none focus:border-[#006838] bg-white"
-                  >
-                    <option value="">-- Chọn Line (Không bắt buộc) --</option>
-                    {availableFormLines.map((ln) => (
-                      <option key={ln} value={ln}>
-                        {ln}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {/* 3. Dropdown Line (Conditional) */}
+                {selectedFormWorkshop && availableFormLines.length > 0 && (
+                  <div className="space-y-1 animate-in fade-in duration-200">
+                    <label className="font-black text-slate-900 text-[11px]">3. Line Sản Xuất</label>
+                    <select
+                      value={selectedFormLine}
+                      onChange={(e) => {
+                        setSelectedFormLine(e.target.value);
+                        setSelectedFormChuyen("");
+                        setSelectedFormTo("");
+                      }}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold outline-none focus:border-[#006838] bg-white"
+                    >
+                      <option value="">-- Chọn Line (Không bắt buộc) --</option>
+                      {availableFormLines.map((ln) => (
+                        <option key={ln} value={ln}>
+                          {ln}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* THỨ TỰ FIELD: MSNV → Người đăng ký → VTCV */}
+            {/* Thứ tự field: MSNV → Người đăng ký → VTCV */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {/* 1. MSNV* */}
               <div className="space-y-1">
@@ -529,7 +716,7 @@ export default function KaizenPublicSubmitForm({
                   </label>
                   {autoFilled && (
                     <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1 animate-in fade-in">
-                      <IconCheck size={12} /> Khớp MSNV
+                      <IconCheck size={12} /> Đã khớp dữ liệu
                     </span>
                   )}
                 </div>
@@ -539,7 +726,7 @@ export default function KaizenPublicSubmitForm({
                     required
                     value={form.proposerEmpCode}
                     onChange={(e) => setForm({ ...form, proposerEmpCode: e.target.value })}
-                    placeholder="VD: KG-09812 hoặc 202608001"
+                    placeholder="VD: CN-88201 hoặc 202608101"
                     className={`w-full px-3.5 py-2.5 pr-9 rounded-xl border text-xs font-bold outline-none transition-all ${
                       notFoundMsg
                         ? "border-amber-400 bg-amber-50/20 focus:border-amber-500"
@@ -560,7 +747,7 @@ export default function KaizenPublicSubmitForm({
                   )}
                 </div>
                 {notFoundMsg && (
-                  <p className="text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-2.5 py-1.5 flex items-center gap-1.5 mt-1 animate-in fade-in">
+                  <p className="text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-2.5 py-1.5 flex items-center gap-1.5 mt-1.5 animate-in fade-in">
                     <IconAlertCircle size={14} className="shrink-0 text-amber-600" />
                     <span>{notFoundMsg}</span>
                   </p>
@@ -577,21 +764,20 @@ export default function KaizenPublicSubmitForm({
                   required
                   value={form.proposerName}
                   onChange={(e) => setForm({ ...form, proposerName: e.target.value })}
-                  placeholder="Họ và Tên Nhân Viên"
+                  placeholder="Họ và Tên Công Nhân / Cán Bộ"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-bold outline-none focus:border-[#006838]"
                 />
               </div>
 
-              {/* 3. VTCV* (Chỉ có 3 lựa chọn: Cán bộ quản lý / Công nhân / Nhân viên) */}
+              {/* 3. VTCV* (3 lựa chọn: Cán bộ quản lý, Công nhân, Nhân viên) */}
               <div className="space-y-1">
                 <label className="font-black text-slate-900">
                   VTCV <span className="text-rose-600 font-bold ml-0.5">*</span>
                 </label>
                 <select
-                  required
                   value={form.proposerPosition}
                   onChange={(e) => setForm({ ...form, proposerPosition: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-bold outline-none focus:border-[#006838] bg-white"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-bold outline-none focus:border-[#006838]"
                 >
                   {VTCV_OPTIONS.map((vt) => (
                     <option key={vt} value={vt}>
@@ -604,7 +790,7 @@ export default function KaizenPublicSubmitForm({
           </div>
 
           {/* ════════════════════════════════════════════════════════════════
-              MỤC B: THÔNG TIN CẢI TIẾN
+              SECTION B: THÔNG TIN CẢI TIẾN
              ════════════════════════════════════════════════════════════════ */}
           <div className="space-y-3 pb-4 border-b border-slate-200">
             <div className="flex items-center gap-2 text-blue-600">
@@ -615,14 +801,13 @@ export default function KaizenPublicSubmitForm({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {/* Tiêu đề cải tiến* */}
+              {/* Tiêu đề cải tiến */}
               <div className="space-y-1 sm:col-span-2">
                 <label className="font-black text-slate-900">
-                  Tiêu đề cải tiến <span className="text-rose-600 font-bold ml-0.5">*</span>
+                  Tiêu đề cải tiến
                 </label>
                 <input
                   type="text"
-                  required
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
                   placeholder="VD: Tự chế gá kẹp dưỡng may giúp giảm thao tác thừa"
@@ -630,9 +815,11 @@ export default function KaizenPublicSubmitForm({
                 />
               </div>
 
-              {/* Mã giày (Bỏ bắt buộc *) */}
+              {/* mã giày */}
               <div className="space-y-1">
-                <label className="font-black text-slate-900">Mã giày</label>
+                <label className="font-black text-slate-900">
+                  mã giày
+                </label>
                 <input
                   type="text"
                   value={form.productCode}
@@ -653,7 +840,7 @@ export default function KaizenPublicSubmitForm({
                 required
                 value={form.beforeDescription}
                 onChange={(e) => setForm({ ...form, beforeDescription: e.target.value })}
-                placeholder="Mô tả chi tiết tình trạng hiện tại, lãng phí, thao tác thừa hoặc nguy cơ rủi ro khi chưa thực hiện cải tiến..."
+                placeholder="Mô tả lãng phí, thao tác thừa, nguyên nhân gây chậm tiến độ hoặc rủi ro phát hiện trước cải tiến..."
                 className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium outline-none focus:border-[#006838] resize-none"
               />
             </div>
@@ -668,25 +855,30 @@ export default function KaizenPublicSubmitForm({
                 required
                 value={form.afterSolution}
                 onChange={(e) => setForm({ ...form, afterSolution: e.target.value })}
-                placeholder="Mô tả ý tưởng sáng kiến, phương pháp thực hiện cải tiến và kết quả đạt được..."
+                placeholder="Mô tả ý tưởng, gá kẹp mới, cải tiến quy trình và kết quả hành động đạt được..."
                 className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium outline-none focus:border-[#006838] resize-none"
               />
             </div>
           </div>
 
           {/* ════════════════════════════════════════════════════════════════
-              MỤC D: HÌNH ẢNH MINH HỌA (GIỮ NGUYÊN)
+              SECTION D: HÌNH ẢNH MINH HỌA
              ════════════════════════════════════════════════════════════════ */}
-          <div className="space-y-3 pb-4">
+          <div className="space-y-3 pb-4 border-b border-slate-200">
             <div className="flex items-center gap-2 text-indigo-600">
               <IconPhoto size={18} />
               <h3 className="font-black text-slate-900 text-xs uppercase tracking-wide">
-                D. HÌNH ẢNH MINH HỌA (TÙY CHỌN)
+                D. HÌNH ẢNH MINH HỌA
               </h3>
             </div>
 
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-[11px] font-bold text-amber-900 flex items-center gap-2">
+              <span>📸</span>
+              <span>Ảnh Google Drive phải được chia sẻ "Bất kỳ ai có đường liên kết"</span>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Ảnh TRƯỚC Cải Tiến */}
+              {/* Before Image Upload / Paste Link */}
               <div className="space-y-2 p-3.5 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50">
                 <div className="flex items-center justify-between">
                   <label className="font-black text-slate-900 text-xs">Ảnh TRƯỚC Cải Tiến:</label>
@@ -694,7 +886,7 @@ export default function KaizenPublicSubmitForm({
                     <button
                       type="button"
                       onClick={() => setForm({ ...form, beforeImageUrl: "" })}
-                      className="text-[11px] text-rose-600 font-bold flex items-center gap-1 cursor-pointer"
+                      className="text-[11px] text-rose-600 font-bold flex items-center gap-1"
                     >
                       <IconTrash size={13} />
                       <span>Xóa file</span>
@@ -707,7 +899,7 @@ export default function KaizenPublicSubmitForm({
                 ) : (
                   <label className="flex flex-col items-center justify-center p-3 h-28 bg-white rounded-xl border border-slate-200 cursor-pointer text-center hover:bg-emerald-50/50">
                     <IconUpload size={22} className="text-[#006838] mb-1" />
-                    <span className="text-[11px] font-bold text-slate-900">Upload ảnh (Tối đa 10MB)</span>
+                    <span className="text-[11px] font-bold text-slate-900">Upload ảnh (Tối đa 5 ảnh / 10MB)</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -718,7 +910,7 @@ export default function KaizenPublicSubmitForm({
                 )}
 
                 <div className="space-y-1 pt-1">
-                  <label className="text-[10px] font-bold text-slate-600 block">HOẶC Dán Link Ảnh TRƯỚC:</label>
+                  <label className="text-[10px] font-bold text-slate-600 block">HOẶC Dán Link Ảnh TRƯỚC (mỗi link 1 dòng):</label>
                   <textarea
                     rows={2}
                     value={form.beforeImageLink}
@@ -729,7 +921,7 @@ export default function KaizenPublicSubmitForm({
                 </div>
               </div>
 
-              {/* Ảnh SAU Cải Tiến */}
+              {/* After Image Upload / Paste Link */}
               <div className="space-y-2 p-3.5 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50">
                 <div className="flex items-center justify-between">
                   <label className="font-black text-slate-900 text-xs">Ảnh SAU Cải Tiến:</label>
@@ -737,7 +929,7 @@ export default function KaizenPublicSubmitForm({
                     <button
                       type="button"
                       onClick={() => setForm({ ...form, afterImageUrl: "" })}
-                      className="text-[11px] text-rose-600 font-bold flex items-center gap-1 cursor-pointer"
+                      className="text-[11px] text-rose-600 font-bold flex items-center gap-1"
                     >
                       <IconTrash size={13} />
                       <span>Xóa file</span>
@@ -750,7 +942,7 @@ export default function KaizenPublicSubmitForm({
                 ) : (
                   <label className="flex flex-col items-center justify-center p-3 h-28 bg-white rounded-xl border border-slate-200 cursor-pointer text-center hover:bg-emerald-50/50">
                     <IconUpload size={22} className="text-[#006838] mb-1" />
-                    <span className="text-[11px] font-bold text-slate-900">Upload ảnh (Tối đa 10MB)</span>
+                    <span className="text-[11px] font-bold text-slate-900">Upload ảnh (Tối đa 5 ảnh / 10MB)</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -761,7 +953,7 @@ export default function KaizenPublicSubmitForm({
                 )}
 
                 <div className="space-y-1 pt-1">
-                  <label className="text-[10px] font-bold text-slate-600 block">HOẶC Dán Link Ảnh SAU:</label>
+                  <label className="text-[10px] font-bold text-slate-600 block">HOẶC Dán Link Ảnh SAU (mỗi link 1 dòng):</label>
                   <textarea
                     rows={2}
                     value={form.afterImageLink}
@@ -777,7 +969,7 @@ export default function KaizenPublicSubmitForm({
           {/* Submit Action Button */}
           <div className="pt-3 border-t border-slate-200 flex flex-col sm:flex-row gap-3 items-center justify-between">
             <p className="text-[11px] text-slate-500 font-medium italic">
-              * Hồ sơ đăng ký sẽ được tự động đưa thẳng vào Kho Lưu Trữ Cải Tiến ngay khi nhấn gửi.
+              * Vui lòng rà soát lại thông tin trước khi nhấn Gửi Đề Xuất
             </p>
 
             <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -798,7 +990,7 @@ export default function KaizenPublicSubmitForm({
                 {submitting ? (
                   <>
                     <IconRefresh className="animate-spin" size={16} />
-                    <span>ĐANG XỬ LÝ LƯU TRỮ...</span>
+                    <span>ĐANG GỬI HỒ SƠ...</span>
                   </>
                 ) : (
                   <>

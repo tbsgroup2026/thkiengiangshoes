@@ -1,0 +1,42 @@
+name: C++ Shared Core Google Test Suite
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'core-cpp/**'
+      - '.github/workflows/build-core-cpp-test.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'core-cpp/**'
+  workflow_dispatch:
+
+jobs:
+  test-core-cpp:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Build Dependencies & OpenSSL / Curl / SQLite
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake build-essential libcurl4-openssl-dev libssl-dev sqlite3 libsqlite3-dev
+
+      - name: Configure CMake
+        run: |
+          cd core-cpp
+          mkdir -p build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON
+
+      - name: Build Core C++ & Google Tests
+        run: |
+          cd core-cpp/build
+          make -j$(nproc)
+
+      - name: Run Core C++ Unit Tests
+        run: |
+          cd core-cpp/build
+          ctest --output-on-failure

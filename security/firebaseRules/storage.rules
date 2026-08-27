@@ -1,0 +1,187 @@
+// ============================================================
+// TBS II — Firebase Storage Security Rules
+// ============================================================
+// Ap dung cho TBS Mobile App (Flutter/Firebase).
+// Upload anh QR, tai lieu, avatar.
+// ============================================================
+
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ============================================================
+    // HELPER FUNCTIONS
+    // ============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserRole() {
+      return request.auth.token.role;
+    }
+
+    function getUserEmpCode() {
+      return request.auth.token.emp_code;
+    }
+
+    function isAdmin() {
+      return getUserRole() == 'ADMIN';
+    }
+
+    function isMaintenance() {
+      return getUserRole() == 'MAINTENANCE' || getUserRole() == 'ADMIN';
+    }
+
+    function isWorker() {
+      return getUserRole() == 'WORKER' || isMaintenance();
+    }
+
+    function isOffice() {
+      return getUserRole() == 'OFFICE' || getUserRole() == 'MANAGER' || isAdmin();
+    }
+
+    // Kich thuoc file toi da (bytes)
+    function maxFileSize() {
+      return 25 * 1024 * 1024;  // 25MB
+    }
+
+    function maxImageSize() {
+      return 10 * 1024 * 1024;  // 10MB cho anh
+    }
+
+    function maxAvatarSize() {
+      return 2 * 1024 * 1024;  // 2MB cho avatar
+    }
+
+    // Content type duoc phep
+    function isValidImageType() {
+      return request.resource.contentType.matches('image/(jpeg|png|webp|gif)');
+    }
+
+    function isValidDocumentType() {
+      return request.resource.contentType.matches(
+        'application/(pdf|msword|vnd.openxmlformats-officedocument.wordprocessingml.document)'
+      );
+    }
+
+    // ============================================================
+    // DEFAULT — TU CHOI MOI TRUY CAP
+    // ============================================================
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // ============================================================
+    // QR_CODE_IMAGES — anh QR code tu mobile app
+    // ============================================================
+    match /qr_images/{imageId} {
+      // Worker upload anh khi bao cao su co
+      allow create: if isAuthenticated()
+        && isWorker()
+        && isValidImageType()
+        && request.resource.size <= maxImageSize();
+
+      // Bat ky ai da xac thuc deu doc duoc (can cho incident)
+      allow read: if isAuthenticated();
+
+      // Khong cho phep update/delete (data integrity)
+      allow update, delete: if isAdmin();
+    }
+
+    // ============================================================
+    // INCIDENT_IMAGES — anh su co may
+    // ============================================================
+    match /incident_images/{imageId} {
+      allow create: if isAuthenticated()
+        && isWorker()
+        && isValidImageType()
+        && request.resource.size <= maxImageSize();
+
+      allow read: if isAuthenticated();
+
+      allow update, delete: if isAdmin();
+    }
+
+    // ============================================================
+    // AVATARS — anh dai dien nguoi dung
+    // ============================================================
+    match /avatars/{userId}/{imageId} {
+      // User upload avatar cua chinh minh
+      allow create: if isAuthenticated()
+        && request.auth.uid == userId
+        && isValidImageType()
+        && request.resource.size <= maxAvatarSize();
+
+      // Ai cung doc duoc avatar
+      allow read: if isAuthenticated();
+
+      // User update avatar cua minh, admin update moi
+      allow update: if isAuthenticated()
+        && (request.auth.uid == userId || isAdmin())
+        && isValidImageType()
+        && request.resource.size <= maxAvatarSize();
+
+      allow delete: if isAuthenticated()
+        && (request.auth.uid == userId || isAdmin());
+    }
+
+    // ============================================================
+    // DOCUMENTS — tai lieu van phong (Word/PDF)
+    // ============================================================
+    match /documents/{docId} {
+      // Office staff upload
+      allow create: if isAuthenticated()
+        && isOffice()
+        && isValidDocumentType()
+        && request.resource.size <= maxFileSize();
+
+      // Office doc duoc
+      allow read: if isAuthenticated() && isOffice();
+
+      // Manager/admin duoc update
+      allow update: if isAuthenticated()
+        && (getUserRole() == 'MANAGER' || isAdmin())
+        && request.resource.size <= maxFileSize();
+
+      allow delete: if isAdmin();
+    }
+
+    // ============================================================
+    // TEMPLATES — template tai lieu
+    // ============================================================
+    match /templates/{templateId} {
+      allow create: if isAdmin()
+        && isValidDocumentType()
+        && request.resource.size <= maxFileSize();
+
+      allow read: if isAuthenticated() && isOffice();
+
+      allow update: if isAdmin()
+        && request.resource.size <= maxFileSize();
+
+      allow delete: if isAdmin();
+    }
+
+    // ============================================================
+    // EXPORTS — file xuat bao cao (BI)
+    // ============================================================
+    match /exports/{exportId} {
+      allow create: if isAuthenticated()
+        && (getUserRole() == 'MANAGER' || isAdmin())
+        && request.resource.size <= maxFileSize();
+
+      allow read: if isAuthenticated()
+        && (getUserRole() == 'MANAGER' || isAdmin());
+
+      allow delete: if isAdmin();
+    }
+
+    // ============================================================
+    // PUBLIC — assets tinh (favicon, logo, ...)
+    // ============================================================
+    match /public/{fileName} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+  }
+}

@@ -1,0 +1,388 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Department {
+  id        String     @id @default(uuid())
+  name      String
+  code      String     @unique
+  parentId  String?
+  parent    Department? @relation("DepartmentHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Department[] @relation("DepartmentHierarchy")
+  users     User[]
+  documents Document[] @relation("DeptDocuments")
+  chatRooms ChatRoom[]
+  jobs      Job[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  permissions String     // Object mapping: { screens: string[], endpoints: string[], writeAccess: boolean }
+  users       User[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model User {
+  id                 String             @id @default(uuid())
+  email              String             @unique
+  passwordHash       String
+  fullName           String
+  phone              String?
+  departmentId       String
+  department         Department         @relation(fields: [departmentId], references: [id])
+  roleId             String
+  role               Role               @relation(fields: [roleId], references: [id])
+  phongBan           String?            // Phòng Ban hiện tại (OLD)
+  phongBanSapXep     String?            // PB Sắp Xếp/Mới (NEW - from Excel 370 employees)
+  isActive           Boolean            @default(true)
+  lastPasswordChange DateTime?
+  documentsCreated   Document[]         @relation("DocCreator")
+  documentsAssigned  Document[]         @relation("DocAssignee")
+  documentHistories  DocumentHistory[]
+  workflowLogs       WorkflowLog[]
+  reportedTickets    Ticket[]           @relation("TicketReporter")
+  claimedTickets     Ticket[]           @relation("TicketMaintainer")
+  ticketLogs         TicketLog[]
+  chatMessages       ChatMessage[]
+  deviceTokens       DeviceToken[]
+  pushNotifications  PushNotification[]
+  notificationPref   NotificationPreference?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+}
+
+model Document {
+  id                String            @id @default(uuid())
+  documentType      String            // "HR", "FINANCE", "PURCHASE", "WAREHOUSE", "PRODUCTION", "QC", "CSKH"
+  title             String
+  state             String            // "DRAFT", "SENT", "APPROVED", "REJECTED", "DELAYED"
+  creatorId         String
+  creator           User              @relation("DocCreator", fields: [creatorId], references: [id])
+  currentAssigneeId String?
+  currentAssignee   User?             @relation("DocAssignee", fields: [currentAssigneeId], references: [id])
+  departmentId      String
+  department        Department        @relation("DeptDocuments", fields: [departmentId], references: [id])
+  data              String              // Custom form fields matching the document type
+  slaDeadline       DateTime?
+  histories         DocumentHistory[]
+  workflowLogs      WorkflowLog[]
+  linksAsA          DocumentLink[]    @relation("LinkA")
+  linksAsB          DocumentLink[]    @relation("LinkB")
+  chatMessages      ChatMessage[]     @relation("DocChat")
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+model DocumentHistory {
+  id            String   @id @default(uuid())
+  documentId    String
+  document      Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  actorId       String
+  actor         User     @relation(fields: [actorId], references: [id])
+  previousState String
+  nextState     String
+  dataDiff      String?
+  comment       String?
+  createdAt     DateTime @default(now())
+}
+
+model DocumentLink {
+  id           String   @id @default(uuid())
+  documentAId  String
+  documentA    Document @relation("LinkA", fields: [documentAId], references: [id], onDelete: Cascade)
+  documentBId  String
+  documentB    Document @relation("LinkB", fields: [documentBId], references: [id], onDelete: Cascade)
+  linkageType  String   // "REFERENCE", "SUB_TASK", "DEP_WORKFLOW"
+  createdAt    DateTime @default(now())
+}
+
+model Workflow {
+  id                  String   @id @default(uuid())
+  name                String
+  triggerDocumentType String   @unique // "HR", "FINANCE", etc.
+  steps               String     // Array of steps: [{ name: string, role: string, department: string, slaHours: number }]
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model WorkflowLog {
+  id          String   @id @default(uuid())
+  documentId  String
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  stepName    String
+  executorId  String
+  executor    User     @relation(fields: [executorId], references: [id])
+  action      String   // "APPROVE", "REJECT", "FORWARD"
+  timeTaken   Int      // in seconds
+  status      String   // "COMPLETED", "EXPIRED"
+  slaBreached Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model Job {
+  id             String           @id @default(uuid())
+  title          String
+  salary         String
+  location       String
+  description    String
+  requirements   String
+  benefits       String?
+  slots          Int              @default(1)
+  category       String?          // "ke-toan", "san-xuat", "ky-thuat", "it", "hanh-chinh", etc.
+  educationLevel String?          // "khong-yeu-cau", "cao-dang", "dai-hoc", "tren-dai-hoc"
+  expiresAt      DateTime?
+  viewCount      Int              @default(0)
+  applyCount     Int              @default(0)
+  province       String?
+  contactEmail   String
+  contactPhone   String
+  status         String           @default("ACTIVE") // ACTIVE, CLOSED
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  applications   JobApplication[]
+  departmentId   String?
+  department     Department?      @relation(fields: [departmentId], references: [id])
+}
+
+model JobApplication {
+  id               String              @id @default(uuid())
+  jobId            String
+  job              Job                 @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  fullName         String
+  email            String
+  phone            String
+  coverLetter      String?
+  cvUrl            String
+  status           String              @default("SUBMITTED") // SUBMITTED, REVIEWING, INTERVIEW_SCHEDULED, ACCEPTED, REJECTED
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  interviewSchedule InterviewSchedule?
+}
+
+model InterviewSchedule {
+  id            String         @id @default(uuid())
+  applicationId String         @unique
+  application   JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  scheduledAt   DateTime
+  location      String?        // physical location or "Online - Google Meet link"
+  meetingLink   String?
+  notes         String?
+  status        String         @default("PENDING") // PENDING, CONFIRMED, RESCHEDULED, CANCELLED, COMPLETED
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Machine {
+  id        String   @id @default(uuid())
+  name      String
+  qrCode    String   @unique
+  area      String
+  status    String   // "ACTIVE", "REPAIR", "OFFLINE"
+  tickets   Ticket[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Ticket {
+  id                    String      @id @default(uuid())
+  machineId             String
+  machine               Machine     @relation(fields: [machineId], references: [id])
+  reporterId            String
+  reporter              User        @relation("TicketReporter", fields: [reporterId], references: [id])
+  maintainerId          String?
+  maintainer            User?       @relation("TicketMaintainer", fields: [maintainerId], references: [id])
+  description           String
+  imageUrl              String?
+  status                String      // "PENDING", "IN_PROGRESS", "WAITING_PARTS", "COMPLETED"
+  responseTimeSeconds   Int?
+  resolutionTimeSeconds Int?
+  logs                  TicketLog[]
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+}
+
+model TicketLog {
+  id        String   @id @default(uuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  action    String   // "REPORT", "CLAIM", "HOLD", "RESOLVE"
+  actorId   String
+  actor     User     @relation(fields: [actorId], references: [id])
+  comment   String?
+  createdAt DateTime @default(now())
+}
+
+model ChatRoom {
+  id           String        @id @default(uuid())
+  name         String
+  type         String        // "DEPARTMENT", "DOCUMENT_GROUP"
+  departmentId String?
+  department   Department?   @relation(fields: [departmentId], references: [id])
+  messages     ChatMessage[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model ChatMessage {
+  id           String    @id @default(uuid())
+  roomId       String
+  room         ChatRoom  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  senderId     String
+  sender       User      @relation(fields: [senderId], references: [id])
+  text         String
+  attachmentUrl String?
+  documentId   String?
+  document     Document? @relation("DocChat", fields: [documentId], references: [id])
+  createdAt    DateTime  @default(now())
+}
+
+model RoomBooking {
+  id              String   @id @default(uuid())
+  roomId          String
+  roomName        String
+  title           String
+  bookerName      String
+  department      String
+  bookingDate     String   // DD/MM/YYYY format
+  timeSlot        String   // "HH:MM - HH:MM" format
+  attendeesCount  Int      @default(1)
+  notes           String?
+  status          String   @default("PENDING") // PENDING, APPROVING, RECEPTIONIST_PROPOSED, CONFIRMED, CANCELLED, COMPLETED
+  approvedAt      DateTime?
+  approvedBy      String?  // User ID of receptionist who approved
+  cancelledAt     DateTime?
+  cancelledBy     String?  // User ID who cancelled
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status])
+  @@index([roomId])
+  @@index([bookingDate])
+}
+
+// ============ PUSH NOTIFICATION MODELS ============
+
+model DeviceToken {
+  id                String   @id @default(uuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Device identification
+  platform          String   // "ANDROID" | "IOS"
+  token             String   @unique  // FCM token or APNs token
+  deviceId          String?  // Unique device identifier (e.g., UUID)
+  deviceName        String?  // e.g., "iPhone 14 Pro"
+  userAgent         String?
+  
+  // Status tracking
+  isActive          Boolean  @default(true)
+  lastUsedAt        DateTime?
+  lastFailedAt      DateTime?
+  failureCount      Int      @default(0)
+  
+  // Metadata
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([platform])
+  @@index([isActive])
+  @@index([createdAt])
+}
+
+model PushNotification {
+  id                String   @id @default(uuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Content
+  title             String   // "Đơn hàng mới"
+  body              String   // "Có đơn hàng từ SKECHERS..."
+  type              String   // "ORDER" | "ALERT" | "KAIZEN" | "BOOKING" | "SLA" | "DOCUMENT" | "CHAT" | "NEWS"
+  priority          String   @default("MEDIUM")  // "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"
+  
+  // Status
+  status            String   @default("PENDING")  // "PENDING" | "SENT" | "DELIVERED" | "FAILED" | "READ"
+  
+  // Payload
+  data              String?  // JSON: { action, deepLink, orderId, etc. }
+  
+  // Timestamps
+  createdAt         DateTime @default(now())
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  readAt            DateTime?
+  
+  // Retry tracking
+  attemptCount      Int      @default(0)
+  lastAttemptAt     DateTime?
+  lastError         String?
+  
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+  @@index([priority])
+  @@index([createdAt])
+}
+
+model NotificationPreference {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Channels
+  pushEnabled       Boolean  @default(true)
+  emailEnabled      Boolean  @default(true)
+  smsEnabled        Boolean  @default(false)
+  
+  // Notification types to receive
+  channelTypes      String   @default("ORDER,ALERT,KAIZEN,BOOKING,SLA,DOCUMENT,CHAT")
+  
+  // Timing preferences
+  quietHours        String?  // JSON: { startHour: 22, endHour: 8 } - no notifications
+  
+  // Audit
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@index([userId])
+}
+
+// ============ REALTIME NOTIFICATION SYSTEM ============
+// Lưu thông báo realtime với targetUser cụ thể
+// Chi tiết xem: /api/notifications POST endpoint
+
+model Notification {
+  id                String   @id @default(uuid())
+  
+  // Content
+  title             String   // "✈️ Đề Xuất Công Tác Mới"
+  message           String   // "Cán bộ ... vừa đăng ký đi công tác..."
+  type              String   @default("INFO")  // "INFO" | "WARNING" | "SUCCESS" | "GEMBA" | "KAIZEN"
+  
+  // Target audience
+  targetUser        String   @default("ALL")  // "username" | "emp_code" | "Ban Giám Đốc" | "Lễ Tân" | "ALL"
+  
+  // Links
+  link              String?  // "/business-trip", "/rooms", etc.
+  
+  // Status
+  isRead            Boolean  @default(false)
+  
+  // Timestamps
+  createdAt         DateTime @default(now())
+  
+  @@index([targetUser])
+  @@index([type])
+  @@index([createdAt])
+}
+

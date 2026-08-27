@@ -69,10 +69,10 @@ export default function KaizenFiveStepSubmitForm({ onSuccessClose, onCancel }: K
     // Step 1: Đăng ký & Thông tin tác giả
     proposerName: "",
     proposerEmpCode: "",
-    proposerPosition: "",
-    factory: "VP2 SKECHERS",
+    proposerPosition: "Công nhân",
+    factory: "KG 1",
     department: "",
-    region: "Kiên Giang 1",
+    region: "KG 1",
     category: "PRODUCTIVITY",
     categoryLabel: "3. Tăng Năng Suất",
     topicGroup: "NĂNG SUẤT",
@@ -85,18 +85,18 @@ export default function KaizenFiveStepSubmitForm({ onSuccessClose, onCancel }: K
     timeBeforeSeconds: 0,
     timeAfterSeconds: 0,
     efficiencyValueVND: 0,
-    savedSeconds: 30,
+    savedSeconds: 0,
     beforeImageUrl: "",
     afterImageUrl: "",
     beforeVideoUrl: "",
     afterVideoUrl: "",
 
     // Step 3: Hoàn thiện hồ sơ
-    registrationType: "THI_DUA", // THI_DUA or LUU_TRU
+    registrationType: "LUU_TRU", // THI_DUA or LUU_TRU
     productGroup: "",
     productCode: "",
     quantity: 0,
-    customer: "Skechers",
+    customer: "",
     proposerMonth: new Date().getMonth() + 1,
     proposerYear: new Date().getFullYear(),
 

@@ -1,0 +1,58 @@
+# TBS II Caddy Configuration (Production)
+# Place this Caddyfile in /etc/caddy/Caddyfile or run "caddy start --config Caddyfile"
+
+# Replace tbs.yourdomain.com with your production domain name
+tbs.yourdomain.com {
+    # Automatic Let's Encrypt SSL/TLS is handled by Caddy default
+    # If using local self-signed SSL for testing, uncomment below:
+    # tls internal
+
+    # Secure HTTP Headers
+    header {
+        # Restrict loading the site within an iframe (Anti-Clickjacking)
+        X-Frame-Options "DENY"
+        # Block MIME type sniffing
+        X-Content-Type-Options "nosniff"
+        # Enable browser XSS filtering
+        X-XSS-Protection "1; mode=block"
+        # Referrer Policy
+        Referrer-Policy "strict-origin-when-cross-origin"
+        # HTTP Strict Transport Security (HSTS)
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    }
+
+    # Compress traffic
+    encode gzip zstd
+
+    # Route /api/v1 and /api requests to Express Backend
+    handle /api/* {
+        reverse_proxy localhost:8000
+    }
+    
+    # Route /health to Express Backend
+    handle /health {
+        reverse_proxy localhost:8000
+    }
+    handle /health/* {
+        reverse_proxy localhost:8000
+    }
+
+    # Route WebSockets /socket.io requests
+    handle /socket.io/* {
+        reverse_proxy localhost:8000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote}
+        }
+    }
+
+    # Block direct client requests to text, log and config files
+    @blocked_files {
+        path *.txt *.log *.env *.yml *.yaml *.bak *.conf *.ini *.sql
+    }
+    respond @blocked_files "Access Denied: Restricted file extension." 403
+
+    # Route all other frontend requests to Next.js Web Portal
+    handle {
+        reverse_proxy localhost:3000
+    }
+}

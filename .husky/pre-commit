@@ -1,0 +1,4 @@
+#!/bin/sh
+# TBS II — Husky Pre-Commit Hook
+# Portable version — committed to repo, works after `npm run prepare` / `husky install`
+node scripts/security-scan.js

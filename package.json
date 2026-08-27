@@ -1,39 +1,18 @@
 {
-  "name": "tbskiengiangshoeskaizen",
-  "version": "0.1.0",
-  "private": true,
+  "name": "tbs2-platform",
+  "version": "1.0.0",
+  "description": "TBS II Production & Workflow Management Platform Monorepo",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint",
-    "predeploy": "npm run build",
-    "deploy": "npm run build && npx wrangler deploy"
-  },
-  "dependencies": {
-    "@tabler/icons-react": "^3.45.0",
-    "bcryptjs": "^2.4.3",
-    "chart.js": "^4.5.1",
-    "docxtemplater": "^3.50.0",
-    "jose": "^5.9.6",
-    "lucide-react": "^0.469.0",
-    "motion": "^11.11.0",
-    "next": "16.2.11",
-    "pdf-lib": "^1.17.1",
-    "pizzip": "^3.1.7",
-    "react": "19.2.4",
-    "react-chartjs-2": "^5.3.1",
-    "react-dom": "19.2.4",
-    "xlsx": "^0.18.5"
+    "build": "cd web && npm install && npm run build",
+    "deploy": "cd web && npx wrangler deploy",
+    "install-all": "npm install --prefix backend && npm install --prefix web",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:web": "npm run dev --prefix web",
+    "dev": "npx --yes concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix web\"",
+    "security-scan": "node scripts/security-scan.js",
+    "security-scan:all": "node scripts/security-scan.js --all"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.11",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "husky": "^8.0.3"
   }
 }

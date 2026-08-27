@@ -1,0 +1,212 @@
+[
+  {
+    "row": 4,
+    "msnv": "200405004",
+    "name": "PHẠM MINH TÙNG",
+    "phong_ban_hien_tai": "ĐH-QT CHUỖI",
+    "pb_sap_xep": "ĐH-QT CH"
+  },
+  {
+    "row": 5,
+    "msnv": "102104041",
+    "name": "TRẦN THỊ NGỌC",
+    "phong_ban_hien_tai": "KẾ TOÁN",
+    "pb_sap_xep": "KẾ TOÁN"
+  },
+  {
+    "row": 6,
+    "msnv": "101507015",
+    "name": "VŨ THỊ TRANG",
+    "phong_ban_hien_tai": "KẾ TOÁN",
+    "pb_sap_xep": "KTTH"
+  },
+  {
+    "row": 7,
+    "msnv": "311505293",
+    "name": "PHAN KHÁNH DƯƠNG",
+    "phong_ban_hien_tai": "KẾ TOÁN",
+    "pb_sap_xep": "KTTH"
+  },
+  {
+    "row": 8,
+    "msnv": "311706451",
+    "name": "TRƯƠNG HUYỀN TRANG",
+    "phong_ban_hien_tai": "KẾ TOÁN",
+    "pb_sap_xep": "KTTH"
+  },
+  {
+    "row": 9,
+    "msnv": "102105038",
+    "name": "TRẦN THỊ NHƯ Ý",
+    "phong_ban_hien_tai": "QT-KS",
+    "pb_sap_xep": "QT & KS"
+  },
+  {
+    "row": 10,
+    "msnv": "202205001",
+    "name": "NGUYỄN ĐỖ PHƯỚC TIẾN",
+    "phong_ban_hien_tai": "ĐMVT - COST",
+    "pb_sap_xep": "QT & KS"
+  },
+  {
+    "row": 11,
+    "msnv": "222102020",
+    "name": "DƯ THỊ THANH TÌNH",
+    "phong_ban_hien_tai": "QT NNL",
+    "pb_sap_xep": "ĐHVP"
+  },
+  {
+    "row": 12,
+    "msnv": "211206004",
+    "name": "NGUYỄN VĂN TÌNH",
+    "phong_ban_hien_tai": "QT NNL",
+    "pb_sap_xep": "QTNNL"
+  },
+  {
+    "row": 13,
+    "msnv": "201606014",
+    "name": "TRẦN THỊ HỒNG NHUNG",
+    "phong_ban_hien_tai": "QT - PT NNL",
+    "pb_sap_xep": "QTNNL"
+  },
+  {
+    "row": 14,
+    "msnv": "210612005",
+    "name": "NGUYỄN THỊ HẰNG",
+    "phong_ban_hien_tai": "ĐM & PB NGÂN SÁCH TL",
+    "pb_sap_xep": "QTNNL"
+  },
+  {
+    "row": 15,
+    "msnv": "202404001",
+    "name": "NGUYỄN NGỌC TUYẾN",
+    "phong_ban_hien_tai": "TUYỂN DỤNG - ĐÀO TẠO",
+    "pb_sap_xep": "QTNNL"
+  },
+  {
+    "row": 16,
+    "msnv": "201906023",
+    "name": "ĐẶNG THỊ THANH LỊCH",
+    "phong_ban_hien_tai": "NSTL CS",
+    "pb_sap_xep": "QTNNL"
+  },
+  {
+    "row": 17,
+    "msnv": "202206011",
+    "name": "TRẦN THỊ BÍCH TRÂM",
+    "phong_ban_hien_tai": "HÀNH CHÍNH-LỄ TÂN",
+    "pb_sap_xep": "HC-QT"
+  },
+  {
+    "row": 18,
+    "msnv": "202203002",
+    "name": "NGUYỄN TIẾN HẠNH",
+    "phong_ban_hien_tai": "AUDIT & DT KLLĐ",
+    "pb_sap_xep": "AUDIT"
+  },
+  {
+    "row": 19,
+    "msnv": "202409009",
+    "name": "NGUYỄN KIM NGUYÊN",
+    "phong_ban_hien_tai": "HÀNH CHÍNH-LỄ TÂN",
+    "pb_sap_xep": "HC-QT"
+  },
+  {
+    "row": 20,
+    "msnv": "202010004",
+    "name": "NGUYỄN MINH HÙNG",
+    "phong_ban_hien_tai": "HÀNH CHÍNH-LỄ TÂN",
+    "pb_sap_xep": "HC-QT"
+  },
+  {
+    "row": 21,
+    "msnv": "201507005",
+    "name": "LÊ QUỐC HUY",
+    "phong_ban_hien_tai": "VSCN - TẠP VỤ",
+    "pb_sap_xep": "HC-QT"
+  },
+  {
+    "row": 22,
+    "msnv": "202011012",
+    "name": "VŨ NHƯ CƯỜNG",
+    "phong_ban_hien_tai": "NHÀ ĂN",
+    "pb_sap_xep": "BẾP TRƯỞNG"
+  },
+  {
+    "row": 23,
+    "msnv": "202105008",
+    "name": "NGUYỄN DUY PHƯƠNG",
+    "phong_ban_hien_tai": "LÁI XE",
+    "pb_sap_xep": "LÁI XE"
+  },
+  {
+    "row": 24,
+    "msnv": "201508005",
+    "name": "PHAN VĂN HỒNG",
+    "phong_ban_hien_tai": "LÁI XE",
+    "pb_sap_xep": "LÁI XE"
+  },
+  {
+    "row": 25,
+    "msnv": "102008002",
+    "name": "HUỲNH THẾ VINH",
+    "phong_ban_hien_tai": "LÁI XE",
+    "pb_sap_xep": "LÁI XE"
+  },
+  {
+    "row": 26,
+    "msnv": "201605005",
+    "name": "VÕ QUÍ KỲ",
+    "phong_ban_hien_tai": "LÁI XE",
+    "pb_sap_xep": "LÁI XE"
+  },
+  {
+    "row": 27,
+    "msnv": "202209001",
+    "name": "PHAN NGỌC TUẤN",
+    "phong_ban_hien_tai": "LÁI XE",
+    "pb_sap_xep": "LÁI XE"
+  },
+  {
+    "row": 28,
+    "msnv": "201410001",
+    "name": "NGUYỄN HOÀNG TÂN",
+    "phong_ban_hien_tai": "BẢO TRÌ ĐIỆN - ĐIỆN LẠNH",
+    "pb_sap_xep": "ME"
+  },
+  {
+    "row": 29,
+    "msnv": "202205023",
+    "name": "NGUYỄN VĂN CƯỜNG",
+    "phong_ban_hien_tai": "BẢO TRÌ ĐIỆN - ĐIỆN LẠNH",
+    "pb_sap_xep": "ME"
+  },
+  {
+    "row": 30,
+    "msnv": "201509001",
+    "name": "HOÀNG THỊ NỤ",
+    "phong_ban_hien_tai": "VSCN - TẠP VỤ",
+    "pb_sap_xep": "VSCN/CSCX"
+  },
+  {
+    "row": 31,
+    "msnv": "201412013",
+    "name": "BÙI THỊ SINH",
+    "phong_ban_hien_tai": "VSCN - TẠP VỤ",
+    "pb_sap_xep": "VSCN/CSCX"
+  },
+  {
+    "row": 32,
+    "msnv": "202205016",
+    "name": "ĐẶNG THỊ PHIN",
+    "phong_ban_hien_tai": "VSCN - TẠP VỤ",
+    "pb_sap_xep": "VSCN/CSCX"
+  },
+  {
+    "row": 33,
+    "msnv": "202506001",
+    "name": "LÊ THỊ THÚY",
+    "phong_ban_hien_tai": "VSCN - TẠP VỤ",
+    "pb_sap_xep": "VSCN/CSCX"
+  }
+]

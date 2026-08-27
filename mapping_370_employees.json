@@ -1,0 +1,2592 @@
+[
+  {
+    "msnv": "200405004",
+    "name": "PHẠM MINH TÙNG",
+    "department_new": "",
+    "phong_ban_new": "ĐH-QT",
+    "row": 4
+  },
+  {
+    "msnv": "102104041",
+    "name": "TRẦN THỊ NGỌC",
+    "department_new": "",
+    "phong_ban_new": "ĐH-QT",
+    "row": 5
+  },
+  {
+    "msnv": "101507015",
+    "name": "VŨ THỊ TRANG",
+    "department_new": "",
+    "phong_ban_new": "ĐH-QT",
+    "row": 6
+  },
+  {
+    "msnv": "311505293",
+    "name": "PHAN KHÁNH DƯƠNG",
+    "department_new": "",
+    "phong_ban_new": "ĐH-QT",
+    "row": 7
+  },
+  {
+    "msnv": "311706451",
+    "name": "TRƯƠNG HUYỀN TRANG",
+    "department_new": "",
+    "phong_ban_new": "ĐH-QT",
+    "row": 8
+  },
+  {
+    "msnv": "102105038",
+    "name": "TRẦN THỊ NHƯ Ý",
+    "department_new": "",
+    "phong_ban_new": "ĐH-QT",
+    "row": 9
+  },
+  {
+    "msnv": "202205001",
+    "name": "NGUYỄN ĐỖ PHƯỚC TIẾN",
+    "department_new": "",
+    "phong_ban_new": "ĐH-QT",
+    "row": 10
+  },
+  {
+    "msnv": "222102020",
+    "name": "DƯ THỊ THANH TÌNH",
+    "department_new": "",
+    "phong_ban_new": "NHÂN SỰ-HC",
+    "row": 11
+  },
+  {
+    "msnv": "211206004",
+    "name": "NGUYỄN VĂN TÌNH",
+    "department_new": "",
+    "phong_ban_new": "NHÂN SỰ-HC",
+    "row": 12
+  },
+  {
+    "msnv": "201606014",
+    "name": "TRẦN THỊ HỒNG NHUNG",
+    "department_new": "",
+    "phong_ban_new": "NHÂN SỰ-HC",
+    "row": 13
+  },
+  {
+    "msnv": "210612005",
+    "name": "NGUYỄN THỊ HẰNG",
+    "department_new": "",
+    "phong_ban_new": "NHÂN SỰ-HC",
+    "row": 14
+  },
+  {
+    "msnv": "202404001",
+    "name": "NGUYỄN NGỌC TUYẾN",
+    "department_new": "",
+    "phong_ban_new": "NHÂN SỰ-HC",
+    "row": 15
+  },
+  {
+    "msnv": "201906023",
+    "name": "ĐẶNG THỊ THANH LỊCH",
+    "department_new": "",
+    "phong_ban_new": "NHÂN SỰ-HC",
+    "row": 16
+  },
+  {
+    "msnv": "202206011",
+    "name": "TRẦN THỊ BÍCH TRÂM",
+    "department_new": "",
+    "phong_ban_new": "NHÂN SỰ-HC",
+    "row": 17
+  },
+  {
+    "msnv": "202203002",
+    "name": "NGUYỄN TIẾN HẠNH",
+    "department_new": "",
+    "phong_ban_new": "NHÂN SỰ-HC",
+    "row": 18
+  },
+  {
+    "msnv": "202409009",
+    "name": "NGUYỄN KIM NGUYÊN",
+    "department_new": "",
+    "phong_ban_new": "NHÂN SỰ-HC",
+    "row": 19
+  },
+  {
+    "msnv": "202010004",
+    "name": "NGUYỄN MINH HÙNG",
+    "department_new": "",
+    "phong_ban_new": "NHÂN SỰ-HC",
+    "row": 20
+  },
+  {
+    "msnv": "201507005",
+    "name": "LÊ QUỐC HUY",
+    "department_new": "",
+    "phong_ban_new": "NHÂN SỰ-HC",
+    "row": 21
+  },
+  {
+    "msnv": "202011012",
+    "name": "VŨ NHƯ CƯỜNG",
+    "department_new": "",
+    "phong_ban_new": "NHÂN SỰ-HC",
+    "row": 22
+  },
+  {
+    "msnv": "202105008",
+    "name": "NGUYỄN DUY PHƯƠNG",
+    "department_new": "",
+    "phong_ban_new": "NHÂN SỰ-HC",
+    "row": 23
+  },
+  {
+    "msnv": "201508005",
+    "name": "PHAN VĂN HỒNG",
+    "department_new": "",
+    "phong_ban_new": "NHÂN SỰ-HC",
+    "row": 24
+  },
+  {
+    "msnv": "102008002",
+    "name": "HUỲNH THẾ VINH",
+    "department_new": "",
+    "phong_ban_new": "NHÂN SỰ-HC",
+    "row": 25
+  },
+  {
+    "msnv": "201605005",
+    "name": "VÕ QUÍ KỲ",
+    "department_new": "",
+    "phong_ban_new": "NHÂN SỰ-HC",
+    "row": 26
+  },
+  {
+    "msnv": "202209001",
+    "name": "PHAN NGỌC TUẤN",
+    "department_new": "",
+    "phong_ban_new": "NHÂN SỰ-HC",
+    "row": 27
+  },
+  {
+    "msnv": "201410001",
+    "name": "NGUYỄN HOÀNG TÂN",
+    "department_new": "",
+    "phong_ban_new": "NHÂN SỰ-HC",
+    "row": 28
+  },
+  {
+    "msnv": "202205023",
+    "name": "NGUYỄN VĂN CƯỜNG",
+    "department_new": "",
+    "phong_ban_new": "NHÂN SỰ-HC",
+    "row": 29
+  },
+  {
+    "msnv": "201509001",
+    "name": "HOÀNG THỊ NỤ",
+    "department_new": "",
+    "phong_ban_new": "NHÂN SỰ-HC",
+    "row": 30
+  },
+  {
+    "msnv": "201412013",
+    "name": "BÙI THỊ SINH",
+    "department_new": "",
+    "phong_ban_new": "NHÂN SỰ-HC",
+    "row": 31
+  },
+  {
+    "msnv": "202205016",
+    "name": "ĐẶNG THỊ PHIN",
+    "department_new": "",
+    "phong_ban_new": "NHÂN SỰ-HC",
+    "row": 32
+  },
+  {
+    "msnv": "202506001",
+    "name": "LÊ THỊ THÚY",
+    "department_new": "",
+    "phong_ban_new": "NHÂN SỰ-HC",
+    "row": 33
+  },
+  {
+    "msnv": "202303015",
+    "name": "TRẦN THỊ HẢI",
+    "department_new": "",
+    "phong_ban_new": "NHÂN SỰ-HC",
+    "row": 34
+  },
+  {
+    "msnv": "222410036",
+    "name": "NGUYỄN TẤN TRIỆU",
+    "department_new": "",
+    "phong_ban_new": "NHÂN SỰ-HC",
+    "row": 35
+  },
+  {
+    "msnv": "211612014",
+    "name": "NGUYỄN THỊ BẮC",
+    "department_new": "",
+    "phong_ban_new": "NHÂN SỰ-HC",
+    "row": 36
+  },
+  {
+    "msnv": "202608001",
+    "name": "PHẠM NGUYỄN ANH HUY",
+    "department_new": "",
+    "phong_ban_new": "NHÂN SỰ-HC",
+    "row": 37
+  },
+  {
+    "msnv": "202608002",
+    "name": "TRẦN NGỌC HUY",
+    "department_new": "",
+    "phong_ban_new": "NHÂN SỰ-HC",
+    "row": 38
+  },
+  {
+    "msnv": "101403004",
+    "name": "NGUYỄN HỮU ĐẠT",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 39
+  },
+  {
+    "msnv": "200712001",
+    "name": "LÝ TUẤN HOA",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 40
+  },
+  {
+    "msnv": "201508012",
+    "name": "HUỲNH THỊ KIỀU OANH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 41
+  },
+  {
+    "msnv": "200511003",
+    "name": "NGUYỄN ĐÌNH ĐỨC",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 42
+  },
+  {
+    "msnv": "200706002",
+    "name": "HUỲNH THỊ KIM ANH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 43
+  },
+  {
+    "msnv": "201905001",
+    "name": "NGUYỄN VĨ PHONG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 44
+  },
+  {
+    "msnv": "202104001",
+    "name": "VŨ PHƯƠNG BẢO VY",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 45
+  },
+  {
+    "msnv": "201404004",
+    "name": "HÀ HOA BAN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 46
+  },
+  {
+    "msnv": "201702068",
+    "name": "VÕ THANH THIẾU",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 47
+  },
+  {
+    "msnv": "201009005",
+    "name": "NGUYỄN NGỌC ĐIỆP",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 48
+  },
+  {
+    "msnv": "201509006",
+    "name": "PHẠM MINH HIẾU",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 49
+  },
+  {
+    "msnv": "201408010",
+    "name": "NGUYỄN ĐÌNH NGHIỆP",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 50
+  },
+  {
+    "msnv": "201506024",
+    "name": "BÙI VĂN MẠNH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 51
+  },
+  {
+    "msnv": "201508013",
+    "name": "DƯƠNG THỊ HƯƠNG HUYỀN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 52
+  },
+  {
+    "msnv": "201907001",
+    "name": "TRƯƠNG VĂN TRỌNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 53
+  },
+  {
+    "msnv": "202103031",
+    "name": "NGUYỄN HỒNG THI",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 54
+  },
+  {
+    "msnv": "202103038",
+    "name": "VĂN THỊ TRINH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 55
+  },
+  {
+    "msnv": "202112003",
+    "name": "LÊ KHẢI",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 56
+  },
+  {
+    "msnv": "102408036",
+    "name": "PHẠM TUYẾT NHUNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 57
+  },
+  {
+    "msnv": "201904009",
+    "name": "TRƯƠNG THÁI THỤY",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 58
+  },
+  {
+    "msnv": "201512003",
+    "name": "NGUYỄN THỊ KIỀU OANH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 59
+  },
+  {
+    "msnv": "201811010",
+    "name": "ĐỒNG THỊ HỒNG NHUNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 60
+  },
+  {
+    "msnv": "201508004",
+    "name": "NGUYỄN THỊ KIM CƯƠNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 61
+  },
+  {
+    "msnv": "201907011",
+    "name": "TRẦN THỊ HUỆ",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 62
+  },
+  {
+    "msnv": "202507001",
+    "name": "BÙI ĐỨC HUY",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 63
+  },
+  {
+    "msnv": "200811003",
+    "name": "NGUYỄN THỊ LINH HIỀN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 64
+  },
+  {
+    "msnv": "202006001",
+    "name": "THÂN THỊ MỸ LINH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 65
+  },
+  {
+    "msnv": "201508014",
+    "name": "VÕ THỊ NHÀN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 66
+  },
+  {
+    "msnv": "201703032",
+    "name": "NGUYỄN THỊ NGỌC NGHIỆP",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 67
+  },
+  {
+    "msnv": "102211004",
+    "name": "ĐINH CHÂU NGỌC HIẾU",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 68
+  },
+  {
+    "msnv": "201810004",
+    "name": "VŨ NGUYỄN KHÁNH NGUYÊN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 69
+  },
+  {
+    "msnv": "202006004",
+    "name": "NGUYỄN THỊ MAI",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 70
+  },
+  {
+    "msnv": "201504006",
+    "name": "NGUYỄN NGỌC CHỌN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 71
+  },
+  {
+    "msnv": "101507016",
+    "name": "ĐINH BẢO THỐNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 72
+  },
+  {
+    "msnv": "202103034",
+    "name": "NGUYỄN THỊ NGỌC SƯƠNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 73
+  },
+  {
+    "msnv": "200511004",
+    "name": "ĐOÀN THỊ TRUYỀN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 74
+  },
+  {
+    "msnv": "202103039",
+    "name": "VŨ THỊ PHƯỢNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 75
+  },
+  {
+    "msnv": "201711001",
+    "name": "MAI THANH HÙNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 76
+  },
+  {
+    "msnv": "201904007",
+    "name": "NGUYỄN THỊ DIỄM SƯƠNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 77
+  },
+  {
+    "msnv": "201904001",
+    "name": "TRƯƠNG THỊ YẾN TRINH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 78
+  },
+  {
+    "msnv": "201203003",
+    "name": "BÙI SƠN KHÁNH LONG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 79
+  },
+  {
+    "msnv": "201504004",
+    "name": "TRƯƠNG THANH PHỤNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 80
+  },
+  {
+    "msnv": "201702007",
+    "name": "NGUYỄN NGỌC VŨ",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 81
+  },
+  {
+    "msnv": "201606015",
+    "name": "HỒ THỊ TUYẾT MỸ",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 82
+  },
+  {
+    "msnv": "202112001",
+    "name": "PHẠM PHI HÙNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 83
+  },
+  {
+    "msnv": "201507021",
+    "name": "TẠ CÔNG DANH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 84
+  },
+  {
+    "msnv": "201507019",
+    "name": "VÕ THỊ THÙY LINH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 85
+  },
+  {
+    "msnv": "202105007",
+    "name": "TÔ THỊ HẠNH VI",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 86
+  },
+  {
+    "msnv": "202006005",
+    "name": "NGUYỄN HỮU QUYỀN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 87
+  },
+  {
+    "msnv": "100303008",
+    "name": "NGUYỄN THỊ THANH THẢO",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 88
+  },
+  {
+    "msnv": "101702022",
+    "name": "TRẦN THỊ CẨM VÂN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 89
+  },
+  {
+    "msnv": "200603019",
+    "name": "HUỲNH ĐỨC THIỆN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 90
+  },
+  {
+    "msnv": "202409003",
+    "name": "NGUYỄN TẤN PHÁT",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 91
+  },
+  {
+    "msnv": "209603003",
+    "name": "NGUYỄN ĐĂNG ĐÔN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 92
+  },
+  {
+    "msnv": "209307006",
+    "name": "NGUYỄN NGỌC CHÂU",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 93
+  },
+  {
+    "msnv": "100402003",
+    "name": "NGUYỄN THỊ PHƯƠNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 94
+  },
+  {
+    "msnv": "201412009",
+    "name": "CAO THANH TÙNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 95
+  },
+  {
+    "msnv": "201806008",
+    "name": "NGUYỄN THỊ MINH PHƯƠNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 96
+  },
+  {
+    "msnv": "202403005",
+    "name": "TRƯƠNG QUỐC BẢO",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 97
+  },
+  {
+    "msnv": "202303011",
+    "name": "PHẠM MINH HIẾU",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 98
+  },
+  {
+    "msnv": "202206005",
+    "name": "NGUYỄN HOÀNG ĐỨC ANH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 99
+  },
+  {
+    "msnv": "201604010",
+    "name": "BÙI THANH CƯỜNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 100
+  },
+  {
+    "msnv": "202511001",
+    "name": "PHẠM DUY KHÁNH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 101
+  },
+  {
+    "msnv": "201408004",
+    "name": "TRẦN NGỌC NHÂN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 102
+  },
+  {
+    "msnv": "201505008",
+    "name": "HOÀNG VĂN HẢI",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 103
+  },
+  {
+    "msnv": "202604008",
+    "name": "TRẦN THỊ ÁNH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 104
+  },
+  {
+    "msnv": "202503005",
+    "name": "BÙI VĂN HUÂN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 105
+  },
+  {
+    "msnv": "202304004",
+    "name": "TRƯƠNG THỊ THANH HUỆ",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 106
+  },
+  {
+    "msnv": "202506006",
+    "name": "HUỲNH NHẬT KHOA",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 107
+  },
+  {
+    "msnv": "202508001",
+    "name": "LÊ THỊ DUNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 108
+  },
+  {
+    "msnv": "202508005",
+    "name": "LÊ THỊ XOAN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 109
+  },
+  {
+    "msnv": "202509002",
+    "name": "NGUYỄN TRUNG HIẾU",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 110
+  },
+  {
+    "msnv": "202409007",
+    "name": "ĐOÀN THỊ KIM ANH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 111
+  },
+  {
+    "msnv": "209609002",
+    "name": "TRỊNH THỊ THU TUYẾN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 112
+  },
+  {
+    "msnv": "200403002",
+    "name": "PHẠM THỊ VÂN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 113
+  },
+  {
+    "msnv": "200704002",
+    "name": "PHẠM THỊ HUYNH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 114
+  },
+  {
+    "msnv": "100302002",
+    "name": "NGUYỄN THỊ NGUYỆT NGA",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 115
+  },
+  {
+    "msnv": "200505003",
+    "name": "TRẦN THỊ NGÂN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 116
+  },
+  {
+    "msnv": "101106003",
+    "name": "KIỀU THỊ NĂM",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 117
+  },
+  {
+    "msnv": "200405005",
+    "name": "BÙI THỊ LOAN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 118
+  },
+  {
+    "msnv": "209911005",
+    "name": "LÊ THỊ LIÊN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 119
+  },
+  {
+    "msnv": "201405017",
+    "name": "NGUYỄN VĂN LỢI",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 120
+  },
+  {
+    "msnv": "209704001",
+    "name": "ĐÀO THỊ XUÂN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 121
+  },
+  {
+    "msnv": "200212002",
+    "name": "NGUYỄN THỊ THANH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 122
+  },
+  {
+    "msnv": "202605002",
+    "name": "LÊ THỊ MỸ HIẾU",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 123
+  },
+  {
+    "msnv": "209706001",
+    "name": "VŨ THỊ THÍA",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 124
+  },
+  {
+    "msnv": "201003003",
+    "name": "NGÔ THỊ HÀ",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 125
+  },
+  {
+    "msnv": "201305004",
+    "name": "LÊ VĂN NHUẬN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 126
+  },
+  {
+    "msnv": "209703003",
+    "name": "PHẠM THỊ LIÊN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 127
+  },
+  {
+    "msnv": "209307009",
+    "name": "PHAN THỊ THANH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 128
+  },
+  {
+    "msnv": "209803002",
+    "name": "BÙI THỊ HUYỀN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 129
+  },
+  {
+    "msnv": "201204005",
+    "name": "LÊ THỊ GIANG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 130
+  },
+  {
+    "msnv": "209307005",
+    "name": "NGUYỄN THỊ HẠNH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 131
+  },
+  {
+    "msnv": "201905005",
+    "name": "NGUYỄN THẾ BẢO",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 132
+  },
+  {
+    "msnv": "202207005",
+    "name": "NGUYỄN THỊ BÍCH NGỌC",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 133
+  },
+  {
+    "msnv": "201105002",
+    "name": "NGUYỄN ĐÌNH BÌNH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 134
+  },
+  {
+    "msnv": "209911006",
+    "name": "NGUYỄN THỊ LIỆU",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 135
+  },
+  {
+    "msnv": "209502001",
+    "name": "NGUYỄN THỊ BÌNH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 136
+  },
+  {
+    "msnv": "202506005",
+    "name": "LÊ THỊ HOẢNH EM",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 137
+  },
+  {
+    "msnv": "202509004",
+    "name": "TRẦN VĂN HẬN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 138
+  },
+  {
+    "msnv": "209504001",
+    "name": "ĐỖ THỊ THU HIỀN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 139
+  },
+  {
+    "msnv": "202408001",
+    "name": "NGUYỄN ĐẶNG QUỲNH HƯƠNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 140
+  },
+  {
+    "msnv": "202506004",
+    "name": "CHÂU THỊ CHÚC KHOA",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 141
+  },
+  {
+    "msnv": "202509001",
+    "name": "PHAN THỊ KIM ANH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 142
+  },
+  {
+    "msnv": "202509003",
+    "name": "VY THỊ CƯƠNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 143
+  },
+  {
+    "msnv": "202603002",
+    "name": "NGUYỄN THỊ BÉ TÝ",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 144
+  },
+  {
+    "msnv": "209707001",
+    "name": "PHẠM THỊ NHIÊN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 145
+  },
+  {
+    "msnv": "201809010",
+    "name": "NGUYỄN THỊ CẨM THÚY",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 146
+  },
+  {
+    "msnv": "201307011",
+    "name": "PHẠM THỊ LIỄU",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 147
+  },
+  {
+    "msnv": "201201012",
+    "name": "BÙI THỊ THÙY TRANG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 148
+  },
+  {
+    "msnv": "222407084",
+    "name": "NGUYỄN THỊ MINH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 149
+  },
+  {
+    "msnv": "202608004",
+    "name": "TRẦN CHÍ BẢO",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 150
+  },
+  {
+    "msnv": "200511001",
+    "name": "HOÀNG VĂN THUẦN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 151
+  },
+  {
+    "msnv": "200811002",
+    "name": "LƯƠNG THỊ SÂM",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 152
+  },
+  {
+    "msnv": "201709003",
+    "name": "NGUYỄN THỊ THUYỀN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 153
+  },
+  {
+    "msnv": "201410002",
+    "name": "LÊ HỒNG THẮM",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 154
+  },
+  {
+    "msnv": "202408004",
+    "name": "LÝ THỊ DÀNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 155
+  },
+  {
+    "msnv": "202603001",
+    "name": "HOÀNG THỊ NỤ",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 156
+  },
+  {
+    "msnv": "202604003",
+    "name": "DƯƠNG THỊ YẾN NGHI",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 157
+  },
+  {
+    "msnv": "201803128",
+    "name": "NGUYỄN THỊ DUNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 158
+  },
+  {
+    "msnv": "201803120",
+    "name": "NGUYỄN THỊ NĂM",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 159
+  },
+  {
+    "msnv": "219810001",
+    "name": "NGUYỄN VĂN TÌNH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 160
+  },
+  {
+    "msnv": "201707011",
+    "name": "LÊ DỮNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 161
+  },
+  {
+    "msnv": "119611002",
+    "name": "PHAN TIẾN TRUNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 162
+  },
+  {
+    "msnv": "200204001",
+    "name": "NGUYỄN QUANG MINH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 163
+  },
+  {
+    "msnv": "200505001",
+    "name": "ĐỖ VĂN MINH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 164
+  },
+  {
+    "msnv": "202206008",
+    "name": "VÕ CHÍ THẢO",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 165
+  },
+  {
+    "msnv": "201205001",
+    "name": "KHIẾU HỮU ĐÃN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 166
+  },
+  {
+    "msnv": "201707012",
+    "name": "NGUYỄN VĂN TỶ ANH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 167
+  },
+  {
+    "msnv": "209910001",
+    "name": "VŨ THỊ THỦY",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 168
+  },
+  {
+    "msnv": "200305003",
+    "name": "NGUYỄN THỊ ÁI",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 169
+  },
+  {
+    "msnv": "211407006",
+    "name": "PHẠM THỊ CHUNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 170
+  },
+  {
+    "msnv": "212104043",
+    "name": "LÊ ĐÌNH ĐẠT",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 171
+  },
+  {
+    "msnv": "219909001",
+    "name": "NGUYỄN ĐÌNH THẠO",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 172
+  },
+  {
+    "msnv": "222309022",
+    "name": "THẠCH THỊ GIA PHỤNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 173
+  },
+  {
+    "msnv": "222603015",
+    "name": "BÙI THỊ HỒNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 174
+  },
+  {
+    "msnv": "222407026",
+    "name": "VŨ THỊ HUỆ",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 175
+  },
+  {
+    "msnv": "212111001",
+    "name": "TRẦN PHƯƠNG NAM",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 176
+  },
+  {
+    "msnv": "211507155",
+    "name": "NGUYỄN HOÀI HÂN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 177
+  },
+  {
+    "msnv": "222507002",
+    "name": "TRƯƠNG MINH LUÂN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 178
+  },
+  {
+    "msnv": "211803198",
+    "name": "NGUYỄN THỊ MAI",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 179
+  },
+  {
+    "msnv": "212103051",
+    "name": "THÔNG THỊ XUÂN DỌT",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 180
+  },
+  {
+    "msnv": "222604011",
+    "name": "TRẦN VĂN TOÀN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 181
+  },
+  {
+    "msnv": "222603046",
+    "name": "VŨ THU HẰNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 182
+  },
+  {
+    "msnv": "211402041",
+    "name": "NGUYỄN THỊ TUYẾT NHUNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 183
+  },
+  {
+    "msnv": "222603027",
+    "name": "ĐỖ THỊ HOÀN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 184
+  },
+  {
+    "msnv": "222603029",
+    "name": "BÙI THỊ PHONG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 185
+  },
+  {
+    "msnv": "222603028",
+    "name": "CAO THỊ QUỲNH NGA",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 186
+  },
+  {
+    "msnv": "222408116",
+    "name": "PHẠM THỊ HIỀN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 187
+  },
+  {
+    "msnv": "222507003",
+    "name": "LÊ ĐÌNH THUẬN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 188
+  },
+  {
+    "msnv": "210906001",
+    "name": "NGUYỄN THỊ KHÁNH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 189
+  },
+  {
+    "msnv": "211509064",
+    "name": "PHẠM THỊ HOÀN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 190
+  },
+  {
+    "msnv": "222202064",
+    "name": "NGUYỄN VĂN PHÚC",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 191
+  },
+  {
+    "msnv": "211503299",
+    "name": "HỒ HỮU THÔNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 192
+  },
+  {
+    "msnv": "211704395",
+    "name": "TRƯƠNG MINH HẢI",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 193
+  },
+  {
+    "msnv": "222302387",
+    "name": "LÊ THỊ NGA",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 194
+  },
+  {
+    "msnv": "210405001",
+    "name": "NGUYỄN THỊ LÀNH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 195
+  },
+  {
+    "msnv": "222504063",
+    "name": "BÙI THỊ MINH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 196
+  },
+  {
+    "msnv": "222603024",
+    "name": "MANG THANH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 197
+  },
+  {
+    "msnv": "202607001",
+    "name": "BÙI THỊ LỆ",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 198
+  },
+  {
+    "msnv": "222503062",
+    "name": "NGUYỄN THỊ HUỆ",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 199
+  },
+  {
+    "msnv": "202608005",
+    "name": "PHẠM DANH CƯỜNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 200
+  },
+  {
+    "msnv": "211308005",
+    "name": "LÊ THỊ HỒNG THU",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 201
+  },
+  {
+    "msnv": "222203298",
+    "name": "PHAN VĂN LÃM",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 202
+  },
+  {
+    "msnv": "222603003",
+    "name": "NGUYỄN THỊ NHINH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 203
+  },
+  {
+    "msnv": "221803179",
+    "name": "THẠCH CHANH SÔ QUI",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 204
+  },
+  {
+    "msnv": "222504006",
+    "name": "TRẦN VĂN TUÂN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 205
+  },
+  {
+    "msnv": "219307005",
+    "name": "NGUYỄN ĐÌNH QUẢNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 206
+  },
+  {
+    "msnv": "201308002",
+    "name": "NGUYỄN DANH MƯỜI",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 207
+  },
+  {
+    "msnv": "209606001",
+    "name": "NGUYỄN XUÂN THẠO",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 208
+  },
+  {
+    "msnv": "200004001",
+    "name": "LÊ ĐẠI DƯƠNG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 209
+  },
+  {
+    "msnv": "201907017",
+    "name": "PHAN THỊ THẢO",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 210
+  },
+  {
+    "msnv": "201509004",
+    "name": "HOÀNG QUỐC LUẬT",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 211
+  },
+  {
+    "msnv": "202204014",
+    "name": "PHẠM THỊ XUÂN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 212
+  },
+  {
+    "msnv": "202003012",
+    "name": "TRẦN THỊ NGHĨA",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 213
+  },
+  {
+    "msnv": "201706004",
+    "name": "PHÙNG VĂN QUANG",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 214
+  },
+  {
+    "msnv": "201903054",
+    "name": "NGUYỄN THỊ HỒNG GẤM",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 215
+  },
+  {
+    "msnv": "202303016",
+    "name": "ĐỖ THỊ NGỌC BÍCH",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 216
+  },
+  {
+    "msnv": "201009004",
+    "name": "LÊ BÍCH NGỌC",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 217
+  },
+  {
+    "msnv": "119307023",
+    "name": "NGUYỄN THỊ THU TRÚC",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 218
+  },
+  {
+    "msnv": "202409010",
+    "name": "ĐÀO THỊ LUYÊN",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 219
+  },
+  {
+    "msnv": "202503003",
+    "name": "LÊ VĂN THUYẾT",
+    "department_new": "",
+    "phong_ban_new": "KD PTSP",
+    "row": 220
+  },
+  {
+    "msnv": "201604020",
+    "name": "PHẠM THỊ DƯƠNG",
+    "department_new": "",
+    "phong_ban_new": "QLCL & LAB",
+    "row": 221
+  },
+  {
+    "msnv": "201606013",
+    "name": "NGUYỄN VĂN HIỀN",
+    "department_new": "",
+    "phong_ban_new": "QLCL & LAB",
+    "row": 222
+  },
+  {
+    "msnv": "201806014",
+    "name": "THIỀU THỊ THÙY NHƯ",
+    "department_new": "",
+    "phong_ban_new": "QLCL & LAB",
+    "row": 223
+  },
+  {
+    "msnv": "200506001",
+    "name": "PHAN THỊ DIỄM HƯƠNG",
+    "department_new": "",
+    "phong_ban_new": "QLCL & LAB",
+    "row": 224
+  },
+  {
+    "msnv": "200603001",
+    "name": "LÊ THỊ LỆ HẰNG",
+    "department_new": "",
+    "phong_ban_new": "QLCL & LAB",
+    "row": 225
+  },
+  {
+    "msnv": "202103018",
+    "name": "TRIỆU ÁI NHÂN",
+    "department_new": "",
+    "phong_ban_new": "QLCL & LAB",
+    "row": 226
+  },
+  {
+    "msnv": "201503001",
+    "name": "HOÀNG THỊ DUNG",
+    "department_new": "",
+    "phong_ban_new": "QLCL & LAB",
+    "row": 227
+  },
+  {
+    "msnv": "200208001",
+    "name": "TRẦN THỊ GẨM",
+    "department_new": "",
+    "phong_ban_new": "QLCL & LAB",
+    "row": 228
+  },
+  {
+    "msnv": "209609001",
+    "name": "VŨ THỊ LÁNG",
+    "department_new": "",
+    "phong_ban_new": "QLCL & LAB",
+    "row": 229
+  },
+  {
+    "msnv": "201205003",
+    "name": "LÊ THỊ KIM LIÊN",
+    "department_new": "",
+    "phong_ban_new": "QLCL & LAB",
+    "row": 230
+  },
+  {
+    "msnv": "201809001",
+    "name": "PHẠM VĂN HIỆP",
+    "department_new": "",
+    "phong_ban_new": "QLCL & LAB",
+    "row": 231
+  },
+  {
+    "msnv": "202405004",
+    "name": "PHẠM THANH TRÚC",
+    "department_new": "",
+    "phong_ban_new": "QLCL & LAB",
+    "row": 232
+  },
+  {
+    "msnv": "201306001",
+    "name": "TRẦN HOÀNG THẢO",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 233
+  },
+  {
+    "msnv": "200510003",
+    "name": "DƯƠNG HOÀNG VŨ",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 234
+  },
+  {
+    "msnv": "402102068",
+    "name": "ĐỖ TUẤN LINH",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 235
+  },
+  {
+    "msnv": "200403001",
+    "name": "NGUYỄN HOÀNG VŨ",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 236
+  },
+  {
+    "msnv": "201503013",
+    "name": "TRẦN THỊ ANH THI",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 237
+  },
+  {
+    "msnv": "200508002",
+    "name": "DƯƠNG MINH TÚ",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 238
+  },
+  {
+    "msnv": "201611019",
+    "name": "BÙI THỊ HƯƠNG",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 239
+  },
+  {
+    "msnv": "202409001",
+    "name": "NGUYỄN MINH CHÁNH",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 240
+  },
+  {
+    "msnv": "202107001",
+    "name": "PHAN THỊ THU HOÀI",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 241
+  },
+  {
+    "msnv": "202104017",
+    "name": "NGUYỄN NGỌC NIÊN",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 242
+  },
+  {
+    "msnv": "201806023",
+    "name": "NGUYỄN MINH THUẬN",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 243
+  },
+  {
+    "msnv": "202405001",
+    "name": "ĐỖ GIA TRÌNH",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 244
+  },
+  {
+    "msnv": "202103033",
+    "name": "LÊ THỊ THU HƯƠNG",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 245
+  },
+  {
+    "msnv": "201607003",
+    "name": "NGUYỄN THỊ KIM LOAN",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 246
+  },
+  {
+    "msnv": "201611015",
+    "name": "TRẦN SƠN TRUYỀN",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 247
+  },
+  {
+    "msnv": "201507008",
+    "name": "NGUYỄN THỊ THU HIỀN",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 248
+  },
+  {
+    "msnv": "201510021",
+    "name": "NGUYỄN THỊ BÍCH VÂN",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 249
+  },
+  {
+    "msnv": "201711015",
+    "name": "LÊ ANH PHONG",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 250
+  },
+  {
+    "msnv": "201004004",
+    "name": "NGUYỄN THỊ THƯƠNG",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 251
+  },
+  {
+    "msnv": "210608004",
+    "name": "NGUYỄN ĐỨC TRỌNG",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 252
+  },
+  {
+    "msnv": "201507010",
+    "name": "PHẠM THỊ KIM THOA",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 253
+  },
+  {
+    "msnv": "201806009",
+    "name": "LÊ THỊ THANH NGA",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 254
+  },
+  {
+    "msnv": "201507029",
+    "name": "ĐÀO THỊ SEN",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 255
+  },
+  {
+    "msnv": "201507018",
+    "name": "PHAN THỊ NGỌC BÍCH",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 256
+  },
+  {
+    "msnv": "201711002",
+    "name": "LÊ HUY TUẤN",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 257
+  },
+  {
+    "msnv": "200209002",
+    "name": "NGUYỄN THỊ KIM LUYẾN",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 258
+  },
+  {
+    "msnv": "202103030",
+    "name": "NGUYỄN THỊ THANH HOA",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 259
+  },
+  {
+    "msnv": "202003014",
+    "name": "NGUYỄN THỊ MỸ DUYÊN",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 260
+  },
+  {
+    "msnv": "201908011",
+    "name": "HÀ THỊ TUYẾT NHUNG",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 261
+  },
+  {
+    "msnv": "202604001",
+    "name": "ĐỖ THỊ THÚY VINH",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 262
+  },
+  {
+    "msnv": "201908005",
+    "name": "NGUYỄN THỊ DIỆN",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 263
+  },
+  {
+    "msnv": "201611018",
+    "name": "PHẠM THỊ MỸ TRƯỜNG",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 264
+  },
+  {
+    "msnv": "200212001",
+    "name": "PHAN THỊ THANH TÂM",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 265
+  },
+  {
+    "msnv": "219704001",
+    "name": "NGUYỄN VĂN AN",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 266
+  },
+  {
+    "msnv": "211704149",
+    "name": "PHAN HƯƠNG GIANG",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 267
+  },
+  {
+    "msnv": "210612003",
+    "name": "TRẦN XUÂN HẠNH",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 268
+  },
+  {
+    "msnv": "200304002",
+    "name": "HOÀNG THỊ HÒA",
+    "department_new": "",
+    "phong_ban_new": "CN-PPH & CI",
+    "row": 269
+  },
+  {
+    "msnv": "119504004",
+    "name": "BÙI ĐÌNH TRUNG",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 270
+  },
+  {
+    "msnv": "211008007",
+    "name": "NGUYỄN THÙY DƯƠNG",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 271
+  },
+  {
+    "msnv": "210608003",
+    "name": "VŨ THÀNH LÊ",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 272
+  },
+  {
+    "msnv": "210210001",
+    "name": "LƯU VĂN DIỆN",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 273
+  },
+  {
+    "msnv": "211302034",
+    "name": "ĐẶNG CAO MINH QUỐC",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 274
+  },
+  {
+    "msnv": "219307001",
+    "name": "VŨ THỊ BÍCH THỦY",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 275
+  },
+  {
+    "msnv": "201611001",
+    "name": "TRƯƠNG THỊ NGỌC HƯƠNG",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 276
+  },
+  {
+    "msnv": "202409005",
+    "name": "PHẠM THỊ THU HƯƠNG",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 277
+  },
+  {
+    "msnv": "202409004",
+    "name": "NGUYỄN NGỌC MY MY",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 278
+  },
+  {
+    "msnv": "202605003",
+    "name": "TẠ NGUYỄN TRUNG THÀNH",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 279
+  },
+  {
+    "msnv": "200105001",
+    "name": "LÊ VĂN PHƯƠNG",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 280
+  },
+  {
+    "msnv": "201403017",
+    "name": "LÝ HUỲNH DUY",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 281
+  },
+  {
+    "msnv": "202003011",
+    "name": "NGUYỄN THỊ MINH HẢI",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 282
+  },
+  {
+    "msnv": "202203004",
+    "name": "TRẦN THẢO TRÀ",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 283
+  },
+  {
+    "msnv": "202405002",
+    "name": "ĐỖ THỊ NGỌC MỸ",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 284
+  },
+  {
+    "msnv": "202406002",
+    "name": "MAI NGỌC UYÊN NHI",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 285
+  },
+  {
+    "msnv": "200603002",
+    "name": "MAI ĐĂNG TRÍ",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 286
+  },
+  {
+    "msnv": "202406001",
+    "name": "TRẦN HƯƠNG LY",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 287
+  },
+  {
+    "msnv": "101605022",
+    "name": "CHÂU THẾ TÂN",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 288
+  },
+  {
+    "msnv": "201203008",
+    "name": "NGUYỄN TIẾN TUẤN",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 289
+  },
+  {
+    "msnv": "201108004",
+    "name": "LÊ THỊ MỘNG THÚY",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 290
+  },
+  {
+    "msnv": "202404002",
+    "name": "TRẦN THỊ HOÀI MY",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 291
+  },
+  {
+    "msnv": "201903056",
+    "name": "VÕ THỊ THANH HOA",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 292
+  },
+  {
+    "msnv": "201804021",
+    "name": "NGUYỄN THỊ HỒNG PHẤN",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 293
+  },
+  {
+    "msnv": "201911002",
+    "name": "MAI MINH HIẾU",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 294
+  },
+  {
+    "msnv": "202203003",
+    "name": "TÔ THỊ ÁNH NGUYỆT",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 295
+  },
+  {
+    "msnv": "200007002",
+    "name": "LÊ THỊ THÚY LOAN",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 296
+  },
+  {
+    "msnv": "211405042",
+    "name": "NGUYỄN THỊ SEN",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 297
+  },
+  {
+    "msnv": "202412001",
+    "name": "PHẠM THỊ MAI THƯƠNG",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 298
+  },
+  {
+    "msnv": "202604010",
+    "name": "HỒ ĐÀO VIỄN XUÂN",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 299
+  },
+  {
+    "msnv": "202605001",
+    "name": "PHẠM THỊ THU HÀ",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 300
+  },
+  {
+    "msnv": "200209001",
+    "name": "NGUYỄN HOÀNG MINH",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 301
+  },
+  {
+    "msnv": "202303001",
+    "name": "NGUYỄN HỮU LỄ",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 302
+  },
+  {
+    "msnv": "201806022",
+    "name": "NGUYỄN THỊ MINH NGUYỆT",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 303
+  },
+  {
+    "msnv": "201903047",
+    "name": "TRẦM THỊ NGỌC LINH",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 304
+  },
+  {
+    "msnv": "201903011",
+    "name": "NGUYỄN PHƯỚC LỘC",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 305
+  },
+  {
+    "msnv": "201908022",
+    "name": "ĐỖ THỊ MỸ DIỄM",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 306
+  },
+  {
+    "msnv": "201604005",
+    "name": "MAI THỊ HÒA",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 307
+  },
+  {
+    "msnv": "201510012",
+    "name": "NGUYỄN THỊ ÚT",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 308
+  },
+  {
+    "msnv": "200810003",
+    "name": "LÊ THỊ QUYÊN",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 309
+  },
+  {
+    "msnv": "201104001",
+    "name": "NGUYỄN THỊ MINH PHƯƠNG",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 310
+  },
+  {
+    "msnv": "200711001",
+    "name": "PHÙNG THỊ DUYÊN",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 311
+  },
+  {
+    "msnv": "201304002",
+    "name": "NGÔ NGỌC THANH",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 312
+  },
+  {
+    "msnv": "202201002",
+    "name": "TRẦN THỊ HOÀI THƯƠNG",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 313
+  },
+  {
+    "msnv": "202608003",
+    "name": "NGÔ HÀ THANH AN",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 314
+  },
+  {
+    "msnv": "201704015",
+    "name": "HỒ VĂN THỔI",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 315
+  },
+  {
+    "msnv": "209911007",
+    "name": "NGÔ MINH PHỤNG",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 316
+  },
+  {
+    "msnv": "201504010",
+    "name": "TRẦN XUÂN ANH",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 317
+  },
+  {
+    "msnv": "200304001",
+    "name": "TRẦN THỊ THU DINH",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 318
+  },
+  {
+    "msnv": "202204001",
+    "name": "NGUYỄN THỊ THẮM",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 319
+  },
+  {
+    "msnv": "201409002",
+    "name": "PHẠM THỊ MINH",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 320
+  },
+  {
+    "msnv": "209307002",
+    "name": "NGUYỄN THỊ THÀNH",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 321
+  },
+  {
+    "msnv": "201403019",
+    "name": "PHẠM THỊ LANH",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 322
+  },
+  {
+    "msnv": "202206015",
+    "name": "NGUYỄN ĐÌNH ĐẠI",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 323
+  },
+  {
+    "msnv": "201803003",
+    "name": "NGUYỄN CHÍ CÔNG",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 324
+  },
+  {
+    "msnv": "202203011",
+    "name": "BÙI THÚY KIỀU",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 325
+  },
+  {
+    "msnv": "202203020",
+    "name": "NGUYỄN TRẦN MINH TUẤN",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 326
+  },
+  {
+    "msnv": "202406009",
+    "name": "TRẦN VĂN TƯỞNG",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 327
+  },
+  {
+    "msnv": "201903023",
+    "name": "HOÀNG VĂN HẢI",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 328
+  },
+  {
+    "msnv": "202407002",
+    "name": "LÊ VĂN NHỊN",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 329
+  },
+  {
+    "msnv": "201905033",
+    "name": "NGUYỄN VĂN HẠNH",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 330
+  },
+  {
+    "msnv": "202604009",
+    "name": "LÝ THANH NAM",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 331
+  },
+  {
+    "msnv": "201709020",
+    "name": "LÊ THỊ THẢO",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 332
+  },
+  {
+    "msnv": "202202029",
+    "name": "HOÀNG THỊ THANH TUYÊN",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 333
+  },
+  {
+    "msnv": "201803012",
+    "name": "PHẠM THỊ VÂN ANH",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 334
+  },
+  {
+    "msnv": "230012122",
+    "name": "LÊ THỊ HUYỀN",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 335
+  },
+  {
+    "msnv": "202604007",
+    "name": "HUỲNH THỊ HỒNG MUỘI",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 336
+  },
+  {
+    "msnv": "202009001",
+    "name": "TRƯƠNG THỊ CHÂM",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 337
+  },
+  {
+    "msnv": "202406006",
+    "name": "HÀ THỊ CẨM YẾN",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 338
+  },
+  {
+    "msnv": "202204013",
+    "name": "NGUYỄN NGỌC THƠ",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 339
+  },
+  {
+    "msnv": "201702015",
+    "name": "DƯƠNG THỊ MAI",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 340
+  },
+  {
+    "msnv": "201905034",
+    "name": "NGUYỄN THỊ KIM HOA",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 341
+  },
+  {
+    "msnv": "201603021",
+    "name": "PHẠM THỊ HUYỀN",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 342
+  },
+  {
+    "msnv": "201511005",
+    "name": "HUỲNH THỊ KIM TÂM",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 343
+  },
+  {
+    "msnv": "201511003",
+    "name": "ĐỖ THỊ NGA",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 344
+  },
+  {
+    "msnv": "201704024",
+    "name": "NGUYỄN THỊ NGA",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 345
+  },
+  {
+    "msnv": "201803135",
+    "name": "MÔNG THỊ LIÊN",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 346
+  },
+  {
+    "msnv": "230802070",
+    "name": "PHẠM THỊ TUYẾT",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 347
+  },
+  {
+    "msnv": "202604011",
+    "name": "LÝ THỊ HUỆ",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 348
+  },
+  {
+    "msnv": "202101001",
+    "name": "TRƯƠNG THỊ THẢO",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 349
+  },
+  {
+    "msnv": "201903024",
+    "name": "VI VĂN THÊM",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 350
+  },
+  {
+    "msnv": "201410012",
+    "name": "HUỲNH NGỌC TOÀN",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 351
+  },
+  {
+    "msnv": "201604021",
+    "name": "ĐỖ THỊ HOÀN",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 352
+  },
+  {
+    "msnv": "201402032",
+    "name": "TRẦN THỊ HƯỜNG",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 353
+  },
+  {
+    "msnv": "200605001",
+    "name": "PHẠM VĂN THÀNH",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 354
+  },
+  {
+    "msnv": "201411009",
+    "name": "LÊ THỊ THÙY DUNG",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 355
+  },
+  {
+    "msnv": "201503033",
+    "name": "NGUYỄN QUANG TRỰC",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 356
+  },
+  {
+    "msnv": "201804002",
+    "name": "TRẦN QUANG ĐĂNG",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 357
+  },
+  {
+    "msnv": "201111001",
+    "name": "NGUYỄN HỮU NHÂN",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 358
+  },
+  {
+    "msnv": "200307002",
+    "name": "KHỔNG VĂN BÌNH",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 359
+  },
+  {
+    "msnv": "200610002",
+    "name": "CAO XUÂN HÒE",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 360
+  },
+  {
+    "msnv": "202010008",
+    "name": "ĐẶNG HỮU DƯ",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 361
+  },
+  {
+    "msnv": "201503030",
+    "name": "TRẦN NGUYỄN NHẬT HOÀNG",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 362
+  },
+  {
+    "msnv": "309410001",
+    "name": "TRƯƠNG THỊ THỦY",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 363
+  },
+  {
+    "msnv": "200406001",
+    "name": "TRƯƠNG THỊ TUYẾT NHUNG",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 364
+  },
+  {
+    "msnv": "200405003",
+    "name": "PHẠM HỒNG NGÂN",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 365
+  },
+  {
+    "msnv": "201807004",
+    "name": "NGUYỄN THỊ HUYỀN TRÂN",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 366
+  },
+  {
+    "msnv": "202409008",
+    "name": "NGUYỄN THỊ PHƯƠNG",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 367
+  },
+  {
+    "msnv": "201408008",
+    "name": "NGUYỄN TRỌNG ÚC",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 368
+  },
+  {
+    "msnv": "201806016",
+    "name": "DƯƠNG VĂN TÚ",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 369
+  },
+  {
+    "msnv": "201807003",
+    "name": "TRẦN QUANG TUẤN",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 370
+  },
+  {
+    "msnv": "202103019",
+    "name": "SẦM VĂN ĐỨC",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 371
+  },
+  {
+    "msnv": "201910003",
+    "name": "TRẦN QUANG HẬU",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 372
+  },
+  {
+    "msnv": "201805008",
+    "name": "HOÀNG VĂN BIÊN",
+    "department_new": "",
+    "phong_ban_new": "KHCB-TTPP",
+    "row": 373
+  }
+]

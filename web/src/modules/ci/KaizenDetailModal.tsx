@@ -215,15 +215,15 @@ export default function KaizenDetailModal({
             {/* Hàng 1: VTCV | NHÓM SP/DV */}
             <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-0.5">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">VTCV</span>
-              <span className="text-xs font-extrabold text-slate-900 block truncate" title={vtcv}>
-                {vtcv}
+              <span className="text-xs font-extrabold text-slate-900 block truncate" title={vtcv || "---"}>
+                {vtcv || "---"}
               </span>
             </div>
 
             <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-0.5">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">NHÓM SP/DV</span>
-              <span className="text-xs font-extrabold text-slate-900 block truncate" title={prodGroup}>
-                {prodGroup}
+              <span className="text-xs font-extrabold text-slate-900 block truncate" title={prodGroup || "---"}>
+                {prodGroup || "---"}
               </span>
             </div>
 
@@ -238,22 +238,22 @@ export default function KaizenDetailModal({
             <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-0.5">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">NGÀY ĐĂNG</span>
               <span className="text-xs font-extrabold text-slate-900 block">
-                {new Date(proposal.created_at).toLocaleDateString("vi-VN")}
+                {proposal.created_at ? new Date(proposal.created_at).toLocaleDateString("vi-VN") : new Date().toLocaleDateString("vi-VN")}
               </span>
             </div>
 
-            {/* Hàng 3: NHÂN SỰ ĐỀ XUẤT (Nhiều tên nối bằng & -> wrap 2 dòng) | KHÁCH HÀNG */}
+            {/* Hàng 3: NHÂN SỰ ĐỀ XUẤT | KHÁCH HÀNG */}
             <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-0.5">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">NHÂN SỰ ĐỀ XUẤT</span>
               <span className="text-xs font-extrabold text-slate-900 block leading-tight break-words">
-                {proposal.proposer_emp_code}
+                {proposal.proposer_emp_code || "---"}
               </span>
             </div>
 
             <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-0.5">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">KHÁCH HÀNG</span>
               <span className="text-xs font-extrabold text-slate-900 block">
-                {cust}
+                {cust || "---"}
               </span>
             </div>
           </div>

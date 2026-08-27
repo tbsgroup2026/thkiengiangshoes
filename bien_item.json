@@ -1,0 +1,20 @@
+{
+  "id": "emp_370_370",
+  "empCode": "201805008",
+  "name": "HOÀNG VĂN BIÊN",
+  "email": "201805008@tbsgroup.vn",
+  "phone": "0988 000 000",
+  "title": "CN",
+  "department": "THỰC THI CUNG ỨNG",
+  "roleCode": "CBCNV",
+  "status": "ACTIVE",
+  "ngayVao": "2018-05-07",
+  "vtcvHienTai": "CN",
+  "phongBanHienTai": "THỰC THI CUNG ỨNG",
+  "vtcvSap": "CN",
+  "vtcvSapXep": "CN",
+  "phongBanSapXep": "ĐB CƯ VT",
+  "boPhoanMoi": "TTPP",
+  "phongBanMoi": "KHCB-TTPP",
+  "ghiChu": ""
+}

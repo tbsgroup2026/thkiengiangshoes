@@ -1,0 +1,297 @@
+// ============================================================
+// TBS II — Firestore Security Rules (Least Privilege)
+// ============================================================
+// Nguyen tac: mac dinh DENY, chi ALLOW nhung gi can thiet.
+// Ap dung cho TBS Mobile App (Flutter/Firebase).
+// ============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================================
+    // HELPER FUNCTIONS
+    // ============================================================
+
+    // Kiem tra user da dang nhap
+    function isAuthenticated() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    // Lay role tu custom claims
+    function getUserRole() {
+      return request.auth.token.role;
+    }
+
+    // Lay department tu custom claims
+    function getUserDepartment() {
+      return request.auth.token.department;
+    }
+
+    // Lay branch_id tu custom claims
+    function getUserBranch() {
+      return request.auth.token.branch_id;
+    }
+
+    // Lay emp_code tu custom claims
+    function getUserEmpCode() {
+      return request.auth.token.emp_code;
+    }
+
+    // Kiem tra role
+    function isAdmin() {
+      return getUserRole() == 'ADMIN';
+    }
+
+    function isManager() {
+      return getUserRole() == 'MANAGER' || isAdmin();
+    }
+
+    function isOffice() {
+      return getUserRole() == 'OFFICE' || isManager();
+    }
+
+    function isMaintenance() {
+      return getUserRole() == 'MAINTENANCE' || isOffice();
+    }
+
+    function isWorker() {
+      return getUserRole() == 'WORKER' || isMaintenance();
+    }
+
+    // Kiem tra cung department
+    function isSameDepartment(docDepartment) {
+      return getUserDepartment() == docDepartment || isAdmin();
+    }
+
+    // Kiem tra cung branch
+    function isSameBranch(docBranchId) {
+      return getUserBranch() == docBranchId || isAdmin();
+    }
+
+    // Data chua bi xoa (soft delete)
+    function isNotDeleted() {
+      return !('deleted_at' in resource.data) || resource.data.deleted_at == null;
+    }
+
+    // ============================================================
+    // DEFAULT — TU CHOI MOI TRUY CAP
+    // ============================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ============================================================
+    // users — CHI ADMIN VA MANAGER CO QUYEN DOC
+    // ============================================================
+    match /users/{userId} {
+      // User doc duoc thong tin cua chinh minh
+      allow read: if isAuthenticated()
+        && (request.auth.uid == userId || isManager());
+
+      // Chi admin duoc ghi
+      allow write: if isAdmin();
+
+      // Khong cho phep doc danh sach (list)
+      allow list: if isManager();
+    }
+
+    // ============================================================
+    // hr_records — CHI HR/ADMIN/MANAGER
+    // ============================================================
+    match /hr_records/{docId} {
+      allow read: if isAuthenticated()
+        && isManager()
+        && isNotDeleted();
+
+      allow write: if isAdmin();
+
+      allow list: if isManager();
+    }
+
+    // ============================================================
+    // accounting — CHI ACCOUNTING/ADMIN
+    // ============================================================
+    match /accounting/{docId} {
+      allow read: if isAuthenticated()
+        && (isAdmin() || getUserRole() == 'MANAGER')
+        && isNotDeleted();
+
+      allow write: if isAdmin();
+
+      allow list: if isAdmin() || getUserRole() == 'MANAGER';
+    }
+
+    // ============================================================
+    // qc_reports — QC + MAINTENANCE + ADMIN + MANAGER
+    // ============================================================
+    match /qc_reports/{docId} {
+      allow read: if isAuthenticated()
+        && (isMaintenance() || getUserRole() == 'OFFICE')
+        && isNotDeleted();
+
+      allow create: if isAuthenticated()
+        && isMaintenance();
+
+      allow update, delete: if isAdmin();
+
+      allow list: if isMaintenance();
+    }
+
+    // ============================================================
+    // machines — DOC BOI MOI NGUOI, GHI BOI MAINTENANCE
+    // ============================================================
+    match /machines/{machineId} {
+      allow read: if isAuthenticated() && isWorker();
+      allow write: if isAuthenticated() && isMaintenance();
+      allow list: if isAuthenticated() && isWorker();
+    }
+
+    // ============================================================
+    // incidents (su co) — WORKER BAO CAO, MAINTENANCE XU LY
+    // ============================================================
+    match /incidents/{incidentId} {
+      // Worker doc incident cua chinh minh, maintenance doc duoc giao
+      allow read: if isAuthenticated()
+        && (
+          resource.data.reported_by == getUserEmpCode()
+          || resource.data.assigned_to == getUserEmpCode()
+          || isManager()
+        )
+        && isNotDeleted();
+
+      // Worker tao incident, maintenance update
+      allow create: if isAuthenticated()
+        && isWorker()
+        && request.resource.data.reported_by == getUserEmpCode()
+        && request.resource.data.status == 'OPEN';
+
+      allow update: if isAuthenticated()
+        && (
+          // Maintenance duoc cap nhat incident duoc giao
+          (getUserRole() == 'MAINTENANCE'
+            && resource.data.assigned_to == getUserEmpCode())
+          // Admin/Manager duoc cap nhat moi incident
+          || isManager()
+        );
+
+      allow delete: if isAdmin();
+
+      allow list: if isAuthenticated() && isWorker();
+    }
+
+    // ============================================================
+    // maintenance_tickets — MAINTENANCE + ADMIN
+    // ============================================================
+    match /maintenance_tickets/{ticketId} {
+      allow read: if isAuthenticated()
+        && (
+          resource.data.assigned_to == getUserEmpCode()
+          || isManager()
+        );
+
+      allow create: if isAuthenticated() && isMaintenance();
+      allow update: if isAuthenticated() && isMaintenance();
+      allow delete: if isAdmin();
+
+      allow list: if isAuthenticated() && isMaintenance();
+    }
+
+    // ============================================================
+    // documents — OFFICE + MANAGER + ADMIN
+    // ============================================================
+    match /documents/{docId} {
+      allow read: if isAuthenticated()
+        && isOffice()
+        && isNotDeleted();
+
+      allow create: if isAuthenticated()
+        && isOffice();
+
+      allow update: if isAuthenticated()
+        && (isManager() || isAdmin());
+
+      allow delete: if isAdmin();
+
+      allow list: if isAuthenticated() && isOffice();
+    }
+
+    // ============================================================
+    // chat_messages — NGUOI GUI VA NGUOI NHAN
+    // ============================================================
+    match /chat_messages/{messageId} {
+      allow read: if isAuthenticated()
+        && (
+          resource.data.sender_id == request.auth.uid
+          || resource.data.recipient_id == request.auth.uid
+          || resource.data.room_id in getResourceData().member_rooms
+        );
+
+      allow create: if isAuthenticated()
+        && request.resource.data.sender_id == request.auth.uid
+        && request.resource.data.timestamp == request.time;
+
+      // Khong cho update/delete message da gui (chat integrity)
+      allow update, delete: if false;
+
+      allow list: if isAuthenticated();
+    }
+
+    // ============================================================
+    // chatbot_history — CHI USER TUONG UNG
+    // ============================================================
+    match /chatbot_history/{sessionId} {
+      allow read: if isAuthenticated()
+        && resource.data.user_id == request.auth.uid;
+
+      allow create: if isAuthenticated()
+        && request.resource.data.user_id == request.auth.uid;
+
+      allow update: if isAuthenticated()
+        && resource.data.user_id == request.auth.uid;
+
+      allow delete: if isAdmin();
+
+      allow list: if false;  // Khong list — chi doc session cua minh
+    }
+
+    // ============================================================
+    // notifications — CHI USER TUONG UNG
+    // ============================================================
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated()
+        && resource.data.user_id == request.auth.uid;
+
+      allow create: if false;  // Chi backend tao notification
+
+      allow update: if isAuthenticated()
+        && resource.data.user_id == request.auth.uid
+        // Chi duoc update read status
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['read_at']);
+
+      allow delete: if isAuthenticated()
+        && resource.data.user_id == request.auth.uid;
+
+      allow list: if false;
+    }
+
+    // ============================================================
+    // audit_logs — CHI ADMIN
+    // ============================================================
+    match /audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;  // Chi backend ghi audit log
+      allow list: if isAdmin();
+    }
+
+    // ============================================================
+    // app_config — PUBLIC READ (config khong nhay cam)
+    // ============================================================
+    match /app_config/{configId} {
+      allow read: if true;  // Config public (versions, feature flags, ...)
+      allow write: if isAdmin();
+      allow list: if true;
+    }
+  }
+}

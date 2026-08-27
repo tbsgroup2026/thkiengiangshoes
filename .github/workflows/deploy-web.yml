@@ -1,0 +1,54 @@
+# GitHub Actions workflow for deploying Web to Cloudflare Workers
+name: Deploy Web to Cloudflare Workers
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'web/**'
+      - '.github/workflows/deploy-web.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: 'web/package-lock.json'
+
+      - name: Install Web Dependencies
+        run: |
+          cd web
+          npm ci
+
+      - name: Build Next.js Application
+        run: |
+          cd web
+          npm run build
+
+      - name: Deploy to Cloudflare Workers
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "================================================================================="
+            echo "⚠️ CLOUDFLARE_API_TOKEN CHƯA ĐƯỢC CẤP TRONG GITHUB SECRETS"
+            echo "---------------------------------------------------------------------------------"
+            echo "Để tự động deploy lên Cloudflare mới, vui lòng truy cập:"
+            echo "👉 https://github.com/tbsgroup2026/vpchuoiskechers/settings/secrets/actions"
+            echo "Tạo 2 Secrets:"
+            echo "  1. CLOUDFLARE_API_TOKEN"
+            echo "  2. CLOUDFLARE_ACCOUNT_ID"
+            echo "================================================================================="
+            exit 0
+          fi
+          cd web
+          npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

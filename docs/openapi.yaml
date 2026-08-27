@@ -1,0 +1,133 @@
+openapi: 3.0.3
+info:
+  title: TBS II Production & Maintenance Management System API
+  description: OpenAPI Specification for TBS II Multi-platform Factory Operations, SLA Calculation Engine, and BI Dashboard.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local Development API Server
+
+paths:
+  /auth/login:
+    post:
+      summary: User Login
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [emp_code, password]
+              properties:
+                emp_code: { type: string, example: "CN001" }
+                password: { type: string, example: "123456" }
+      responses:
+        '200':
+          description: Successful authentication, returns JWT access token and user profile
+  
+  /machines:
+    get:
+      summary: List Factory Machines
+      tags: [Machines]
+      parameters:
+        - name: zone_id
+          in: query
+          schema: { type: integer }
+        - name: status
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: List of machines with QR code base64 data and current status
+
+  /machines/{id}/status:
+    put:
+      summary: Update Machine Operational Status
+      tags: [Machines]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: status_str
+          in: query
+          required: true
+          schema: { type: string, enum: [OPERATING, WARNING, DOWN, MAINTENANCE] }
+      responses:
+        '200':
+          description: Machine status updated and broadcast via WebSocket
+
+  /incidents:
+    get:
+      summary: List Incidents
+      tags: [Incidents]
+      responses:
+        '200':
+          description: List of reported incidents with SLA metrics and downtime
+    post:
+      summary: Report New Machine Incident (Worker)
+      tags: [Incidents]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [machine_id, description]
+              properties:
+                machine_id: { type: integer, example: 3 }
+                priority: { type: string, example: "CRITICAL" }
+                description: { type: string, example: "Máy cắt dừng đột ngột" }
+      responses:
+        '200':
+          description: Incident created, machine status set to DOWN, real-time alert broadcast
+
+  /incidents/{id}/accept:
+    post:
+      summary: Accept Maintenance Task (Starts SLA Stopwatch)
+      tags: [Incidents]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Task accepted, accepted_at timestamp recorded, response time calculated
+
+  /incidents/{id}/resolve:
+    post:
+      summary: Confirm Repair Complete (Maintenance)
+      tags: [Incidents]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [incident_id, root_cause, resolution_notes]
+              properties:
+                incident_id: { type: integer }
+                root_cause: { type: string }
+                resolution_notes: { type: string }
+                spare_parts_used: { type: string }
+      responses:
+        '200':
+          description: Incident resolved, downtime calculated, machine restored to OPERATING
+
+  /analytics/bi:
+    get:
+      summary: Get BI Analytics Data
+      tags: [Analytics & BI]
+      responses:
+        '200':
+          description: Returns MTTR, MTBF, Top failing machines, root cause breakdown, team performance metrics
+
+  /analytics/heatmap:
+    get:
+      summary: Get Factory Floor Interactive Heatmap
+      tags: [Analytics & BI]
+      responses:
+        '200':
+          description: Returns factory zones, lines, grid coordinates, and machine statuses
