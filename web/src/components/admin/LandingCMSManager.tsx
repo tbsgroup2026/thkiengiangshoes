@@ -89,6 +89,70 @@ export default function LandingCMSManager({
     }));
   };
 
+  const prefixCfg = hero.prefixConfig || {
+    text: hero.titlePrefix || "Tổ hợp Kiên Giang",
+    fontSize: 36,
+    colorMode: "solid",
+    color: "#ffffff",
+    gradient: { from: "#ffffff", to: "#2fd39a", direction: "to right" },
+  };
+
+  const highlightCfg = hero.highlightConfig || {
+    text: hero.titleHighlight || "TBS Group",
+    fontSize: 54,
+    colorMode: "gradient",
+    color: "#2fd39a",
+    gradient: { from: "#2fd39a", to: "#f2dc9a", direction: "to right" },
+  };
+
+  const updatePrefixField = (field: string, val: any) => {
+    const updated = { ...prefixCfg, [field]: val };
+    setLandingCMS((prev) => ({
+      ...prev,
+      hero: {
+        ...prev.hero,
+        titlePrefix: field === "text" ? val : prev.hero.titlePrefix,
+        prefixConfig: updated,
+      },
+    }));
+  };
+
+  const updatePrefixGradient = (gradField: string, val: any) => {
+    const updatedGrad = { ...(prefixCfg.gradient || { from: "#ffffff", to: "#2fd39a", direction: "to right" }), [gradField]: val };
+    const updated = { ...prefixCfg, gradient: updatedGrad };
+    setLandingCMS((prev) => ({
+      ...prev,
+      hero: {
+        ...prev.hero,
+        prefixConfig: updated,
+      },
+    }));
+  };
+
+  const updateHighlightField = (field: string, val: any) => {
+    const updated = { ...highlightCfg, [field]: val };
+    setLandingCMS((prev) => ({
+      ...prev,
+      hero: {
+        ...prev.hero,
+        titleHighlight: field === "text" ? val : prev.hero.titleHighlight,
+        highlightConfig: updated,
+      },
+    }));
+  };
+
+  const updateHighlightGradient = (gradField: string, val: any) => {
+    const updatedGrad = { ...(highlightCfg.gradient || { from: "#2fd39a", to: "#f2dc9a", direction: "to right" }), [gradField]: val };
+    const updated = { ...highlightCfg, gradient: updatedGrad };
+    setLandingCMS((prev) => ({
+      ...prev,
+      hero: {
+        ...prev.hero,
+        highlightConfig: updated,
+      },
+    }));
+  };
+
   // Update nested workspace field
   const updateWorkspace = (key: "headline" | "description", value: string) => {
     setLandingCMS((prev) => ({
@@ -379,42 +443,459 @@ export default function LandingCMSManager({
             </div>
           </div>
 
-          {/* Headline & Quotes */}
-          <div className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-2xs space-y-4">
-            <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#006838]" />
-              Tiêu Đề &amp; Slogan Đầu Trang (Hero Banner)
-            </h3>
+          {/* ════════════════════════════════════════════════════════════════
+              TIÊU ĐỀ & SLOGAN ĐẦU TRANG (HERO BANNER) — INDEPENDENT DUAL CARD
+             ════════════════════════════════════════════════════════════════ */}
+          <div className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-2xs space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 flex-wrap gap-2">
+              <div>
+                <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[#006838]" />
+                  Tuỳ Chỉnh Kích Thước &amp; Màu Sắc Tiêu Đề Hero Banner (2 Dòng Độc Lập)
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5 font-medium">
+                  Cấu hình nội dung, kích thước chữ (font-size px) và kiểu màu (Đơn sắc / Gradient) riêng biệt cho từng dòng tiêu đề
+                </p>
+              </div>
+              <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-[#006838] text-[10px] font-black uppercase">
+                Layout 2 Khối Độc Lập
+              </span>
+            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* KHỐI 1: TIỀN TỐ TIÊU ĐỀ (DÒNG TRÊN) */}
+            <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-lg bg-[#006838] text-white flex items-center justify-center text-xs font-black">
+                    1
+                  </span>
+                  <h4 className="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-wide">
+                    Tiền tố tiêu đề (Dòng trên - Header Prefix)
+                  </h4>
+                </div>
+                <span className="text-[11px] font-bold text-slate-500">
+                  Khối hiển thị hàng thứ nhất (dòng trên)
+                </span>
+              </div>
+
+              {/* Text input */}
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">
-                  Tiền tố tiêu đề (Dòng trên)
-                </label>
+                <label className="text-xs font-bold text-slate-700 block">Nội dung văn bản (Text):</label>
                 <input
                   type="text"
-                  value={hero.titlePrefix}
-                  onChange={(e) => updateHero("titlePrefix", e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-bold focus:border-[#006838] focus:bg-white outline-none"
+                  value={prefixCfg.text}
+                  onChange={(e) => updatePrefixField("text", e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 text-xs font-bold focus:border-[#006838] outline-none"
                   placeholder="Tổ hợp Kiên Giang"
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">
-                  Tên nổi bật Gradient (Dòng dưới)
-                </label>
-                <input
-                  type="text"
-                  value={hero.titleHighlight}
-                  onChange={(e) => updateHero("titleHighlight", e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-bold focus:border-[#006838] focus:bg-white outline-none text-[#006838]"
-                  placeholder="SKECHERS - TBS Group"
-                />
+              {/* Font Size & Presets */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                <div className="md:col-span-8 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-700">Kích thước chữ (Font Size):</label>
+                    <span className="text-xs font-mono font-black text-[#006838]">{prefixCfg.fontSize || 36}px</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="range"
+                      min={18}
+                      max={96}
+                      value={prefixCfg.fontSize || 36}
+                      onChange={(e) => updatePrefixField("fontSize", parseInt(e.target.value))}
+                      className="flex-1 accent-[#006838] cursor-pointer"
+                    />
+                    <input
+                      type="number"
+                      min={18}
+                      max={96}
+                      value={prefixCfg.fontSize || 36}
+                      onChange={(e) => updatePrefixField("fontSize", parseInt(e.target.value) || 36)}
+                      className="w-16 px-2 py-1 rounded-lg bg-white border border-slate-200 text-xs font-mono font-bold text-center outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="md:col-span-4 space-y-1">
+                  <label className="text-[11px] font-bold text-slate-600 block">Quick Presets:</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[24, 32, 36, 44, 52].map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => updatePrefixField("fontSize", size)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                          prefixCfg.fontSize === size
+                            ? "bg-[#006838] text-white"
+                            : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-100"
+                        }`}
+                      >
+                        {size}px
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Color Mode & Pickers */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start pt-1 border-t border-slate-200/80">
+                <div className="md:col-span-4 space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 block">Kiểu màu sắc (Color Mode):</label>
+                  <div className="flex p-1 rounded-xl bg-slate-200/80 border border-slate-300">
+                    <button
+                      type="button"
+                      onClick={() => updatePrefixField("colorMode", "solid")}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                        prefixCfg.colorMode === "solid"
+                          ? "bg-white text-[#006838] shadow-2xs font-extrabold"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      🎨 Đơn Sắc (Solid)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updatePrefixField("colorMode", "gradient")}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                        prefixCfg.colorMode === "gradient"
+                          ? "bg-white text-[#006838] shadow-2xs font-extrabold"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      🌈 Gradient
+                    </button>
+                  </div>
+                </div>
+
+                <div className="md:col-span-8">
+                  {prefixCfg.colorMode === "solid" ? (
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700 block">Chọn màu đơn sắc (Color):</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={prefixCfg.color || "#ffffff"}
+                          onChange={(e) => updatePrefixField("color", e.target.value)}
+                          className="w-9 h-9 rounded-xl border border-slate-300 cursor-pointer p-0.5 bg-white"
+                        />
+                        <input
+                          type="text"
+                          value={prefixCfg.color || "#ffffff"}
+                          onChange={(e) => updatePrefixField("color", e.target.value)}
+                          className="w-32 px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs font-mono font-bold text-slate-800 outline-none"
+                          placeholder="#ffffff"
+                        />
+                        <div className="flex gap-1">
+                          {["#ffffff", "#2fd39a", "#f2dc9a", "#38bdf8", "#f43f5e"].map((c) => (
+                            <button
+                              key={c}
+                              type="button"
+                              onClick={() => updatePrefixField("color", c)}
+                              className="w-6 h-6 rounded-full border border-slate-300 shadow-2xs cursor-pointer"
+                              style={{ backgroundColor: c }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-700 block">Màu bắt đầu (From):</label>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="color"
+                            value={prefixCfg.gradient?.from || "#ffffff"}
+                            onChange={(e) => updatePrefixGradient("from", e.target.value)}
+                            className="w-8 h-8 rounded-lg border border-slate-300 cursor-pointer p-0.5 bg-white"
+                          />
+                          <input
+                            type="text"
+                            value={prefixCfg.gradient?.from || "#ffffff"}
+                            onChange={(e) => updatePrefixGradient("from", e.target.value)}
+                            className="w-full px-2 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-mono outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-700 block">Màu kết thúc (To):</label>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="color"
+                            value={prefixCfg.gradient?.to || "#2fd39a"}
+                            onChange={(e) => updatePrefixGradient("to", e.target.value)}
+                            className="w-8 h-8 rounded-lg border border-slate-300 cursor-pointer p-0.5 bg-white"
+                          />
+                          <input
+                            type="text"
+                            value={prefixCfg.gradient?.to || "#2fd39a"}
+                            onChange={(e) => updatePrefixGradient("to", e.target.value)}
+                            className="w-full px-2 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-mono outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-700 block">Hướng (Direction):</label>
+                        <select
+                          value={prefixCfg.gradient?.direction || "to right"}
+                          onChange={(e) => updatePrefixGradient("direction", e.target.value)}
+                          className="w-full px-2.5 py-2 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-800 outline-none"
+                        >
+                          <option value="to right">➡️ Ngang (to right)</option>
+                          <option value="to bottom">⬇️ Dọc (to bottom)</option>
+                          <option value="to bottom right">↘️ Chéo (to bottom right)</option>
+                          <option value="to top right">↗️ Chéo ngược (to top right)</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Live Mini Preview Box for Line 1 */}
+              <div className="p-3.5 rounded-xl bg-[#08221a] border border-emerald-900/60 text-center space-y-1">
+                <span className="text-[10px] font-mono font-bold text-emerald-400 uppercase tracking-widest block">
+                  LIVE PREVIEW — DÒNG 1 (TIỀN TỐ TIÊU ĐỀ)
+                </span>
+                <div
+                  className="font-black tracking-tight"
+                  style={{
+                    fontSize: `${Math.min(prefixCfg.fontSize || 36, 42)}px`,
+                    color: prefixCfg.colorMode === "solid" ? prefixCfg.color || "#ffffff" : "transparent",
+                    backgroundImage:
+                      prefixCfg.colorMode === "gradient"
+                        ? `linear-gradient(${prefixCfg.gradient?.direction || "to right"}, ${prefixCfg.gradient?.from || "#ffffff"}, ${prefixCfg.gradient?.to || "#2fd39a"})`
+                        : "none",
+                    WebkitBackgroundClip: prefixCfg.colorMode === "gradient" ? "text" : "unset",
+                    WebkitTextFillColor: prefixCfg.colorMode === "gradient" ? "transparent" : "unset",
+                  }}
+                >
+                  {prefixCfg.text || "Tổ hợp Kiên Giang"}
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* KHỐI 2: TÊN NỔI BẬT GRADIENT (DÒNG DƯỚI) */}
+            <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-xs font-black">
+                    2
+                  </span>
+                  <h4 className="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-wide">
+                    Tên nổi bật Gradient (Dòng dưới - Header Highlight)
+                  </h4>
+                </div>
+                <span className="text-[11px] font-bold text-emerald-700">
+                  Khối hiển thị hàng thứ hai (dòng dưới)
+                </span>
+              </div>
+
+              {/* Text input */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">Nội dung văn bản (Text):</label>
+                <input
+                  type="text"
+                  value={highlightCfg.text}
+                  onChange={(e) => updateHighlightField("text", e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-[#006838] text-xs font-bold focus:border-[#006838] outline-none"
+                  placeholder="TBS Group"
+                />
+              </div>
+
+              {/* Font Size & Presets */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                <div className="md:col-span-8 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-700">Kích thước chữ (Font Size):</label>
+                    <span className="text-xs font-mono font-black text-[#006838]">{highlightCfg.fontSize || 54}px</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="range"
+                      min={20}
+                      max={110}
+                      value={highlightCfg.fontSize || 54}
+                      onChange={(e) => updateHighlightField("fontSize", parseInt(e.target.value))}
+                      className="flex-1 accent-[#006838] cursor-pointer"
+                    />
+                    <input
+                      type="number"
+                      min={20}
+                      max={110}
+                      value={highlightCfg.fontSize || 54}
+                      onChange={(e) => updateHighlightField("fontSize", parseInt(e.target.value) || 54)}
+                      className="w-16 px-2 py-1 rounded-lg bg-white border border-slate-200 text-xs font-mono font-bold text-center outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="md:col-span-4 space-y-1">
+                  <label className="text-[11px] font-bold text-slate-600 block">Quick Presets:</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[36, 48, 54, 64, 76].map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => updateHighlightField("fontSize", size)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                          highlightCfg.fontSize === size
+                            ? "bg-[#006838] text-white"
+                            : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-100"
+                        }`}
+                      >
+                        {size}px
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Color Mode & Pickers */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start pt-1 border-t border-slate-200/80">
+                <div className="md:col-span-4 space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 block">Kiểu màu sắc (Color Mode):</label>
+                  <div className="flex p-1 rounded-xl bg-slate-200/80 border border-slate-300">
+                    <button
+                      type="button"
+                      onClick={() => updateHighlightField("colorMode", "solid")}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                        highlightCfg.colorMode === "solid"
+                          ? "bg-white text-[#006838] shadow-2xs font-extrabold"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      🎨 Đơn Sắc (Solid)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateHighlightField("colorMode", "gradient")}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                        highlightCfg.colorMode === "gradient"
+                          ? "bg-white text-[#006838] shadow-2xs font-extrabold"
+                          : "text-slate-600 hover:text-slate-900"
+                      }`}
+                    >
+                      🌈 Gradient
+                    </button>
+                  </div>
+                </div>
+
+                <div className="md:col-span-8">
+                  {highlightCfg.colorMode === "solid" ? (
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700 block">Chọn màu đơn sắc (Color):</label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={highlightCfg.color || "#2fd39a"}
+                          onChange={(e) => updateHighlightField("color", e.target.value)}
+                          className="w-9 h-9 rounded-xl border border-slate-300 cursor-pointer p-0.5 bg-white"
+                        />
+                        <input
+                          type="text"
+                          value={highlightCfg.color || "#2fd39a"}
+                          onChange={(e) => updateHighlightField("color", e.target.value)}
+                          className="w-32 px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs font-mono font-bold text-slate-800 outline-none"
+                          placeholder="#2fd39a"
+                        />
+                        <div className="flex gap-1">
+                          {["#2fd39a", "#f2dc9a", "#ffffff", "#38bdf8", "#fbbf24"].map((c) => (
+                            <button
+                              key={c}
+                              type="button"
+                              onClick={() => updateHighlightField("color", c)}
+                              className="w-6 h-6 rounded-full border border-slate-300 shadow-2xs cursor-pointer"
+                              style={{ backgroundColor: c }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-700 block">Màu bắt đầu (From):</label>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="color"
+                            value={highlightCfg.gradient?.from || "#2fd39a"}
+                            onChange={(e) => updateHighlightGradient("from", e.target.value)}
+                            className="w-8 h-8 rounded-lg border border-slate-300 cursor-pointer p-0.5 bg-white"
+                          />
+                          <input
+                            type="text"
+                            value={highlightCfg.gradient?.from || "#2fd39a"}
+                            onChange={(e) => updateHighlightGradient("from", e.target.value)}
+                            className="w-full px-2 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-mono outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-700 block">Màu kết thúc (To):</label>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="color"
+                            value={highlightCfg.gradient?.to || "#f2dc9a"}
+                            onChange={(e) => updateHighlightGradient("to", e.target.value)}
+                            className="w-8 h-8 rounded-lg border border-slate-300 cursor-pointer p-0.5 bg-white"
+                          />
+                          <input
+                            type="text"
+                            value={highlightCfg.gradient?.to || "#f2dc9a"}
+                            onChange={(e) => updateHighlightGradient("to", e.target.value)}
+                            className="w-full px-2 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-mono outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-700 block">Hướng (Direction):</label>
+                        <select
+                          value={highlightCfg.gradient?.direction || "to right"}
+                          onChange={(e) => updateHighlightGradient("direction", e.target.value)}
+                          className="w-full px-2.5 py-2 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-800 outline-none"
+                        >
+                          <option value="to right">➡️ Ngang (to right)</option>
+                          <option value="to bottom">⬇️ Dọc (to bottom)</option>
+                          <option value="to bottom right">↘️ Chéo (to bottom right)</option>
+                          <option value="to top right">↗️ Chéo ngược (to top right)</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Live Mini Preview Box for Line 2 */}
+              <div className="p-3.5 rounded-xl bg-[#08221a] border border-emerald-900/60 text-center space-y-1">
+                <span className="text-[10px] font-mono font-bold text-emerald-400 uppercase tracking-widest block">
+                  LIVE PREVIEW — DÒNG 2 (TÊN NỔI BẬT)
+                </span>
+                <div
+                  className="font-black tracking-tight"
+                  style={{
+                    fontSize: `${Math.min(highlightCfg.fontSize || 54, 52)}px`,
+                    color: highlightCfg.colorMode === "solid" ? highlightCfg.color || "#2fd39a" : "transparent",
+                    backgroundImage:
+                      highlightCfg.colorMode === "gradient"
+                        ? `linear-gradient(${highlightCfg.gradient?.direction || "to right"}, ${highlightCfg.gradient?.from || "#2fd39a"}, ${highlightCfg.gradient?.to || "#f2dc9a"})`
+                        : "none",
+                    WebkitBackgroundClip: highlightCfg.colorMode === "gradient" ? "text" : "unset",
+                    WebkitTextFillColor: highlightCfg.colorMode === "gradient" ? "transparent" : "unset",
+                  }}
+                >
+                  {highlightCfg.text || "TBS Group"}
+                </div>
+              </div>
+            </div>
+
+            {/* Slogan & Description Additional Inputs */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-700 block">
                   Trích dẫn tiếng Anh (Chữ nghiêng)
@@ -455,6 +936,7 @@ export default function LandingCMSManager({
               />
             </div>
           </div>
+  );
 
           {/* 3 Images of Hero Section with Cloudinary Direct Upload */}
           <div className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-2xs space-y-4">

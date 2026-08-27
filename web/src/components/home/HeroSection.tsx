@@ -29,6 +29,68 @@ export default function HeroSection() {
     }
   }, []);
 
+  const prefixCfg = cmsHero.prefixConfig || {
+    text: cmsHero.titlePrefix || "Tổ hợp Kiên Giang",
+    fontSize: 36,
+    colorMode: "solid",
+    color: "#ffffff",
+    gradient: { from: "#ffffff", to: "#2fd39a", direction: "to right" },
+  };
+
+  const highlightCfg = cmsHero.highlightConfig || {
+    text: cmsHero.titleHighlight || "TBS Group",
+    fontSize: 54,
+    colorMode: "gradient",
+    color: "#2fd39a",
+    gradient: { from: "#2fd39a", to: "#f2dc9a", direction: "to right" },
+  };
+
+  const getLineStyle = (cfg: any, fallbackText: string, isPrefix: boolean) => {
+    const text = cfg?.text || fallbackText;
+    const baseFontSize = cfg?.fontSize || (isPrefix ? 36 : 54);
+    const mode = cfg?.colorMode || (isPrefix ? "solid" : "gradient");
+    const color = cfg?.color || (isPrefix ? "#ffffff" : "#2fd39a");
+    const grad = cfg?.gradient || { from: "#2fd39a", to: "#f2dc9a", direction: "to right" };
+
+    const dirMap: Record<string, string> = {
+      "to right": "to right",
+      "to bottom": "to bottom",
+      "to bottom right": "to bottom right",
+      "to top right": "to top right",
+    };
+    const dir = dirMap[grad.direction] || "to right";
+
+    const clampMin = Math.max(18, Math.round(baseFontSize * 0.55));
+    const clampMax = baseFontSize;
+
+    if (mode === "gradient") {
+      return {
+        style: {
+          fontSize: `clamp(${clampMin}px, 4.5vw, ${clampMax}px)`,
+          backgroundImage: `linear-gradient(${dir}, ${grad.from || "#2fd39a"}, ${grad.to || "#f2dc9a"})`,
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          color: "transparent",
+        },
+        text,
+      };
+    }
+
+    return {
+      style: {
+        fontSize: `clamp(${clampMin}px, 4.5vw, ${clampMax}px)`,
+        color,
+        backgroundImage: "none",
+        WebkitBackgroundClip: "unset",
+        WebkitTextFillColor: "unset",
+      },
+      text,
+    };
+  };
+
+  const prefixStyled = getLineStyle(prefixCfg, cmsHero.titlePrefix || "Tổ hợp Kiên Giang", true);
+  const highlightStyled = getLineStyle(highlightCfg, cmsHero.titleHighlight || "TBS Group", false);
+
   const groups = shoeLines?.groups || DEFAULT_LANDING_CMS.shoeLines.groups;
   const marqueeGroups = [...groups, ...groups, ...groups];
 
@@ -63,16 +125,24 @@ export default function HeroSection() {
               
 
 
-              {/* Main Headline */}
-              <div className="space-y-3 sm:space-y-4">
-                <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.1]">
-                  {cmsHero.titlePrefix || "Tổ hợp Kiên Giang"}{" "}
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#2fd39a] via-emerald-300 to-[#f2dc9a] block sm:inline">
-                    {cmsHero.titleHighlight || "TBS Group"}
+              {/* Main Headline (2 separate block lines) */}
+              <div className="space-y-2">
+                <h1 className="font-black tracking-tight leading-[1.15]">
+                  <span
+                    className="block font-black tracking-tight mb-1 sm:mb-2"
+                    style={prefixStyled.style}
+                  >
+                    {prefixStyled.text}
+                  </span>
+                  <span
+                    className="block font-black tracking-tight"
+                    style={highlightStyled.style}
+                  >
+                    {highlightStyled.text}
                   </span>
                 </h1>
 
-                <p className="text-sm sm:text-base lg:text-lg text-slate-300 font-normal leading-relaxed max-w-2xl mx-auto lg:mx-0">
+                <p className="text-sm sm:text-base lg:text-lg text-slate-300 font-normal leading-relaxed max-w-2xl mx-auto lg:mx-0 pt-2">
                   {cmsHero.description ||
                     "Không gian điều hành đại diện cho năng lực quản trị, văn hóa doanh nghiệp và tiêu chuẩn vận hành của Tổ hợp Kiên Giang - TBS Group."}
                 </p>

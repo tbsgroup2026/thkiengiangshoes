@@ -27,11 +27,25 @@ export interface ShoeLinesConfig {
   groups: ShoeGroup[];
 }
 
+export interface HeroTitleLineConfig {
+  text: string;
+  fontSize: number;
+  colorMode: "solid" | "gradient";
+  color: string;
+  gradient: {
+    from: string;
+    to: string;
+    direction: "to right" | "to bottom" | "to bottom right" | "to top right";
+  };
+}
+
 export interface LandingCMSConfig {
   // 1. Hero Section
   hero: {
     titlePrefix: string;
     titleHighlight: string;
+    prefixConfig?: HeroTitleLineConfig;
+    highlightConfig?: HeroTitleLineConfig;
     quoteItalic: string;
     description: string;
     bgImage: string;
@@ -361,6 +375,28 @@ export const DEFAULT_LANDING_CMS: LandingCMSConfig = {
   hero: {
     titlePrefix: "Tổ hợp Kiên Giang",
     titleHighlight: "TBS Group",
+    prefixConfig: {
+      text: "Tổ hợp Kiên Giang",
+      fontSize: 36,
+      colorMode: "solid",
+      color: "#ffffff",
+      gradient: {
+        from: "#ffffff",
+        to: "#2fd39a",
+        direction: "to right",
+      },
+    },
+    highlightConfig: {
+      text: "TBS Group",
+      fontSize: 54,
+      colorMode: "gradient",
+      color: "#2fd39a",
+      gradient: {
+        from: "#2fd39a",
+        to: "#f2dc9a",
+        direction: "to right",
+      },
+    },
     quoteItalic: "“Excellence in Manufacturing. Excellence in Leadership.”",
     description:
       "Không gian điều hành đại diện cho năng lực quản trị, văn hóa doanh nghiệp và tiêu chuẩn vận hành của Tổ hợp Kiên Giang - TBS Group. Thiết kế hướng đến sự tinh gọn, hiện đại và chuyên nghiệp, phản ánh vị thế của một doanh nghiệp sản xuất trong chuỗi cung ứng toàn cầu.",
