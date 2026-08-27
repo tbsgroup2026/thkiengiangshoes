@@ -60,15 +60,6 @@ const DASHBOARD_CATEGORIES = [
   { id: "OTHER", label: "8.Khác", color: "#64748b" },
 ];
 
-// Customers list matching system codes
-const DASHBOARD_CUSTOMERS = [
-  "DP",
-  "WR",
-  "RB",
-  "SK",
-  "Khác",
-];
-
 // Helper to format currency in Million VNĐ (Tr)
 const formatMillion = (val: number): string => {
   const num = isNaN(val) ? 0 : val;
@@ -423,37 +414,6 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
     const max = Math.max(...monthlyDataMap.months.map((m) => monthlyDataMap.map[m].value), 0);
     return Math.max(max, 400);
   }, [monthlyDataMap]);
-
-  // 4. Data per Customer (Count & Value)
-  const customerDataMap = useMemo(() => {
-    const map: Record<string, { count: number; value: number }> = {};
-    DASHBOARD_CUSTOMERS.forEach((c) => {
-      map[c] = { count: 0, value: 0 };
-    });
-
-    filteredProposals.forEach((p) => {
-      const cust = getCustomerCode(p);
-      if (map[cust]) {
-        map[cust].count += 1;
-        map[cust].value += getProposalValue(p);
-      } else {
-        map["Khác"].count += 1;
-        map["Khác"].value += getProposalValue(p);
-      }
-    });
-
-    return map;
-  }, [filteredProposals]);
-
-  const maxCustomerCount = useMemo(() => {
-    const max = Math.max(...DASHBOARD_CUSTOMERS.map((c) => customerDataMap[c].count), 0);
-    return Math.max(max, 9);
-  }, [customerDataMap]);
-
-  const maxCustomerValue = useMemo(() => {
-    const max = Math.max(...DASHBOARD_CUSTOMERS.map((c) => customerDataMap[c].value), 0);
-    return Math.max(max, 250);
-  }, [customerDataMap]);
 
   // 5. Top 5 Thi Đua Proposals
   const top5Proposals = useMemo(() => {
@@ -948,112 +908,7 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
       </div>
 
       {/* ════════════════════════════════════════════════════════════════
-          ROW 4: CUSTOMER CHARTS & TOP 5 THI ĐUA TABLE (Matching Image 3)
-         ════════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* CHART 3.1: Số Lượng Theo Khách Hàng */}
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden flex flex-col">
-          <div className="bg-[#0b1739] text-white px-4 py-2.5 flex items-center gap-2">
-            <IconUsers size={18} className="text-indigo-400" />
-            <h3 className="text-xs font-black tracking-wide uppercase">
-              Số Lượng Theo Khách Hàng
-            </h3>
-          </div>
-
-          <div className="p-4 flex-1 flex flex-col justify-between min-h-[220px]">
-            <div className="space-y-2">
-              {DASHBOARD_CUSTOMERS.map((cust, idx) => {
-                const cnt = customerDataMap[cust]?.count || 0;
-                const widthPercent = maxCustomerCount > 0 ? (cnt / maxCustomerCount) * 100 : 0;
-                const colors = ["#3b82f6", "#2563eb", "#60a5fa", "#93c5fd", "#10b981", "#f59e0b"];
-
-                return (
-                  <div key={cust} className="flex items-center gap-3 text-xs">
-                    <span className="w-28 text-[10px] font-bold text-slate-700 text-right truncate">
-                      {cust}
-                    </span>
-
-                    <div className="flex-1 bg-slate-100 h-5 rounded-r-lg overflow-hidden relative flex items-center">
-                      <div
-                        className="h-full rounded-r-lg transition-all duration-500"
-                        style={{ width: `${Math.max(widthPercent, 0)}%`, backgroundColor: colors[idx % colors.length] }}
-                      />
-                    </div>
-
-                    <span className="w-6 text-[11px] font-black text-slate-800 text-left">
-                      {cnt}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="pt-3 border-t border-slate-200 flex justify-between text-[9px] font-bold text-slate-400 pl-28 pr-6">
-              <span>0</span>
-              <span>1</span>
-              <span>2</span>
-              <span>3</span>
-              <span>4</span>
-              <span>5</span>
-              <span>6</span>
-              <span>7</span>
-              <span>8</span>
-              <span>9</span>
-            </div>
-          </div>
-        </div>
-
-        {/* CHART 3.2: Giá Trị Theo Khách Hàng */}
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden flex flex-col">
-          <div className="bg-[#0b1739] text-white px-4 py-2.5 flex items-center gap-2">
-            <IconCoins size={18} className="text-amber-400" />
-            <h3 className="text-xs font-black tracking-wide uppercase">
-              Giá Trị Theo Khách Hàng
-            </h3>
-          </div>
-
-          <div className="p-4 flex-1 flex flex-col justify-between min-h-[220px]">
-            <div className="space-y-2">
-              {DASHBOARD_CUSTOMERS.map((cust, idx) => {
-                const val = customerDataMap[cust]?.value || 0;
-                const widthPercent = maxCustomerValue > 0 ? (val / maxCustomerValue) * 100 : 0;
-                const colors = ["#3b82f6", "#2563eb", "#60a5fa", "#93c5fd", "#10b981", "#f59e0b"];
-
-                return (
-                  <div key={cust} className="flex items-center gap-3 text-xs">
-                    <span className="w-28 text-[10px] font-bold text-slate-700 text-right truncate">
-                      {cust}
-                    </span>
-
-                    <div className="flex-1 bg-slate-100 h-5 rounded-r-lg overflow-hidden relative flex items-center">
-                      <div
-                        className="h-full rounded-r-lg transition-all duration-500"
-                        style={{ width: `${Math.max(widthPercent, 0)}%`, backgroundColor: colors[idx % colors.length] }}
-                      />
-                    </div>
-
-                    <span className="w-16 text-[11px] font-black text-emerald-600 text-left">
-                      {formatMillion(val)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="pt-3 border-t border-slate-200 flex justify-between text-[9px] font-bold text-slate-400 pl-28 pr-16">
-              <span>0</span>
-              <span>50,0 Tr</span>
-              <span>100,0 Tr</span>
-              <span>150,0 Tr</span>
-              <span>200,0 Tr</span>
-              <span>250,0 Tr</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ════════════════════════════════════════════════════════════════
-          ROW 5: TABLE CẢI TIẾN TIÊU BIỂU (TOP 5 THI ĐUA) (Matching Image 3)
+          ROW 4: TABLE CẢI TIẾN TIÊU BIỂU (TOP 5 THI ĐUA)
          ════════════════════════════════════════════════════════════════ */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
         <div className="bg-[#0b1739] text-white px-4 py-3 flex items-center justify-between">
