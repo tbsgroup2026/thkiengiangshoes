@@ -817,17 +817,7 @@ export default function CIModule() {
                 {!isSidebarCollapsed && <span className="truncate">Về Trang Chủ</span>}
               </Link>
 
-              {/* Nộp Hồ Sơ 5 Bước */}
-              <button
-                type="button"
-                onClick={() => setIsFiveStepModalOpen(true)}
-                className={`w-full text-left rounded-xl transition-all cursor-pointer flex items-center gap-2.5 ${
-                  isSidebarCollapsed ? "p-2.5 justify-center" : "px-3.5 py-2.5"
-                } bg-gradient-to-r from-[#006838] to-emerald-800 text-white font-extrabold shadow-md hover:opacity-95`}
-              >
-                <IconSend size={18} className="shrink-0 text-amber-300" />
-                {!isSidebarCollapsed && <span className="text-xs truncate">Form 5 Bước</span>}
-              </button>
+
 
               {/* Thư viện */}
               <button
