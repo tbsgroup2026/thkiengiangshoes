@@ -9,6 +9,7 @@ export default function HeroSection() {
   const { t, lang } = useTranslation();
   const [cmsHero, setCmsHero] = useState(DEFAULT_LANDING_CMS.hero);
   const [shoeLines, setShoeLines] = useState(DEFAULT_LANDING_CMS.shoeLines);
+  const [activeGroupIdx, setActiveGroupIdx] = useState(0);
 
   useEffect(() => {
     const loadCMS = () => {
@@ -28,30 +29,22 @@ export default function HeroSection() {
     }
   }, []);
 
-  // Build single continuous marquee array: 3 shoe images + 1 group label badge for each group
   const groups = shoeLines?.groups || DEFAULT_LANDING_CMS.shoeLines.groups;
-  const singleCycleList: Array<
-    | { type: "IMAGE"; id: string; url: string; name: string }
-    | { type: "LABEL"; id: string; title: string }
-  > = [];
+  const currentGroup = groups[activeGroupIdx] || groups[0] || { title: "WATER PROOF", items: [] };
 
+  // Flatten all shoe images across all groups for infinite continuous marquee
+  const allShoeItems: Array<{ id: string; url: string; name: string }> = [];
   groups.forEach((group) => {
     (group.items || []).forEach((item, idx) => {
-      singleCycleList.push({
-        type: "IMAGE",
+      allShoeItems.push({
         id: item.id || `img-${group.id}-${idx}`,
         url: item.url,
         name: item.name || group.title,
       });
     });
-    singleCycleList.push({
-      type: "LABEL",
-      id: `label-${group.id}`,
-      title: group.title,
-    });
   });
 
-  const marqueeList = [...singleCycleList, ...singleCycleList, ...singleCycleList];
+  const marqueeShoes = [...allShoeItems, ...allShoeItems, ...allShoeItems];
 
   return (
     <>
@@ -200,8 +193,8 @@ export default function HeroSection() {
         <div className="absolute left-0 top-0 bottom-0 w-[120px] sm:w-[160px] bg-gradient-to-r from-[#0b3226] via-[#0b3226]/90 to-transparent z-10 pointer-events-none" />
         <div className="absolute right-0 top-0 bottom-0 w-[120px] sm:w-[160px] bg-gradient-to-l from-[#0b3226] via-[#0b3226]/90 to-transparent z-10 pointer-events-none" />
 
-        <div className="w-full text-center space-y-5">
-          {/* Gold Top Header: ─────── DÒNG GIÀY TIÊU BIỂU ─────── */}
+        <div className="w-full text-center space-y-4">
+          {/* Top Gold Header: ─────── DÒNG GIÀY TIÊU BIỂU ─────── */}
           <div className="flex items-center justify-center gap-4 px-4">
             <div className="h-[1px] w-16 sm:w-28 md:w-36 bg-gradient-to-r from-transparent to-[#f2dc9a]/70" />
             <h3 className="text-xs sm:text-sm font-bold uppercase tracking-[4px] text-[#f2dc9a] font-serif">
@@ -210,44 +203,57 @@ export default function HeroSection() {
             <div className="h-[1px] w-16 sm:w-28 md:w-36 bg-gradient-to-l from-transparent to-[#f2dc9a]/70" />
           </div>
 
-          {/* Continuous Marquee Row: 15 Shoe Cards + 5 Group Badges */}
+          {/* Middle Continuous Marquee Row: ONLY White Shoe Image Cards */}
           <div className="overflow-hidden w-full flex items-center py-2">
             <div className="animate-marquee-left flex items-center gap-4 sm:gap-5">
-              {marqueeList.map((item, idx) => {
-                if (item.type === "IMAGE") {
-                  return (
-                    <div
-                      key={`${item.id}-${idx}`}
-                      className="flex-shrink-0 flex items-center justify-center w-[160px] sm:w-[190px] h-[90px] sm:h-[105px] rounded-[24px] px-4 py-2 bg-white shadow-xl border border-white/40 hover:-translate-y-1 hover:shadow-2xl hover:scale-[1.03] transition-all duration-300 select-none cursor-pointer group"
-                      title={item.name}
-                    >
-                      <img
-                        src={item.url}
-                        alt={item.name}
-                        className="max-h-[70px] max-w-[155px] w-auto h-auto object-contain transition-transform duration-300 group-hover:scale-105"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = "/images/brands/256000.png";
-                        }}
-                      />
-                    </div>
-                  );
-                }
-
-                // Group Label Badge with Lines: ─────── WATER PROOF ───────
-                return (
-                  <div
-                    key={`${item.id}-${idx}`}
-                    className="flex-shrink-0 flex items-center justify-center gap-3 px-6 py-3 select-none"
-                  >
-                    <div className="h-[1px] w-10 sm:w-16 bg-[#f2dc9a]/50" />
-                    <span className="text-white font-black text-xs sm:text-sm uppercase tracking-[3.5px] font-sans whitespace-nowrap">
-                      {item.title}
-                    </span>
-                    <div className="h-[1px] w-10 sm:w-16 bg-[#f2dc9a]/50" />
-                  </div>
-                );
-              })}
+              {marqueeShoes.map((shoe, idx) => (
+                <div
+                  key={`${shoe.id}-${idx}`}
+                  className="flex-shrink-0 flex items-center justify-center w-[160px] sm:w-[190px] h-[90px] sm:h-[105px] rounded-[24px] px-4 py-2 bg-white shadow-xl border border-white/40 hover:-translate-y-1 hover:shadow-2xl hover:scale-[1.03] transition-all duration-300 select-none cursor-pointer group"
+                  title={shoe.name}
+                >
+                  <img
+                    src={shoe.url}
+                    alt={shoe.name}
+                    className="max-h-[70px] max-w-[155px] w-auto h-auto object-contain transition-transform duration-300 group-hover:scale-105"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "/images/brands/256000.png";
+                    }}
+                  />
+                </div>
+              ))}
             </div>
+          </div>
+
+          {/* Bottom Group Label Line: ─────── WATER PROOF ─────── */}
+          <div className="pt-1 flex flex-col items-center gap-2">
+            <div className="flex items-center justify-center gap-4 px-4">
+              <div className="h-[1px] w-14 sm:w-24 md:w-36 bg-[#f2dc9a]/60" />
+              <h4 className="text-white font-black text-sm sm:text-base uppercase tracking-[4px] font-sans">
+                {currentGroup.title}
+              </h4>
+              <div className="h-[1px] w-14 sm:w-24 md:w-36 bg-[#f2dc9a]/60" />
+            </div>
+
+            {/* Interactive Group Pill Tabs */}
+            {groups.length > 1 && (
+              <div className="flex items-center justify-center gap-2 flex-wrap px-4 pt-1">
+                {groups.map((g, idx) => (
+                  <button
+                    key={g.id || idx}
+                    type="button"
+                    onClick={() => setActiveGroupIdx(idx)}
+                    className={`px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+                      activeGroupIdx === idx
+                        ? "bg-[#006838] text-white border border-emerald-400/50 shadow-sm"
+                        : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white border border-white/10"
+                    }`}
+                  >
+                    {g.title}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </section>
