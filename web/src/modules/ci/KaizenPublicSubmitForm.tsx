@@ -35,6 +35,8 @@ export const REAL_FACTORIES = [
   "KG 1",
   "KG 2",
   "Hoàn thiện đế",
+  "VP CHUỖI SKECHERS",
+  "THNM Kiên Giang",
 ];
 
 export const REAL_DEPARTMENTS = [
@@ -116,6 +118,18 @@ export default function KaizenPublicSubmitForm({
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [unitTitle, setUnitTitle] = useState<string>("THNM KIÊN GIANG");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const host = window.location.hostname.toLowerCase();
+      if (host.includes("vpchuoi") || host.includes("skechers")) {
+        setUnitTitle("VP CHUỖI SKECHERS");
+      } else {
+        setUnitTitle("THNM KIÊN GIANG");
+      }
+    }
+  }, []);
 
   // Auto-Fill States for MSNV Lookup
   const [lookupLoading, setLookupLoading] = useState(false);
@@ -534,7 +548,7 @@ export default function KaizenPublicSubmitForm({
               <img src="/images/tbs-logo.png" alt="TBS Group" className="h-6 w-auto object-contain" />
             </div>
             <span className="text-xs font-black uppercase tracking-wider text-amber-300">
-              VP CHUỖI SKECHERS - CỔNG CẢI TIẾN KAIZEN
+              {unitTitle} - CỔNG CẢI TIẾN KAIZEN
             </span>
           </div>
 
