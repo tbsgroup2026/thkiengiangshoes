@@ -1,5 +1,5 @@
 // PWA Service Worker for Văn Phòng Chuỗi SKECHERS - TBS Group
-const CACHE_NAME = "skechers-tbs-v6";
+const CACHE_NAME = "skechers-tbs-v7";
 const ASSETS_TO_CACHE = [
   "/",
   "/favicon.ico",
@@ -109,6 +109,24 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
+          const contentType = response.headers.get("content-type") || "";
+
+          // If SPA fallback returned HTML for a missing JS/CSS chunk, don't execute HTML as JS
+          if (contentType.includes("text/html")) {
+            if (url.pathname.endsWith(".js")) {
+              return new Response("/* Chunk 404 */", {
+                status: 200,
+                headers: { "Content-Type": "application/javascript" },
+              });
+            }
+            if (url.pathname.endsWith(".css")) {
+              return new Response("/* CSS 404 */", {
+                status: 200,
+                headers: { "Content-Type": "text/css" },
+              });
+            }
+          }
+
           // Handle 200 OK and 304 Not Modified from Cloudflare Edge Server correctly
           if (response.ok || response.status === 304) {
             if (response.ok) {
@@ -117,7 +135,8 @@ self.addEventListener("fetch", (event) => {
             }
             return response;
           }
-          // Only fallback if chunk returned 404 (obsolete chunk after deployment)
+
+          // Only fallback if chunk returned 404
           if (response.status === 404) {
             return caches.match(event.request).then((cached) => {
               if (cached) return cached;

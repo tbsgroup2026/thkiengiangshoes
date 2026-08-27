@@ -8,6 +8,25 @@ export interface BrandPartner {
   updatedAt?: string;
 }
 
+export interface ShoeImageItem {
+  id: string;
+  url: string;
+  name?: string;
+  order: number;
+}
+
+export interface ShoeGroup {
+  id: string;
+  title: string;
+  order: number;
+  items: ShoeImageItem[];
+}
+
+export interface ShoeLinesConfig {
+  title: string;
+  groups: ShoeGroup[];
+}
+
 export interface LandingCMSConfig {
   // 1. Hero Section
   hero: {
@@ -61,6 +80,9 @@ export interface LandingCMSConfig {
 
   // 5. Brand Partners Carousel
   brandPartners: BrandPartner[];
+
+  // 6. Featured Shoe Lines (Dòng Giày Tiêu Biểu)
+  shoeLines: ShoeLinesConfig;
 }
 
 export const DEFAULT_BRAND_PARTNERS: BrandPartner[] = [
@@ -78,6 +100,64 @@ export const DEFAULT_BRAND_PARTNERS: BrandPartner[] = [
   { id: "bp-12", name: "Kate Spade", logo: "/images/brands/kate-spade.svg", displayOrder: 12, isActive: true },
   { id: "bp-13", name: "Vera Bradley", logo: "/images/brands/vera-bradley.svg", displayOrder: 13, isActive: true },
 ];
+
+export const DEFAULT_SHOE_GROUPS: ShoeGroup[] = [
+  {
+    id: "sg-1",
+    title: "WATER PROOF",
+    order: 1,
+    items: [
+      { id: "img-1-1", url: "/images/brands/256000.png", name: "Waterproof Hiking Boot", order: 1 },
+      { id: "img-1-2", url: "/images/crawled/56.webp", name: "Waterproof Safety Shoe", order: 2 },
+      { id: "img-1-3", url: "/images/brands/256026.png", name: "All-Terrain Waterproof", order: 3 },
+    ],
+  },
+  {
+    id: "sg-2",
+    title: "MEN'S SPORT",
+    order: 2,
+    items: [
+      { id: "img-2-1", url: "/images/crawled/04.webp", name: "Sport Lifestyle Sneaker", order: 1 },
+      { id: "img-2-2", url: "/images/crawled/05.webp", name: "Athletic Runner Max", order: 2 },
+      { id: "img-2-3", url: "/images/crawled/60.webp", name: "Sport Comfort Trainer", order: 3 },
+    ],
+  },
+  {
+    id: "sg-3",
+    title: "MEN USA",
+    order: 3,
+    items: [
+      { id: "img-3-1", url: "/images/brands/256133.jpg", name: "USA Classic Outdoor", order: 1 },
+      { id: "img-3-2", url: "/images/brands/256003.png", name: "USA Leather Chelsea", order: 2 },
+      { id: "img-3-3", url: "/images/brands/195001.jpg", name: "USA Heritage Work Boot", order: 3 },
+    ],
+  },
+  {
+    id: "sg-4",
+    title: "WORK SHOES",
+    order: 4,
+    items: [
+      { id: "img-4-1", url: "/images/crawled/58.webp", name: "Steel Toe Work Safety", order: 1 },
+      { id: "img-4-2", url: "/images/crawled/005.webp", name: "Industrial Comfort Work", order: 2 },
+      { id: "img-4-3", url: "/images/crawled/Da-giay1.jpg", name: "Heavy Duty Work Shoe", order: 3 },
+    ],
+  },
+  {
+    id: "sg-5",
+    title: "PERFORMANCE",
+    order: 5,
+    items: [
+      { id: "img-5-1", url: "/images/brands/256000.png", name: "Performance GoRun Pro", order: 1 },
+      { id: "img-5-2", url: "/images/crawled/05.webp", name: "Performance Speed Elite", order: 2 },
+      { id: "img-5-3", url: "/images/brands/256026.png", name: "Performance Trail Burst", order: 3 },
+    ],
+  },
+];
+
+export const DEFAULT_SHOE_LINES_CONFIG: ShoeLinesConfig = {
+  title: "DÒNG GIÀY TIÊU BIỂU",
+  groups: DEFAULT_SHOE_GROUPS,
+};
 
 export const DEFAULT_LANDING_CMS: LandingCMSConfig = {
   hero: {
@@ -156,6 +236,7 @@ export const DEFAULT_LANDING_CMS: LandingCMSConfig = {
     ],
   },
   brandPartners: DEFAULT_BRAND_PARTNERS,
+  shoeLines: DEFAULT_SHOE_LINES_CONFIG,
 };
 
 export const CMS_STORAGE_KEY = "tbs_landing_cms";
@@ -204,6 +285,10 @@ export function getLandingCMS(): LandingCMSConfig {
       }
     }
 
+    const rawShoeLines = parsed.shoeLines && Array.isArray(parsed.shoeLines.groups) && parsed.shoeLines.groups.length > 0
+      ? parsed.shoeLines
+      : DEFAULT_SHOE_LINES_CONFIG;
+
     return {
       hero: { ...DEFAULT_LANDING_CMS.hero, ...(parsed.hero || {}) },
       workspace: { ...DEFAULT_LANDING_CMS.workspace, ...(parsed.workspace || {}) },
@@ -214,6 +299,10 @@ export function getLandingCMS(): LandingCMSConfig {
         items: mergedItems,
       },
       brandPartners: mergedPartners,
+      shoeLines: {
+        title: rawShoeLines.title || DEFAULT_SHOE_LINES_CONFIG.title,
+        groups: rawShoeLines.groups || DEFAULT_SHOE_GROUPS,
+      },
     };
   } catch (e) {
     return DEFAULT_LANDING_CMS;

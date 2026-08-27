@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import HeroSection from "@/components/home/HeroSection";
+import FeaturedShoeLines from "@/components/home/FeaturedShoeLines";
 import WorkspaceGallery from "@/components/home/WorkspaceGallery";
 import { getLandingCMS, DEFAULT_LANDING_CMS } from "@/lib/landingCMS";
 import { useTranslation } from "@/hooks/useTranslation";
@@ -36,6 +37,11 @@ export default function HomePage() {
       <main className="flex-1">
         {/* HERO SECTION & BRAND STRIP */}
         <HeroSection />
+
+        {/* FEATURED SHOE LINES SECTION (#featured-shoe-lines) */}
+        <div className="bg-[#08221a] py-4">
+          <FeaturedShoeLines initialConfig={cmsData.shoeLines} />
+        </div>
 
         {/* WORKSPACE GALLERY (#workspace) */}
         <div className="bg-white text-slate-900">

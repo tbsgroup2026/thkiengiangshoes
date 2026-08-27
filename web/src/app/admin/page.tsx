@@ -40,9 +40,11 @@ import {
   getLandingCMS,
   saveLandingCMS,
   DEFAULT_LANDING_CMS,
+  DEFAULT_SHOE_LINES_CONFIG,
 } from "@/lib/landingCMS";
 import LandingCMSManager from "@/components/admin/LandingCMSManager";
 import BrandPartnersManager from "@/components/admin/BrandPartnersManager";
+import ShoeLinesManager from "@/components/admin/ShoeLinesManager";
 import * as XLSX from "xlsx";
 import { INITIAL_370_EMPLOYEES } from "@/lib/initialEmployees";
 
@@ -89,7 +91,7 @@ interface MediaAsset {
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<
-    "overview" | "users" | "news" | "media" | "brand_partners" | "products" | "landing_cms" | "d1_control"
+    "overview" | "users" | "news" | "media" | "brand_partners" | "shoe_lines" | "products" | "landing_cms" | "d1_control"
   >("overview");
   const [cmsSubSection, setCmsSubSection] = useState<
     "hero" | "workspace" | "excellence" | "products"
@@ -102,7 +104,7 @@ export default function AdminPage() {
   useEffect(() => {
     setLandingCMS(getLandingCMS());
 
-    // Check URL search parameters (e.g. /admin?tab=products or /admin?tab=brand_partners)
+    // Check URL search parameters (e.g. /admin?tab=products or /admin?tab=shoe_lines)
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const tabParam = params.get("tab");
@@ -111,6 +113,8 @@ export default function AdminPage() {
         setCmsSubSection("products");
       } else if (tabParam === "brand_partners" || tabParam === "brands") {
         setActiveTab("brand_partners");
+      } else if (tabParam === "shoe_lines" || tabParam === "shoes") {
+        setActiveTab("shoe_lines");
       } else if (tabParam === "landing_cms") {
         setActiveTab("landing_cms");
       }
@@ -1201,6 +1205,23 @@ export default function AdminPage() {
           </button>
 
           <button
+            onClick={() => setActiveTab("shoe_lines")}
+            className={`px-4 py-2.5 rounded-xl font-extrabold text-xs flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === "shoe_lines"
+                ? "bg-[#006838] text-white shadow-md border border-[#004e2a]"
+                : "text-slate-700 hover:text-[#006838] hover:bg-white/70"
+            }`}
+          >
+            <IconShoe size={16} />
+            <span>👟 Dòng Giày Tiêu Biểu</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+              activeTab === "shoe_lines" ? "bg-white/20 text-white" : "bg-emerald-100 text-[#006838]"
+            }`}>
+              {landingCMS.shoeLines?.groups?.length || 5} Nhóm
+            </span>
+          </button>
+
+          <button
             onClick={() => {
               setCmsSubSection("products");
               setActiveTab("products");
@@ -2132,6 +2153,21 @@ export default function AdminPage() {
             brandPartners={landingCMS.brandPartners || []}
             onChange={(updatedPartners) => {
               const newCMS = { ...landingCMS, brandPartners: updatedPartners };
+              setLandingCMS(newCMS);
+              saveLandingCMS(newCMS);
+            }}
+            showToast={showToast}
+          />
+        )}
+
+        {/* ════════════════════════════════════════════════════════════════
+            TAB: QUẢN LÝ DÒNG GIÀY TIÊU BIỂU (FEATURED SHOE LINES)
+           ════════════════════════════════════════════════════════════════ */}
+        {activeTab === "shoe_lines" && (
+          <ShoeLinesManager
+            shoeLines={landingCMS.shoeLines || DEFAULT_SHOE_LINES_CONFIG}
+            onChange={(updatedShoeLines) => {
+              const newCMS = { ...landingCMS, shoeLines: updatedShoeLines };
               setLandingCMS(newCMS);
               saveLandingCMS(newCMS);
             }}
