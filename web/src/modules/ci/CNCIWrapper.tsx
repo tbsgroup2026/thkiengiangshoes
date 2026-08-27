@@ -4,17 +4,64 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  IconBulb,
+  IconCpu,
+  IconFileText,
+  IconDeviceMobile,
+  IconBuildingStore,
   IconTrendingUp,
+  IconBulb,
+  IconSchool,
+  IconChartBar,
   IconMapPin,
-  IconArrowRight,
+  IconTools,
+  IconClipboardList,
+  IconDeviceLaptop,
+  IconChartPie,
+  IconStar,
+  IconChevronRight,
+  IconSparkles,
   IconArrowLeft,
   IconClock,
-  IconSparkles,
-  IconAlertCircle,
-  IconBuildingFactory,
+  IconSettings,
 } from "@tabler/icons-react";
 import CIModule from "./CIModule";
+import { CNCI_BANNER_DATA, CNCI_CARDS_DATA, CNCICard, CNCIItem } from "@/lib/cnciData";
+
+const renderIcon = (name: string, size = 20) => {
+  switch (name) {
+    case "IconCpu":
+      return <IconCpu size={size} />;
+    case "IconFileText":
+      return <IconFileText size={size} />;
+    case "IconDeviceMobile":
+      return <IconDeviceMobile size={size} />;
+    case "IconBuildingStore":
+      return <IconBuildingStore size={size} />;
+    case "IconTrendingUp":
+      return <IconTrendingUp size={size} />;
+    case "IconBulb":
+      return <IconBulb size={size} />;
+    case "IconSchool":
+      return <IconSchool size={size} />;
+    case "IconChartBar":
+      return <IconChartBar size={size} />;
+    case "IconMapPin":
+      return <IconMapPin size={size} />;
+    case "IconTools":
+    case "IconWrench":
+      return <IconTools size={size} />;
+    case "IconClipboardList":
+      return <IconClipboardList size={size} />;
+    case "IconDeviceLaptop":
+      return <IconDeviceLaptop size={size} />;
+    case "IconChartPie":
+      return <IconChartPie size={size} />;
+    case "IconStar":
+      return <IconStar size={size} />;
+    default:
+      return <IconFileText size={size} />;
+  }
+};
 
 export default function CNCIWrapper() {
   const router = useRouter();
@@ -31,20 +78,6 @@ export default function CNCIWrapper() {
     }
   }, []);
 
-  const handleSelectSubView = (view: "kaizen" | "ci" | "gemba") => {
-    if (view === "kaizen") {
-      router.push("/work/kaizen");
-    } else if (view === "ci") {
-      router.push("/work/ci");
-    } else if (view === "gemba") {
-      router.push("/work/gemba");
-    }
-  };
-
-  const handleBackToLanding = () => {
-    router.push("/work/cn-ci");
-  };
-
   return (
     <div className="w-full space-y-5 animate-in fade-in duration-300">
       {/* ════════════════════════════════════════════════════════════════
@@ -57,7 +90,7 @@ export default function CNCIWrapper() {
             className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-black transition-all flex items-center gap-2 cursor-pointer border border-slate-200"
           >
             <IconArrowLeft size={16} />
-            <span>Quay lại Danh Mục CN-CI</span>
+            <span>Quay lại Phân Hệ CN-CI</span>
           </Link>
 
           <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
@@ -71,137 +104,125 @@ export default function CNCIWrapper() {
       )}
 
       {/* ════════════════════════════════════════════════════════════════
-          1. LANDING SELECTION VIEW (3 LARGE CARDS MATCHING IMAGE 2)
+          1. MAIN DASHBOARD CONTENT VIEW (BANNER + 3 FEATURE CARDS GRID)
          ════════════════════════════════════════════════════════════════ */}
       {!subView && (
         <div className="space-y-6 animate-in zoom-in-95 duration-200">
-          {/* Top Banner Intro */}
-          <div className="p-6 rounded-3xl bg-gradient-to-r from-slate-900 via-[#004d29] to-slate-950 text-white shadow-md relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="space-y-1.5 z-10">
-              <span className="px-3 py-1 rounded-full bg-emerald-400/20 text-emerald-300 text-[10px] font-black uppercase tracking-widest border border-emerald-300/30">
-                Phân Hệ CN-CI
-              </span>
-              <h2 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
-                <span>Cải Tiến Liên Tục &amp; Năng Suất 4.0</span>
-              </h2>
-              <p className="text-xs text-emerald-100/90 font-medium max-w-xl">
-                Chọn một trong ba trung tâm quản trị nghiệp vụ cải tiến dưới đây để bắt đầu thực hiện.
-              </p>
+          {/* TOP BANNER — Dark Emerald Gradient matching reference screenshot */}
+          <div className="p-6 sm:p-7 rounded-3xl bg-gradient-to-r from-[#042017] via-[#004d29] to-[#041a13] text-white shadow-lg relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 border border-emerald-800/40">
+            {/* Background Decorative Pattern & Growth Graphic */}
+            <div className="absolute right-0 top-0 bottom-0 w-1/2 opacity-15 pointer-events-none flex items-center justify-end pr-6">
+              <div className="relative w-full h-full flex items-center justify-end">
+                <IconTrendingUp size={180} className="text-emerald-300 stroke-[1.2]" />
+                <IconSettings size={90} className="absolute right-12 bottom-4 text-emerald-400 animate-spin-slow" />
+              </div>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-white/10 text-emerald-300 flex items-center justify-center flex-shrink-0 backdrop-blur-xs border border-white/15">
-              <IconSparkles size={28} />
+
+            <div className="space-y-2 z-10 max-w-2xl">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-300 shadow-2xs backdrop-blur-xs">
+                  <IconSparkles size={18} />
+                </div>
+                <span className="text-[11px] font-black uppercase tracking-widest text-emerald-300">
+                  {CNCI_BANNER_DATA.welcomeText}
+                </span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white leading-snug">
+                {CNCI_BANNER_DATA.title}
+              </h2>
+              <p className="text-xs sm:text-sm text-emerald-100/90 font-medium leading-relaxed">
+                {CNCI_BANNER_DATA.description}
+              </p>
             </div>
           </div>
 
-          {/* 3 Large Selection Cards Grid (Exact Matching Image 2) */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* CARD 1: KAIZEN */}
-            <Link
-              href="/work/kaizen"
-              className="group rounded-3xl p-6 bg-[#f2faf5] border-2 border-[#d4f2e1] hover:border-[#006838] shadow-2xs hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col justify-between min-h-[200px] relative overflow-hidden"
-            >
-              {/* Decorative Subtle Dots Pattern */}
-              <div className="absolute top-0 right-0 w-24 h-24 bg-[radial-gradient(#006838_1px,transparent_1px)] [background-size:8px_8px] opacity-10 pointer-events-none" />
+          {/* 3 FEATURE CARDS GRID (Exact 3-Column Layout Matching Reference Screenshot) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-6 items-start">
+            {CNCI_CARDS_DATA.map((card: CNCICard) => {
+              // Separate full width vs half width items
+              const fullWidthItems = card.items.filter((item) => !item.isHalfWidth);
+              const halfWidthItems = card.items.filter((item) => item.isHalfWidth);
 
-              <div className="flex items-start gap-4">
-                {/* Green Icon Circle */}
-                <div className="w-16 h-16 rounded-full bg-[#dcf4e7] text-[#006838] flex items-center justify-center flex-shrink-0 shadow-2xs group-hover:scale-110 transition-transform duration-300">
-                  <IconBulb size={32} />
+              return (
+                <div
+                  key={card.id}
+                  className={`bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/90 shadow-2xs ${card.cardBorderHoverClass} transition-all duration-300 flex flex-col justify-between space-y-5`}
+                >
+                  {/* Card Header: Icon + Title + Description */}
+                  <div className="flex items-start gap-4">
+                    <div
+                      className={`w-14 h-14 rounded-2xl ${card.iconBgClass} ${card.iconColorClass} flex items-center justify-center flex-shrink-0 shadow-md shadow-slate-900/10`}
+                    >
+                      {renderIcon(card.iconName, 26)}
+                    </div>
+                    <div className="space-y-1 min-w-0">
+                      <h3 className="text-lg font-black text-slate-900 tracking-tight leading-snug truncate">
+                        {card.title}
+                      </h3>
+                      <p className="text-xs font-semibold text-slate-500 leading-snug line-clamp-2">
+                        {card.description}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Card Sub-Items List */}
+                  <div className="space-y-2.5 pt-1">
+                    {fullWidthItems.map((item: CNCIItem) => (
+                      <Link
+                        key={item.id}
+                        href={item.href}
+                        className="p-3.5 rounded-2xl bg-slate-50/60 hover:bg-white border border-slate-200/80 hover:border-[#006838]/60 shadow-2xs hover:shadow-md transition-all flex items-center justify-between gap-3 group cursor-pointer"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-8 h-8 rounded-xl bg-slate-100 group-hover:bg-emerald-50 text-slate-700 group-hover:text-[#006838] flex items-center justify-center flex-shrink-0 transition-colors border border-slate-200/60">
+                            {renderIcon(item.iconName, 17)}
+                          </div>
+                          <span className="text-xs font-bold text-slate-800 group-hover:text-[#006838] transition-colors truncate">
+                            {item.name}
+                          </span>
+                        </div>
+                        <IconChevronRight
+                          size={15}
+                          className="text-slate-400 group-hover:text-[#006838] group-hover:translate-x-0.5 transition-all flex-shrink-0"
+                        />
+                      </Link>
+                    ))}
+
+                    {/* Half-width items rendered side-by-side in a 2-column sub-grid */}
+                    {halfWidthItems.length > 0 && (
+                      <div className="grid grid-cols-2 gap-2.5">
+                        {halfWidthItems.map((item: CNCIItem) => (
+                          <Link
+                            key={item.id}
+                            href={item.href}
+                            className="p-3 rounded-2xl bg-slate-50/60 hover:bg-white border border-slate-200/80 hover:border-[#006838]/60 shadow-2xs hover:shadow-md transition-all flex items-center justify-between gap-2 group cursor-pointer"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-emerald-50 text-slate-700 group-hover:text-[#006838] flex items-center justify-center flex-shrink-0 transition-colors border border-slate-200/60">
+                                {renderIcon(item.iconName, 15)}
+                              </div>
+                              <span className="text-[11px] font-bold text-slate-800 group-hover:text-[#006838] transition-colors truncate">
+                                {item.name}
+                              </span>
+                            </div>
+                            <IconChevronRight
+                              size={14}
+                              className="text-slate-400 group-hover:text-[#006838] group-hover:translate-x-0.5 transition-all flex-shrink-0"
+                            />
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-
-                <div className="space-y-1">
-                  <h3 className="text-2xl font-black text-emerald-950 tracking-tight group-hover:text-[#006838] transition-colors">
-                    KAIZEN
-                  </h3>
-                  <p className="text-xs font-semibold text-slate-600 leading-relaxed">
-                    Đề xuất ý tưởng, cải tiến công việc mỗi ngày
-                  </p>
-                </div>
-              </div>
-
-              {/* Bottom Row Arrow Action */}
-              <div className="flex justify-end pt-4">
-                <div className="w-11 h-11 rounded-full bg-[#006838] text-white flex items-center justify-center shadow-md shadow-emerald-900/20 group-hover:translate-x-1 transition-all">
-                  <IconArrowRight size={22} />
-                </div>
-              </div>
-            </Link>
-
-            {/* CARD 2: CI */}
-            <Link
-              href="/work/ci"
-              className="group rounded-3xl p-6 bg-[#f0f5ff] border-2 border-[#d6e4ff] hover:border-[#2f54eb] shadow-2xs hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col justify-between min-h-[200px] relative overflow-hidden"
-            >
-              {/* Decorative Subtle Dots Pattern */}
-              <div className="absolute top-0 right-0 w-24 h-24 bg-[radial-gradient(#2f54eb_1px,transparent_1px)] [background-size:8px_8px] opacity-10 pointer-events-none" />
-
-              <div className="flex items-start gap-4">
-                {/* Blue Icon Circle */}
-                <div className="w-16 h-16 rounded-full bg-[#d6e4ff] text-[#2f54eb] flex items-center justify-center flex-shrink-0 shadow-2xs group-hover:scale-110 transition-transform duration-300">
-                  <IconTrendingUp size={32} />
-                </div>
-
-                <div className="space-y-1">
-                  <h3 className="text-2xl font-black text-blue-950 tracking-tight group-hover:text-[#2f54eb] transition-colors flex items-center gap-2">
-                    <span>CI</span>
-                    <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-black uppercase tracking-wider">
-                      Soon
-                    </span>
-                  </h3>
-                  <p className="text-xs font-semibold text-slate-600 leading-relaxed">
-                    Quản lý &amp; theo dõi các hoạt động cải tiến
-                  </p>
-                </div>
-              </div>
-
-              {/* Bottom Row Arrow Action */}
-              <div className="flex justify-end pt-4">
-                <div className="w-11 h-11 rounded-full bg-[#2f54eb] text-white flex items-center justify-center shadow-md shadow-blue-900/20 group-hover:translate-x-1 transition-all">
-                  <IconArrowRight size={22} />
-                </div>
-              </div>
-            </Link>
-
-            {/* CARD 3: GEMBA */}
-            <Link
-              href="/work/gemba"
-              className="group rounded-3xl p-6 bg-[#fff7e6] border-2 border-[#ffd591] hover:border-[#fa8c16] shadow-2xs hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col justify-between min-h-[200px] relative overflow-hidden"
-            >
-              {/* Decorative Subtle Dots Pattern */}
-              <div className="absolute top-0 right-0 w-24 h-24 bg-[radial-gradient(#fa8c16_1px,transparent_1px)] [background-size:8px_8px] opacity-10 pointer-events-none" />
-
-              <div className="flex items-start gap-4">
-                {/* Orange Icon Circle */}
-                <div className="w-16 h-16 rounded-full bg-[#ffe7ba] text-[#fa8c16] flex items-center justify-center flex-shrink-0 shadow-2xs group-hover:scale-110 transition-transform duration-300">
-                  <IconMapPin size={32} />
-                </div>
-
-                <div className="space-y-1">
-                  <h3 className="text-2xl font-black text-amber-950 tracking-tight group-hover:text-[#fa8c16] transition-colors flex items-center gap-2">
-                    <span>GEMBA</span>
-                    <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-black uppercase tracking-wider">
-                      Soon
-                    </span>
-                  </h3>
-                  <p className="text-xs font-semibold text-slate-600 leading-relaxed">
-                    Đi hiện trường, quan sát và phát hiện vấn đề
-                  </p>
-                </div>
-              </div>
-
-              {/* Bottom Row Arrow Action */}
-              <div className="flex justify-end pt-4">
-                <div className="w-11 h-11 rounded-full bg-[#fa8c16] text-white flex items-center justify-center shadow-md shadow-amber-900/20 group-hover:translate-x-1 transition-all">
-                  <IconArrowRight size={22} />
-                </div>
-              </div>
-            </Link>
+              );
+            })}
           </div>
         </div>
       )}
 
       {/* ════════════════════════════════════════════════════════════════
-          2. KAIZEN SUB-VIEW (FULL GIAI ĐOẠN 2 THƯ VIỆN CẢI TIẾN)
+          2. KAIZEN SUB-VIEW
          ════════════════════════════════════════════════════════════════ */}
       {subView === "kaizen" && (
         <div className="animate-in fade-in duration-200">
@@ -210,7 +231,7 @@ export default function CNCIWrapper() {
       )}
 
       {/* ════════════════════════════════════════════════════════════════
-          3. CI SUB-VIEW (PLACEHOLDER "SẮP RA MẮT")
+          3. CI SUB-VIEW
          ════════════════════════════════════════════════════════════════ */}
       {subView === "ci" && (
         <div className="p-12 rounded-3xl bg-white border border-slate-200 shadow-2xs text-center space-y-4 max-w-xl mx-auto my-8 animate-in zoom-in-95 duration-200">
@@ -233,7 +254,7 @@ export default function CNCIWrapper() {
       )}
 
       {/* ════════════════════════════════════════════════════════════════
-          4. GEMBA SUB-VIEW (PLACEHOLDER "SẮP RA MẮT")
+          4. GEMBA SUB-VIEW
          ════════════════════════════════════════════════════════════════ */}
       {subView === "gemba" && (
         <div className="p-12 rounded-3xl bg-white border border-slate-200 shadow-2xs text-center space-y-4 max-w-xl mx-auto my-8 animate-in zoom-in-95 duration-200">
