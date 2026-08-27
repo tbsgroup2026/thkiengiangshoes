@@ -70,6 +70,7 @@ export default function NotificationCenter() {
     const fetchRemoteNotifications = async () => {
       try {
         const res = await fetch("/api/notifications");
+        if (!res.ok) return;
         const json = await res.json();
         if (json.success && Array.isArray(json.data)) {
           const remoteItems: NotificationItem[] = json.data.map((item: any) => ({

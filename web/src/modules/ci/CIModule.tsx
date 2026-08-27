@@ -468,6 +468,10 @@ export default function CIModule() {
       if (searchQuery) params.append("search", searchQuery);
 
       const res = await fetch(`/api/ci-kaizen?${params.toString()}`);
+      if (!res.ok) {
+        setLoading(false);
+        return;
+      }
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
         setProposals(json.data);

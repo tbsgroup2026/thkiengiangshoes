@@ -97,14 +97,27 @@ self.addEventListener("notificationclick", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  // Only handle GET requests for static assets
+  // Only handle GET requests for static assets, skip API routes
   if (event.request.method !== "GET" || event.request.url.includes("/api/")) {
     return;
   }
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      return cachedResponse || fetch(event.request).catch(() => cachedResponse);
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+      return fetch(event.request).catch(() => {
+        return (
+          caches.match("/work") ||
+          caches.match("/") ||
+          new Response("Offline", {
+            status: 503,
+            statusText: "Offline",
+            headers: { "Content-Type": "text/plain; charset=utf-8" },
+          })
+        );
+      });
     })
   );
 });
