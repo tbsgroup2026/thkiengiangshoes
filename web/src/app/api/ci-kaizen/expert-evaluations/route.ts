@@ -77,6 +77,8 @@ export async function POST(request: Request) {
       (Boolean((session as any)?.levelRank) && Number((session as any).levelRank) >= 3) ||
       ['TONG_GIAM_DOC', 'PHO_TONG_GIAM_DOC', 'GIAM_DOC', 'PHO_GIAM_DOC', 'TRUONG_PHONG', 'CI_LEAD', 'QC', 'ADMIN'].includes(roleCode);
 
+    const db = getDbBinding();
+
     if (action === 'SAVE_DRAFT' || action === 'CONFIRM') {
       if (!isJudgeRole && session) {
         return NextResponse.json(
@@ -84,9 +86,29 @@ export async function POST(request: Request) {
           { status: 403 }
         );
       }
-    }
 
-    const db = getDbBinding();
+      if (db) {
+        const proposalRow = await db
+          .prepare('SELECT sub_status, approval_status, status FROM ci_kaizen_proposals WHERE id = ?')
+          .bind(proposalId)
+          .first();
+
+        if (
+          proposalRow &&
+          (proposalRow.sub_status === 'CHO_REVIEW' ||
+            proposalRow.approval_status === 'PENDING' ||
+            proposalRow.status === 'SUBMITTED')
+        ) {
+          return NextResponse.json(
+            {
+              error:
+                '⚠️ Đề xuất đang ở trạng thái Chờ phê duyệt (Bước 3). Cần phê duyệt tính khả thi trước khi chấm điểm chuyên môn!',
+            },
+            { status: 400 }
+          );
+        }
+      }
+    }
 
     if (action === 'ASSIGN_JUDGE') {
       return NextResponse.json({

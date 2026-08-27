@@ -163,9 +163,11 @@ export default function KaizenDetailModal({
     return isJudgeOrExecutive;
   }, [evalData, user, isJudgeOrExecutive]);
 
-  // Tab 2 & 3: ONLY visible if current account has judging permission for this proposal
-  const canSeeExpertTab = isAssignedJudge;
-  const canSeeAwardTab = isAssignedJudge;
+  const isApprovedStep3 = proposal?.sub_status !== "CHO_REVIEW" && proposal?.approval_status !== "PENDING" && proposal?.status !== "SUBMITTED";
+
+  // Tab 2 & 3: ONLY visible if proposal is ALREADY approved (Step 3 completed) AND current account has judging permission
+  const canSeeExpertTab = isApprovedStep3 && isAssignedJudge;
+  const canSeeAwardTab = isApprovedStep3 && isAssignedJudge;
 
   // Fallback activeTab if selected tab is hidden or user lacks permission
   useEffect(() => {
