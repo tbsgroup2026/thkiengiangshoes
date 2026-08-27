@@ -110,6 +110,43 @@ export default function KaizenDetailModal({
     };
   }, [proposal?.id]);
 
+  // Mark / Unmark Thi dua state & function
+  const [markingThiDua, setMarkingThiDua] = useState(false);
+  const [thiDuaMsg, setThiDuaMsg] = useState<string | null>(null);
+
+  const handleToggleThiDua = async () => {
+    if (!proposal) return;
+    const isCurrentlyThiDua = Number(proposal.is_thi_dua) === 1;
+    const action = isCurrentlyThiDua ? "REMOVE" : "ADD";
+
+    try {
+      setMarkingThiDua(true);
+      setThiDuaMsg(null);
+      const res = await fetch("/api/ci-kaizen/mark-thi-dua", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          proposalId: proposal.id,
+          action,
+        }),
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        proposal.is_thi_dua = isCurrentlyThiDua ? 0 : 1;
+        setThiDuaMsg(json.message);
+        setTimeout(() => setThiDuaMsg(null), 3000);
+        if (onRate) onRate();
+      } else {
+        setThiDuaMsg(`❌ ${json.message || "Không thể thực hiện"}`);
+      }
+    } catch (e: any) {
+      setThiDuaMsg("❌ Lỗi kết nối!");
+    } finally {
+      setMarkingThiDua(false);
+    }
+  };
+
   const isAssignedJudge = useMemo(() => {
     if (evalData?.assignedJudges && Array.isArray(evalData.assignedJudges) && evalData.assignedJudges.length > 0) {
       if (evalData.isExecutiveManager) return true;
@@ -321,6 +358,35 @@ export default function KaizenDetailModal({
 
           {/* Action Buttons & Close Button at Bottom */}
           <div className="space-y-2 pt-2 mt-auto border-t border-slate-200">
+            {thiDuaMsg && (
+              <div className="p-2 rounded-xl bg-amber-100 border border-amber-300 text-amber-900 text-[11px] font-bold text-center animate-in fade-in">
+                {thiDuaMsg}
+              </div>
+            )}
+
+            {/* BGK / BGĐ Action: Chuyển sang Thi đua (chỉ khi đã Lưu trữ) */}
+            {(proposal.status === "ARCHIVED" || proposal.sub_status === "LUU_TRU" || proposal.registration_type === "LUU_TRU") && isJudgeOrExecutive && (
+              <button
+                type="button"
+                disabled={markingThiDua}
+                onClick={handleToggleThiDua}
+                className={`w-full py-2.5 px-3 rounded-xl font-black text-xs shadow-2xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  Number(proposal.is_thi_dua) === 1
+                    ? "bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300"
+                    : "bg-amber-500 hover:bg-amber-600 text-white shadow-md"
+                }`}
+              >
+                <IconTrophy size={16} />
+                <span>
+                  {markingThiDua
+                    ? "Đang xử lý..."
+                    : Number(proposal.is_thi_dua) === 1
+                    ? "ℹ️ Bỏ khỏi Thi đua"
+                    : "🏆 Chuyển sang Thi đua"}
+                </span>
+              </button>
+            )}
+
             {isOwner || isExecutiveOrAdmin ? (
               <div className="grid grid-cols-2 gap-2">
                 <button

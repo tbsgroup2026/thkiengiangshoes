@@ -7,6 +7,7 @@ import KaizenEarlyWarning from "./KaizenEarlyWarning";
 import KaizenFiveStepSubmitForm from "./KaizenFiveStepSubmitForm";
 import KaizenPublicSubmitForm from "./KaizenPublicSubmitForm";
 import KaizenDetailModal from "./KaizenDetailModal";
+import EvaluationModal from "./EvaluationModal";
 import {
   IconLayoutGrid,
   IconList,
@@ -89,6 +90,11 @@ export interface KaizenProposal {
   rejection_reason?: string;
   required_reviewer_ids_json?: string;
   evaluated_at?: string;
+  is_thi_dua?: number;
+  propose_thi_dua?: number;
+  scores_json?: string;
+  evaluation_result?: string;
+  approval_status?: string;
   version: number;
   created_at: string;
 }
@@ -226,6 +232,10 @@ export default function CIModule() {
   const [selectedRegType, setSelectedRegType] = useState("ALL");
   const [selectedSubStatus, setSelectedSubStatus] = useState("CHO_DANH_GIA");
   const [selectedStatus, setSelectedStatus] = useState("ALL");
+
+  // Evaluation Modal State (Step 5 Rating)
+  const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false);
+  const [evaluatingProposal, setEvaluatingProposal] = useState<KaizenProposal | null>(null);
     // Sidebar States
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isRegTypeExpanded, setIsRegTypeExpanded] = useState(true);
@@ -736,14 +746,16 @@ export default function CIModule() {
     if (selectedRegion !== "ALL" && !matchRegionFilter(p.region, selectedRegion)) {
       return false;
     }
-    // Filter by registration type
-    if (selectedRegType !== "ALL") {
+    // Filter by registration type or Thi đua flag
+    if (selectedRegType === "THI_DUA") {
+      if (Number(p.is_thi_dua) !== 1) return false;
+    } else if (selectedRegType !== "ALL") {
       if (p.registration_type !== selectedRegType) return false;
     }
     // Filter by sub-status
     if (selectedSubStatus !== "ALL") {
       if (selectedSubStatus === "CHO_REVIEW") {
-        if (!(p.status === "SUBMITTED" || p.status === "UNDER_REVIEW" || !p.status)) return false;
+        if (!(p.status === "SUBMITTED" || p.status === "UNDER_REVIEW" || !p.status || p.sub_status === "CHO_REVIEW")) return false;
       } else if (selectedSubStatus === "CHO_DANH_GIA") {
         if (p.sub_status !== "CHO_DANH_GIA") return false;
       } else if (selectedSubStatus === "DA_DANH_GIA") {
@@ -763,7 +775,7 @@ export default function CIModule() {
   });
 
   // Calculate Badge Counters
-  const countThiDua = proposals.filter((p) => p.registration_type === "THI_DUA").length;
+  const countThiDua = proposals.filter((p) => Number(p.is_thi_dua) === 1).length;
   const countChoReview = proposals.filter((p) =>
     p.registration_type === "THI_DUA" &&
     (p.status === "SUBMITTED" || p.status === "UNDER_REVIEW" || !p.status)
@@ -1422,9 +1434,15 @@ export default function CIModule() {
                         <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider shadow-2xs ${catObj.color}`}>
                           {prop.category_label || catObj.label}
                         </span>
-                        <span className="px-1.5 py-0.5 rounded bg-slate-900/80 text-white text-[9px] font-mono font-bold shadow-2xs">
-                          T8/2026
-                        </span>
+                        {Number(prop.is_thi_dua) === 1 ? (
+                          <span className="px-1.5 py-0.5 rounded bg-amber-400 text-amber-950 text-[9px] font-black shadow-2xs flex items-center gap-0.5">
+                            🏆 Thi đua
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 rounded bg-slate-900/80 text-white text-[9px] font-mono font-bold shadow-2xs">
+                            T8/2026
+                          </span>
+                        )}
                       </div>
 
                       {/* Proposer Info Bar Overlay at Bottom of Image */}
@@ -1484,17 +1502,19 @@ export default function CIModule() {
                             ⭐ Đánh giá
                           </button>
 
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveProposal(prop);
-                              setIsEvalModalOpen(true);
-                            }}
-                            className="px-2 py-0.5 rounded bg-[#006838]/10 text-[#006838] hover:bg-[#006838] hover:text-white text-[10px] font-black border border-[#006838]/20 transition-colors"
-                          >
-                            Chấm điểm
-                          </button>
+                          {prop.sub_status === "CHO_DANH_GIA" && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEvaluatingProposal(prop);
+                                setIsEvaluationModalOpen(true);
+                              }}
+                              className="px-2 py-0.5 rounded bg-emerald-600 text-white hover:bg-emerald-700 text-[10px] font-black shadow-2xs transition-colors"
+                            >
+                              ✓ Đánh giá
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1974,6 +1994,19 @@ export default function CIModule() {
           </div>
         </div>
       )}
+      {/* MODAL STEP 5: EVALUATION MODAL */}
+      <EvaluationModal
+        isOpen={isEvaluationModalOpen}
+        proposal={evaluatingProposal}
+        onClose={() => {
+          setIsEvaluationModalOpen(false);
+          setEvaluatingProposal(null);
+        }}
+        onSuccess={() => {
+          showToast("🎉 Đã lưu kết quả đánh giá hiệu quả sáng kiến!");
+          fetchProposals();
+        }}
+      />
     </div>
   );
 }

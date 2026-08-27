@@ -2845,18 +2845,18 @@ export default {
 
           const userRole = (user.roleCode || "").toUpperCase();
           const userEmp = (user.empCode || "").trim().toUpperCase();
-          const isEvaluator = user.isExecutiveOrAdmin || ["TEAM_CI", "BGD", "ADMIN", "TRUONG_PHONG", "CI_LEAD"].includes(userRole) || ["TGĐ-001", "ADMIN-2026", "202608001"].includes(userEmp);
+          const isEvaluator = user.isExecutiveOrAdmin || ["TEAM_CI", "BGD", "ADMIN", "TRUONG_PHONG", "CI_LEAD", "BGK"].includes(userRole) || ["TGĐ-001", "ADMIN-2026", "202608001"].includes(userEmp);
 
           if (!isEvaluator) {
             return new Response(JSON.stringify({
               success: false,
               error: "FORBIDDEN",
-              message: "⛔ Bạn không có quyền đánh giá hiệu quả sáng kiến. Chỉ Team CI / BGĐ / Admin mới có quyền thực hiện."
+              message: "⛔ Bạn không có quyền đánh giá hiệu quả sáng kiến. Chỉ Team CI / Hội đồng đánh giá (BGK) / BGĐ / Admin mới có quyền thực hiện."
             }), { status: 403, headers: SECURE_JSON_HEADERS });
           }
 
           const body = await request.json();
-          const { proposalId, result, note } = body; // result: 'DAT' | 'KHONG_DAT'
+          const { proposalId, result, scores, propose_thi_dua, note } = body; // result: 'DAT' | 'KHONG_DAT'
 
           if (!proposalId || !result) {
             return new Response(JSON.stringify({ success: false, error: "MISSING_PARAMS", message: "Thiếu proposalId hoặc result (DAT/KHONG_DAT)" }), { status: 400, headers: SECURE_JSON_HEADERS });
@@ -2883,27 +2883,55 @@ export default {
             }), { status: 422, headers: SECURE_JSON_HEADERS });
           }
 
+          // Format 5-criteria scores_json
+          let scoresObj = { thoi_gian: 0, cong_nghe: 0, chat_luong: 0, "5s": 0, an_toan: 0, average: 0 };
+          if (scores && typeof scores === "object") {
+            const tg = Number(scores.thoi_gian || scores.thoiGian) || 0;
+            const cn = Number(scores.cong_nghe || scores.congNghe) || 0;
+            const cl = Number(scores.chat_luong || scores.chatLuong) || 0;
+            const s5 = Number(scores["5s"] || scores.s5) || 0;
+            const at = Number(scores.an_toan || scores.anToan) || 0;
+            const avg = Math.round(((tg + cn + cl + s5 + at) / 5) * 10) / 10;
+            scoresObj = { thoi_gian: tg, cong_nghe: cn, chat_luong: cl, "5s": s5, an_toan: at, average: avg };
+          }
+          const scoresJsonStr = JSON.stringify(scoresObj);
+          const avgRating = scoresObj.average || proposal.avg_rating || 0;
+
           const isPass = result === "DAT";
           const newEvalResult = isPass ? "DAT" : "KHONG_DAT";
           const newSubStatus = isPass ? "DA_DANH_GIA" : "KHONG_DAT_YEU_CAU";
+          const proposeThiDuaVal = (isPass && propose_thi_dua) ? 1 : 0;
+
+          // Auto-migrate columns
+          try {
+            await env.DB.prepare("ALTER TABLE ci_kaizen_proposals ADD COLUMN propose_thi_dua INTEGER DEFAULT 0").run();
+          } catch(e) {}
+          try {
+            await env.DB.prepare("ALTER TABLE ci_kaizen_proposals ADD COLUMN is_thi_dua INTEGER DEFAULT 0").run();
+          } catch(e) {}
+          try {
+            await env.DB.prepare("ALTER TABLE ci_kaizen_proposals ADD COLUMN scores_json TEXT").run();
+          } catch(e) {}
 
           await env.DB.prepare(`
             UPDATE ci_kaizen_proposals
-            SET evaluation_result = ?, sub_status = ?, evaluated_by = ?, evaluated_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+            SET evaluation_result = ?, sub_status = ?, avg_rating = ?, scores_json = ?, propose_thi_dua = ?, evaluated_by = ?, evaluated_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
-          `).bind(newEvalResult, newSubStatus, user.empCode || user.id || "ADMIN", proposalId).run();
+          `).bind(newEvalResult, newSubStatus, avgRating, scoresJsonStr, proposeThiDuaVal, user.empCode || user.id || "ADMIN", proposalId).run();
 
           await env.DB.prepare(`
             INSERT INTO ci_kaizen_status_history (proposal_id, from_status, to_status, action, actor_id, actor_name, note)
             VALUES (?, 'CHO_DANH_GIA', ?, ?, ?, ?, ?)
-          `).bind(proposalId, newSubStatus, isPass ? "EVALUATE_PASS" : "EVALUATE_FAIL", user.empCode || "USER", user.name || "Cán bộ Đánh giá", safeVal(note, isPass ? "Đánh giá hiệu quả ĐẠT" : "Đánh giá hiệu quả KHÔNG ĐẠT")).run();
+          `).bind(proposalId, newSubStatus, isPass ? "EVALUATE_PASS" : "EVALUATE_FAIL", user.empCode || "USER", user.name || "Cán bộ Đánh giá", safeVal(note, isPass ? `Đánh giá hiệu quả ĐẠT (${avgRating}/5 sao)` : "Đánh giá hiệu quả KHÔNG ĐẠT")).run();
 
           return new Response(JSON.stringify({
             success: true,
             message: isPass ? "🏆 Đánh giá hiệu quả ĐẠT! Sáng kiến đã đủ điều kiện để Ban Giám Đốc nghiệm thu & Lưu trữ (Bước 6)." : "⛔ Đánh giá hiệu quả KHÔNG ĐẠT. Sáng kiến DỪNG theo Quy định QĐ-TBKG.",
             proposalId,
             evaluation_result: newEvalResult,
-            sub_status: newSubStatus
+            sub_status: newSubStatus,
+            scores: scoresObj,
+            propose_thi_dua: proposeThiDuaVal === 1
           }), { headers: SECURE_JSON_HEADERS });
 
         } catch(err) {
@@ -2977,6 +3005,83 @@ export default {
             status: "ARCHIVED",
             sub_status: "LUU_TRU",
             registration_type: "LUU_TRU"
+          }), { headers: SECURE_JSON_HEADERS });
+
+        } catch(err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: SECURE_JSON_HEADERS });
+        }
+      }
+
+      // 4. POST /api/ci-kaizen/mark-thi-dua (BGK Gắn/Bỏ nhãn Thi đua)
+      if (url.pathname.endsWith("/mark-thi-dua") && request.method === "POST") {
+        try {
+          const user = await verifyServerAuth(request, env);
+          if (!user || !user.authenticated) {
+            return new Response(JSON.stringify({ success: false, error: "UNAUTHORIZED", message: "Vui lòng đăng nhập!" }), { status: 401, headers: SECURE_JSON_HEADERS });
+          }
+
+          const userRole = (user.roleCode || "").toUpperCase();
+          const userEmp = (user.empCode || "").trim().toUpperCase();
+          const isBGKOrAdmin = user.isExecutiveOrAdmin || ["BGD", "ADMIN", "TEAM_CI", "BGK", "TONG_GIAM_DOC", "SYSTEM_ADMIN"].includes(userRole) || ["TGĐ-001", "ADMIN-2026", "202608001"].includes(userEmp);
+
+          if (!isBGKOrAdmin) {
+            return new Response(JSON.stringify({
+              success: false,
+              error: "FORBIDDEN",
+              message: "⛔ Chỉ thành viên Hội đồng đánh giá (BGK) hoặc Admin mới có quyền gắn nhãn Thi đua."
+            }), { status: 403, headers: SECURE_JSON_HEADERS });
+          }
+
+          const body = await request.json();
+          const { proposalId, action } = body; // action: 'ADD' | 'REMOVE'
+
+          if (!proposalId || !action) {
+            return new Response(JSON.stringify({ success: false, error: "MISSING_PARAMS", message: "Thiếu proposalId hoặc action (ADD/REMOVE)" }), { status: 400, headers: SECURE_JSON_HEADERS });
+          }
+
+          const proposal = await env.DB.prepare("SELECT * FROM ci_kaizen_proposals WHERE id = ?").bind(proposalId).first();
+          if (!proposal) {
+            return new Response(JSON.stringify({ success: false, error: "NOT_FOUND", message: "Không tìm thấy sáng kiến!" }), { status: 404, headers: SECURE_JSON_HEADERS });
+          }
+
+          if (proposal.status !== "ARCHIVED" && proposal.sub_status !== "LUU_TRU") {
+            return new Response(JSON.stringify({
+              success: false,
+              error: "INVALID_STATE_TRANSITION",
+              message: "⛔ Chỉ có thể gắn nhãn Thi đua cho sáng kiến đã ở trạng thái Lưu trữ (Bước 6)!"
+            }), { status: 422, headers: SECURE_JSON_HEADERS });
+          }
+
+          const isAdd = action === "ADD";
+          const newIsThiDua = isAdd ? 1 : 0;
+
+          // Auto-migrate columns
+          try {
+            await env.DB.prepare("ALTER TABLE ci_kaizen_proposals ADD COLUMN is_thi_dua INTEGER DEFAULT 0").run();
+          } catch(e) {}
+          try {
+            await env.DB.prepare("ALTER TABLE ci_kaizen_proposals ADD COLUMN thi_dua_confirmed_by TEXT").run();
+          } catch(e) {}
+          try {
+            await env.DB.prepare("ALTER TABLE ci_kaizen_proposals ADD COLUMN thi_dua_confirmed_at DATETIME").run();
+          } catch(e) {}
+
+          await env.DB.prepare(`
+            UPDATE ci_kaizen_proposals
+            SET is_thi_dua = ?, thi_dua_confirmed_by = ?, thi_dua_confirmed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+          `).bind(newIsThiDua, user.empCode || user.id || "BGK", proposalId).run();
+
+          await env.DB.prepare(`
+            INSERT INTO ci_kaizen_status_history (proposal_id, from_status, to_status, action, actor_id, actor_name, note)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+          `).bind(proposalId, proposal.sub_status || "LUU_TRU", proposal.sub_status || "LUU_TRU", isAdd ? "MARK_THI_DUA" : "UNMARK_THI_DUA", user.empCode || "BGK", user.name || "Ban Giám Khảo", isAdd ? "Gắn nhãn Thi đua cho sáng kiến" : "Gỡ nhãn Thi đua khỏi sáng kiến").run();
+
+          return new Response(JSON.stringify({
+            success: true,
+            message: isAdd ? "🏆 Đã chuyển sáng kiến sang danh mục Thi đua!" : "ℹ️ Đã bỏ nhãn Thi đua khỏi sáng kiến.",
+            proposalId,
+            is_thi_dua: newIsThiDua
           }), { headers: SECURE_JSON_HEADERS });
 
         } catch(err) {
