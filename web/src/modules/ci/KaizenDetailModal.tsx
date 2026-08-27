@@ -577,6 +577,27 @@ export default function KaizenDetailModal({
           </div>
         </div>
       </div>
+
+      {/* POPUP PHÊ DUYỆT TÍNH KHẢ THI (BƯỚC 3 QĐ-TBKG) */}
+      <FeasibilityApprovalModal
+        isOpen={isFeasibilityModalOpen}
+        proposal={proposal}
+        initialDecision={feasibilityInitialDecision}
+        onClose={() => setIsFeasibilityModalOpen(false)}
+        onSuccess={(updated) => {
+          proposal.approval_status = updated.approval_status;
+          proposal.sub_status = updated.sub_status;
+          proposal.status = updated.status;
+          setStep3Msg(
+            updated.approval_status === "PHE_DUYET"
+              ? "✅ Đã phê duyệt tính khả thi (Bước 3) thành công!"
+              : "❌ Đã từ chối triển khai sáng kiến."
+          );
+          setTimeout(() => setStep3Msg(null), 4000);
+          if (onRate) onRate();
+          if (onEvaluate) onEvaluate();
+        }}
+      />
     </div>
   );
 }
@@ -1934,27 +1955,6 @@ function TabAwardReviewContent({
           </button>
         </form>
       </div>
-
-      {/* POPUP PHÊ DUYỆT TÍNH KHẢ THI (BƯỚC 3 QĐ-TBKG) */}
-      <FeasibilityApprovalModal
-        isOpen={isFeasibilityModalOpen}
-        proposal={proposal}
-        initialDecision={feasibilityInitialDecision}
-        onClose={() => setIsFeasibilityModalOpen(false)}
-        onSuccess={(updated) => {
-          proposal.approval_status = updated.approval_status;
-          proposal.sub_status = updated.sub_status;
-          proposal.status = updated.status;
-          setStep3Msg(
-            updated.approval_status === "PHE_DUYET"
-              ? "✅ Đã phê duyệt tính khả thi (Bước 3) thành công!"
-              : "❌ Đã từ chối triển khai sáng kiến."
-          );
-          setTimeout(() => setStep3Msg(null), 4000);
-          if (onRate) onRate();
-          if (onEvaluate) onEvaluate();
-        }}
-      />
     </div>
   );
 }
