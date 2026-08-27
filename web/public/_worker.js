@@ -928,6 +928,9 @@ export default {
           status: 500,
           headers: SECURE_JSON_HEADERS
         });
+      }
+    }
+
     // API Route: Notifications (/api/notifications)
     if (url.pathname === "/api/notifications") {
       if (request.method === "OPTIONS") {
