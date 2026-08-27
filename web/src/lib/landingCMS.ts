@@ -550,9 +550,8 @@ export async function fetchLandingCMSFromServer(): Promise<LandingCMSConfig> {
       const json = await res.json();
       if (json && json.success && json.data) {
         const serverConfig = parseCMSConfig(json.data);
-        // Sync server data to localStorage for instant local cache read
+        // Sync server data to localStorage for instant local cache read (do not dispatch event to prevent loop)
         localStorage.setItem(CMS_STORAGE_KEY, JSON.stringify(serverConfig));
-        window.dispatchEvent(new Event("tbs_landing_cms_updated"));
         return serverConfig;
       }
     }
