@@ -385,6 +385,7 @@ export default {
 
   async handleRequest(request, env, ctx) {
     const url = new URL(request.url);
+    const pathname = url.pathname.replace(/\/$/, "") || "/";
 
     // Auto-migrate schema columns & legacy codes lazily
     await ensureDatabaseColumnsAndLegacyCode(env);
@@ -5532,7 +5533,7 @@ export default {
     // ════════════════════════════════════════════════════════════════
     // 🔔 NOTIFICATIONS & AUDIT LOGS APIS
     // ════════════════════════════════════════════════════════════════
-    if (url.pathname === "/api/notifications") {
+    if (pathname === "/api/notifications" || url.pathname.startsWith("/api/notifications")) {
       if (request.method === "GET") {
         try {
           const user = (await verifyServerAuth(request)) || { empCode: "EMP-001", roleCode: "CBCNV" };
@@ -5588,7 +5589,7 @@ export default {
       }
     }
 
-    if (url.pathname === "/api/admin/audit-logs" && request.method === "GET") {
+    if (pathname === "/api/admin/audit-logs" && request.method === "GET") {
       try {
         const user = await verifyServerAuth(request);
         if (!user || !user.authenticated) {
@@ -5608,7 +5609,7 @@ export default {
     // ════════════════════════════════════════════════════════════════
     // 🌐 LANDING PAGE CMS PERSISTENCE & MULTI-DEVICE SYNC APIS
     // ════════════════════════════════════════════════════════════════
-    if (url.pathname === "/api/landing-cms") {
+    if (pathname === "/api/landing-cms" || pathname.startsWith("/api/landing-cms")) {
       const NO_CACHE_HEADERS = {
         ...SECURE_JSON_HEADERS,
         "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
@@ -5695,7 +5696,7 @@ export default {
     // ════════════════════════════════════════════════════════════════
     // 👤 USER AVATARS & PROFILE PERSISTENCE D1 APIS
     // ════════════════════════════════════════════════════════════════
-    if (url.pathname === "/api/user-avatars" || url.pathname === "/api/profile") {
+    if (pathname === "/api/user-avatars" || pathname.startsWith("/api/user-avatars") || pathname === "/api/profile" || pathname.startsWith("/api/profile")) {
       const NO_CACHE_HEADERS = {
         ...SECURE_JSON_HEADERS,
         "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
