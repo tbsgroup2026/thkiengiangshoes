@@ -118,15 +118,15 @@ export default function KaizenPublicSubmitForm({
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
-  const [unitTitle, setUnitTitle] = useState<string>("THNM KIÊN GIANG");
+  const [unitTitle, setUnitTitle] = useState<string>("THNM Kiên Giang");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const host = window.location.hostname.toLowerCase();
-      if (host.includes("vpchuoi") || host.includes("skechers")) {
+      if (host.includes("vpchuoi")) {
         setUnitTitle("VP CHUỖI SKECHERS");
       } else {
-        setUnitTitle("THNM KIÊN GIANG");
+        setUnitTitle("THNM Kiên Giang");
       }
     }
   }, []);
