@@ -184,6 +184,26 @@ export function getLandingCMS(): LandingCMSConfig {
       ? parsed.brandPartners
       : DEFAULT_BRAND_PARTNERS;
 
+    // Sanitize any stale logo paths saved in client localStorage
+    const cleanedPartners = rawPartners.map((partner: BrandPartner) => {
+      let logo = partner.logo;
+      if (logo === "/images/brands/decathlon.svg") logo = "/images/brands/256000.png";
+      if (logo === "/images/brands/wolverine.svg") logo = "/images/brands/256133.jpg";
+      return {
+        ...partner,
+        logo,
+      };
+    });
+
+    // If stored partners list is missing newer default partners, merge them
+    const existingIds = new Set(cleanedPartners.map((p: BrandPartner) => p.id));
+    const mergedPartners = [...cleanedPartners];
+    for (const defPartner of DEFAULT_BRAND_PARTNERS) {
+      if (!existingIds.has(defPartner.id)) {
+        mergedPartners.push(defPartner);
+      }
+    }
+
     return {
       hero: { ...DEFAULT_LANDING_CMS.hero, ...(parsed.hero || {}) },
       workspace: { ...DEFAULT_LANDING_CMS.workspace, ...(parsed.workspace || {}) },
@@ -193,7 +213,7 @@ export function getLandingCMS(): LandingCMSConfig {
         description: storedProducts.description || DEFAULT_LANDING_CMS.products.description,
         items: mergedItems,
       },
-      brandPartners: rawPartners,
+      brandPartners: mergedPartners,
     };
   } catch (e) {
     return DEFAULT_LANDING_CMS;
