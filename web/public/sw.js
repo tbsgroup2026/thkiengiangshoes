@@ -1,5 +1,5 @@
 // PWA Service Worker for Văn Phòng Chuỗi SKECHERS - TBS Group
-const CACHE_NAME = "skechers-tbs-v8";
+const CACHE_NAME = "skechers-tbs-v9";
 const ASSETS_TO_CACHE = [
   "/",
   "/favicon.ico",
@@ -97,12 +97,14 @@ self.addEventListener("notificationclick", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  // Only handle GET requests for static assets, skip API routes
-  if (event.request.method !== "GET" || event.request.url.includes("/api/")) {
+  // Pass through GET requests for API routes and Next.js internal build assets directly to browser network
+  if (
+    event.request.method !== "GET" ||
+    event.request.url.includes("/api/") ||
+    event.request.url.includes("/_next/")
+  ) {
     return;
   }
-
-  const url = new URL(event.request.url);
 
   // Network-First for HTML navigation to guarantee latest HTML and CSS/JS hashes
   if (event.request.mode === "navigate" || (event.request.headers.get("accept") || "").includes("text/html")) {
@@ -121,52 +123,6 @@ self.addEventListener("fetch", (event) => {
             return caches.match("/");
           });
         })
-    );
-    return;
-  }
-
-  // Network-first for Next.js build chunks to handle new deployments cleanly
-  if (url.pathname.startsWith("/_next/static/")) {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          const contentType = response.headers.get("content-type") || "";
-
-          // If SPA fallback returned HTML for a missing JS/CSS chunk, don't execute HTML as JS
-          if (contentType.includes("text/html")) {
-            if (url.pathname.endsWith(".js")) {
-              return new Response("/* Chunk 404 */", {
-                status: 200,
-                headers: { "Content-Type": "application/javascript" },
-              });
-            }
-            if (url.pathname.endsWith(".css")) {
-              return new Response("/* CSS 404 */", {
-                status: 200,
-                headers: { "Content-Type": "text/css" },
-              });
-            }
-          }
-
-          // Handle 200 OK and 304 Not Modified from Cloudflare Edge Server correctly
-          if (response.ok || response.status === 304) {
-            if (response.ok) {
-              const copy = response.clone();
-              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-            }
-            return response;
-          }
-
-          // Only fallback if chunk returned 404
-          if (response.status === 404) {
-            return caches.match(event.request).then((cached) => {
-              if (cached) return cached;
-              return response;
-            });
-          }
-          return response;
-        })
-        .catch(() => caches.match(event.request))
     );
     return;
   }

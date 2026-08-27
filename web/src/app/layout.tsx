@@ -58,6 +58,15 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
+              if ('serviceWorker' in navigator && 'caches' in window) {
+                caches.keys().then(function(keys) {
+                  keys.forEach(function(key) {
+                    if (key !== 'skechers-tbs-v9') {
+                      caches.delete(key);
+                    }
+                  });
+                });
+              }
               window.addEventListener('error', function(e) {
                 var msg = e && (e.message || (e.error && e.error.message)) || '';
                 if (msg.includes('Unexpected token') || msg.includes('Loading chunk') || msg.includes('Failed to fetch dynamically imported module')) {
