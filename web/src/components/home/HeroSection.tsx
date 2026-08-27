@@ -194,37 +194,37 @@ export default function HeroSection() {
          ════════════════════════════════════════════════════════════════ */}
       <section
         id="brand-strip"
-        className="relative z-30 -mt-[74px] py-7 bg-[#0b3226]/95 backdrop-blur-md border-y border-[#2fd39a]/25 shadow-2xl overflow-hidden"
+        className="relative z-30 -mt-[74px] py-8 bg-[#0b3226] border-y border-[#2fd39a]/25 shadow-2xl overflow-hidden"
       >
-        {/* Gradient side fades */}
-        <div className="absolute left-0 top-0 bottom-0 w-[140px] bg-gradient-to-r from-[#0b3226] via-[#0b3226]/90 to-transparent z-10 pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-0 w-[140px] bg-gradient-to-l from-[#0b3226] via-[#0b3226]/90 to-transparent z-10 pointer-events-none" />
+        {/* Side gradient overlays for smooth infinite scroll */}
+        <div className="absolute left-0 top-0 bottom-0 w-[120px] sm:w-[160px] bg-gradient-to-r from-[#0b3226] via-[#0b3226]/90 to-transparent z-10 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-[120px] sm:w-[160px] bg-gradient-to-l from-[#0b3226] via-[#0b3226]/90 to-transparent z-10 pointer-events-none" />
 
-        <div className="w-full text-center space-y-4">
-          {/* Gold Header with Decorative Lines on Left & Right */}
+        <div className="w-full text-center space-y-5">
+          {/* Gold Top Header: ─────── DÒNG GIÀY TIÊU BIỂU ─────── */}
           <div className="flex items-center justify-center gap-4 px-4">
-            <div className="h-[1px] w-12 sm:w-20 md:w-28 bg-gradient-to-r from-transparent to-[#f2dc9a]/80" />
-            <h3 className="text-xs sm:text-sm font-bold uppercase tracking-[3.5px] text-[#f2dc9a] font-serif">
+            <div className="h-[1px] w-16 sm:w-28 md:w-36 bg-gradient-to-r from-transparent to-[#f2dc9a]/70" />
+            <h3 className="text-xs sm:text-sm font-bold uppercase tracking-[4px] text-[#f2dc9a] font-serif">
               {t("hero.brand_partners")}
             </h3>
-            <div className="h-[1px] w-12 sm:w-20 md:w-28 bg-gradient-to-l from-transparent to-[#f2dc9a]/80" />
+            <div className="h-[1px] w-16 sm:w-28 md:w-36 bg-gradient-to-l from-transparent to-[#f2dc9a]/70" />
           </div>
 
-          {/* Continuous Marquee Row: 15 Shoe Images + 5 Group Labels */}
-          <div className="overflow-hidden w-full flex items-center py-1">
-            <div className="animate-marquee-left flex items-center gap-5 sm:gap-6">
+          {/* Continuous Marquee Row: 15 Shoe Cards + 5 Group Badges */}
+          <div className="overflow-hidden w-full flex items-center py-2">
+            <div className="animate-marquee-left flex items-center gap-4 sm:gap-5">
               {marqueeList.map((item, idx) => {
                 if (item.type === "IMAGE") {
                   return (
                     <div
                       key={`${item.id}-${idx}`}
-                      className="flex-shrink-0 flex items-center justify-center w-[150px] sm:w-[170px] h-[68px] rounded-[18px] px-4 py-2 bg-white shadow-lg border border-white/30 hover:-translate-y-1 hover:shadow-xl hover:scale-105 transition-all duration-300 select-none cursor-pointer group"
+                      className="flex-shrink-0 flex items-center justify-center w-[160px] sm:w-[190px] h-[90px] sm:h-[105px] rounded-[24px] px-4 py-2 bg-white shadow-xl border border-white/40 hover:-translate-y-1 hover:shadow-2xl hover:scale-[1.03] transition-all duration-300 select-none cursor-pointer group"
                       title={item.name}
                     >
                       <img
                         src={item.url}
                         alt={item.name}
-                        className="max-h-[48px] max-w-[130px] w-auto h-auto object-contain transition-transform duration-300 group-hover:scale-105"
+                        className="max-h-[70px] max-w-[155px] w-auto h-auto object-contain transition-transform duration-300 group-hover:scale-105"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = "/images/brands/256000.png";
                         }}
@@ -233,15 +233,17 @@ export default function HeroSection() {
                   );
                 }
 
-                // Group Label Badge
+                // Group Label Badge with Lines: ─────── WATER PROOF ───────
                 return (
                   <div
                     key={`${item.id}-${idx}`}
-                    className="flex-shrink-0 flex items-center justify-center px-5 py-2.5 bg-white/10 backdrop-blur-md rounded-full border border-white/20 text-white font-extrabold text-xs uppercase tracking-widest shadow-md select-none"
+                    className="flex-shrink-0 flex items-center justify-center gap-3 px-6 py-3 select-none"
                   >
-                    <span className="text-[#f2dc9a] mr-2">———</span>
-                    <span>{item.title}</span>
-                    <span className="text-[#f2dc9a] ml-2">———</span>
+                    <div className="h-[1px] w-10 sm:w-16 bg-[#f2dc9a]/50" />
+                    <span className="text-white font-black text-xs sm:text-sm uppercase tracking-[3.5px] font-sans whitespace-nowrap">
+                      {item.title}
+                    </span>
+                    <div className="h-[1px] w-10 sm:w-16 bg-[#f2dc9a]/50" />
                   </div>
                 );
               })}
