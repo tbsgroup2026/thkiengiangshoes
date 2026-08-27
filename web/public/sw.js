@@ -1,5 +1,5 @@
 // PWA Service Worker for Văn Phòng Chuỗi SKECHERS - TBS Group
-const CACHE_NAME = "skechers-tbs-v7";
+const CACHE_NAME = "skechers-tbs-v8";
 const ASSETS_TO_CACHE = [
   "/",
   "/favicon.ico",
@@ -104,6 +104,27 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(event.request.url);
 
+  // Network-First for HTML navigation to guarantee latest HTML and CSS/JS hashes
+  if (event.request.mode === "navigate" || (event.request.headers.get("accept") || "").includes("text/html")) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          }
+          return response;
+        })
+        .catch(() => {
+          return caches.match(event.request).then((cached) => {
+            if (cached) return cached;
+            return caches.match("/");
+          });
+        })
+    );
+    return;
+  }
+
   // Network-first for Next.js build chunks to handle new deployments cleanly
   if (url.pathname.startsWith("/_next/static/")) {
     event.respondWith(
@@ -150,22 +171,14 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Cache-first for offline PWA shell
+  // Fallback cache handler for static assets (images, icons, fonts)
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
         return cachedResponse;
       }
       return fetch(event.request).catch(() => {
-        return (
-          caches.match("/work") ||
-          caches.match("/") ||
-          new Response("Offline", {
-            status: 503,
-            statusText: "Offline",
-            headers: { "Content-Type": "text/plain; charset=utf-8" },
-          })
-        );
+        return caches.match("/");
       });
     })
   );
