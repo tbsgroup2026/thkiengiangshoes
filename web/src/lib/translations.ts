@@ -350,7 +350,7 @@ const TRANSLATIONS: Record<LanguageCode, Translations> = {
       years_experience: "Năm Kinh Nghiệm",
       products_year: "Sản Phẩm / Năm",
       operational_staff: "Nhân Sự Vận Hành",
-      brand_partners: "ĐỐI TÁC THƯƠNG HIỆU TIN CẬY",
+      brand_partners: "DÒNG GIÀY TIÊU BIỂU",
     },
 
     workspace: {

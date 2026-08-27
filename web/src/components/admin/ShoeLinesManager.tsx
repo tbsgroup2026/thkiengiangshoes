@@ -17,7 +17,6 @@ import {
   IconPhoto,
 } from "@tabler/icons-react";
 import { ShoeLinesConfig, ShoeGroup, ShoeImageItem, DEFAULT_SHOE_LINES_CONFIG } from "@/lib/landingCMS";
-import FeaturedShoeLines from "@/components/home/FeaturedShoeLines";
 
 interface Props {
   shoeLines: ShoeLinesConfig;
@@ -475,7 +474,46 @@ export default function ShoeLinesManager({ shoeLines, onChange, showToast }: Pro
             <span>Xem trước Giao diện Dòng Giày Tiêu Biểu xuất hiện trên Trang Chủ:</span>
           </div>
 
-          <FeaturedShoeLines initialConfig={config} />
+          <div className="relative z-30 py-7 bg-[#0b3226] rounded-3xl border border-[#2fd39a]/30 shadow-2xl overflow-hidden">
+            <div className="absolute left-0 top-0 bottom-0 w-[100px] bg-gradient-to-r from-[#0b3226] via-[#0b3226]/90 to-transparent z-10 pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-0 w-[100px] bg-gradient-to-l from-[#0b3226] via-[#0b3226]/90 to-transparent z-10 pointer-events-none" />
+
+            <div className="w-full text-center space-y-4">
+              <div className="flex items-center justify-center gap-4 px-4">
+                <div className="h-[1px] w-12 sm:w-20 bg-gradient-to-r from-transparent to-[#f2dc9a]/80" />
+                <h3 className="text-xs sm:text-sm font-bold uppercase tracking-[3.5px] text-[#f2dc9a] font-serif">
+                  {config.title || "DÒNG GIÀY TIÊU BIỂU"}
+                </h3>
+                <div className="h-[1px] w-12 sm:w-20 bg-gradient-to-l from-transparent to-[#f2dc9a]/80" />
+              </div>
+
+              <div className="overflow-hidden w-full flex items-center py-1">
+                <div className="animate-marquee-left flex items-center gap-5">
+                  {config.groups.map((grp) => (
+                    <React.Fragment key={grp.id}>
+                      {grp.items.map((item, idx) => (
+                        <div
+                          key={`${item.id}-${idx}`}
+                          className="flex-shrink-0 flex items-center justify-center w-[150px] h-[68px] rounded-[18px] px-4 py-2 bg-white shadow-lg border border-white/30"
+                        >
+                          <img
+                            src={item.url}
+                            alt={item.name || grp.title}
+                            className="max-h-[48px] max-w-[130px] w-auto h-auto object-contain"
+                          />
+                        </div>
+                      ))}
+                      <div className="flex-shrink-0 flex items-center justify-center px-5 py-2.5 bg-white/10 backdrop-blur-md rounded-full border border-white/20 text-white font-extrabold text-xs uppercase tracking-widest shadow-md">
+                        <span className="text-[#f2dc9a] mr-2">———</span>
+                        <span>{grp.title}</span>
+                        <span className="text-[#f2dc9a] ml-2">———</span>
+                      </div>
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

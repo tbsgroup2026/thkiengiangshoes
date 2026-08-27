@@ -8,7 +8,7 @@ import { getLandingCMS, DEFAULT_LANDING_CMS } from "@/lib/landingCMS";
 export default function HeroSection() {
   const { t, lang } = useTranslation();
   const [cmsHero, setCmsHero] = useState(DEFAULT_LANDING_CMS.hero);
-  const [brandPartners, setBrandPartners] = useState(DEFAULT_LANDING_CMS.brandPartners);
+  const [shoeLines, setShoeLines] = useState(DEFAULT_LANDING_CMS.shoeLines);
 
   useEffect(() => {
     const loadCMS = () => {
@@ -16,8 +16,8 @@ export default function HeroSection() {
       if (config?.hero) {
         setCmsHero(config.hero);
       }
-      if (Array.isArray(config?.brandPartners)) {
-        setBrandPartners(config.brandPartners);
+      if (config?.shoeLines) {
+        setShoeLines(config.shoeLines);
       }
     };
     loadCMS();
@@ -28,14 +28,30 @@ export default function HeroSection() {
     }
   }, []);
 
-  // Filter active partners sorted by displayOrder
-  const activePartners = brandPartners
-    .filter((b) => b.isActive !== false)
-    .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+  // Build single continuous marquee array: 3 shoe images + 1 group label badge for each group
+  const groups = shoeLines?.groups || DEFAULT_LANDING_CMS.shoeLines.groups;
+  const singleCycleList: Array<
+    | { type: "IMAGE"; id: string; url: string; name: string }
+    | { type: "LABEL"; id: string; title: string }
+  > = [];
 
-  const displayList = activePartners.length > 0
-    ? [...activePartners, ...activePartners]
-    : [...DEFAULT_LANDING_CMS.brandPartners, ...DEFAULT_LANDING_CMS.brandPartners];
+  groups.forEach((group) => {
+    (group.items || []).forEach((item, idx) => {
+      singleCycleList.push({
+        type: "IMAGE",
+        id: item.id || `img-${group.id}-${idx}`,
+        url: item.url,
+        name: item.name || group.title,
+      });
+    });
+    singleCycleList.push({
+      type: "LABEL",
+      id: `label-${group.id}`,
+      title: group.title,
+    });
+  });
+
+  const marqueeList = [...singleCycleList, ...singleCycleList, ...singleCycleList];
 
   return (
     <>
@@ -51,105 +67,112 @@ export default function HeroSection() {
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat pointer-events-none"
           style={{ backgroundImage: `url('${cmsHero.bgImage || "/images/tbs-gate.jpg"}')` }}
-        />
-        {/* Lớp phủ đen có độ trong suốt 40%, gradient black từ trái sang phải */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-black/10 pointer-events-none" />
-        <div className="absolute inset-0 bg-black/40 pointer-events-none" />
+        >
+          {/* Dark Green Gradient Overlay for High Contrast */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#08221a]/95 via-[#08221a]/85 to-[#08221a]/60" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#08221a] via-transparent to-[#08221a]/40" />
+        </div>
 
-        <div className="relative z-10 w-full max-w-[1400px] mx-auto px-5 sm:px-8 lg:px-12">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-            {/* Left Column: Copy & CTAs & Stats */}
-            <div className="lg:col-span-7 space-y-6">
-              {/* Main Headline */}
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black text-white leading-[1.08] tracking-tight">
-                {cmsHero.titlePrefix || t("hero.chain_office")} <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#2fd39a] via-[#52e8b2] to-[#f2dc9a]">
-                  {cmsHero.titleHighlight || t("hero.skechers_tbs")}
+        {/* Ambient Glow Accent */}
+        <div className="absolute top-1/4 left-1/4 w-[400px] sm:w-[600px] h-[400px] sm:h-[600px] bg-[#2fd39a]/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center">
+            
+            {/* Left Content Column (7 cols) */}
+            <div className="lg:col-span-7 space-y-6 sm:space-y-8 text-center lg:text-left">
+              
+              {/* Badge: Skechers Chain Office */}
+              <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-[#0d3b2e]/90 border border-[#2fd39a]/35 shadow-lg backdrop-blur-md">
+                <span className="w-2 h-2 rounded-full bg-[#2fd39a] animate-pulse" />
+                <span className="text-[#2fd39a] text-xs font-bold uppercase tracking-wider">
+                  {t("hero.chain_office")}
                 </span>
-              </h1>
+                <span className="text-[#2fd39a]/40">|</span>
+                <span className="text-white/90 text-xs font-medium">
+                  {t("hero.skechers_tbs")}
+                </span>
+              </div>
 
-              {/* Italic Quote */}
-              <p className="text-sm sm:text-base font-serif italic text-[#f2dc9a]/90 tracking-wide">
-                &ldquo;{cmsHero.quoteItalic || t("hero.excellence_manufacturing")}&rdquo;
-              </p>
+              {/* Main Headline */}
+              <div className="space-y-3 sm:space-y-4">
+                <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.1]">
+                  {cmsHero.titlePrefix || "Tổ hợp Kiên Giang"}{" "}
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#2fd39a] via-emerald-300 to-[#f2dc9a] block sm:inline">
+                    {cmsHero.titleHighlight || "TBS Group"}
+                  </span>
+                </h1>
 
-              {/* Paragraph Description */}
-              <p className="text-xs sm:text-sm text-gray-300 leading-relaxed max-w-[62ch]">
-                {cmsHero.description || t("hero.operating_space")}
-              </p>
+                <p className="text-sm sm:text-base lg:text-lg text-slate-300 font-normal leading-relaxed max-w-2xl mx-auto lg:mx-0">
+                  {cmsHero.description ||
+                    "Không gian điều hành đại diện cho năng lực quản trị, văn hóa doanh nghiệp và tiêu chuẩn vận hành của Tổ hợp Kiên Giang - TBS Group."}
+                </p>
+              </div>
 
-              {/* CTAs */}
-              <div className="flex flex-wrap items-center gap-3 pt-2">
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
                 <Link
-                  href="/login"
-                  className="inline-flex items-center gap-2 bg-gradient-to-r from-[#2fd39a] to-[#f2dc9a] text-[#08221a] font-extrabold px-6 py-3 rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/20 hover:brightness-110 active:scale-[0.98] transition-all duration-200"
+                  href="/work"
+                  className="px-7 py-3.5 rounded-2xl bg-gradient-to-r from-[#2fd39a] to-emerald-500 text-[#08221a] font-extrabold text-sm shadow-xl shadow-[#2fd39a]/20 hover:shadow-2xl hover:shadow-[#2fd39a]/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center gap-2 group"
                 >
                   <span>{t("hero.access_system")}</span>
-                  <IconArrowRight size={16} />
+                  <IconArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                 </Link>
+
                 <a
                   href="#workspace"
-                  className="inline-flex items-center gap-2 text-gray-200 font-semibold px-6 py-3 rounded-xl text-xs uppercase tracking-wider hover:text-white hover:bg-white/10 border border-white/20 transition-all duration-200"
+                  className="px-7 py-3.5 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/20 text-white font-bold text-sm backdrop-blur-md hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
                 >
                   {t("hero.explore_space")}
                 </a>
               </div>
 
-              {/* Stats Row — 3 Clusters */}
-              <div className="pt-6 border-t border-white/15 grid grid-cols-3 gap-3 sm:gap-6">
-                <div className="space-y-0.5">
-                  <div className="text-2xl sm:text-3xl font-black font-mono text-white tracking-tight">
+              {/* Stats Bar */}
+              <div className="grid grid-cols-3 gap-3 sm:gap-6 pt-6 border-t border-white/10 max-w-xl mx-auto lg:mx-0">
+                <div className="p-3 rounded-xl bg-white/5 border border-white/10 backdrop-blur-xs text-center lg:text-left">
+                  <div className="text-xl sm:text-2xl font-black text-[#f2dc9a]">
                     {cmsHero.stat1Value || "30+"}
                   </div>
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-gray-300">
+                  <div className="text-[11px] sm:text-xs text-slate-400 font-medium">
                     {cmsHero.stat1Label || t("hero.years_experience")}
                   </div>
                 </div>
-                <div className="space-y-0.5 border-l border-white/20 pl-3 sm:pl-6">
-                  <div className="text-2xl sm:text-3xl font-black font-mono text-[#2fd39a] tracking-tight">
+
+                <div className="p-3 rounded-xl bg-white/5 border border-white/10 backdrop-blur-xs text-center lg:text-left">
+                  <div className="text-xl sm:text-2xl font-black text-[#2fd39a]">
                     {cmsHero.stat2Value || "10M+"}
                   </div>
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-gray-300">
+                  <div className="text-[11px] sm:text-xs text-slate-400 font-medium">
                     {cmsHero.stat2Label || t("hero.products_year")}
                   </div>
                 </div>
-                <div className="space-y-0.5 border-l border-white/20 pl-3 sm:pl-6">
-                  <div className="text-2xl sm:text-3xl font-black font-mono text-[#f2dc9a] tracking-tight">
+
+                <div className="p-3 rounded-xl bg-white/5 border border-white/10 backdrop-blur-xs text-center lg:text-left">
+                  <div className="text-xl sm:text-2xl font-black text-white">
                     {cmsHero.stat3Value || "5,000+"}
                   </div>
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-gray-300">
+                  <div className="text-[11px] sm:text-xs text-slate-400 font-medium">
                     {cmsHero.stat3Label || t("hero.operational_staff")}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Right Column: Hero Visual Block matching exact screenshot */}
-            <div className="lg:col-span-5 relative min-h-[380px] sm:min-h-[420px] lg:min-h-[440px] h-[400px] sm:h-[440px] z-10 mt-6 lg:mt-0">
-              {/* 1. Main Card (Top-Right): Hands Circle Image */}
-              <div className="absolute top-0 right-0 w-[80%] h-[68%] rounded-[26px] overflow-hidden border border-[#2fd39a]/35 shadow-2xl z-10 group bg-[#0d2419]">
+            {/* Right Media Column (5 cols) — Dynamic Hands Photo Card */}
+            <div className="lg:col-span-5 relative">
+              <div className="relative rounded-3xl overflow-hidden shadow-2xl border-2 border-[#2fd39a]/30 group bg-[#0d2419]">
                 <img
                   src={cmsHero.handsImage || "/images/tbs-hands.png"}
-                  alt="TBS Group - Chung Sức Kiến Tạo Tương Lai"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                  alt="TBS Hands Commitment"
+                  className="w-full h-auto object-cover group-hover:scale-105 transition-transform duration-700"
                 />
-              </div>
-
-              {/* 2. Sub Card (Bottom-Left): Team Photo Banner with White Border */}
-              <div className="absolute bottom-0 left-0 w-[55%] h-[48%] rounded-[22px] overflow-hidden border-[3px] border-white shadow-2xl z-20 hover:scale-[1.03] transition-transform duration-300 group/card bg-[#0d2419]">
-                <img
-                  src={cmsHero.teamImage || "/images/tbs-team-banner.png"}
-                  alt="Phát Huy Sức Mạnh Kiến Tạo Tương Lai"
-                  className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-500"
-                />
-              </div>
-
-              {/* 3. Dark Quote Badge: Bottom-Right Quote Box */}
-              <div className="absolute bottom-[5%] sm:bottom-[10%] right-0 sm:-right-2 z-30 bg-[#08221a]/90 backdrop-blur-[14px] border border-[#2fd39a]/45 rounded-[20px] p-3.5 sm:p-[16px_20px] max-w-[190px] sm:max-w-[230px] shadow-2xl">
-                <div className="w-[30px] sm:w-[40px] h-[2.5px] bg-gradient-to-r from-[#2fd39a] to-[#1fae7d] rounded-full mb-2 sm:mb-[10px]" />
-                <p className="font-serif italic text-white text-sm sm:text-[17px] leading-[1.4]">
-                  &ldquo;{cmsHero.quoteBadgeText || "Chung sức kiến tạo tương lai"}&rdquo;
-                </p>
+                
+                {/* Overlay Quote Badge */}
+                <div className="absolute bottom-4 left-4 right-4 p-4 rounded-2xl bg-[#08221a]/85 backdrop-blur-md border border-[#2fd39a]/30 text-center">
+                  <p className="font-serif italic text-white text-sm sm:text-[17px] leading-[1.4]">
+                    &ldquo;{cmsHero.quoteBadgeText || "Chung sức kiến tạo tương lai"}&rdquo;
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -167,7 +190,7 @@ export default function HeroSection() {
 
       {/* ════════════════════════════════════════════════════════════════
           MODULE 2 — BRAND-STRIP (#brand-strip)
-          Full-width dark green background strip with white stadium pills
+          Full-width dark green background strip: "DÒNG GIÀY TIÊU BIỂU"
          ════════════════════════════════════════════════════════════════ */}
       <section
         id="brand-strip"
@@ -178,38 +201,50 @@ export default function HeroSection() {
         <div className="absolute right-0 top-0 bottom-0 w-[140px] bg-gradient-to-l from-[#0b3226] via-[#0b3226]/90 to-transparent z-10 pointer-events-none" />
 
         <div className="w-full text-center space-y-4">
-          <h3 className="text-[11px] font-bold uppercase tracking-[3.5px] text-[#f2dc9a]">
-            {t("hero.brand_partners")}
-          </h3>
+          {/* Gold Header with Decorative Lines on Left & Right */}
+          <div className="flex items-center justify-center gap-4 px-4">
+            <div className="h-[1px] w-12 sm:w-20 md:w-28 bg-gradient-to-r from-transparent to-[#f2dc9a]/80" />
+            <h3 className="text-xs sm:text-sm font-bold uppercase tracking-[3.5px] text-[#f2dc9a] font-serif">
+              {t("hero.brand_partners")}
+            </h3>
+            <div className="h-[1px] w-12 sm:w-20 md:w-28 bg-gradient-to-l from-transparent to-[#f2dc9a]/80" />
+          </div>
 
-          {/* Continuous Marquee Row of White Stadium Pills */}
+          {/* Continuous Marquee Row: 15 Shoe Images + 5 Group Labels */}
           <div className="overflow-hidden w-full flex items-center py-1">
             <div className="animate-marquee-left flex items-center gap-5 sm:gap-6">
-              {displayList.map((brand, idx) => (
-                <div
-                  key={`${brand.id || brand.name}-${idx}`}
-                  className="flex-shrink-0 flex items-center justify-center w-[160px] h-[68px] rounded-[18px] px-5 py-2 bg-white shadow-lg border border-white/30 hover:-translate-y-1 hover:shadow-xl hover:scale-105 transition-all duration-300 select-none cursor-pointer group"
-                  title={brand.name}
-                >
-                  <img
-                    src={brand.logo}
-                    alt={`${brand.name} Logo`}
-                    className="max-h-[38px] max-w-[124px] w-auto h-auto object-contain transition-transform duration-300 group-hover:scale-105"
-                    onError={(e) => {
-                      // Fallback text preview if image fails to load
-                      const target = e.target as HTMLElement;
-                      target.style.display = "none";
-                      const parent = target.parentElement;
-                      if (parent && !parent.querySelector(".brand-fallback")) {
-                        const txt = document.createElement("span");
-                        txt.className = "brand-fallback font-black text-[#006838] text-xs uppercase tracking-wider text-center";
-                        txt.innerText = brand.name;
-                        parent.appendChild(txt);
-                      }
-                    }}
-                  />
-                </div>
-              ))}
+              {marqueeList.map((item, idx) => {
+                if (item.type === "IMAGE") {
+                  return (
+                    <div
+                      key={`${item.id}-${idx}`}
+                      className="flex-shrink-0 flex items-center justify-center w-[150px] sm:w-[170px] h-[68px] rounded-[18px] px-4 py-2 bg-white shadow-lg border border-white/30 hover:-translate-y-1 hover:shadow-xl hover:scale-105 transition-all duration-300 select-none cursor-pointer group"
+                      title={item.name}
+                    >
+                      <img
+                        src={item.url}
+                        alt={item.name}
+                        className="max-h-[48px] max-w-[130px] w-auto h-auto object-contain transition-transform duration-300 group-hover:scale-105"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = "/images/brands/256000.png";
+                        }}
+                      />
+                    </div>
+                  );
+                }
+
+                // Group Label Badge
+                return (
+                  <div
+                    key={`${item.id}-${idx}`}
+                    className="flex-shrink-0 flex items-center justify-center px-5 py-2.5 bg-white/10 backdrop-blur-md rounded-full border border-white/20 text-white font-extrabold text-xs uppercase tracking-widest shadow-md select-none"
+                  >
+                    <span className="text-[#f2dc9a] mr-2">———</span>
+                    <span>{item.title}</span>
+                    <span className="text-[#f2dc9a] ml-2">———</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
