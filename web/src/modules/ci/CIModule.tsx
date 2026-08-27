@@ -178,7 +178,16 @@ export function HalfStarRating({ value, onChange, readOnly = false, size = 22 }:
   );
 }
 
-const TH_KG_SUB_ITEMS = ["Kiên Giang 1", "Kiên Giang 2", "Hoàn Thiện Đế"];
+const TH_KG_SUB_ITEMS = [
+  "Kiên Giang 1",
+  "Kiên Giang 2",
+  "Kiên Giang 3",
+  "Hoàn thiện đế",
+  "Phòng kế hoạch",
+  "Phòng CN-CI",
+  "Phòng chất lượng",
+  "Phòng nhân sự",
+];
 const MAIN_REGIONS = ["THKG"];
 
 const matchRegionFilter = (propRegion: string, filterRegion: string) => {
@@ -186,7 +195,31 @@ const matchRegionFilter = (propRegion: string, filterRegion: string) => {
   if (!propRegion) return false;
 
   const pr = propRegion.toUpperCase();
-  const fr = filterRegion.toUpperCase();
+
+  if (filterRegion === "Kiên Giang 1" || filterRegion === "KG 1") {
+    return pr.includes("KIÊN GIANG 1") || pr.includes("KIEN GIANG 1") || pr.includes("KG 1") || pr.includes("KG1");
+  }
+  if (filterRegion === "Kiên Giang 2" || filterRegion === "KG 2") {
+    return pr.includes("KIÊN GIANG 2") || pr.includes("KIEN GIANG 2") || pr.includes("KG 2") || pr.includes("KG2");
+  }
+  if (filterRegion === "Kiên Giang 3" || filterRegion === "KG 3") {
+    return pr.includes("KIÊN GIANG 3") || pr.includes("KIEN GIANG 3") || pr.includes("KG 3") || pr.includes("KG3");
+  }
+  if (filterRegion === "Hoàn thiện đế" || filterRegion === "Hoàn Thiện Đế") {
+    return pr.includes("HOÀN THIỆN ĐẾ") || pr.includes("HOAN THIEN DE") || pr.includes("HTĐ") || pr.includes("HTD") || pr === "ĐẾ" || pr === "DE";
+  }
+  if (filterRegion === "Phòng kế hoạch") {
+    return pr.includes("KẾ HOẠCH") || pr.includes("KE HOACH") || pr.includes("PPC");
+  }
+  if (filterRegion === "Phòng CN-CI") {
+    return pr.includes("CN-CI") || pr.includes("CN CI") || pr.includes("CONTINUOUS IMPROVEMENT");
+  }
+  if (filterRegion === "Phòng chất lượng") {
+    return pr.includes("CHẤT LƯỢNG") || pr.includes("CHAT LUONG") || pr.includes("QA") || pr.includes("QC");
+  }
+  if (filterRegion === "Phòng nhân sự") {
+    return pr.includes("NHÂN SỰ") || pr.includes("NHAN SU") || pr.includes("HR") || pr.includes("HÀNH CHÍNH");
+  }
 
   if (filterRegion === "THKG" || filterRegion === "TH-KG") {
     return (
@@ -216,7 +249,7 @@ const matchRegionFilter = (propRegion: string, filterRegion: string) => {
     return pr.includes("VP CHUỖI") || pr.includes("VP CHUOI") || pr.includes("R&D") || pr.includes("NGÀNH S");
   }
 
-  return pr.includes(fr);
+  return pr.includes(filterRegion.toUpperCase());
 };
 
 export default function CIModule() {

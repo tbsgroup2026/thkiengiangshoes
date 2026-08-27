@@ -36,14 +36,21 @@ import {
   getTosForChuyens,
 } from "./organizationTree";
 
-export const STANDARD_6_REGIONS = [
-  "KG 1",
-  "KG 2",
+export const STANDARD_8_REGIONS = [
+  "Kiên Giang 1",
+  "Kiên Giang 2",
+  "Kiên Giang 3",
   "Hoàn thiện đế",
+  "Phòng kế hoạch",
+  "Phòng CN-CI",
+  "Phòng chất lượng",
+  "Phòng nhân sự",
 ];
 
-// Authoritative 6 Regions matching System Standard for Dashboard Regional Charts
-const DASHBOARD_REGIONS = STANDARD_6_REGIONS;
+export const STANDARD_6_REGIONS = STANDARD_8_REGIONS;
+
+// Authoritative 8 Regions matching System Standard for Dashboard Regional Charts
+const DASHBOARD_REGIONS = STANDARD_8_REGIONS;
 
 // Authoritative list of 7 Factories for Multi-Select Filter
 const FACTORY_OPTIONS = REAL_FACTORIES;
@@ -77,40 +84,26 @@ const getProposalValue = (p: any): number => {
   return 0;
 };
 
-// Helper to match region string to 6 standard region buckets
+// Helper to match region string to 8 standard region/department buckets
 const normalizeRegion = (p: KaizenProposal | any): string => {
-  if (!p) return "VP Chuỗi (R&D)";
+  if (!p) return "Kiên Giang 1";
   const regionStr = typeof p === "string" ? p : p.region;
   const factoryStr = typeof p === "object" ? p.factory : "";
   const deptStr = typeof p === "object" ? p.department : "";
 
   const combined = `${regionStr || ""} ${factoryStr || ""} ${deptStr || ""}`.toUpperCase();
-  if (!combined.trim()) return "VP Chuỗi (R&D)";
+  if (!combined.trim()) return "Kiên Giang 1";
 
-  if (combined.includes("KIÊN GIANG 1") || combined.includes("KIEN GIANG 1") || combined.includes("KG 1") || combined.includes("KG1")) return "Kiên Giang 1";
-  if (combined.includes("KIÊN GIANG 2") || combined.includes("KIEN GIANG 2") || combined.includes("KG 2") || combined.includes("KG2")) return "Kiên Giang 2";
   if (combined.includes("KIÊN GIANG 3") || combined.includes("KIEN GIANG 3") || combined.includes("KG 3") || combined.includes("KG3")) return "Kiên Giang 3";
-  if (combined.includes("HOÀN THIỆN ĐẾ") || combined.includes("HOAN THIEN DE") || combined.includes("HTĐ") || combined.includes("HTD") || combined.includes("ĐẾ") || combined.includes("DE")) return "Hoàn Thiện Đế";
-  if (
-    combined.includes("MIỀN ĐÔNG") ||
-    combined.includes("MIEN DONG") ||
-    combined.includes("SK MĐ") ||
-    combined.includes("SK MD") ||
-    combined.includes("LONG XUYÊN") ||
-    combined.includes("LONG XUYEN") ||
-    combined.includes("ĐÀ NẴNG") ||
-    combined.includes("DA NANG") ||
-    combined.includes("HỘI AN") ||
-    combined.includes("HOI AN") ||
-    combined.includes("ĐỒNG XOÀI") ||
-    combined.includes("DONG XOAI")
-  ) {
-    return "Nhà Máy Miền Đông";
-  }
-  if (combined.includes("VP CHUỖI") || combined.includes("VP CHUOI") || combined.includes("VP2") || combined.includes("R&D") || combined.includes("SXCN") || combined.includes("NGÀNH S")) {
-    return "VP Chuỗi (R&D)";
-  }
-  return "VP Chuỗi (R&D)";
+  if (combined.includes("KIÊN GIANG 2") || combined.includes("KIEN GIANG 2") || combined.includes("KG 2") || combined.includes("KG2")) return "Kiên Giang 2";
+  if (combined.includes("KIÊN GIANG 1") || combined.includes("KIEN GIANG 1") || combined.includes("KG 1") || combined.includes("KG1")) return "Kiên Giang 1";
+  if (combined.includes("HOÀN THIỆN ĐẾ") || combined.includes("HOAN THIEN DE") || combined.includes("HTĐ") || combined.includes("HTD") || combined.includes("ĐẾ") || combined.includes("DE")) return "Hoàn thiện đế";
+  if (combined.includes("KẾ HOẠCH") || combined.includes("KE HOACH") || combined.includes("PPC")) return "Phòng kế hoạch";
+  if (combined.includes("CN-CI") || combined.includes("CN CI") || combined.includes("CONTINUOUS IMPROVEMENT") || combined.includes("P. CN-CI")) return "Phòng CN-CI";
+  if (combined.includes("CHẤT LƯỢNG") || combined.includes("CHAT LUONG") || combined.includes("QA") || combined.includes("QC")) return "Phòng chất lượng";
+  if (combined.includes("NHÂN SỰ") || combined.includes("NHAN SU") || combined.includes("HR") || combined.includes("HÀNH CHÍNH")) return "Phòng nhân sự";
+
+  return "Kiên Giang 1";
 };
 
 // Helper to match proposal against 5-level cascading organizational filter
@@ -298,10 +291,10 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
       }
     }
 
-    // Level 1: Default -> Display by Nhà Máy
+    // Level 1: Default -> Display by Nhà Máy / Khu Vực
     return {
-      chartItems: STANDARD_6_REGIONS,
-      levelName: "NHÀ MÁY",
+      chartItems: STANDARD_8_REGIONS,
+      levelName: "NHÀ MÁY / KHU VỰC",
       contextLabel: "",
     };
   }, [cascadingFilterState]);

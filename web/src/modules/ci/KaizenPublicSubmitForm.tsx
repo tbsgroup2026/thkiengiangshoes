@@ -32,9 +32,14 @@ const CATEGORIES = [
 ];
 
 export const REAL_FACTORIES = [
-  "KG 1",
-  "KG 2",
+  "Kiên Giang 1",
+  "Kiên Giang 2",
+  "Kiên Giang 3",
   "Hoàn thiện đế",
+  "Phòng kế hoạch",
+  "Phòng CN-CI",
+  "Phòng chất lượng",
+  "Phòng nhân sự",
 ];
 
 export const REAL_DEPARTMENTS = [
