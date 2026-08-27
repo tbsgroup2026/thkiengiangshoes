@@ -45,10 +45,11 @@ const ICON_OPTIONS = [
 interface Props {
   departments: WorkspaceDepartment[];
   onChange: (deps: WorkspaceDepartment[]) => void;
+  onSave?: () => void;
   showToast: (msg: string) => void;
 }
 
-export default function WorkspaceCMSManager({ departments, onChange, showToast }: Props) {
+export default function WorkspaceCMSManager({ departments, onChange, onSave, showToast }: Props) {
   const [deps, setDeps] = useState<WorkspaceDepartment[]>(
     departments && departments.length > 0 ? departments : DEFAULT_WORKSPACE_DEPARTMENTS
   );
@@ -281,7 +282,8 @@ export default function WorkspaceCMSManager({ departments, onChange, showToast }
   // Save Config
   const handleSaveConfig = () => {
     onChange(deps);
-    showToast("💾 ĐÃ LƯU THAY ĐỔI KHÔNG GIAN LÀM VIỆC THÀNH CÔNG!");
+    if (onSave) onSave();
+    showToast("💾 ĐÃ LƯU & ĐỒNG BỘ THAY ĐỔI KHÔNG GIAN LÀM VIỆC LÊN MÁY CHỦ!");
   };
 
   const totalImagesCount = deps.reduce((acc, d) => acc + (d.images?.length || 0), 0);

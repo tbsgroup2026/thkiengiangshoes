@@ -2218,8 +2218,8 @@ export default function AdminPage() {
             onChange={(updatedDeps) => {
               const newCMS = { ...landingCMS, workspaceDepartments: updatedDeps };
               setLandingCMS(newCMS);
-              saveLandingCMS(newCMS);
             }}
+            onSave={() => handleSaveLandingCMS()}
             showToast={showToast}
           />
         )}
