@@ -70,6 +70,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Vui lòng cung cấp proposalId' }, { status: 400 });
     }
 
+    const roleCode = String((session as any)?.roleCode || (session as any)?.role || '').toUpperCase();
+    const isExecutiveOrAdmin = Boolean((session as any)?.isExecutiveOrAdmin) || ['TONG_GIAM_DOC', 'ADMIN'].includes(roleCode);
+    const isJudgeRole =
+      isExecutiveOrAdmin ||
+      (Boolean((session as any)?.levelRank) && Number((session as any).levelRank) >= 3) ||
+      ['TONG_GIAM_DOC', 'PHO_TONG_GIAM_DOC', 'GIAM_DOC', 'PHO_GIAM_DOC', 'TRUONG_PHONG', 'CI_LEAD', 'QC', 'ADMIN'].includes(roleCode);
+
+    if (action === 'SAVE_DRAFT' || action === 'CONFIRM') {
+      if (!isJudgeRole && session) {
+        return NextResponse.json(
+          { error: 'Tài khoản của bạn không có quyền chấm điểm chuyên môn cho đề xuất này' },
+          { status: 403 }
+        );
+      }
+    }
+
     const db = getDbBinding();
 
     if (action === 'ASSIGN_JUDGE') {

@@ -85,15 +85,76 @@ export default function KaizenDetailModal({
   }, [user, proposal]);
 
   const isJudgeOrExecutive = useMemo(() => {
+    if (!user) return false;
     if (isExecutiveOrAdmin || levelRank >= 3) return true;
-    const rc = ((user as any)?.roleCode || "").toUpperCase();
+    const rc = ((user as any)?.roleCode || (user as any)?.role || "").toUpperCase();
     return ["TONG_GIAM_DOC", "PHO_TONG_GIAM_DOC", "GIAM_DOC", "PHO_GIAM_DOC", "TRUONG_PHONG", "CI_LEAD", "QC", "ADMIN"].includes(rc);
   }, [user, isExecutiveOrAdmin, levelRank]);
 
-  // Tab 2: BGK/Ban 2.2/Admin HOẶC Tác giả (chỉ xem điểm đã chấm)
-  const canSeeExpertTab = isJudgeOrExecutive || (isOwner && proposal?.sub_status === "DA_DANH_GIA");
-  // Tab 3: CHỈ BGK / Ban 2.2 / Admin mới có quyền thấy & trao giải thưởng
-  const canSeeAwardTab = isJudgeOrExecutive;
+  // Fetch evaluation data to verify if current user is an assigned judge
+  const [evalData, setEvalData] = useState<any>(null);
+
+  useEffect(() => {
+    if (!proposal?.id) return;
+    let isMounted = true;
+    fetch(`/api/ci-kaizen/expert-evaluations?proposalId=${proposal.id}`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (isMounted && json.success) {
+          setEvalData(json.data);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [proposal?.id]);
+
+  const isAssignedJudge = useMemo(() => {
+    if (evalData?.assignedJudges && Array.isArray(evalData.assignedJudges) && evalData.assignedJudges.length > 0) {
+      if (evalData.isExecutiveManager) return true;
+      if (!user?.empCode) return false;
+      const userEmp = user.empCode.trim().toUpperCase();
+      return evalData.assignedJudges.some((j: any) => (j.judge_emp_code || "").trim().toUpperCase() === userEmp);
+    }
+    return isJudgeOrExecutive;
+  }, [evalData, user, isJudgeOrExecutive]);
+
+  // Tab 2 & 3: ONLY visible if current account has judging permission for this proposal
+  const canSeeExpertTab = isAssignedJudge;
+  const canSeeAwardTab = isAssignedJudge;
+
+  // Fallback activeTab if selected tab is hidden or user lacks permission
+  useEffect(() => {
+    if (activeTab === "expert_review" && !canSeeExpertTab) {
+      setActiveTab("info");
+    } else if (activeTab === "star_review" && !canSeeAwardTab) {
+      setActiveTab("info");
+    }
+  }, [activeTab, canSeeExpertTab, canSeeAwardTab]);
+
+  // Handle direct access via URL search params (e.g. ?tab=expert_review)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = (params.get("tab") || params.get("activeTab") || params.get("tab_name") || "").toLowerCase();
+
+      if (["expert_review", "cham-diem", "danh-gia-chuyen-mon"].includes(tabParam)) {
+        if (canSeeExpertTab) {
+          setActiveTab("expert_review");
+        } else {
+          setActiveTab("info");
+        }
+      } else if (["star_review", "thuong", "danh-gia-thuong"].includes(tabParam)) {
+        if (canSeeAwardTab) {
+          setActiveTab("star_review");
+        } else {
+          setActiveTab("info");
+        }
+      }
+    } catch (e) {}
+  }, [canSeeExpertTab, canSeeAwardTab]);
 
   if (!isOpen || !proposal) return null;
 
@@ -348,48 +409,52 @@ export default function KaizenDetailModal({
               <span>ℹ️ Thông tin</span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => setActiveTab("expert_review")}
-              className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-                activeTab === "expert_review"
-                  ? "bg-[#0b1739] text-white shadow-xs"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
-              }`}
-            >
-              <span>♛ Đánh giá chuyên môn</span>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                activeTab === "expert_review" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
-              }`}>
-                {proposal.score_points || (proposal as any).evaluations_count ? `${proposal.score_points || 2}` : "2"}
-              </span>
-            </button>
+            {canSeeExpertTab && (
+              <button
+                type="button"
+                onClick={() => setActiveTab("expert_review")}
+                className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                  activeTab === "expert_review"
+                    ? "bg-[#0b1739] text-white shadow-xs"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
+                }`}
+              >
+                <span>♛ Đánh giá chuyên môn</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                  activeTab === "expert_review" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+                }`}>
+                  {proposal.score_points || (proposal as any).evaluations_count ? `${proposal.score_points || 2}` : "2"}
+                </span>
+              </button>
+            )}
 
-            <button
-              type="button"
-              onClick={() => setActiveTab("star_review")}
-              className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
-                activeTab === "star_review"
-                  ? "bg-[#0b1739] text-white shadow-xs"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
-              }`}
-            >
-              <span>★ Đánh giá thưởng</span>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                activeTab === "star_review" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
-              }`}>
-                {proposal.rating_count || 0}
-              </span>
-            </button>
+            {canSeeAwardTab && (
+              <button
+                type="button"
+                onClick={() => setActiveTab("star_review")}
+                className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                  activeTab === "star_review"
+                    ? "bg-[#0b1739] text-white shadow-xs"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
+                }`}
+              >
+                <span>★ Đánh giá thưởng</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                  activeTab === "star_review" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+                }`}>
+                  {proposal.rating_count || 0}
+                </span>
+              </button>
+            )}
           </div>
 
           {/* TAB CONTENT */}
           <div className="flex-1 min-w-0 overflow-y-auto">
             {activeTab === "info" && <TabInfoContent proposal={proposal} />}
-            {activeTab === "expert_review" && (
-              <TabExpertReviewContent proposal={proposal} isOwner={isOwner} />
+            {activeTab === "expert_review" && canSeeExpertTab && (
+              <TabExpertReviewContent proposal={proposal} isOwner={isOwner} initialEvalData={evalData} />
             )}
-            {activeTab === "star_review" && (
+            {activeTab === "star_review" && canSeeAwardTab && (
               <TabAwardReviewContent
                 proposal={proposal}
                 isJudgeOrExecutive={isJudgeOrExecutive}
@@ -644,9 +709,11 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
 function TabExpertReviewContent({
   proposal,
   isOwner,
+  initialEvalData,
 }: {
   proposal: KaizenProposal;
   isOwner: boolean;
+  initialEvalData?: any;
 }) {
   const { user, isExecutiveOrAdmin, levelRank } = usePermission();
 
@@ -656,13 +723,13 @@ function TabExpertReviewContent({
     return ["TONG_GIAM_DOC", "PHO_TONG_GIAM_DOC", "GIAM_DOC", "PHO_GIAM_DOC", "TRUONG_PHONG", "CI_LEAD", "QC", "ADMIN"].includes(rc);
   }, [user, isExecutiveOrAdmin, levelRank]);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialEvalData);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   // Server state data
-  const [evalData, setEvalData] = useState<any>(null);
+  const [evalData, setEvalData] = useState<any>(initialEvalData || null);
   const catObj = CATEGORIES.find((c) => c.id === proposal.category) || CATEGORIES[0];
 
   // Form states for assigned judge scoring
@@ -1079,23 +1146,7 @@ function TabExpertReviewContent({
         </div>
       )}
 
-      {/* Notice for Non-Assigned BGK */}
-      {!evalData?.isAssignedJudge && (
-        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-bold space-y-1">
-          <div className="flex items-center gap-2 text-amber-800 font-black">
-            <IconAlertTriangle size={18} />
-            <span>THÔNG BÁO PHÂN QUYỀN CHẤM ĐIỂM</span>
-          </div>
-          <p>
-            Tài khoản của bạn chưa được phân công làm Ban Giám Khảo cho đề xuất cải tiến này.
-          </p>
-          {evalData?.isExecutiveManager && (
-            <p className="text-emerald-700 font-extrabold">
-              💡 Bạn là TGĐ/Admin: Nếu muốn tự chấm điểm bài này, vui lòng nhập MSNV của bản thân vào ô Phân công BGK phía trên.
-            </p>
-          )}
-        </div>
-      )}
+
 
       {/* FORM CHẤM ĐIỂM DÀNH CHO BGK */}
       <div className="bg-white rounded-3xl border border-slate-200 p-4 md:p-6 shadow-2xs space-y-6">

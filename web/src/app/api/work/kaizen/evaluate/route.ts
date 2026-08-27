@@ -31,6 +31,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Mã đề xuất Kaizen không hợp lệ' }, { status: 400 });
     }
 
+    const roleCode = String((session as any)?.roleCode || (session as any)?.role || '').toUpperCase();
+    const isExecutiveOrAdmin = Boolean((session as any)?.isExecutiveOrAdmin) || ['TONG_GIAM_DOC', 'ADMIN'].includes(roleCode);
+    const isJudgeRole =
+      isExecutiveOrAdmin ||
+      (Boolean((session as any)?.levelRank) && Number((session as any).levelRank) >= 3) ||
+      ['TONG_GIAM_DOC', 'PHO_TONG_GIAM_DOC', 'GIAM_DOC', 'PHO_GIAM_DOC', 'TRUONG_PHONG', 'CI_LEAD', 'QC', 'ADMIN'].includes(roleCode);
+
+    if (!isJudgeRole && session) {
+      return NextResponse.json(
+        { error: 'Tài khoản của bạn không có quyền chấm điểm đề xuất này' },
+        { status: 403 }
+      );
+    }
+
     const c1 = Number(criterion1Score) || 0;
     const c2 = Number(criterion2Score) || 0;
     const c3 = Number(criterion3Score) || 0;
