@@ -306,6 +306,93 @@ Khi có thao tác `git push` hoặc merge vào nhánh `main` làm thay đổi th
 
 ---
 
+# 13. SKILL AGENT BỔ TRỢ (AI CODING SKILLS)
+
+Mục này mô tả các "Skill" (bộ kịch bản / hướng dẫn chuyên biệt) hỗ trợ các AI Coding Agent (Antigravity, Claude Code, Cursor, Codex...) làm việc chính xác và hiệu quả nhất với codebase của hệ thống **TBS II Platform**.
+
+## 13.1. Scan skill hiện có trong dự án
+
+Dự án hiện tại đã được trang bị **13 AI Skill Agents** chuyên biệt nằm tại thư mục `.agents/skills/`:
+
+| Tên Skill | Đường dẫn file | Mục đích & Mô tả chức năng |
+|---|---|---|
+| `brandkit` | [.agents/skills/brandkit/SKILL.md](file:///d:/Work/KG-KAIZEN/.agents/skills/brandkit/SKILL.md) | Bộ hướng dẫn tạo hình ảnh bộ nhận diện thương hiệu (Brandkit), thiết kế logo & identity system chuẩn TBS Group. |
+| `design-taste-frontend` | [.agents/skills/design-taste-frontend/SKILL.md](file:///d:/Work/KG-KAIZEN/.agents/skills/design-taste-frontend/SKILL.md) | Tiêu chuẩn thiết kế UI/UX hiện đại (v2), phòng chống giao diện mẫu AI generic, tối ưu spacing, typography & micro-motion. |
+| `design-taste-frontend-v1` | [.agents/skills/design-taste-frontend-v1/SKILL.md](file:///d:/Work/KG-KAIZEN/.agents/skills/design-taste-frontend-v1/SKILL.md) | Phiên bản v1 giữ tính tương thích ngược cho các giao diện kế thừa. |
+| `full-output-enforcement` | [.agents/skills/full-output-enforcement/SKILL.md](file:///d:/Work/KG-KAIZEN/.agents/skills/full-output-enforcement/SKILL.md) | Ép buộc AI tạo mã nguồn đầy đủ 100%, cấm tuyệt đối mã giả (placeholder) hoặc bỏ dở đoạn code. |
+| `gpt-taste` | [.agents/skills/gpt-taste/SKILL.md](file:///d:/Work/KG-KAIZEN/.agents/skills/gpt-taste/SKILL.md) | Hướng dẫn bố cục AIDA, Bento Grid, cuộn trang GSAP ScrollTrigger & hiệu ứng chuyển động chuyên sâu. |
+| `high-end-visual-design` | [.agents/skills/high-end-visual-design/SKILL.md](file:///d:/Work/KG-KAIZEN/.agents/skills/high-end-visual-design/SKILL.md) | Định nghĩa các font chữ cao cấp, hiệu ứng đổ bóng, thẻ card sang trọng, nâng cấp thẩm mỹ UI. |
+| `image-to-code` | [.agents/skills/image-to-code/SKILL.md](file:///d:/Work/KG-KAIZEN/.agents/skills/image-to-code/SKILL.md) | Quy trình chuyển đổi từ hình ảnh thiết kế sang mã nguồn React/Tailwind chuẩn xác từng pixel. |
+| `imagegen-frontend-mobile` | [.agents/skills/imagegen-frontend-mobile/SKILL.md](file:///d:/Work/KG-KAIZEN/.agents/skills/imagegen-frontend-mobile/SKILL.md) | Hướng dẫn AI tạo hình ảnh tham chiếu giao diện Mobile App (iOS / Android mockups). |
+| `imagegen-frontend-web` | [.agents/skills/imagegen-frontend-web/SKILL.md](file:///d:/Work/KG-KAIZEN/.agents/skills/imagegen-frontend-web/SKILL.md) | Quy trình tạo ảnh tham chiếu từng section độc lập cho landing page & web app. |
+| `industrial-brutalist-ui` | [.agents/skills/industrial-brutalist-ui/SKILL.md](file:///d:/Work/KG-KAIZEN/.agents/skills/industrial-brutalist-ui/SKILL.md) | Phong cách giao diện công nghiệp cơ khí (Swiss Typographic + Military Terminal) cho bảng điều khiển dữ liệu lớn. |
+| `minimalist-ui` | [.agents/skills/minimalist-ui/SKILL.md](file:///d:/Work/KG-KAIZEN/.agents/skills/minimalist-ui/SKILL.md) | Giao diện phong cách tạp chí tối giản, tông màu đơn sắc thanh lịch & flat bento grid. |
+| `redesign-existing-projects` | [.agents/skills/redesign-existing-projects/SKILL.md](file:///d:/Work/KG-KAIZEN/.agents/skills/redesign-existing-projects/SKILL.md) | Quy trình tái thiết kế & nâng cấp giao diện dự án hiện có mà không làm hỏng logic nghiệp vụ cũ. |
+| `stitch-design-taste` | [.agents/skills/stitch-design-taste/SKILL.md](file:///d:/Work/KG-KAIZEN/.agents/skills/stitch-design-taste/SKILL.md) | Hệ thống Semantic Design System cho Google Stitch, kiểm soát hiệu năng phần cứng & micro-motion. |
+
+## 13.2. Đề xuất Skill Agent nên tạo cho dự án này
+
+Dựa trên cấu trúc hệ thống Monorepo đặc thù với nhiều phân hệ nghiệp vụ (`00` - `06`, Kaizen, Gemba Walk, MMTB, Tài chính, Tuyển dụng...), dưới đây là **5 Skill Agent bổ trợ được đề xuất tạo thêm**:
+
+### 1. **Skill: `add-business-module`**
+- **Mục đích**: Tự động thêm 1 phân hệ nghiệp vụ mới vào thanh sidebar, khai báo cờ dữ liệu, tạo cấu trúc file (`/web/src/modules/<tên-module>`, `/web/src/app/<tên-module>`) đúng pattern hiện có của dự án.
+- **Trigger**: Khi người dùng yêu cầu: *"Thêm phân hệ mới"*, *"Thêm module X vào sidebar"*, *"Tạo trang chức năng Y"*.
+- **Thao tác trên các file/thư mục**:
+  - [web/src/app/work/page.tsx](file:///d:/Work/KG-KAIZEN/web/src/app/work/page.tsx) *(Mảng `departments` & icon import)*
+  - `web/src/modules/<tên-module>/` *(Tạo mới thư mục & component wrapper)*
+  - [web/src/lib/companyData.ts](file:///d:/Work/KG-KAIZEN/web/src/lib/companyData.ts) *(Khai báo config banner & data)*
+
+### 2. **Skill: `edit-feature-card`**
+- **Mục đích**: Sửa nội dung thẻ nhóm chức năng (Tiêu đề, mô tả, icon, danh sách mục con, liên kết route) trong bất kỳ phân hệ nghiệp vụ nào mà không bị phá vỡ bố cục grid responsive.
+- **Trigger**: Khi người dùng yêu cầu: *"Sửa nội dung thẻ"*, *"Đổi icon cho thẻ X"*, *"Thêm mục con vào thẻ Y"*.
+- **Thao tác trên các file/thư mục**:
+  - [web/src/lib/cnciData.ts](file:///d:/Work/KG-KAIZEN/web/src/lib/cnciData.ts) *(Dữ liệu nhóm thẻ CN-CI)*
+  - [web/src/app/work/page.tsx](file:///d:/Work/KG-KAIZEN/web/src/app/work/page.tsx) *(Thẻ các phân hệ Tổng quan, R&D, QC)*
+  - `web/src/modules/ci/CNCIWrapper.tsx` *(Render layout thẻ)*
+
+### 3. **Skill: `sync-readme`**
+- **Mục đích**: Tự động cập nhật lại file `README.md` (đặc biệt là Mục 6 - Bản đồ code theo chức năng & Mục 2 - Tech Stack) mỗi khi dự án thêm phân hệ mới hoặc thay đổi cấu trúc mã nguồn.
+- **Trigger**: Sau khi hoàn thành cập nhật lớn về cấu trúc code hoặc khi người dùng yêu cầu: *"Cập nhật README"*, *"Sync documentation"*.
+- **Thao tác trên các file/thư mục**:
+  - [README.md](file:///d:/Work/KG-KAIZEN/README.md)
+  - Quét toàn bộ thư mục `web/src/` & `backend/`
+
+### 4. **Skill: `api-route-checker`**
+- **Mục đích**: Quét và kiểm tra tính hợp lệ của tất cả các liên kết route, nút bấm, và API endpoints trong hệ thống; phát hiện liên kết chết (404), cờ placeholder chưa hoàn thiện hoặc thiếu kiểm tra xác thực JWT/RBAC.
+- **Trigger**: Khi người dùng yêu cầu: *"Kiểm tra route"*, *"Audit link"*, *"Check API trước khi deploy"*.
+- **Thao tác trên các file/thư mục**:
+  - `web/src/app/api/` *(Tất cả serverless API routes)*
+  - `web/src/app/` *(Tất cả trang Next.js App Router)*
+
+### 5. **Skill: `design-consistency-check`**
+- **Mục đích**: Đảm bảo các component mới thêm vào tuân thủ đúng hệ thống thiết kế hiện có (màu xanh thương hiệu `#006838`, bo góc `rounded-2xl`, hiệu ứng shadow, typography font Inter/Roboto và quy chuẩn responsive cho màn hình laptop nhỏ).
+- **Trigger**: Khi người dùng thêm UI mới hoặc yêu cầu: *"Kiểm tra đồng bộ giao diện"*, *"Fix layout responsive"*.
+- **Thao tác trên các file/thư mục**:
+  - `web/src/components/`
+  - `web/src/modules/`
+  - [web/src/app/globals.css](file:///d:/Work/KG-KAIZEN/web/src/app/globals.css)
+
+## 13.3. Hướng dẫn tạo skill mới cho AI Agent
+
+Đối với các AI Coding Agent hỗ trợ chuẩn **Skill** (Antigravity, Claude Code,...), cấu trúc tạo 1 skill mới như sau:
+
+- **Vị trí đặt file**: `.agents/skills/<ten-skill>/SKILL.md` (hoặc `.claude/skills/<ten-skill>/SKILL.md`)
+- **Cấu trúc tối thiểu của file `SKILL.md`**:
+```markdown
+---
+name: ten-skill-viết-thường
+description: Mô tả ngắn gọn chức năng của skill và các từ khóa trigger để agent tự động nhận diện.
+---
+
+# Hướng dẫn chi tiết cho Agent
+1. Các bước thực hiện bài bản...
+2. Các file cần kiểm tra và chỉnh sửa...
+3. Các quy tắc cấm/bắt buộc tuân thủ...
+```
+- **Cơ chế tự động phát hiện**: Khi người dùng đưa ra yêu cầu có ngữ cảnh phù hợp với phần `description` trong YAML frontmatter, AI Agent sẽ tự động nạp file `SKILL.md` tương ứng và thực thi theo đúng quy trình đã được định nghĩa.
+
+---
+
 ### DANH SÁCH CÁC FILE ĐÃ ĐỌC ĐỂ TỔNG HỢP README NÀY:
 
 1. [package.json](file:///d:/Work/KG-KAIZEN/package.json) *(Khai báo scripts root & dependencies monorepo)*
@@ -320,5 +407,6 @@ Khi có thao tác `git push` hoặc merge vào nhánh `main` làm thay đổi th
 10. [web/src/lib/cnciData.ts](file:///d:/Work/KG-KAIZEN/web/src/lib/cnciData.ts) *(Cấu hình dữ liệu nhóm thẻ phân hệ CN-CI)*
 11. [web/src/modules/ci/organizationTree.ts](file:///d:/Work/KG-KAIZEN/web/src/modules/ci/organizationTree.ts) *(Cơ cấu tổ chức nhà máy KG 1, KG 2, Hoàn thiện đế)*
 12. [web/src/modules/ci/KaizenDetailModal.tsx](file:///d:/Work/KG-KAIZEN/web/src/modules/ci/KaizenDetailModal.tsx) *(Phân quyền Ban Giám Khảo & ẩn tab chuyên môn)*
-13. [DEPLOYMENT.md](file:///d:/Work/KG-KAIZEN/DEPLOYMENT.md) *(Tài liệu hướng dẫn deployment)*
-14. [PROJECT_STATE.md](file:///d:/Work/KG-KAIZEN/PROJECT_STATE.md) *(Trạng thái tổng quan hệ thống)*
+13. [.agents/skills/](file:///d:/Work/KG-KAIZEN/.agents/skills) *(Danh sách 13 AI Skill Agents hiện có)*
+14. [DEPLOYMENT.md](file:///d:/Work/KG-KAIZEN/DEPLOYMENT.md) *(Tài liệu hướng dẫn deployment)*
+15. [PROJECT_STATE.md](file:///d:/Work/KG-KAIZEN/PROJECT_STATE.md) *(Trạng thái tổng quan hệ thống)*
