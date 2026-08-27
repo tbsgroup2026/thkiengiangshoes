@@ -37,12 +37,9 @@ import {
 } from "./organizationTree";
 
 export const STANDARD_6_REGIONS = [
-  "Kiên Giang 1",
-  "Kiên Giang 2",
-  "Kiên Giang 3",
-  "Hoàn Thiện Đế",
-  "Nhà Máy Miền Đông",
-  "VP Chuỗi (R&D)",
+  "KG 1",
+  "KG 2",
+  "Hoàn thiện đế",
 ];
 
 // Authoritative 6 Regions matching System Standard for Dashboard Regional Charts

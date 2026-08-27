@@ -17,14 +17,9 @@ export interface OrgNodeMap {
 }
 
 export const KIEN_GIANG_FACTORIES = [
-  "Kiên Giang 1",
-  "Kiên Giang 2",
-  "Kiên Giang 3",
   "KG 1",
   "KG 2",
-  "KG 3",
-  "HTĐ KG",
-  "VP KV KG",
+  "Hoàn thiện đế",
 ];
 
 export function isKienGiangFactory(factory: string): boolean {
@@ -33,13 +28,13 @@ export function isKienGiangFactory(factory: string): boolean {
   return (
     normalized.includes("kiên giang") ||
     normalized.includes("kg") ||
-    normalized.includes("htđ") ||
-    normalized.includes("vp kv")
+    normalized.includes("hoàn thiện đế") ||
+    normalized.includes("htđ")
   );
 }
 
 export const INITIAL_ORG_TREE: OrgNodeMap = {
-  "Kiên Giang 1": {
+  "KG 1": {
     "Xưởng Đế KG1": {
       "Line Ép 1": {
         "Chuyền Cán Ép 1": ["Tổ Cán Ép A", "Tổ Cán Ép B"],
@@ -66,7 +61,7 @@ export const INITIAL_ORG_TREE: OrgNodeMap = {
     },
   },
 
-  "Kiên Giang 2": {
+  "KG 2": {
     "Xưởng Mũi KG2": {
       "Line May 1": {
         "Chuyền May KG2-1": ["Tổ May 1", "Tổ May 2"],
@@ -79,27 +74,11 @@ export const INITIAL_ORG_TREE: OrgNodeMap = {
     },
   },
 
-  "Kiên Giang 3": {
-    "Xưởng Tổng Hợp KG3": {
-      "Line Tự Động": {
-        "Chuyền Tự Động 1": ["Tổ Vận Hành 1", "Tổ Vận Hành 2"],
-      },
-    },
-  },
-
-  "HTĐ KG": {
+  "Hoàn thiện đế": {
     "Xưởng Hoàn Thiện Đế": {
       "Line Sơn & Ép": {
         "Chuyền Sơn Đế": ["Tổ Phun Sơn 1", "Tổ Phun Sơn 2"],
         "Chuyền Ép Thành Phẩm": ["Tổ Ép Đế 1"],
-      },
-    },
-  },
-
-  "VP KV KG": {
-    "Văn Phòng Khu Vực": {
-      "Khối Kỹ Thuật & CI": {
-        "Chuyền CI": ["Tổ Kaizen 1"],
       },
     },
   },

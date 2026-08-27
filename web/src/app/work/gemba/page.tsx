@@ -295,11 +295,9 @@ export default function GembaDedicatedPage() {
                     onChange={(e) => setFactory(e.target.value)}
                     className="w-full p-2.5 rounded-xl border border-slate-300 font-bold text-slate-800 bg-white"
                   >
-                    <option value="Kiên Giang 1">Kiên Giang 1</option>
-                    <option value="Kiên Giang 2">Kiên Giang 2</option>
-                    <option value="Kiên Giang 3">Kiên Giang 3</option>
-                    <option value="HTĐ KG">HTĐ KG</option>
-                    <option value="VP KV KG">VP KV KG</option>
+                    <option value="KG 1">KG 1</option>
+                    <option value="KG 2">KG 2</option>
+                    <option value="Hoàn thiện đế">Hoàn thiện đế</option>
                   </select>
                 </div>
 

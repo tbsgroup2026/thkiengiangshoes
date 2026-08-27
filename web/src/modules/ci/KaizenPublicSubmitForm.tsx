@@ -34,11 +34,7 @@ const CATEGORIES = [
 export const REAL_FACTORIES = [
   "KG 1",
   "KG 2",
-  "KG 3",
-  "HTĐ KG",
-  "VP KV KG",
-  "SK MĐ",
-  "VP2",
+  "Hoàn thiện đế",
 ];
 
 export const REAL_DEPARTMENTS = [

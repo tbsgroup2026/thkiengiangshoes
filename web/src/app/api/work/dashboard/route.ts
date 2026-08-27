@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-static';
 
-const KG_FACTORIES_SQL = "('Kiên Giang 1', 'Kiên Giang 2', 'Kiên Giang 3', 'KG 1', 'KG 2', 'KG 3', 'HTĐ KG', 'VP KV KG')";
+const KG_FACTORIES_SQL = "('KG 1', 'KG 2', 'Hoàn thiện đế', 'Kiên Giang 1', 'Kiên Giang 2', 'HTĐ KG')";
 
 function getDbBinding(): any {
   return (process.env as any).DB || (globalThis as any).DB || null;
