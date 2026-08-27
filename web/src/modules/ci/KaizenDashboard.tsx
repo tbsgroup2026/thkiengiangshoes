@@ -933,11 +933,10 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-extrabold text-[10px] uppercase tracking-wider">
-                <th className="py-3 px-4 w-12 text-center">#</th>
+                <th className="py-3 px-4 w-16 text-center">HẠNG</th>
+                <th className="py-3 px-4">HỌ VÀ TÊN</th>
+                <th className="py-3 px-4 text-center">MSNV</th>
                 <th className="py-3 px-4">CẢI TIẾN</th>
-                <th className="py-3 px-4">NHÓM SP/DV</th>
-                <th className="py-3 px-4 text-center">CHUYÊN MÔN</th>
-                <th className="py-3 px-4 text-center">ĐIỂM TB</th>
                 <th className="py-3 px-4 text-right">GIÁ TRỊ</th>
               </tr>
             </thead>
@@ -946,47 +945,47 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
               {top5Proposals.length > 0 ? (
                 top5Proposals.map((item, idx) => (
                   <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3 px-4 text-center">
+                    {/* Column 1: Hạng */}
+                    <td className="py-3 px-4 text-center font-extrabold">
                       {idx === 0 ? (
-                        <span className="text-amber-500 font-black text-sm">🏆</span>
+                        <span className="text-amber-500 font-black text-sm">🏆 1</span>
                       ) : idx === 1 ? (
-                        <span className="text-slate-400 font-black text-sm">🥈</span>
+                        <span className="text-slate-400 font-black text-sm">🥈 2</span>
                       ) : idx === 2 ? (
-                        <span className="text-amber-700 font-black text-sm">🥉</span>
+                        <span className="text-amber-700 font-black text-sm">🥉 3</span>
                       ) : (
                         <span className="text-slate-500 font-bold">{idx + 1}</span>
                       )}
                     </td>
 
-                    <td className="py-3 px-4 max-w-md">
-                      <span className="font-extrabold text-slate-900 block text-xs leading-snug">
-                        {item.title}
+                    {/* Column 2: Họ và Tên */}
+                    <td className="py-3 px-4">
+                      <span className="font-extrabold text-slate-900 text-xs block leading-snug">
+                        {item.proposer_name || "Nhân viên"}
                       </span>
                       <span className="text-[11px] text-slate-400 block pt-0.5">
-                        {item.proposer_name} · {item.region} · {item.created_at ? `T${new Date(item.created_at).getMonth() + 1}/${new Date(item.created_at).getFullYear()}` : "T8/2026"}
+                        {item.department || item.region || "Tổ hợp Kiên Giang"}
                       </span>
                     </td>
 
-                    <td className="py-3 px-4">
-                      <span className="inline-block px-2.5 py-0.5 rounded-full bg-blue-600 text-white font-extrabold text-[10px]">
-                        {item.dept_code || "Chặt"}
+                    {/* Column 3: MSNV */}
+                    <td className="py-3 px-4 text-center">
+                      <span className="inline-block px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-mono font-extrabold text-[11px] border border-slate-200">
+                        {item.proposer_emp_code || item.code || "CBCNV"}
                       </span>
                     </td>
 
-                    <td className="py-3 px-4 text-center font-extrabold text-slate-800">
-                      <span className="inline-flex items-center gap-1">
-                        <span className="text-amber-500">👑</span>
-                        <span>{(item.score_points || 95.0).toFixed(2)}</span>
+                    {/* Column 4: Cải tiến */}
+                    <td className="py-3 px-4 max-w-md">
+                      <span className="font-extrabold text-slate-900 block text-xs leading-snug truncate" title={item.title}>
+                        {item.title}
+                      </span>
+                      <span className="text-[11px] text-[#006838] font-bold block pt-0.5">
+                        {item.category_label || item.category || "Cải tiến quy trình"}
                       </span>
                     </td>
 
-                    <td className="py-3 px-4 text-center font-extrabold text-slate-800">
-                      <span className="inline-flex items-center gap-1">
-                        <span className="text-amber-400">⭐</span>
-                        <span>{(item.avg_rating || 4.5).toFixed(1)}</span>
-                      </span>
-                    </td>
-
+                    {/* Column 5: Giá trị */}
                     <td className="py-3 px-4 text-right font-black text-emerald-600 text-sm">
                       {formatMillion(getProposalValue(item))}
                     </td>
@@ -995,7 +994,7 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
               ) : (
                 /* Empty state when database has no proposals */
                 <tr>
-                  <td colSpan={6} className="py-10 text-center text-slate-400">
+                  <td colSpan={5} className="py-10 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center font-bold">
                         0
