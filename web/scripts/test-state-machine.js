@@ -11,6 +11,10 @@
  */
 
 const BASE_URL = process.env.TEST_APP_URL || "http://localhost:3000";
+const AUTH_HEADERS = {
+  "Content-Type": "application/json",
+  "Authorization": "Bearer tbs_token_ADMIN-2026_test"
+};
 
 async function runTests() {
   console.log("================================================================");
@@ -63,9 +67,11 @@ async function runTests() {
     const proposalId1 = createJson.id;
 
     // Verify created proposal in DB
-    const listRes1 = await fetch(`${BASE_URL}/api/ci-kaizen?search=${createJson.code}`);
+    const listRes1 = await fetch(`${BASE_URL}/api/ci-kaizen?search=Test%20Automation%20Creation%20Isolation`, {
+      headers: AUTH_HEADERS
+    });
     const listJson1 = await listRes1.json();
-    const createdProp = listJson1.data?.find(p => p.id === proposalId1);
+    const createdProp = listJson1.data?.find(p => p.id === proposalId1 || p.code === createJson.code);
 
     assert(createdProp !== undefined, "Tìm thấy bản ghi vừa khởi tạo trong CSDL D1");
     assert(createdProp?.status === "SUBMITTED", `Trạng thái ban đầu bắt buộc = 'SUBMITTED' (thực tế: '${createdProp?.status}')`);
@@ -100,7 +106,7 @@ async function runTests() {
     // Reject it at Step 3
     const rejectRes = await fetch(`${BASE_URL}/api/ci-kaizen/approve`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: AUTH_HEADERS,
       body: JSON.stringify({
         proposalId: proposalId2,
         decision: "REJECT",
@@ -113,7 +119,7 @@ async function runTests() {
     // Attempt to evaluate rejected proposal
     const evalAttempt = await fetch(`${BASE_URL}/api/ci-kaizen/evaluate`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: AUTH_HEADERS,
       body: JSON.stringify({ proposalId: proposalId2, result: "DAT" })
     });
     assert(evalAttempt.status === 422, "API /evaluate từ chối đề xuất bị REJECTED (HTTP 422 PROPOSAL_REJECTED)");
@@ -121,7 +127,7 @@ async function runTests() {
     // Attempt to archive rejected proposal
     const archiveAttempt = await fetch(`${BASE_URL}/api/ci-kaizen/archive`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: AUTH_HEADERS,
       body: JSON.stringify({ proposalId: proposalId2 })
     });
     assert(archiveAttempt.status === 422, "API /archive từ chối đề xuất bị REJECTED (HTTP 422 PROPOSAL_REJECTED)");
@@ -135,7 +141,7 @@ async function runTests() {
 
     const directArchive = await fetch(`${BASE_URL}/api/ci-kaizen/archive`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: AUTH_HEADERS,
       body: JSON.stringify({ proposalId: proposalId1 })
     });
     assert(directArchive.status === 422, "API /archive chặn thành công đề xuất chưa qua Phê duyệt Bước 3 (HTTP 422 INVALID_STATE_TRANSITION)");
@@ -149,7 +155,7 @@ async function runTests() {
 
     const approveStep3 = await fetch(`${BASE_URL}/api/ci-kaizen/approve`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: AUTH_HEADERS,
       body: JSON.stringify({ proposalId: proposalId1, decision: "APPROVE", note: "Đủ điều kiện thử nghiệm" })
     });
     const approveJson = await approveStep3.json();
@@ -157,7 +163,7 @@ async function runTests() {
 
     const archiveBeforeEval = await fetch(`${BASE_URL}/api/ci-kaizen/archive`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: AUTH_HEADERS,
       body: JSON.stringify({ proposalId: proposalId1 })
     });
     assert(archiveBeforeEval.status === 422, "API /archive chặn thành công đề xuất đã Phê duyệt nhưng chưa Đánh giá hiệu quả (HTTP 422 INVALID_STATE_TRANSITION)");
@@ -171,7 +177,7 @@ async function runTests() {
 
     const evaluateStep5 = await fetch(`${BASE_URL}/api/ci-kaizen/evaluate`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: AUTH_HEADERS,
       body: JSON.stringify({ proposalId: proposalId1, result: "DAT", note: "Thử nghiệm đạt kết quả vượt kỳ vọng" })
     });
     const evalStep5Json = await evaluateStep5.json();
@@ -179,14 +185,16 @@ async function runTests() {
 
     const happyArchive = await fetch(`${BASE_URL}/api/ci-kaizen/archive`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: AUTH_HEADERS,
       body: JSON.stringify({ proposalId: proposalId1, note: "Nghiệm thu & Đưa vào Thư viện Lưu trữ" })
     });
     const happyArchiveJson = await happyArchive.json();
     assert(happyArchive.status === 200 && happyArchiveJson.sub_status === "LUU_TRU", "Bước 6 Lưu trữ thành công (status: ARCHIVED, sub_status: LUU_TRU)");
 
     // Verify history audit logs
-    const historyRes = await fetch(`${BASE_URL}/api/ci-kaizen/history?proposalId=${proposalId1}`);
+    const historyRes = await fetch(`${BASE_URL}/api/ci-kaizen/history?proposalId=${proposalId1}`, {
+      headers: AUTH_HEADERS
+    });
     const historyJson = await historyRes.json();
     assert(historyRes.status === 200 && historyJson.data?.length >= 3, `Đã ghi nhận đủ lịch sử chuyển trạng thái audit log (${historyJson.data?.length} bản ghi)`);
 
@@ -199,7 +207,7 @@ async function runTests() {
 
     const updateBypass = await fetch(`${BASE_URL}/api/ci-kaizen`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: AUTH_HEADERS,
       body: JSON.stringify({
         id: proposalId1,
         action: "UPDATE",
@@ -215,9 +223,14 @@ async function runTests() {
     // ----------------------------------------------------------------
     console.log("\n----------------------------------------------------------------");
     console.log("🔹 TEST 7: RBAC AUTHORIZATION BLOCK");
-    console.log("Kiểm tra phân quyền RBAC khi gọi endpoint chuyên biệt...");
+    console.log("Kiểm tra phân quyền RBAC khi gọi endpoint chuyên biệt mà không có Auth Token...");
 
-    assert(true, "Mọi endpoint /approve, /evaluate, /archive đều bắt buộc xác thực server auth");
+    const noAuthRes = await fetch(`${BASE_URL}/api/ci-kaizen/approve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ proposalId: proposalId1, decision: "APPROVE" })
+    });
+    assert(noAuthRes.status === 401 || noAuthRes.status === 403, `Gọi endpoint chuyên biệt mà không có token bị từ chối (HTTP ${noAuthRes.status})`);
 
   } catch (err) {
     console.error("\n❌ LỖI KHI CHẠY TEST SCRIPT:", err);

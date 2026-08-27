@@ -277,10 +277,24 @@ async function verifyServerAuth(request, env) {
       if (match) token = match[1];
     }
 
-    let empCode = "202608001";
-    if (token) {
-      if (token.includes("ADMIN-2026") || token.includes("admin")) empCode = "ADMIN-2026";
-      else if (token.includes("200405004") || token.includes("TGĐ-001")) empCode = "200405004";
+    if (!token) {
+      return {
+        authenticated: false,
+        empCode: null,
+        name: null,
+        title: null,
+        department: null,
+        roleCode: null,
+        levelRank: 0,
+        canApprove: false,
+        canManage: false,
+        isExecutiveOrAdmin: false
+      };
+    }
+
+    let empCode = "";
+    if (token.includes("ADMIN-2026") || token.includes("admin")) empCode = "ADMIN-2026";
+    else if (token.includes("200405004") || token.includes("TGĐ-001")) empCode = "200405004";
       else if (token.includes("119504004") || token.includes("PTGĐ-002")) empCode = "119504004";
       else if (token.includes("101403004") || token.includes("GĐ-003")) empCode = "101403004";
       else if (token.includes("201604020") || token.includes("PGĐ-004")) empCode = "201604020";
