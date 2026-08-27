@@ -1,5 +1,5 @@
 // PWA Service Worker for Văn Phòng Chuỗi SKECHERS - TBS Group
-const CACHE_NAME = "skechers-tbs-v12";
+const CACHE_NAME = "skechers-tbs-v13";
 const ASSETS_TO_CACHE = [
   "/",
   "/favicon.ico",

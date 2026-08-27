@@ -17,6 +17,7 @@ import {
   IconChevronRight,
   IconEye,
   IconCheck,
+  IconArrowRight,
 } from "@tabler/icons-react";
 import { useTranslation } from "@/hooks/useTranslation";
 import {
@@ -41,8 +42,9 @@ const DEPARTMENT_ICON_MAP: Record<string, any> = {
 export default function WorkspaceGallery() {
   const { t } = useTranslation();
   const [cmsConfig, setCmsConfig] = useState(DEFAULT_LANDING_CMS);
-  const [activeDepId, setActiveDepId] = useState<string>("sanh");
+  const [activeDepId, setActiveDepId] = useState<string>("all");
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [lightboxDepId, setLightboxDepId] = useState<string>("sanh");
 
   useEffect(() => {
     const loadCMS = () => {
@@ -83,16 +85,31 @@ export default function WorkspaceGallery() {
       ? cmsConfig.workspaceDepartments
       : DEFAULT_LANDING_CMS.workspaceDepartments || [];
 
-  const activeDepartment =
-    departments.find((d) => d.id === activeDepId) || departments[0] || {
+  const displayDepartments =
+    activeDepId === "all"
+      ? departments.filter((d) => d.images && d.images.length > 0)
+      : departments.filter((d) => d.id === activeDepId);
+
+  const lightboxDepartment =
+    departments.find((d) => d.id === lightboxDepId) || departments[0] || {
       id: "sanh",
       name: "Sảnh",
-      icon: "building",
-      order: 1,
       images: [],
     };
 
-  const activeImages: WorkspaceImageItem[] = activeDepartment.images || [];
+  const lightboxImages: WorkspaceImageItem[] = lightboxDepartment.images || [];
+
+  const handleSelectDept = (depId: string) => {
+    setActiveDepId(depId);
+    if (depId !== "all") {
+      setTimeout(() => {
+        const el = document.getElementById(`dept-section-${depId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 50);
+    }
+  };
 
   // Keyboard navigation for lightbox
   useEffect(() => {
@@ -104,16 +121,16 @@ export default function WorkspaceGallery() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [lightboxIndex, activeImages.length]);
+  }, [lightboxIndex, lightboxImages.length]);
 
   const handlePrev = () => {
     if (lightboxIndex === null) return;
-    setLightboxIndex((prev) => (prev === 0 ? activeImages.length - 1 : (prev as number) - 1));
+    setLightboxIndex((prev) => (prev === 0 ? lightboxImages.length - 1 : (prev as number) - 1));
   };
 
   const handleNext = () => {
     if (lightboxIndex === null) return;
-    setLightboxIndex((prev) => (prev === activeImages.length - 1 ? 0 : (prev as number) + 1));
+    setLightboxIndex((prev) => (prev === lightboxImages.length - 1 ? 0 : (prev as number) + 1));
   };
 
   return (
@@ -132,9 +149,8 @@ export default function WorkspaceGallery() {
         </p>
       </div>
 
-      {/* 4 Corporate Content Cards Grid (2x2 or 4 cols) */}
+      {/* 4 Corporate Content Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {/* Card 1: Chuẩn mực không gian */}
         <div className="p-6 rounded-[24px] bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-3.5 hover:border-emerald-500/40 hover:shadow-md transition-all duration-300">
           <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-[#006838] border border-emerald-100 flex items-center justify-center">
             <IconBuilding size={22} strokeWidth={2} />
@@ -149,7 +165,6 @@ export default function WorkspaceGallery() {
           </div>
         </div>
 
-        {/* Card 2: Hiệu quả vận hành */}
         <div className="p-6 rounded-[24px] bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-3.5 hover:border-emerald-500/40 hover:shadow-md transition-all duration-300">
           <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-[#006838] border border-emerald-100 flex items-center justify-center">
             <IconBriefcase size={22} strokeWidth={2} />
@@ -164,7 +179,6 @@ export default function WorkspaceGallery() {
           </div>
         </div>
 
-        {/* Card 3: Bản sắc thương hiệu */}
         <div className="p-6 rounded-[24px] bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-3.5 hover:border-emerald-500/40 hover:shadow-md transition-all duration-300">
           <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-[#006838] border border-emerald-100 flex items-center justify-center">
             <IconSparkles size={22} strokeWidth={2} />
@@ -179,7 +193,6 @@ export default function WorkspaceGallery() {
           </div>
         </div>
 
-        {/* Card 4: Môi trường truyền cảm hứng */}
         <div className="p-6 rounded-[24px] bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-3.5 hover:border-emerald-500/40 hover:shadow-md transition-all duration-300">
           <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-[#006838] border border-emerald-100 flex items-center justify-center">
             <IconUsers size={22} strokeWidth={2} />
@@ -197,7 +210,6 @@ export default function WorkspaceGallery() {
 
       {/* 2 Featured Visual Showcase Cards Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch">
-        {/* Card Feature 1: Điểm nhấn thiết kế nội thất */}
         <div className="relative h-[220px] sm:h-[240px] rounded-[26px] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 group border border-slate-200/90">
           <img
             src="/images/KGLV/CĐTT 2 GÓC HÌNH VP2.png"
@@ -216,7 +228,6 @@ export default function WorkspaceGallery() {
           </div>
         </div>
 
-        {/* Card Feature 2: Góc nhìn môi trường */}
         <div className="relative h-[220px] sm:h-[240px] rounded-[26px] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 group border border-slate-200/90">
           <img
             src="/images/KGLV/3 DÒNG GIÀY CHÍNH.png"
@@ -250,7 +261,35 @@ export default function WorkspaceGallery() {
           </div>
 
           {/* Desktop Vertical Department List */}
-          <div className="hidden lg:flex flex-col space-y-1.5 max-h-[580px] overflow-y-auto pr-1 scrollbar-thin">
+          <div className="hidden lg:flex flex-col space-y-1.5 max-h-[640px] overflow-y-auto pr-1 scrollbar-thin">
+            {/* All Spaces Button */}
+            <button
+              type="button"
+              onClick={() => handleSelectDept("all")}
+              className={`w-full px-3.5 py-3 rounded-2xl text-left transition-all duration-200 flex items-center justify-between group cursor-pointer ${
+                activeDepId === "all"
+                  ? "bg-[#0b3d2e] text-white shadow-md font-extrabold scale-[1.01]"
+                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-bold"
+              }`}
+            >
+              <div className="flex items-center gap-3 truncate">
+                <IconBuilding
+                  size={18}
+                  className={activeDepId === "all" ? "text-[#2fd39a]" : "text-slate-400 group-hover:text-slate-700"}
+                />
+                <span className="text-xs sm:text-[13px] truncate">Tất cả không gian</span>
+              </div>
+              <span
+                className={`px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold ml-2 flex-shrink-0 ${
+                  activeDepId === "all"
+                    ? "bg-white/20 text-white"
+                    : "bg-slate-100 text-slate-500 group-hover:bg-slate-200"
+                }`}
+              >
+                {departments.reduce((sum, d) => sum + (d.images?.length || 0), 0)}
+              </span>
+            </button>
+
             {departments.map((dep) => {
               const IconComponent = DEPARTMENT_ICON_MAP[dep.icon] || IconBuilding;
               const isSelected = dep.id === activeDepId;
@@ -260,7 +299,7 @@ export default function WorkspaceGallery() {
                 <button
                   key={dep.id}
                   type="button"
-                  onClick={() => setActiveDepId(dep.id)}
+                  onClick={() => handleSelectDept(dep.id)}
                   className={`w-full px-3.5 py-3 rounded-2xl text-left transition-all duration-200 flex items-center justify-between group cursor-pointer ${
                     isSelected
                       ? "bg-[#0b3d2e] text-white shadow-md font-extrabold scale-[1.01]"
@@ -291,6 +330,18 @@ export default function WorkspaceGallery() {
 
           {/* Mobile Horizontal Scrollable Department List */}
           <div className="flex lg:hidden overflow-x-auto gap-2 py-1 scrollbar-none">
+            <button
+              type="button"
+              onClick={() => handleSelectDept("all")}
+              className={`flex-shrink-0 px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                activeDepId === "all"
+                  ? "bg-[#0b3d2e] text-white shadow-sm"
+                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+              }`}
+            >
+              <IconBuilding size={15} />
+              <span>Tất cả</span>
+            </button>
             {departments.map((dep) => {
               const IconComponent = DEPARTMENT_ICON_MAP[dep.icon] || IconBuilding;
               const isSelected = dep.id === activeDepId;
@@ -300,7 +351,7 @@ export default function WorkspaceGallery() {
                 <button
                   key={dep.id}
                   type="button"
-                  onClick={() => setActiveDepId(dep.id)}
+                  onClick={() => handleSelectDept(dep.id)}
                   className={`flex-shrink-0 px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
                     isSelected
                       ? "bg-[#0b3d2e] text-white shadow-sm"
@@ -318,46 +369,77 @@ export default function WorkspaceGallery() {
           </div>
         </div>
 
-        {/* Right Column: Active Department Photo Grid */}
-        <div className="lg:col-span-9 bg-white rounded-[26px] p-5 sm:p-6 border border-slate-200/90 shadow-2xs space-y-5">
-          {/* Header Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
-            <h3 className="text-base sm:text-lg font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#006838]" />
-              {activeDepartment.name} ({activeImages.length})
-            </h3>
+        {/* Right Column: Stacked Department Sections matching Screenshot 2 */}
+        <div className="lg:col-span-9 space-y-6">
+          {displayDepartments.length > 0 ? (
+            displayDepartments.map((dep) => {
+              const images = dep.images || [];
+              if (images.length === 0) return null;
 
-            <span className="px-3.5 py-1 rounded-full bg-slate-100 border border-slate-200/80 text-slate-500 font-mono font-bold text-xs">
-              {activeImages.length} không gian
-            </span>
-          </div>
+              let gridColsClass = "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4";
+              if (images.length === 2) gridColsClass = "grid-cols-1 sm:grid-cols-2";
+              if (images.length === 3) gridColsClass = "grid-cols-1 sm:grid-cols-3";
+              if (images.length === 4) gridColsClass = "grid-cols-2 sm:grid-cols-4";
 
-          {/* 5-Column Responsive Grid matching reference screenshot */}
-          {activeImages.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
-              {activeImages.map((imgItem, idx) => (
+              return (
                 <div
-                  key={imgItem.id || idx}
-                  onClick={() => setLightboxIndex(idx)}
-                  className="group relative h-[140px] sm:h-[155px] rounded-[20px] overflow-hidden cursor-pointer border border-slate-200/80 shadow-2xs hover:shadow-xl hover:border-[#006838] transition-all duration-300 bg-slate-50"
+                  key={dep.id}
+                  id={`dept-section-${dep.id}`}
+                  className="bg-white rounded-[26px] p-5 sm:p-6 border border-slate-200/90 shadow-2xs space-y-5 scroll-mt-24"
                 >
-                  <img
-                    src={imgItem.src}
-                    alt={imgItem.caption || `${activeDepartment.name} ${idx + 1}`}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    loading="lazy"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = "/images/KGLV/MẶT TIỀN SẢNH.png";
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                    <IconZoomIn size={22} className="drop-shadow-md" />
+                  {/* Header Bar matching Screenshot 2 */}
+                  <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#006838]" />
+                      <span>
+                        {dep.name} ({images.length})
+                      </span>
+                    </h3>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLightboxDepId(dep.id);
+                        setLightboxIndex(0);
+                      }}
+                      className="px-3.5 py-1.5 rounded-full bg-[#f4fbf7] hover:bg-emerald-100/80 text-[#006838] border border-emerald-200/60 text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+                    >
+                      <span>Vào nhanh</span>
+                      <IconArrowRight size={14} className="stroke-[2.5]" />
+                    </button>
+                  </div>
+
+                  {/* Dynamic Column Responsive Grid matching Reference Screenshot 2 */}
+                  <div className={`grid ${gridColsClass} gap-3.5 sm:gap-4`}>
+                    {images.map((imgItem, idx) => (
+                      <div
+                        key={imgItem.id || idx}
+                        onClick={() => {
+                          setLightboxDepId(dep.id);
+                          setLightboxIndex(idx);
+                        }}
+                        className="group relative h-[155px] sm:h-[180px] rounded-[22px] overflow-hidden cursor-pointer border border-slate-200/90 shadow-2xs hover:shadow-xl hover:border-[#006838] transition-all duration-300 bg-slate-50"
+                      >
+                        <img
+                          src={imgItem.src}
+                          alt={imgItem.caption || `${dep.name} ${idx + 1}`}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          loading="lazy"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = "/images/KGLV/MẶT TIỀN SẢNH.png";
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                          <IconZoomIn size={22} className="drop-shadow-md" />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })
           ) : (
-            <div className="py-16 text-center text-slate-400 font-medium text-xs">
+            <div className="bg-white rounded-[26px] p-12 text-center text-slate-400 font-medium text-xs border border-slate-200/90">
               Chưa có hình ảnh nào cho phòng ban này. Vui lòng cập nhật trong trang /admin.
             </div>
           )}
@@ -365,9 +447,8 @@ export default function WorkspaceGallery() {
       </div>
 
       {/* Lightbox Modal for Full View */}
-      {lightboxIndex !== null && activeImages[lightboxIndex] && (
+      {lightboxIndex !== null && lightboxImages[lightboxIndex] && (
         <div className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-4 sm:p-6 lg:p-10 animate-in fade-in duration-200">
-          {/* Close Button */}
           <button
             onClick={() => setLightboxIndex(null)}
             className="absolute top-5 right-5 z-50 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white flex items-center justify-center transition-all cursor-pointer"
@@ -376,7 +457,6 @@ export default function WorkspaceGallery() {
             <IconX size={24} />
           </button>
 
-          {/* Prev Button */}
           <button
             onClick={handlePrev}
             className="absolute left-4 sm:left-8 top-1/2 -translate-y-1/2 z-50 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white flex items-center justify-center transition-all cursor-pointer"
@@ -385,7 +465,6 @@ export default function WorkspaceGallery() {
             <IconChevronLeft size={28} />
           </button>
 
-          {/* Next Button */}
           <button
             onClick={handleNext}
             className="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 z-50 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white flex items-center justify-center transition-all cursor-pointer"
@@ -394,31 +473,27 @@ export default function WorkspaceGallery() {
             <IconChevronRight size={28} />
           </button>
 
-          {/* Main Lightbox Content Container */}
           <div className="max-w-5xl w-full max-h-[90vh] flex flex-col bg-slate-900 rounded-3xl overflow-hidden border border-slate-800 shadow-2xl">
-            {/* Image Viewport */}
             <div className="relative flex-1 bg-black flex items-center justify-center min-h-[300px] max-h-[68vh] overflow-hidden p-4">
               <img
-                src={activeImages[lightboxIndex].src}
-                alt={activeImages[lightboxIndex].caption || activeDepartment.name}
+                src={lightboxImages[lightboxIndex].src}
+                alt={lightboxImages[lightboxIndex].caption || lightboxDepartment.name}
                 className="max-h-[65vh] w-auto max-w-full object-contain select-none"
               />
 
-              {/* Counter Badge */}
               <div className="absolute bottom-4 left-4 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md border border-white/20 text-xs font-mono font-bold text-white">
-                {lightboxIndex + 1} / {activeImages.length}
+                {lightboxIndex + 1} / {lightboxImages.length}
               </div>
             </div>
 
-            {/* Captions & Info */}
             <div className="p-6 bg-slate-900 border-t border-slate-800 space-y-2">
               <div className="flex items-center gap-3">
                 <span className="px-3 py-1 rounded-full bg-[#006838] text-white text-xs font-extrabold uppercase tracking-wider">
-                  {activeDepartment.name}
+                  {lightboxDepartment.name}
                 </span>
               </div>
               <h3 className="text-lg sm:text-xl font-black text-white tracking-tight">
-                {activeImages[lightboxIndex].caption || `${activeDepartment.name} - Ảnh ${lightboxIndex + 1}`}
+                {lightboxImages[lightboxIndex].caption || `${lightboxDepartment.name} - Ảnh ${lightboxIndex + 1}`}
               </h3>
             </div>
           </div>
