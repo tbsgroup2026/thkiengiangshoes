@@ -141,11 +141,11 @@ export default function RDModule({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-stretch">
         {/* Left: Mini Hero Card (Col 4/12) */}
         <div className="lg:col-span-4 rounded-3xl overflow-hidden shadow-sm bg-slate-900 text-white p-5 border border-emerald-600/30 flex flex-col justify-between relative group min-h-[160px]">
-          {/* R&D Real Background Photo - Clear & Crisp */}
+          {/* R&D Real Background Photo - Clear & Crisp (Shifted Down) */}
           <img
             src="/images/brands/Phòng Đào Tạo/1787810869499_5373416762128407822_5373416762128407822_49d7659c53b21702dff5c8f39212d143.jpg"
             alt="R&D (Phát triển sản phẩm)"
-            className="absolute inset-0 w-full h-full object-cover opacity-75 sm:opacity-80 group-hover:scale-105 transition-transform duration-700 pointer-events-none"
+            className="absolute inset-0 w-full h-full object-cover object-[center_35%] opacity-75 sm:opacity-80 group-hover:scale-105 transition-transform duration-700 pointer-events-none"
           />
           {/* Lighter Gradient Overlay */}
           <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-[#005a30]/45 to-slate-950/50 pointer-events-none" />
