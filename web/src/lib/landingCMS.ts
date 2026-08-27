@@ -393,7 +393,7 @@ export const DEFAULT_LANDING_CMS: LandingCMSConfig = {
       color: "#2fd39a",
       gradient: {
         from: "#2fd39a",
-        to: "#f2dc9a",
+        to: "#fbbf24",
         direction: "to right",
       },
     },

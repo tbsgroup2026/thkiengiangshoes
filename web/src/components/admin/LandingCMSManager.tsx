@@ -102,7 +102,7 @@ export default function LandingCMSManager({
     fontSize: 54,
     colorMode: "gradient",
     color: "#2fd39a",
-    gradient: { from: "#2fd39a", to: "#f2dc9a", direction: "to right" },
+    gradient: { from: "#2fd39a", to: "#fbbf24", direction: "to right" },
   };
 
   const updatePrefixField = (field: string, val: any) => {

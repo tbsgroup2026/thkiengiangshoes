@@ -42,7 +42,7 @@ export default function HeroSection() {
     fontSize: 54,
     colorMode: "gradient",
     color: "#2fd39a",
-    gradient: { from: "#2fd39a", to: "#f2dc9a", direction: "to right" },
+    gradient: { from: "#2fd39a", to: "#fbbf24", direction: "to right" },
   };
 
   const getLineStyle = (cfg: any, fallbackText: string, isPrefix: boolean) => {
@@ -50,7 +50,7 @@ export default function HeroSection() {
     const baseFontSize = cfg?.fontSize || (isPrefix ? 36 : 54);
     const mode = cfg?.colorMode || (isPrefix ? "solid" : "gradient");
     const color = cfg?.color || (isPrefix ? "#ffffff" : "#2fd39a");
-    const grad = cfg?.gradient || { from: "#2fd39a", to: "#f2dc9a", direction: "to right" };
+    const grad = cfg?.gradient || { from: "#2fd39a", to: "#fbbf24", direction: "to right" };
 
     const dirMap: Record<string, string> = {
       "to right": "to right",
