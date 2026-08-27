@@ -62,7 +62,9 @@ async function runTests() {
       })
     });
 
-    const createJson = await createRes.json();
+    const createText = await createRes.text();
+    console.log("DEBUG createText status:", createRes.status, createText);
+    const createJson = JSON.parse(createText);
     assert(createRes.status === 200 && createJson.success === true, "Tạo đề xuất mới qua POST /api/ci-kaizen thành công");
 
     const proposalId1 = createJson.id;

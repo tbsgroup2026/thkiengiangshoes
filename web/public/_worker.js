@@ -3771,7 +3771,7 @@ export default {
               VALUES (?, NULL, 'SUBMITTED', 'SUBMIT', ?, ?, 'Nộp đề xuất mới qua cổng công khai')
             `).bind(id, safeVal(user?.empCode, finalProposerEmpCode), safeVal(user?.name, finalProposerName)).run();
           } catch(e) {}
-          await createNotification("Trưởng Phòng CI", "ci_kaizen", "INFO", id, "🚀 Đề Xuất Cải Tiến Mới", `${user.name || 'Cán bộ'} vừa nộp đề xuất cải tiến Kaizen: "${title}" (${code}).`);
+          await createNotification("Trưởng Phòng CI", "ci_kaizen", "INFO", id, "🚀 Đề Xuất Cải Tiến Mới", `${user?.name || finalProposerName} vừa nộp đề xuất cải tiến Kaizen: "${title}" (${code}).`);
 
           const resPayload = JSON.stringify({ success: true, message: "Đã gửi đề xuất cải tiến Kaizen thành công!", id, code });
 
