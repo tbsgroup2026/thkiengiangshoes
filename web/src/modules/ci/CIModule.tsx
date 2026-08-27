@@ -171,7 +171,7 @@ export function HalfStarRating({ value, onChange, readOnly = false, size = 22 }:
 }
 
 const TH_KG_SUB_ITEMS = ["Kiên Giang 1", "Kiên Giang 2", "Hoàn Thiện Đế"];
-const MAIN_REGIONS = ["THKG", "Nhà Máy Miền Đông", "VP Chuỗi (R&D)"];
+const MAIN_REGIONS = ["THKG"];
 
 const matchRegionFilter = (propRegion: string, filterRegion: string) => {
   if (!filterRegion || filterRegion === "ALL") return true;
@@ -248,7 +248,7 @@ export default function CIModule() {
   });
 
   useEffect(() => {
-    if (selectedRegion === "Kiên Giang 3") {
+    if (selectedRegion === "Kiên Giang 3" || selectedRegion === "Nhà Máy Miền Đông" || selectedRegion === "VP Chuỗi (R&D)") {
       setSelectedRegion("ALL");
     }
   }, [selectedRegion]);
@@ -1064,32 +1064,6 @@ export default function CIModule() {
                       </div>
                     )}
                   </div>
-
-                  {/* Nhà Máy Miền Đông */}
-                  <button
-                    onClick={() => setSelectedRegion(selectedRegion === "Nhà Máy Miền Đông" ? "ALL" : "Nhà Máy Miền Đông")}
-                    className={`w-full text-left px-2 py-1 rounded-lg flex items-center justify-between transition-colors ${
-                      selectedRegion === "Nhà Máy Miền Đông" ? "bg-[#006838] text-white font-extrabold" : "text-slate-300 hover:bg-slate-800/80 hover:text-white"
-                    }`}
-                  >
-                    <span>Nhà Máy Miền Đông</span>
-                    <span className="text-[10px] text-slate-400 font-mono">
-                      ({proposals.filter((p) => matchRegionFilter(p.region, "Nhà Máy Miền Đông")).length})
-                    </span>
-                  </button>
-
-                  {/* VP Chuỗi (R&D) */}
-                  <button
-                    onClick={() => setSelectedRegion(selectedRegion === "VP Chuỗi (R&D)" ? "ALL" : "VP Chuỗi (R&D)")}
-                    className={`w-full text-left px-2 py-1 rounded-lg flex items-center justify-between transition-colors ${
-                      selectedRegion === "VP Chuỗi (R&D)" ? "bg-[#006838] text-white font-extrabold" : "text-slate-300 hover:bg-slate-800/80 hover:text-white"
-                    }`}
-                  >
-                    <span>VP Chuỗi (R&D)</span>
-                    <span className="text-[10px] text-slate-400 font-mono">
-                      ({proposals.filter((p) => matchRegionFilter(p.region, "VP Chuỗi (R&D)")).length})
-                    </span>
-                  </button>
                 </div>
               )}
             </div>
@@ -1352,8 +1326,6 @@ export default function CIModule() {
             <option value="Kiên Giang 1">Kiên Giang 1</option>
             <option value="Kiên Giang 2">Kiên Giang 2</option>
             <option value="Hoàn Thiện Đế">Hoàn Thiện Đế</option>
-            <option value="Nhà Máy Miền Đông">Nhà Máy Miền Đông</option>
-            <option value="VP Chuỗi (R&D)">VP Chuỗi (R&D)</option>
           </select>
 
           {/* Nhóm SP */}
