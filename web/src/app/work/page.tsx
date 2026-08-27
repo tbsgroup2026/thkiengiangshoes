@@ -182,8 +182,71 @@ function HRModuleView() {
   );
 }
 
+function parseModuleFromUrl(): string | null {
+  if (typeof window === "undefined") return null;
+  const urlParams = new URLSearchParams(window.location.search);
+  const rawMod = (urlParams.get("module") || urlParams.get("dept") || "").toLowerCase().trim();
+
+  if (!rawMod || rawMod === "overview" || rawMod === "sanh" || rawMod === "00") {
+    return null;
+  }
+  if (rawMod === "hr" || rawMod === "nhansu" || rawMod === "vanphong" || rawMod === "vpdieuhanh" || rawMod === "01") {
+    return "hr";
+  }
+  if (rawMod === "finance" || rawMod === "ketoan" || rawMod === "taichinh" || rawMod === "02") {
+    return "finance";
+  }
+  if (rawMod === "rd" || rawMod === "03") {
+    return "rd";
+  }
+  if (rawMod === "ci" || rawMod === "kaizen" || rawMod === "it" || rawMod === "04") {
+    return "ci";
+  }
+  if (rawMod === "qc" || rawMod === "quality" || rawMod === "05") {
+    return "qc";
+  }
+  if (rawMod === "logistics" || rawMod === "kho" || rawMod === "06") {
+    return "logistics";
+  }
+  if (rawMod === "production" || rawMod === "factory" || rawMod === "nhamay" || rawMod === "07") {
+    return "production";
+  }
+
+  return null;
+}
+
 export default function WorkDashboardPage() {
   const [selectedDept, setSelectedDept] = useState<string | null>(null);
+
+  const changeDepartment = (deptId: string | null, pushHistory: boolean = true) => {
+    const targetDept = deptId === "overview" ? null : deptId;
+    setSelectedDept(targetDept);
+
+    if (typeof window !== "undefined" && pushHistory) {
+      const targetModule = targetDept || "overview";
+      const currentQuery = new URLSearchParams(window.location.search).get("module");
+      if (currentQuery !== targetModule) {
+        const newUrl = `/work?module=${targetModule}`;
+        window.history.pushState({ module: targetModule }, "", newUrl);
+      }
+    }
+  };
+
+  // Synchronize state with URL parameters on mount and browser back/forward (popstate)
+  useEffect(() => {
+    const initialMod = parseModuleFromUrl();
+    setSelectedDept(initialMod);
+
+    const handlePopState = () => {
+      const mod = parseModuleFromUrl();
+      setSelectedDept(mod);
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("popstate", handlePopState);
+      return () => window.removeEventListener("popstate", handlePopState);
+    }
+  }, []);
 
   const [plantFilter, setPlantFilter] = useState("Toàn nhà máy");
   const [timeFilter, setTimeFilter] = useState("Tháng này");
@@ -849,7 +912,7 @@ export default function WorkDashboardPage() {
               return (
                 <button
                   key={dept.id}
-                  onClick={() => setSelectedDept(isSelected ? null : dept.id)}
+                  onClick={() => changeDepartment(isSelected ? null : dept.id)}
                   className={`w-11 h-11 mx-auto rounded-2xl flex items-center justify-center transition-all duration-200 group relative cursor-pointer ${isSelected
                     ? "bg-[#006838] text-white shadow-md shadow-emerald-900/30 ring-2 ring-emerald-600/30 scale-105"
                     : "bg-white hover:bg-[#e6f4ed] text-[#006838] border border-slate-200/90 shadow-2xs"
@@ -885,7 +948,7 @@ export default function WorkDashboardPage() {
             return (
               <button
                 key={dept.id}
-                onClick={() => setSelectedDept(isSelected ? null : dept.id)}
+                onClick={() => changeDepartment(isSelected ? null : dept.id)}
                 className={`w-full text-left rounded-2xl flex items-center p-3.5 sm:p-4 gap-3.5 transition-all duration-200 group relative cursor-pointer ${isSelected
                   ? "bg-[#006838] text-white shadow-md shadow-emerald-900/20 border border-[#006838]"
                   : "bg-white hover:bg-[#e6f4ed]/50 text-slate-700 hover:text-slate-900 border border-slate-200/90 shadow-xs"
@@ -2520,7 +2583,7 @@ export default function WorkDashboardPage() {
         departments={visibleDepartments}
         selectedDeptId={selectedDept || "overview"}
         onSelectDepartment={(deptId) => {
-          setSelectedDept(deptId === "overview" ? null : deptId);
+          changeDepartment(deptId === "overview" ? null : deptId);
         }}
         onOpenThemeModal={() => setIsThemeModalOpen(true)}
         onLogout={() => {
@@ -2545,10 +2608,10 @@ export default function WorkDashboardPage() {
             : "overview"
         }
         onSelectTab={(tabId) => {
-          if (tabId === "overview") setSelectedDept(null);
-          else if (tabId === "ci-kaizen") setSelectedDept("ci");
-          else if (tabId === "qc-quality") setSelectedDept("qc");
-          else if (tabId === "hr-hanhchanh") setSelectedDept("hr");
+          if (tabId === "overview") changeDepartment(null);
+          else if (tabId === "ci-kaizen") changeDepartment("ci");
+          else if (tabId === "qc-quality") changeDepartment("qc");
+          else if (tabId === "hr-hanhchanh") changeDepartment("hr");
         }}
         onOpenMenu={() => setIsMobileMenuOpen(true)}
         badgeCounts={{

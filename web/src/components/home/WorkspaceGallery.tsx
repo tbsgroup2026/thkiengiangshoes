@@ -39,6 +39,41 @@ const DEPARTMENT_ICON_MAP: Record<string, any> = {
   "users-round": IconUsersGroup,
 };
 
+const WORKSPACE_MODULE_MAPPING: Record<string, string> = {
+  sanh: "overview",
+  vpdieuhanh: "hr",
+  vanphong: "hr",
+  hr: "hr",
+  nhamay1: "production",
+  nhamay2: "production",
+  nhamay3: "production",
+  factory: "production",
+  qc: "qc",
+  it: "ci",
+  ketoan: "finance",
+  phonghop: "hr",
+};
+
+function getModuleUrlForDepartment(depId: string, depName?: string): string {
+  const normId = (depId || "").toLowerCase().trim();
+  const normName = (depName || "").toLowerCase().trim();
+
+  let moduleCode = WORKSPACE_MODULE_MAPPING[normId];
+  if (!moduleCode) {
+    if (normName.includes("sảnh") || normName.includes("lobby")) moduleCode = "overview";
+    else if (normName.includes("văn phòng") || normName.includes("nhân sự") || normName.includes("office") || normName.includes("hr")) moduleCode = "hr";
+    else if (normName.includes("kế toán") || normName.includes("tài chính") || normName.includes("finance")) moduleCode = "finance";
+    else if (normName.includes("qc") || normName.includes("chất lượng") || normName.includes("quality")) moduleCode = "qc";
+    else if (normName.includes("nhà máy") || normName.includes("xưởng") || normName.includes("sản xuất") || normName.includes("factory")) moduleCode = "production";
+    else if (normName.includes("r&d") || normName.includes("phát triển")) moduleCode = "rd";
+    else if (normName.includes("it") || normName.includes("cải tiến") || normName.includes("ci")) moduleCode = "ci";
+    else if (normName.includes("logistics") || normName.includes("kho")) moduleCode = "logistics";
+    else moduleCode = "overview";
+  }
+
+  return `/work?module=${moduleCode}`;
+}
+
 export default function WorkspaceGallery() {
   const { t } = useTranslation();
   const [cmsConfig, setCmsConfig] = useState(DEFAULT_LANDING_CMS);
@@ -397,7 +432,7 @@ export default function WorkspaceGallery() {
                     </h3>
 
                     <a
-                      href="https://thkiengiangshoes.tbsgroup2026.workers.dev/work"
+                      href={getModuleUrlForDepartment(dep.id, dep.name)}
                       className="px-3.5 py-1.5 rounded-full bg-[#f4fbf7] hover:bg-emerald-100/80 text-[#006838] border border-emerald-200/60 text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
                     >
                       <span>Vào nhanh</span>
