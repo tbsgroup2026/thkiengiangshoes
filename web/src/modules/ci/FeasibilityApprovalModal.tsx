@@ -207,10 +207,10 @@ export default function FeasibilityApprovalModal({
               Nội dung tóm tắt
             </span>
             <p className="text-xs text-slate-700 font-medium leading-relaxed bg-slate-50 p-3 rounded-2xl border border-slate-200/80 max-h-28 overflow-y-auto">
-              {proposal.summary ||
+              {(proposal as any).summary ||
                 proposal.after_solution ||
                 proposal.before_description ||
-                proposal.solution_description ||
+                (proposal as any).solution_description ||
                 "Đề xuất cải tiến thiết kế jig gá giúp rút ngắn thời gian thay khuôn, giảm thao tác thủ công và sử dụng vật liệu sẵn có, không phát sinh chi phí lớn."}
             </p>
           </div>
