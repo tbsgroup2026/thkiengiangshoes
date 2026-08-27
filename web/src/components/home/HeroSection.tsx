@@ -47,9 +47,9 @@ export default function HeroSection() {
           className="absolute inset-0 bg-cover bg-center bg-no-repeat pointer-events-none"
           style={{ backgroundImage: `url('${cmsHero.bgImage || "/images/tbs-gate.jpg"}')` }}
         >
-          {/* Dark Green Gradient Overlay for High Contrast */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#08221a]/95 via-[#08221a]/85 to-[#08221a]/60" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#08221a] via-transparent to-[#08221a]/40" />
+          {/* Softened Dark Green Gradient Overlay for Clear Background Photo Visibility */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#08221a]/75 via-[#08221a]/55 to-[#08221a]/30" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#08221a]/70 via-transparent to-[#08221a]/20" />
         </div>
 
         {/* Ambient Glow Accent */}
