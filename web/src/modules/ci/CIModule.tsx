@@ -777,8 +777,7 @@ export default function CIModule() {
   // Calculate Badge Counters
   const countThiDua = proposals.filter((p) => Number(p.is_thi_dua) === 1).length;
   const countChoReview = proposals.filter((p) =>
-    p.registration_type === "THI_DUA" &&
-    (p.status === "SUBMITTED" || p.status === "UNDER_REVIEW" || !p.status)
+    p.status === "SUBMITTED" || p.status === "UNDER_REVIEW" || p.sub_status === "CHO_REVIEW" || p.approval_status === "PENDING"
   ).length;
   const countDaDanhGia = proposals.filter((p) => p.sub_status === "DA_DANH_GIA").length;
   const countChoDanhGia = proposals.filter((p) => p.sub_status === "CHO_DANH_GIA").length;
@@ -969,9 +968,9 @@ export default function CIModule() {
                     </span>
                   </button>
 
-                  {/* Chờ phê duyệt — sub of Thi đua */}
+                  {/* Chờ phê duyệt — top-level / sub */}
                   <button
-                    onClick={() => { setSelectedRegType("THI_DUA"); setSelectedSubStatus("CHO_REVIEW"); }}
+                    onClick={() => { setSelectedRegType("ALL"); setSelectedSubStatus("CHO_REVIEW"); }}
                     className={`w-full text-left px-3 py-1 rounded-lg flex items-center justify-between text-[11px] transition-colors ${
                       selectedSubStatus === "CHO_REVIEW"
                         ? "bg-blue-950/80 text-blue-300 font-extrabold"

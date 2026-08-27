@@ -1,7 +1,7 @@
 {
-  "name": "Văn Phòng Chuỗi SKECHERS - TBS Group",
-  "short_name": "SKECHERS-TBS",
-  "description": "Hệ thống quản trị vận hành chuỗi cung ứng và sản xuất SKECHERS - TBS Group",
+  "name": "Tổ hợp Kiên Giang - TBS Group",
+  "short_name": "THKG-TBS",
+  "description": "Hệ thống quản trị vận hành Tổ hợp Kiên Giang - TBS Group",
   "start_url": "/work",
   "display": "standalone",
   "orientation": "portrait-primary",
@@ -9,20 +9,20 @@
   "theme_color": "#006838",
   "icons": [
     {
-      "src": "/icon.png",
+      "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon.png",
+      "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
       "src": "/favicon.png",
-      "sizes": "192x192",
+      "sizes": "128x128",
       "type": "image/png"
     },
     {

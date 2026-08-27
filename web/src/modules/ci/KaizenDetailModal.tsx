@@ -114,6 +114,44 @@ export default function KaizenDetailModal({
   const [markingThiDua, setMarkingThiDua] = useState(false);
   const [thiDuaMsg, setThiDuaMsg] = useState<string | null>(null);
 
+  // Step 3: Feasibility Review Action State & Handler
+  const [approvingStep3, setApprovingStep3] = useState(false);
+  const [step3Msg, setStep3Msg] = useState<string | null>(null);
+
+  const handleFeasibilityDecision = async (decision: "APPROVE" | "REJECT") => {
+    if (!proposal) return;
+    try {
+      setApprovingStep3(true);
+      setStep3Msg(null);
+      const res = await fetch("/api/ci-kaizen/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          proposalId: proposal.id,
+          decision,
+          note: decision === "APPROVE" ? "Đã phê duyệt tính khả thi (Bước 3)" : "Không đạt tính khả thi",
+        }),
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        proposal.approval_status = json.approval_status;
+        proposal.sub_status = json.sub_status;
+        proposal.status = json.status;
+        setStep3Msg(json.message);
+        setTimeout(() => setStep3Msg(null), 3000);
+        if (onRate) onRate();
+        if (onEvaluate) onEvaluate();
+      } else {
+        setStep3Msg(`❌ ${json.message || "Không thể thực hiện phê duyệt"}`);
+      }
+    } catch (e: any) {
+      setStep3Msg("❌ Lỗi kết nối máy chủ!");
+    } finally {
+      setApprovingStep3(false);
+    }
+  };
+
   const handleToggleThiDua = async () => {
     if (!proposal) return;
     const isCurrentlyThiDua = Number(proposal.is_thi_dua) === 1;
@@ -459,6 +497,42 @@ export default function KaizenDetailModal({
             <p className="text-xs font-bold text-slate-400">
               MSNV: <span className="font-mono text-slate-700">{proposal.proposer_emp_code}</span> &bull; KV: <span className="text-slate-700">{proposal.region || "Kiên Giang 1"}</span> &bull; Tháng {pMonth}/{pYear}
             </p>
+
+            {/* BANNER XEM XÉT TÍNH KHẢ THI (BƯỚC 3 QĐ-TBKG) */}
+            {(proposal.sub_status === "CHO_REVIEW" || proposal.approval_status === "PENDING" || proposal.status === "SUBMITTED") && isJudgeOrExecutive && (
+              <div className="mt-4 p-4 rounded-2xl bg-blue-50/90 border border-blue-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                <div className="space-y-0.5">
+                  <span className="text-xs font-black text-blue-900 flex items-center gap-1.5">
+                    <IconShieldCheck size={16} className="text-blue-600 shrink-0" />
+                    <span>Xem xét tính khả thi sáng kiến (Bước 3 - QĐ-TBKG)</span>
+                  </span>
+                  <p className="text-[11px] text-blue-700 font-medium">
+                    Đề xuất đang ở trạng thái <strong>Chờ phê duyệt</strong>. Bạn có muốn phê duyệt tính khả thi để cho phép thử nghiệm và đánh giá?
+                  </p>
+                  {step3Msg && <div className="text-xs font-extrabold text-emerald-700 mt-1">{step3Msg}</div>}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    disabled={approvingStep3}
+                    onClick={() => handleFeasibilityDecision("APPROVE")}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-extrabold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    <IconCheck size={14} />
+                    <span>Phê Duyệt Triển Khai</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={approvingStep3}
+                    onClick={() => handleFeasibilityDecision("REJECT")}
+                    className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-extrabold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    <IconX size={14} />
+                    <span>Từ Chối Triển Khai</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Thanh Tab - Active Navy #0b1739 */}
