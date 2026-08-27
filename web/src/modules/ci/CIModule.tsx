@@ -1018,51 +1018,27 @@ export default function CIModule() {
 
               {(!isSidebarCollapsed && isRegionExpanded) && (
                 <div className="space-y-0.5 pl-2 text-xs font-bold">
-                  {/* THKG */}
-                  <div>
-                    <div
-                      className={`w-full px-2 py-1 rounded-lg flex items-center justify-between transition-colors cursor-pointer ${
-                        (selectedRegion === "THKG" || selectedRegion === "TH-KG") ? "bg-[#006838] text-white font-extrabold" : "text-slate-300 hover:bg-slate-800/80 hover:text-white"
-                      }`}
-                      onClick={() => setSelectedRegion((selectedRegion === "THKG" || selectedRegion === "TH-KG") ? "ALL" : "THKG")}
-                    >
-                      <span className="flex items-center gap-1">
+                  {/* THKG header - non-clickable label */}
+                  <div className="px-2 py-1 text-slate-400 text-[11px] font-extrabold tracking-wider uppercase">
+                    THKG
+                  </div>
+                  {/* Sub-items */}
+                  <div className="pl-4 space-y-0.5 border-l border-slate-700/80 ml-2 mb-1">
+                    {TH_KG_SUB_ITEMS.map((subItem) => {
+                      const cnt = proposals.filter((p) => matchRegionFilter(p.region, subItem)).length;
+                      return (
                         <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setIsThKgExpanded(!isThKgExpanded);
-                          }}
-                          className="p-0.5 hover:bg-slate-700 rounded transition-colors text-slate-400"
+                          key={subItem}
+                          onClick={() => setSelectedRegion(selectedRegion === subItem ? "ALL" : subItem)}
+                          className={`w-full text-left px-2 py-0.5 rounded flex items-center justify-between text-[11px] transition-colors ${
+                            selectedRegion === subItem ? "bg-emerald-900/80 text-emerald-200 font-black" : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 font-medium"
+                          }`}
                         >
-                          {isThKgExpanded ? <IconChevronDown size={13} /> : <IconChevronRight size={13} />}
+                          <span>{subItem}</span>
+                          <span className="text-[9px] text-slate-400 font-mono">({cnt})</span>
                         </button>
-                        <span>THKG</span>
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-mono">
-                        ({proposals.filter((p) => matchRegionFilter(p.region, "THKG")).length})
-                      </span>
-                    </div>
-
-                    {isThKgExpanded && (
-                      <div className="pl-4 space-y-0.5 border-l border-slate-700/80 ml-2 my-0.5">
-                        {TH_KG_SUB_ITEMS.map((subItem) => {
-                          const cnt = proposals.filter((p) => matchRegionFilter(p.region, subItem)).length;
-                          return (
-                            <button
-                              key={subItem}
-                              onClick={() => setSelectedRegion(selectedRegion === subItem ? "ALL" : subItem)}
-                              className={`w-full text-left px-2 py-0.5 rounded flex items-center justify-between text-[11px] transition-colors ${
-                                selectedRegion === subItem ? "bg-emerald-900/80 text-emerald-200 font-black" : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 font-medium"
-                              }`}
-                            >
-                              <span>{subItem}</span>
-                              <span className="text-[9px] text-slate-400 font-mono">({cnt})</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
+                      );
+                    })}
                   </div>
                 </div>
               )}
