@@ -307,7 +307,6 @@ async function verifyServerAuth(request, env) {
           empCode = parts[2];
         }
       }
-    }
 
     let dbUser = null;
     if (env && env.DB && empCode) {
