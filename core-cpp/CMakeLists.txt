@@ -6,14 +6,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(BUILD_TESTS "Build Google Test suite for C++ core" ON)
 
+if(POLICY CMP0135)
+    cmake_policy(SET CMP0135 NEW)
+endif()
+
 include_directories(include src)
 
 # Sources
 set(CORE_SOURCES
     src/tbs_core.cpp
-    src/network/network_client.cpp
-    src/storage/sqlite_engine.cpp
-    src/sync/sync_engine.cpp
 )
 
 # Shared library for Android / Host
