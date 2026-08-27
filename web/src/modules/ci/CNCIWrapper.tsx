@@ -110,11 +110,11 @@ export default function CNCIWrapper() {
         <div className="space-y-6 animate-in zoom-in-95 duration-200">
           {/* TOP BANNER — Dark Emerald Gradient with Factory Background Image */}
           <div className="p-6 sm:p-7 rounded-3xl bg-slate-900 text-white shadow-lg relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 border border-emerald-800/40 group min-h-[160px]">
-            {/* Factory Real Background Photo - Aligned to Bottom */}
+            {/* Factory Real Background Photo - Centered */}
             <img
               src="/images/brands/Nhà máy/1787810869511_5373416762128407822_5373416762128407822_f5d1738107b86346f69bf64f3e28dd0d.jpg"
               alt="CN-CI Cải tiến liên tục"
-              className="absolute inset-0 w-full h-full object-cover object-bottom opacity-75 sm:opacity-80 group-hover:scale-105 transition-transform duration-700 pointer-events-none"
+              className="absolute inset-0 w-full h-full object-cover object-center opacity-75 sm:opacity-80 group-hover:scale-105 transition-transform duration-700 pointer-events-none"
             />
             {/* Lighter Gradient Overlay */}
             <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-[#004d29]/45 to-slate-950/50 pointer-events-none" />

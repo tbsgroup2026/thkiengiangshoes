@@ -1216,7 +1216,7 @@ export default function WorkDashboardPage() {
               <img
                 src={deptBanners[activeDeptObj.id]?.bg || "/images/tbs-factory-plant.png"}
                 alt={activeDeptObj.name}
-                className="absolute inset-0 w-full h-full object-cover object-bottom opacity-75 sm:opacity-80 group-hover:scale-105 transition-transform duration-700 pointer-events-none"
+                className="absolute inset-0 w-full h-full object-cover object-center opacity-75 sm:opacity-80 group-hover:scale-105 transition-transform duration-700 pointer-events-none"
               />
               <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-[#004d29]/45 to-slate-950/50 pointer-events-none" />
 
