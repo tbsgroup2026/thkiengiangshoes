@@ -137,21 +137,32 @@ export default function HeroSection() {
               </div>
             </div>
 
-            {/* Right Media Column (5 cols) — Dynamic Hands Photo Card */}
-            <div className="lg:col-span-5 relative">
-              <div className="relative rounded-3xl overflow-hidden shadow-2xl border-2 border-[#2fd39a]/30 group bg-[#0d2419]">
+            {/* Right Column: Hero Visual Block matching 2 overlapping cards */}
+            <div className="lg:col-span-5 relative min-h-[440px] h-[440px] z-10 mt-6 lg:mt-0">
+              {/* 1. Main Card (Top-Right): Hands Circle Image */}
+              <div className="absolute top-0 right-0 w-[80%] h-[68%] rounded-[26px] overflow-hidden border border-[#2fd39a]/35 shadow-2xl z-10 group bg-[#0d2419]">
                 <img
                   src={cmsHero.handsImage || "/images/tbs-hands.png"}
-                  alt="TBS Hands Commitment"
-                  className="w-full h-auto object-cover group-hover:scale-105 transition-transform duration-700"
+                  alt="TBS Group - Hands Commitment"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                 />
-                
-                {/* Overlay Quote Badge */}
-                <div className="absolute bottom-4 left-4 right-4 p-4 rounded-2xl bg-[#08221a]/85 backdrop-blur-md border border-[#2fd39a]/30 text-center">
-                  <p className="font-serif italic text-white text-sm sm:text-[17px] leading-[1.4]">
-                    &ldquo;{cmsHero.quoteBadgeText || "Chung sức kiến tạo tương lai"}&rdquo;
-                  </p>
-                </div>
+              </div>
+
+              {/* 2. Sub Card (Bottom-Left): Team Photo Banner with White Border */}
+              <div className="absolute bottom-0 left-0 w-[55%] h-[48%] rounded-[22px] overflow-hidden border-[3px] border-white shadow-2xl z-20 hover:scale-[1.03] transition-transform duration-300 group/card bg-[#0d2419]">
+                <img
+                  src={cmsHero.teamImage || "/images/tbs-team-banner.png"}
+                  alt="Phát Huy Sức Mạnh Kiến Tạo Tương Lai"
+                  className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-500"
+                />
+              </div>
+
+              {/* 3. Dark Quote Badge: Bottom-Right Quote Box */}
+              <div className="absolute bottom-[10%] -right-2 z-30 bg-[#08221a]/90 backdrop-blur-[14px] border border-[#2fd39a]/45 rounded-[20px] p-[16px_20px] max-w-[230px] shadow-2xl">
+                <div className="w-[40px] h-[2.5px] bg-gradient-to-r from-[#2fd39a] to-[#1fae7d] rounded-full mb-[10px]" />
+                <p className="font-serif italic text-white text-[15px] sm:text-[16px] leading-[1.4]">
+                  &ldquo;{cmsHero.quoteBadgeText || "Chung sức kiến tạo tương lai"}&rdquo;
+                </p>
               </div>
             </div>
           </div>
