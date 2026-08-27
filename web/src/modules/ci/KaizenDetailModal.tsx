@@ -29,6 +29,7 @@ import {
 } from "@tabler/icons-react";
 import { KaizenProposal } from "./CIModule";
 import { usePermission } from "@/hooks/usePermission";
+import FeasibilityApprovalModal from "./FeasibilityApprovalModal";
 
 interface KaizenDetailModalProps {
   proposal: KaizenProposal;
@@ -115,7 +116,8 @@ export default function KaizenDetailModal({
   const [thiDuaMsg, setThiDuaMsg] = useState<string | null>(null);
 
   // Step 3: Feasibility Review Action State & Handler
-  const [approvingStep3, setApprovingStep3] = useState(false);
+  const [isFeasibilityModalOpen, setIsFeasibilityModalOpen] = useState(false);
+  const [feasibilityInitialDecision, setFeasibilityInitialDecision] = useState<"APPROVE" | "REJECT">("APPROVE");
   const [step3Msg, setStep3Msg] = useState<string | null>(null);
 
   const handleFeasibilityDecision = async (decision: "APPROVE" | "REJECT") => {
@@ -514,18 +516,22 @@ export default function KaizenDetailModal({
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     type="button"
-                    disabled={approvingStep3}
-                    onClick={() => handleFeasibilityDecision("APPROVE")}
-                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-extrabold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    onClick={() => {
+                      setFeasibilityInitialDecision("APPROVE");
+                      setIsFeasibilityModalOpen(true);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-extrabold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
                   >
                     <IconCheck size={14} />
                     <span>Phê Duyệt Triển Khai</span>
                   </button>
                   <button
                     type="button"
-                    disabled={approvingStep3}
-                    onClick={() => handleFeasibilityDecision("REJECT")}
-                    className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-extrabold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    onClick={() => {
+                      setFeasibilityInitialDecision("REJECT");
+                      setIsFeasibilityModalOpen(true);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white font-extrabold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
                   >
                     <IconX size={14} />
                     <span>Từ Chối Triển Khai</span>
@@ -1963,6 +1969,26 @@ function TabAwardReviewContent({
         </form>
       </div>
 
+      {/* POPUP PHÊ DUYỆT TÍNH KHẢ THI (BƯỚC 3 QĐ-TBKG) */}
+      <FeasibilityApprovalModal
+        isOpen={isFeasibilityModalOpen}
+        proposal={proposal}
+        initialDecision={feasibilityInitialDecision}
+        onClose={() => setIsFeasibilityModalOpen(false)}
+        onSuccess={(updated) => {
+          proposal.approval_status = updated.approval_status;
+          proposal.sub_status = updated.sub_status;
+          proposal.status = updated.status;
+          setStep3Msg(
+            updated.approval_status === "PHE_DUYET"
+              ? "✅ Đã phê duyệt tính khả thi (Bước 3) thành công!"
+              : "❌ Đã từ chối triển khai sáng kiến."
+          );
+          setTimeout(() => setStep3Msg(null), 4000);
+          if (onRate) onRate();
+          if (onEvaluate) onEvaluate();
+        }}
+      />
     </div>
   );
 }
