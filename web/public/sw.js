@@ -1,5 +1,5 @@
 // PWA Service Worker for Văn Phòng Chuỗi SKECHERS - TBS Group
-const CACHE_NAME = "skechers-tbs-v3";
+const CACHE_NAME = "skechers-tbs-v5";
 const ASSETS_TO_CACHE = [
   "/",
   "/favicon.ico",
@@ -58,7 +58,7 @@ self.addEventListener("push", (event) => {
     vibrate: isUrgent ? [500, 150, 500, 150, 500, 150, 500] : [200, 100, 200],
     tag: payload.tag || `tbs_push_${Date.now()}`,
     data: { url: payload.url || "/work" },
-    requireInteraction: isUrgent, // Keeps banner on lock screen until clicked for urgent alerts
+    requireInteraction: isUrgent,
     renotify: true,
     actions: [
       { action: "open", title: "Xem ngay" },
@@ -102,6 +102,42 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  const url = new URL(event.request.url);
+
+  // Network-first for Next.js build chunks to handle new deployments cleanly
+  if (url.pathname.startsWith("/_next/static/")) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+            return response;
+          }
+          // If 404 (chunk replaced after new deployment), fallback to cache or empty response
+          return caches.match(event.request).then((cached) => {
+            if (cached) return cached;
+            if (url.pathname.endsWith(".js")) {
+              return new Response("/* Chunk obsolete */", {
+                status: 200,
+                headers: { "Content-Type": "application/javascript" },
+              });
+            }
+            if (url.pathname.endsWith(".css")) {
+              return new Response("/* CSS obsolete */", {
+                status: 200,
+                headers: { "Content-Type": "text/css" },
+              });
+            }
+            return response;
+          });
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Cache-first for offline PWA shell
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
