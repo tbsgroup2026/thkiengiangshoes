@@ -13,7 +13,8 @@
 const BASE_URL = process.env.TEST_APP_URL || "http://localhost:3000";
 const AUTH_HEADERS = {
   "Content-Type": "application/json",
-  "Authorization": "Bearer tbs_token_ADMIN-2026_test"
+  "Authorization": "Bearer tbs_token_ADMIN-2026_test",
+  "Cookie": "tbs_token=tbs_token_ADMIN-2026_test"
 };
 
 async function runTests() {
@@ -114,6 +115,7 @@ async function runTests() {
       })
     });
     const rejectJson = await rejectRes.json();
+    console.log("DEBUG approve response:", rejectRes.status, rejectJson);
     assert(rejectRes.status === 200 && rejectJson.sub_status === "TU_CHOI_TRIEN_KHAI", "Bước 3 Từ chối triển khai thành công (sub_status: TU_CHOI_TRIEN_KHAI)");
 
     // Attempt to evaluate rejected proposal

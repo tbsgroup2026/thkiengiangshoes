@@ -267,8 +267,8 @@ async function ensureDatabaseColumnsAndLegacyCode(env) {
 
 async function verifyServerAuth(request, env) {
   try {
-    const authHeader = request.headers.get("Authorization") || "";
-    const cookieHeader = request.headers.get("Cookie") || "";
+    const authHeader = request.headers.get("authorization") || request.headers.get("Authorization") || "";
+    const cookieHeader = request.headers.get("cookie") || request.headers.get("Cookie") || "";
     let token = "";
     if (authHeader.startsWith("Bearer ")) {
       token = authHeader.substring(7).trim();
