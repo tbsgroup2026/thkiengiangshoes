@@ -39,6 +39,8 @@ import {
   LandingCMSConfig,
   getLandingCMS,
   saveLandingCMS,
+  fetchLandingCMSFromServer,
+  saveLandingCMSToServer,
   DEFAULT_LANDING_CMS,
   DEFAULT_SHOE_LINES_CONFIG,
 } from "@/lib/landingCMS";
@@ -54,10 +56,13 @@ interface EmployeeAccount {
   name: string;
   email: string;
   phone: string;
-  title: string;
+  position?: string;
   department: string;
   roleCode: string;
-  status: "ACTIVE" | "LOCKED";
+  roleName?: string;
+  status: "ACTIVE" | "INACTIVE" | "LOCKED";
+  joinedDate?: string;
+  title?: string;
   ngayVao?: string;
   vtcvHienTai?: string;
   phongBanHienTai?: string;
@@ -91,18 +96,27 @@ interface MediaAsset {
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<
-    "overview" | "users" | "news" | "media" | "workspace_gallery" | "shoe_lines" | "products" | "landing_cms" | "d1_control"
-  >("overview");
-  const [cmsSubSection, setCmsSubSection] = useState<
-    "hero" | "workspace" | "excellence" | "products"
-  >("hero");
+    "overview" | "users" | "news" | "media" | "workspace_gallery" | "shoe_lines" | "products" | "landing_cms" | "d1_control" | "roles" | "departments"
+  >("landing_cms");
+
+  const [cmsSubSection, setCmsSubSection] = useState<"hero" | "workspace" | "excellence" | "products">("hero");
+
+  // Toast Notification State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Landing Page CMS State
   const [landingCMS, setLandingCMS] = useState<LandingCMSConfig>(DEFAULT_LANDING_CMS);
+  const [isSavingCMS, setIsSavingCMS] = useState(false);
+  const [saveErrorCMS, setSaveErrorCMS] = useState<string | null>(null);
 
   useEffect(() => {
+    // 1. Instant local read
     setLandingCMS(getLandingCMS());
+
+    // 2. Fetch server D1 database config & auto-migrate if needed
+    fetchLandingCMSFromServer().then((srvConfig) => {
+      setLandingCMS(srvConfig);
+    });
 
     // Check URL search parameters (e.g. /admin?tab=products or /admin?tab=workspace_gallery)
     if (typeof window !== "undefined") {
@@ -273,17 +287,34 @@ export default function AdminPage() {
     }
   };
 
-  const handleSaveLandingCMS = (e: React.FormEvent) => {
-    e.preventDefault();
-    saveLandingCMS(landingCMS);
-    showToast("💾 Đã lưu cấu hình Trang Chủ! Nội dung & hình ảnh đã được cập nhật ngay lập tức.");
+  const handleSaveLandingCMS = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setIsSavingCMS(true);
+    setSaveErrorCMS(null);
+    showToast("⏳ Đang gửi và đồng bộ dữ liệu lên Máy chủ (D1 Database)...");
+
+    const res = await saveLandingCMSToServer(landingCMS);
+    setIsSavingCMS(false);
+
+    if (res.success) {
+      showToast("💾 Đã lưu & đồng bộ thành công lên Máy chủ (Cloudflare D1)! Mọi thiết bị/trình duyệt sẽ thấy dữ liệu mới.");
+    } else {
+      setSaveErrorCMS(res.error || "Lỗi lưu máy chủ");
+      showToast("❌ Lưu thất bại: " + (res.error || "Không thể lưu vào D1 Database!"));
+    }
   };
 
-  const handleResetLandingCMS = () => {
-    if (confirm("Bạn có chắc chắn muốn khôi phục toàn bộ nội dung & hình ảnh Trang Chủ về mặc định gốc?")) {
+  const handleResetLandingCMS = async () => {
+    if (confirm("Bạn có chắc chắn muốn khôi phục toàn bộ nội dung & hình ảnh Trang Chủ về mặc định gốc trên Server D1?")) {
       setLandingCMS(DEFAULT_LANDING_CMS);
-      saveLandingCMS(DEFAULT_LANDING_CMS);
-      showToast("🔄 Đã khôi phục cài đặt Trang Chủ về mặc định gốc!");
+      setIsSavingCMS(true);
+      const res = await saveLandingCMSToServer(DEFAULT_LANDING_CMS);
+      setIsSavingCMS(false);
+      if (res.success) {
+        showToast("🔄 Đã khôi phục cài đặt Trang Chủ về mặc định gốc trên Máy chủ thành công!");
+      } else {
+        showToast("❌ Khôi phục thất bại: " + (res.error || "Lỗi kết nối máy chủ"));
+      }
     }
   };
 
@@ -2134,6 +2165,22 @@ export default function AdminPage() {
         {/* ════════════════════════════════════════════════════════════════
             TAB 5: QUẢN TRỊ NỘI DUNG & HÌNH ẢNH TRANG CHỦ & DÒNG SẢN PHẨM
            ════════════════════════════════════════════════════════════════ */}
+        {saveErrorCMS && (
+          <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center justify-between flex-wrap gap-2 mb-4">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-rose-600 animate-ping" />
+              <span>❌ Lỗi đồng bộ máy chủ: {saveErrorCMS}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleSaveLandingCMS()}
+              className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs cursor-pointer transition shadow-2xs"
+            >
+              🔄 Thử Lưu Lại Ngay (Retry)
+            </button>
+          </div>
+        )}
+
         {(activeTab === "landing_cms" || activeTab === "products") && (
           <LandingCMSManager
             landingCMS={landingCMS}

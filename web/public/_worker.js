@@ -5605,6 +5605,93 @@ export default {
       }
     }
 
+    // ════════════════════════════════════════════════════════════════
+    // 🌐 LANDING PAGE CMS PERSISTENCE & MULTI-DEVICE SYNC APIS
+    // ════════════════════════════════════════════════════════════════
+    if (url.pathname === "/api/landing-cms") {
+      const NO_CACHE_HEADERS = {
+        ...SECURE_JSON_HEADERS,
+        "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
+        "Pragma": "no-cache",
+        "Expires": "0"
+      };
+
+      if (request.method === "OPTIONS") {
+        return new Response(null, { status: 204, headers: NO_CACHE_HEADERS });
+      }
+
+      if (request.method === "GET") {
+        try {
+          if (!env.DB) {
+            return new Response(JSON.stringify({ success: true, data: null, source: "no_db" }), { headers: NO_CACHE_HEADERS });
+          }
+
+          // Auto-ensure table exists
+          await env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS system_settings (
+              key TEXT PRIMARY KEY,
+              value TEXT,
+              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+          `).run().catch(() => {});
+
+          const row = await env.DB.prepare("SELECT value, updated_at FROM system_settings WHERE key = 'landing_cms'").first().catch(() => null);
+
+          if (row && row.value) {
+            try {
+              const config = JSON.parse(row.value);
+              return new Response(JSON.stringify({ success: true, data: config, updatedAt: row.updated_at }), { headers: NO_CACHE_HEADERS });
+            } catch (pErr) {
+              return new Response(JSON.stringify({ success: true, data: null, error: "PARSE_ERROR" }), { headers: NO_CACHE_HEADERS });
+            }
+          }
+
+          return new Response(JSON.stringify({ success: true, data: null }), { headers: NO_CACHE_HEADERS });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: NO_CACHE_HEADERS });
+        }
+      }
+
+      if (request.method === "POST") {
+        try {
+          const body = await request.json().catch(() => null);
+          if (!body) {
+            return new Response(JSON.stringify({ success: false, error: "INVALID_JSON_BODY" }), { status: 400, headers: NO_CACHE_HEADERS });
+          }
+
+          if (!env.DB) {
+            return new Response(JSON.stringify({ success: false, error: "DATABASE_NOT_BOUND" }), { status: 500, headers: NO_CACHE_HEADERS });
+          }
+
+          // Auto-ensure table exists
+          await env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS system_settings (
+              key TEXT PRIMARY KEY,
+              value TEXT,
+              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+          `).run().catch(() => {});
+
+          const jsonStr = JSON.stringify(body);
+          await env.DB.prepare(`
+            INSERT INTO system_settings (key, value, updated_at)
+            VALUES ('landing_cms', ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(key) DO UPDATE SET
+              value = excluded.value,
+              updated_at = CURRENT_TIMESTAMP
+          `).bind(jsonStr).run();
+
+          return new Response(JSON.stringify({
+            success: true,
+            message: "Đã lưu và đồng bộ cấu hình CMS lên Cloudflare D1 Database!",
+            updatedAt: new Date().toISOString()
+          }), { headers: NO_CACHE_HEADERS });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message, stack: String(err.stack || err) }), { status: 500, headers: NO_CACHE_HEADERS });
+        }
+      }
+    }
+
     // Default Fallback: Serve Next.js Static Export Assets
     return env.ASSETS.fetch(request);
   },

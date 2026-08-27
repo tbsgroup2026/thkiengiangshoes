@@ -261,7 +261,10 @@ export default function LandingCMSManager({
             <span className="px-2.5 py-0.5 rounded-md bg-emerald-100 text-[#006838] font-bold text-[11px] uppercase tracking-wider">
               CMS VẬN HÀNH TRANG CHỦ
             </span>
-            <span className="text-xs text-slate-400 font-mono">Real-time Live Sync</span>
+            <span className="text-xs text-slate-500 font-mono font-bold flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              Server D1 Sync
+            </span>
           </div>
           <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
             🏠 Quản Trị Nội Dung &amp; Hình Ảnh Landing Page

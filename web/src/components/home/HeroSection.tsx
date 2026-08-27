@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { IconArrowRight, IconArrowDown } from "@tabler/icons-react";
 import { useTranslation } from "@/hooks/useTranslation";
-import { getLandingCMS, DEFAULT_LANDING_CMS } from "@/lib/landingCMS";
+import { getLandingCMS, fetchLandingCMSFromServer, DEFAULT_LANDING_CMS } from "@/lib/landingCMS";
 export default function HeroSection() {
   const { t, lang } = useTranslation();
   const [cmsHero, setCmsHero] = useState(DEFAULT_LANDING_CMS.hero);
@@ -23,9 +23,31 @@ export default function HeroSection() {
     };
     loadCMS();
 
+    const fetchServerData = () => {
+      fetchLandingCMSFromServer().then((config) => {
+        if (config?.hero) {
+          setCmsHero(config.hero);
+        }
+        if (config?.shoeLines) {
+          setShoeLines(config.shoeLines);
+        }
+      });
+    };
+
+    fetchServerData();
+
+    // Background server polling every 60s + sync on window focus
+    const interval = setInterval(fetchServerData, 60000);
+    const handleFocus = () => fetchServerData();
+
     if (typeof window !== "undefined") {
       window.addEventListener("tbs_landing_cms_updated", loadCMS);
-      return () => window.removeEventListener("tbs_landing_cms_updated", loadCMS);
+      window.addEventListener("focus", handleFocus);
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener("tbs_landing_cms_updated", loadCMS);
+        window.removeEventListener("focus", handleFocus);
+      };
     }
   }, []);
 

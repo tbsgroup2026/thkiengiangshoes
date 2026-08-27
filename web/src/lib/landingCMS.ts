@@ -472,66 +472,145 @@ export const DEFAULT_LANDING_CMS: LandingCMSConfig = {
 
 export const CMS_STORAGE_KEY = "tbs_landing_cms";
 
+export function parseCMSConfig(parsed: any): LandingCMSConfig {
+  if (!parsed) return DEFAULT_LANDING_CMS;
+
+  const storedProducts = parsed.products || {};
+  const storedItems = storedProducts.items || [];
+  const mergedItems = [...storedItems];
+  for (const defItem of DEFAULT_LANDING_CMS.products.items) {
+    if (!mergedItems.some((i: any) => i.code === defItem.code)) {
+      mergedItems.push(defItem);
+    }
+  }
+
+  const cleanedPartners = Array.isArray(parsed.brandPartners)
+    ? parsed.brandPartners.filter((p: any) => p && p.id && p.name && p.logo)
+    : DEFAULT_BRAND_PARTNERS;
+
+  const existingIds = new Set(cleanedPartners.map((p: BrandPartner) => p.id));
+  const mergedPartners = [...cleanedPartners];
+  for (const defPartner of DEFAULT_BRAND_PARTNERS) {
+    if (!existingIds.has(defPartner.id)) {
+      mergedPartners.push(defPartner);
+    }
+  }
+
+  const rawShoeLines = parsed.shoeLines && Array.isArray(parsed.shoeLines.groups) && parsed.shoeLines.groups.length > 0
+    ? parsed.shoeLines
+    : DEFAULT_SHOE_LINES_CONFIG;
+
+  const rawWorkspaceDeps = Array.isArray(parsed.workspaceDepartments) && parsed.workspaceDepartments.length > 0
+    ? parsed.workspaceDepartments
+    : DEFAULT_WORKSPACE_DEPARTMENTS;
+
+  return {
+    hero: { ...DEFAULT_LANDING_CMS.hero, ...(parsed.hero || {}) },
+    workspace: { ...DEFAULT_LANDING_CMS.workspace, ...(parsed.workspace || {}) },
+    workspaceDepartments: rawWorkspaceDeps,
+    excellence: { ...DEFAULT_LANDING_CMS.excellence, ...(parsed.excellence || {}) },
+    products: {
+      title: storedProducts.title || DEFAULT_LANDING_CMS.products.title,
+      description: storedProducts.description || DEFAULT_LANDING_CMS.products.description,
+      items: mergedItems,
+    },
+    brandPartners: mergedPartners,
+    shoeLines: {
+      title: rawShoeLines.title || DEFAULT_SHOE_LINES_CONFIG.title,
+      groups: rawShoeLines.groups || DEFAULT_SHOE_GROUPS,
+    },
+  };
+}
+
 export function getLandingCMS(): LandingCMSConfig {
   if (typeof window === "undefined") return DEFAULT_LANDING_CMS;
   try {
     const raw = localStorage.getItem(CMS_STORAGE_KEY);
     if (!raw) return DEFAULT_LANDING_CMS;
     const parsed = JSON.parse(raw);
-
-    const storedProducts = parsed.products || {};
-    const storedItems = storedProducts.items || [];
-    const mergedItems = [...storedItems];
-    for (const defItem of DEFAULT_LANDING_CMS.products.items) {
-      if (!mergedItems.some((i: any) => i.code === defItem.code)) {
-        mergedItems.push(defItem);
-      }
-    }
-
-    const cleanedPartners = Array.isArray(parsed.brandPartners)
-      ? parsed.brandPartners.filter((p: any) => p && p.id && p.name && p.logo)
-      : DEFAULT_BRAND_PARTNERS;
-
-    const existingIds = new Set(cleanedPartners.map((p: BrandPartner) => p.id));
-    const mergedPartners = [...cleanedPartners];
-    for (const defPartner of DEFAULT_BRAND_PARTNERS) {
-      if (!existingIds.has(defPartner.id)) {
-        mergedPartners.push(defPartner);
-      }
-    }
-
-    const rawShoeLines = parsed.shoeLines && Array.isArray(parsed.shoeLines.groups) && parsed.shoeLines.groups.length > 0
-      ? parsed.shoeLines
-      : DEFAULT_SHOE_LINES_CONFIG;
-
-    const rawWorkspaceDeps = Array.isArray(parsed.workspaceDepartments) && parsed.workspaceDepartments.length > 0
-      ? parsed.workspaceDepartments
-      : DEFAULT_WORKSPACE_DEPARTMENTS;
-
-    return {
-      hero: { ...DEFAULT_LANDING_CMS.hero, ...(parsed.hero || {}) },
-      workspace: { ...DEFAULT_LANDING_CMS.workspace, ...(parsed.workspace || {}) },
-      workspaceDepartments: rawWorkspaceDeps,
-      excellence: { ...DEFAULT_LANDING_CMS.excellence, ...(parsed.excellence || {}) },
-      products: {
-        title: storedProducts.title || DEFAULT_LANDING_CMS.products.title,
-        description: storedProducts.description || DEFAULT_LANDING_CMS.products.description,
-        items: mergedItems,
-      },
-      brandPartners: mergedPartners,
-      shoeLines: {
-        title: rawShoeLines.title || DEFAULT_SHOE_LINES_CONFIG.title,
-        groups: rawShoeLines.groups || DEFAULT_SHOE_GROUPS,
-      },
-    };
+    return parseCMSConfig(parsed);
   } catch (e) {
     return DEFAULT_LANDING_CMS;
   }
 }
 
-export function saveLandingCMS(config: LandingCMSConfig) {
+/**
+ * Fetch latest CMS configuration from Cloudflare D1 Server API.
+ * If server D1 is empty BUT local localStorage has existing custom data,
+ * auto-migrate local data to D1 server (Auto-migration).
+ */
+export async function fetchLandingCMSFromServer(): Promise<LandingCMSConfig> {
+  if (typeof window === "undefined") return DEFAULT_LANDING_CMS;
+
+  try {
+    const res = await fetch("/api/landing-cms", {
+      cache: "no-store",
+      headers: { "Pragma": "no-cache" },
+    });
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.success && json.data) {
+        const serverConfig = parseCMSConfig(json.data);
+        // Sync server data to localStorage for instant local read
+        localStorage.setItem(CMS_STORAGE_KEY, JSON.stringify(serverConfig));
+        window.dispatchEvent(new Event("tbs_landing_cms_updated"));
+        return serverConfig;
+      }
+    }
+  } catch (err) {
+    console.warn("[CMS SERVER FETCH WARN]", err);
+  }
+
+  // Fallback to local storage if server is unreachable or empty
+  const localConfig = getLandingCMS();
+
+  // Check if we need to auto-migrate local data to D1 server
+  const rawLocal = localStorage.getItem(CMS_STORAGE_KEY);
+  if (rawLocal && typeof window !== "undefined") {
+    // Attempt auto-migration in background
+    saveLandingCMSToServer(localConfig).catch(() => {});
+  }
+
+  return localConfig;
+}
+
+/**
+ * Save CMS configuration synchronously to localStorage AND asynchronously POST to D1 database on Cloudflare Worker.
+ * Returns Promise<{ success: boolean; error?: string }> for server confirmation in Admin UI.
+ */
+export async function saveLandingCMSToServer(config: LandingCMSConfig): Promise<{ success: boolean; error?: string }> {
+  // 1. Optimistic update locally
   if (typeof window !== "undefined") {
     localStorage.setItem(CMS_STORAGE_KEY, JSON.stringify(config));
     window.dispatchEvent(new Event("tbs_landing_cms_updated"));
   }
+
+  // 2. Post to Cloudflare D1 Server API
+  try {
+    const res = await fetch("/api/landing-cms", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(config),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "HTTP Error " + res.status);
+      return { success: false, error: `Máy chủ phản hồi lỗi (${res.status}): ${errText}` };
+    }
+
+    const data = await res.json().catch(() => ({}));
+    if (data && data.success) {
+      return { success: true };
+    }
+    return { success: false, error: data?.error || "Máy chủ không xác nhận được dữ liệu" };
+  } catch (err: any) {
+    return { success: false, error: err?.message || "Lỗi kết nối mạng khi gửi lên máy chủ" };
+  }
+}
+
+export function saveLandingCMS(config: LandingCMSConfig) {
+  // Backward compatibility wrapper
+  saveLandingCMSToServer(config);
 }

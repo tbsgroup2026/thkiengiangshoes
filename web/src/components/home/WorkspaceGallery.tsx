@@ -21,6 +21,7 @@ import {
 import { useTranslation } from "@/hooks/useTranslation";
 import {
   getLandingCMS,
+  fetchLandingCMSFromServer,
   DEFAULT_LANDING_CMS,
   WorkspaceDepartment,
   WorkspaceImageItem,
@@ -52,9 +53,28 @@ export default function WorkspaceGallery() {
     };
     loadCMS();
 
+    const fetchServerData = () => {
+      fetchLandingCMSFromServer().then((config) => {
+        if (config) {
+          setCmsConfig(config);
+        }
+      });
+    };
+
+    fetchServerData();
+
+    // Background server polling every 60s + sync on window focus
+    const interval = setInterval(fetchServerData, 60000);
+    const handleFocus = () => fetchServerData();
+
     if (typeof window !== "undefined") {
       window.addEventListener("tbs_landing_cms_updated", loadCMS);
-      return () => window.removeEventListener("tbs_landing_cms_updated", loadCMS);
+      window.addEventListener("focus", handleFocus);
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener("tbs_landing_cms_updated", loadCMS);
+        window.removeEventListener("focus", handleFocus);
+      };
     }
   }, []);
 
