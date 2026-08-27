@@ -30,21 +30,7 @@ export default function HeroSection() {
   }, []);
 
   const groups = shoeLines?.groups || DEFAULT_LANDING_CMS.shoeLines.groups;
-  const currentGroup = groups[activeGroupIdx] || groups[0] || { title: "WATER PROOF", items: [] };
-
-  // Flatten all shoe images across all groups for infinite continuous marquee
-  const allShoeItems: Array<{ id: string; url: string; name: string }> = [];
-  groups.forEach((group) => {
-    (group.items || []).forEach((item, idx) => {
-      allShoeItems.push({
-        id: item.id || `img-${group.id}-${idx}`,
-        url: item.url,
-        name: item.name || group.title,
-      });
-    });
-  });
-
-  const marqueeShoes = [...allShoeItems, ...allShoeItems, ...allShoeItems];
+  const marqueeGroups = [...groups, ...groups, ...groups];
 
   return (
     <>
@@ -203,57 +189,42 @@ export default function HeroSection() {
             <div className="h-[1px] w-16 sm:w-28 md:w-36 bg-gradient-to-l from-transparent to-[#f2dc9a]/70" />
           </div>
 
-          {/* Middle Continuous Marquee Row: ONLY White Shoe Image Cards */}
+          {/* Continuous Marquee Track: Each Group Block Contains 5 Shoe Cards + Title Line Centered Below */}
           <div className="overflow-hidden w-full flex items-center py-2">
-            <div className="animate-marquee-left flex items-center gap-4 sm:gap-5">
-              {marqueeShoes.map((shoe, idx) => (
-                <div
-                  key={`${shoe.id}-${idx}`}
-                  className="flex-shrink-0 flex items-center justify-center w-[160px] sm:w-[190px] h-[90px] sm:h-[105px] rounded-[24px] px-4 py-2 bg-white shadow-xl border border-white/40 hover:-translate-y-1 hover:shadow-2xl hover:scale-[1.03] transition-all duration-300 select-none cursor-pointer group"
-                  title={shoe.name}
-                >
-                  <img
-                    src={shoe.url}
-                    alt={shoe.name}
-                    className="max-h-[70px] max-w-[155px] w-auto h-auto object-contain transition-transform duration-300 group-hover:scale-105"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = "/images/brands/256000.png";
-                    }}
-                  />
+            <div className="animate-marquee-left flex items-start gap-8 sm:gap-12">
+              {marqueeGroups.map((group, groupIdx) => (
+                <div key={`${group.id}-${groupIdx}`} className="flex-shrink-0 flex flex-col items-center space-y-4">
+                  {/* 5 Shoe Cards in a row for this group */}
+                  <div className="flex items-center gap-4 sm:gap-5">
+                    {(group.items || []).slice(0, 5).map((shoe, shoeIdx) => (
+                      <div
+                        key={`${shoe.id || shoeIdx}-${groupIdx}`}
+                        className="flex-shrink-0 flex items-center justify-center w-[160px] sm:w-[190px] h-[90px] sm:h-[105px] rounded-[24px] px-4 py-2 bg-white shadow-xl border border-white/40 hover:-translate-y-1 hover:shadow-2xl hover:scale-[1.03] transition-all duration-300 select-none cursor-pointer group"
+                        title={shoe.name || group.title}
+                      >
+                        <img
+                          src={shoe.url}
+                          alt={shoe.name || group.title}
+                          className="max-h-[70px] max-w-[155px] w-auto h-auto object-contain transition-transform duration-300 group-hover:scale-105"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = "/images/brands/256000.png";
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Group Title Line Centered Below the 5 Shoe Cards */}
+                  <div className="flex items-center justify-center gap-4 w-full pt-1">
+                    <div className="h-[1px] w-14 sm:w-28 md:w-36 bg-[#f2dc9a]/60" />
+                    <h4 className="text-white font-black text-xs sm:text-sm uppercase tracking-[4px] font-sans whitespace-nowrap">
+                      {group.title}
+                    </h4>
+                    <div className="h-[1px] w-14 sm:w-28 md:w-36 bg-[#f2dc9a]/60" />
+                  </div>
                 </div>
               ))}
             </div>
-          </div>
-
-          {/* Bottom Group Label Line: ─────── WATER PROOF ─────── */}
-          <div className="pt-1 flex flex-col items-center gap-2">
-            <div className="flex items-center justify-center gap-4 px-4">
-              <div className="h-[1px] w-14 sm:w-24 md:w-36 bg-[#f2dc9a]/60" />
-              <h4 className="text-white font-black text-sm sm:text-base uppercase tracking-[4px] font-sans">
-                {currentGroup.title}
-              </h4>
-              <div className="h-[1px] w-14 sm:w-24 md:w-36 bg-[#f2dc9a]/60" />
-            </div>
-
-            {/* Interactive Group Pill Tabs */}
-            {groups.length > 1 && (
-              <div className="flex items-center justify-center gap-2 flex-wrap px-4 pt-1">
-                {groups.map((g, idx) => (
-                  <button
-                    key={g.id || idx}
-                    type="button"
-                    onClick={() => setActiveGroupIdx(idx)}
-                    className={`px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
-                      activeGroupIdx === idx
-                        ? "bg-[#006838] text-white border border-emerald-400/50 shadow-sm"
-                        : "bg-white/10 text-white/70 hover:bg-white/20 hover:text-white border border-white/10"
-                    }`}
-                  >
-                    {g.title}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       </section>

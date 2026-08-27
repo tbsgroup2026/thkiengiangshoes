@@ -377,8 +377,8 @@ export default function ShoeLinesManager({ shoeLines, onChange, showToast }: Pro
                 </div>
               </div>
 
-              {/* 3 Image Cards Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* 5 Image Cards Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4">
                 {group.items.map((item, itemIdx) => (
                   <div
                     key={item.id || itemIdx}

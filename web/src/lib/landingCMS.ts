@@ -110,6 +110,8 @@ export const DEFAULT_SHOE_GROUPS: ShoeGroup[] = [
       { id: "img-1-1", url: "/images/brands/256000.png", name: "Waterproof Hiking Boot", order: 1 },
       { id: "img-1-2", url: "/images/crawled/56.webp", name: "Waterproof Safety Shoe", order: 2 },
       { id: "img-1-3", url: "/images/brands/256026.png", name: "All-Terrain Waterproof", order: 3 },
+      { id: "img-1-4", url: "/images/brands/256133.jpg", name: "Waterproof Trail Boot", order: 4 },
+      { id: "img-1-5", url: "/images/brands/195001.jpg", name: "Waterproof Leather Work", order: 5 },
     ],
   },
   {
@@ -120,6 +122,8 @@ export const DEFAULT_SHOE_GROUPS: ShoeGroup[] = [
       { id: "img-2-1", url: "/images/crawled/04.webp", name: "Sport Lifestyle Sneaker", order: 1 },
       { id: "img-2-2", url: "/images/crawled/05.webp", name: "Athletic Runner Max", order: 2 },
       { id: "img-2-3", url: "/images/crawled/60.webp", name: "Sport Comfort Trainer", order: 3 },
+      { id: "img-2-4", url: "/images/brands/256003.png", name: "Sport Mesh Slip-On", order: 4 },
+      { id: "img-2-5", url: "/images/crawled/005.webp", name: "Sport Performance Runner", order: 5 },
     ],
   },
   {
@@ -130,6 +134,8 @@ export const DEFAULT_SHOE_GROUPS: ShoeGroup[] = [
       { id: "img-3-1", url: "/images/brands/256133.jpg", name: "USA Classic Outdoor", order: 1 },
       { id: "img-3-2", url: "/images/brands/256003.png", name: "USA Leather Chelsea", order: 2 },
       { id: "img-3-3", url: "/images/brands/195001.jpg", name: "USA Heritage Work Boot", order: 3 },
+      { id: "img-3-4", url: "/images/brands/256000.png", name: "USA All-Weather Boot", order: 4 },
+      { id: "img-3-5", url: "/images/crawled/58.webp", name: "USA Steel Toe Master", order: 5 },
     ],
   },
   {
@@ -140,6 +146,8 @@ export const DEFAULT_SHOE_GROUPS: ShoeGroup[] = [
       { id: "img-4-1", url: "/images/crawled/58.webp", name: "Steel Toe Work Safety", order: 1 },
       { id: "img-4-2", url: "/images/crawled/005.webp", name: "Industrial Comfort Work", order: 2 },
       { id: "img-4-3", url: "/images/crawled/Da-giay1.jpg", name: "Heavy Duty Work Shoe", order: 3 },
+      { id: "img-4-4", url: "/images/brands/256026.png", name: "Heavy Duty Leather Boot", order: 4 },
+      { id: "img-4-5", url: "/images/crawled/56.webp", name: "Safety Grip Professional", order: 5 },
     ],
   },
   {
@@ -150,6 +158,8 @@ export const DEFAULT_SHOE_GROUPS: ShoeGroup[] = [
       { id: "img-5-1", url: "/images/brands/256000.png", name: "Performance GoRun Pro", order: 1 },
       { id: "img-5-2", url: "/images/crawled/05.webp", name: "Performance Speed Elite", order: 2 },
       { id: "img-5-3", url: "/images/brands/256026.png", name: "Performance Trail Burst", order: 3 },
+      { id: "img-5-4", url: "/images/crawled/04.webp", name: "Performance Energy Max", order: 4 },
+      { id: "img-5-5", url: "/images/crawled/60.webp", name: "Performance Dynamic Flex", order: 5 },
     ],
   },
 ];
