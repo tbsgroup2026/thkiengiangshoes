@@ -509,8 +509,33 @@ export function getUserAvatar(empCode: string): string | null {
 }
 
 /**
+ * Tải toàn bộ avatar tùy chỉnh của tất cả nhân sự từ Cloudflare D1 Database về máy.
+ */
+export async function fetchUserAvatarsFromServer(): Promise<Record<string, string>> {
+  if (typeof window === "undefined") return {};
+  try {
+    const res = await fetch("/api/user-avatars", { cache: "no-store", headers: { "Pragma": "no-cache" } });
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.success && json.avatars) {
+        for (const [code, url] of Object.entries(json.avatars)) {
+          if (code && typeof url === "string" && url.trim()) {
+            localStorage.setItem(`tbs_avatar_${normalizeEmpCode(code)}`, url);
+          }
+        }
+        window.dispatchEvent(new Event("tbs_profile_updated"));
+        return json.avatars;
+      }
+    }
+  } catch (err) {
+    console.warn("[AVATARS FETCH WARN]", err);
+  }
+  return {};
+}
+
+/**
  * Lưu avatar tùy chỉnh RIÊNG BIỆT cho đúng một mã nhân viên (empCode).
- * Đồng thời dọn dẹp triệt để bất kỳ key dùng chung nào (tbs_user_custom_avatar).
+ * Đồng thời đồng bộ trực tiếp lên Cloudflare D1 Database.
  */
 export function setUserAvatar(empCode: string, avatarUrl: string): void {
   if (typeof window === "undefined" || !empCode) return;
@@ -522,7 +547,14 @@ export function setUserAvatar(empCode: string, avatarUrl: string): void {
   // 2. Xóa sạch key avatar dùng chung cũ để tránh rò rỉ avatar
   localStorage.removeItem("tbs_user_custom_avatar");
 
-  // 3. Nếu đang đăng nhập đúng tài khoản này, cập nhật cả session
+  // 3. Đẩy lên Cloudflare D1 Database ở background để đồng bộ đa thiết bị
+  fetch("/api/user-avatars", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ empCode: cleanCode, avatarUrl }),
+  }).catch(() => {});
+
+  // 4. Nếu đang đăng nhập đúng tài khoản này, cập nhật cả session
   const storedSession = sessionStorage.getItem("tbs_current_user");
   if (storedSession) {
     try {
@@ -544,7 +576,7 @@ export function setUserAvatar(empCode: string, avatarUrl: string): void {
     } catch {}
   }
 
-  // 4. Phát sự kiện thông báo toàn bộ giao diện cập nhật ngay lập tức
+  // 5. Phát sự kiện thông báo toàn bộ giao diện cập nhật ngay lập tức
   window.dispatchEvent(new Event("tbs_profile_updated"));
 }
 

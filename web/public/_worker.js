@@ -5692,6 +5692,98 @@ export default {
       }
     }
 
+    // ════════════════════════════════════════════════════════════════
+    // 👤 USER AVATARS & PROFILE PERSISTENCE D1 APIS
+    // ════════════════════════════════════════════════════════════════
+    if (url.pathname === "/api/user-avatars" || url.pathname === "/api/profile") {
+      const NO_CACHE_HEADERS = {
+        ...SECURE_JSON_HEADERS,
+        "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
+        "Pragma": "no-cache",
+        "Expires": "0"
+      };
+
+      if (request.method === "OPTIONS") {
+        return new Response(null, { status: 204, headers: NO_CACHE_HEADERS });
+      }
+
+      if (request.method === "GET") {
+        try {
+          if (!env.DB) {
+            return new Response(JSON.stringify({ success: true, avatars: {} }), { headers: NO_CACHE_HEADERS });
+          }
+
+          await env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS system_settings (
+              key TEXT PRIMARY KEY,
+              value TEXT,
+              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+          `).run().catch(() => {});
+
+          const row = await env.DB.prepare("SELECT value FROM system_settings WHERE key = 'user_avatars_map'").first().catch(() => null);
+          let avatarsMap = {};
+          if (row && row.value) {
+            try { avatarsMap = JSON.parse(row.value); } catch {}
+          }
+
+          return new Response(JSON.stringify({ success: true, avatars: avatarsMap }), { headers: NO_CACHE_HEADERS });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: NO_CACHE_HEADERS });
+        }
+      }
+
+      if (request.method === "POST") {
+        try {
+          const body = await request.json().catch(() => null);
+          if (!body) {
+            return new Response(JSON.stringify({ success: false, error: "INVALID_JSON_BODY" }), { status: 400, headers: NO_CACHE_HEADERS });
+          }
+
+          if (!env.DB) {
+            return new Response(JSON.stringify({ success: false, error: "DATABASE_NOT_BOUND" }), { status: 500, headers: NO_CACHE_HEADERS });
+          }
+
+          await env.DB.prepare(`
+            CREATE TABLE IF NOT EXISTS system_settings (
+              key TEXT PRIMARY KEY,
+              value TEXT,
+              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+          `).run().catch(() => {});
+
+          const row = await env.DB.prepare("SELECT value FROM system_settings WHERE key = 'user_avatars_map'").first().catch(() => null);
+          let avatarsMap = {};
+          if (row && row.value) {
+            try { avatarsMap = JSON.parse(row.value); } catch {}
+          }
+
+          const empCode = (body.empCode || body.emp_code || "").trim();
+          const avatarUrl = body.avatarUrl || body.avatar || "";
+
+          if (empCode && avatarUrl) {
+            avatarsMap[empCode] = avatarUrl;
+            const jsonStr = JSON.stringify(avatarsMap);
+            await env.DB.prepare(`
+              INSERT INTO system_settings (key, value, updated_at)
+              VALUES ('user_avatars_map', ?, CURRENT_TIMESTAMP)
+              ON CONFLICT(key) DO UPDATE SET
+                value = excluded.value,
+                updated_at = CURRENT_TIMESTAMP
+            `).bind(jsonStr).run();
+          }
+
+          return new Response(JSON.stringify({
+            success: true,
+            message: "Đã đồng bộ avatar thành công lên Cloudflare D1 Database!",
+            avatars: avatarsMap
+          }), { headers: NO_CACHE_HEADERS });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: NO_CACHE_HEADERS });
+        }
+      }
+    }
+
     // Default Fallback: Serve Next.js Static Export Assets
     return env.ASSETS.fetch(request);
   },

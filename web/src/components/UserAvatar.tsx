@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 interface UserAvatarProps {
   src?: string | null;
@@ -26,6 +26,10 @@ export default function UserAvatar({
   showOnlineBadge = false,
 }: UserAvatarProps) {
   const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [src]);
 
   const sizeClasses: Record<string, string> = {
     xs: "w-6 h-6 text-[10px]",

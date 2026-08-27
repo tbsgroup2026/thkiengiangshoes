@@ -29,7 +29,7 @@ import {
   IconShieldCheck,
   IconBuildingStore,
 } from '@tabler/icons-react';
-import { getCurrentUser, setUserAvatar, logoutUserProfile, formatTitleWithDepartment } from '@/lib/userProfiles';
+import { getCurrentUser, setUserAvatar, fetchUserAvatarsFromServer, logoutUserProfile, formatTitleWithDepartment } from '@/lib/userProfiles';
 
 interface NotificationItem {
   id: number;
@@ -297,6 +297,7 @@ export default function Header() {
     };
 
     checkAuth();
+    fetchUserAvatarsFromServer().then(() => checkAuth());
     window.addEventListener('tbs_profile_updated', checkAuth);
 
     const fetchNotifications = async () => {
