@@ -7,8 +7,11 @@ import { useTranslation } from "@/hooks/useTranslation";
 import { getLandingCMS, DEFAULT_LANDING_CMS } from "@/lib/landingCMS";
 
 const BRAND_PARTNERS = [
-  { name: "Decathlon", logo: "/images/brands/decathlon.svg" },
-  { name: "Wolverine", logo: "/images/brands/wolverine.svg" },
+  { name: "Decathlon", logo: "/images/brands/256000.png" },
+  { name: "256026", logo: "/images/brands/256026.png" },
+  { name: "256133", logo: "/images/brands/256133.jpg" },
+  { name: "256003", logo: "/images/brands/256003.png" },
+  { name: "195001", logo: "/images/brands/195001.jpg" },
   { name: "ECCO", logo: "/images/brands/ecco.svg" },
   { name: "Cole Haan", logo: "/images/brands/cole-haan.svg" },
   { name: "Rockport", logo: "/images/brands/rockport.svg" },

@@ -64,16 +64,19 @@ export interface LandingCMSConfig {
 }
 
 export const DEFAULT_BRAND_PARTNERS: BrandPartner[] = [
-  { id: "bp-1", name: "256026", logo: "/images/brands/256026.png", displayOrder: 1, isActive: true },
-  { id: "bp-2", name: "256133", logo: "/images/brands/256133.png", displayOrder: 2, isActive: true },
-  { id: "bp-3", name: "ecco", logo: "/images/brands/ecco.svg", displayOrder: 3, isActive: true },
-  { id: "bp-4", name: "Cole Haan", logo: "/images/brands/cole-haan.svg", displayOrder: 4, isActive: true },
-  { id: "bp-5", name: "Rockport", logo: "/images/brands/rockport.svg", displayOrder: 5, isActive: true },
-  { id: "bp-6", name: "Skechers", logo: "/images/brands/skechers.svg", displayOrder: 6, isActive: true },
-  { id: "bp-7", name: "Coach", logo: "/images/brands/coach.svg", displayOrder: 7, isActive: true },
-  { id: "bp-8", name: "Osprey", logo: "/images/brands/osprey.svg", displayOrder: 8, isActive: true },
-  { id: "bp-9", name: "Kate Spade", logo: "/images/brands/kate-spade.svg", displayOrder: 9, isActive: true },
-  { id: "bp-10", name: "Vera Bradley", logo: "/images/brands/vera-bradley.svg", displayOrder: 10, isActive: true },
+  { id: "bp-1", name: "Decathlon", logo: "/images/brands/256000.png", displayOrder: 1, isActive: true },
+  { id: "bp-2", name: "256026", logo: "/images/brands/256026.png", displayOrder: 2, isActive: true },
+  { id: "bp-3", name: "256133", logo: "/images/brands/256133.jpg", displayOrder: 3, isActive: true },
+  { id: "bp-4", name: "256003", logo: "/images/brands/256003.png", displayOrder: 4, isActive: true },
+  { id: "bp-5", name: "195001", logo: "/images/brands/195001.jpg", displayOrder: 5, isActive: true },
+  { id: "bp-6", name: "ECCO", logo: "/images/brands/ecco.svg", displayOrder: 6, isActive: true },
+  { id: "bp-7", name: "Cole Haan", logo: "/images/brands/cole-haan.svg", displayOrder: 7, isActive: true },
+  { id: "bp-8", name: "Rockport", logo: "/images/brands/rockport.svg", displayOrder: 8, isActive: true },
+  { id: "bp-9", name: "Skechers", logo: "/images/brands/skechers.svg", displayOrder: 9, isActive: true },
+  { id: "bp-10", name: "Coach", logo: "/images/brands/coach.svg", displayOrder: 10, isActive: true },
+  { id: "bp-11", name: "Osprey", logo: "/images/brands/osprey.svg", displayOrder: 11, isActive: true },
+  { id: "bp-12", name: "Kate Spade", logo: "/images/brands/kate-spade.svg", displayOrder: 12, isActive: true },
+  { id: "bp-13", name: "Vera Bradley", logo: "/images/brands/vera-bradley.svg", displayOrder: 13, isActive: true },
 ];
 
 export const DEFAULT_LANDING_CMS: LandingCMSConfig = {
