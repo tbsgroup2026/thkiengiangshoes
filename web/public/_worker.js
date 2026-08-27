@@ -335,27 +335,19 @@ async function verifyServerAuth(request, env) {
       ? (dbUser.role_code || (sysFallback ? sysFallback.roleCode : "CBCNV"))
       : (sysFallback ? sysFallback.roleCode : (empCode === "ADMIN-2026" ? "SUPER_ADMIN" : "CBCNV"));
 
-    const resolved = resolveEmployeeLevelWorker({
-      title,
-      department,
-      bo_phan_moi: dbUser ? dbUser.bo_phan_moi : "",
-      role_code: roleCode
-    });
+    const isExecutiveOrAdmin = empCode === "ADMIN-2026" || empCode === "202608001" || empCode === "200405004" || roleCode === "SUPER_ADMIN" || roleCode === "TONG_GIAM_DOC" || roleCode === "SYSTEM_ADMIN" || title.includes("Tổng Giám Đốc") || title.includes("Giám Đốc");
 
     return {
       authenticated: true,
       empCode,
       name,
       title,
-      department: resolved.department || department,
+      department,
       roleCode,
-      originalPosition: resolved.originalPosition,
-      employeeLevel: resolved.employeeLevel,
-      levelRank: resolved.levelRank,
-      permissionGroup: resolved.permissionGroup,
-      canApprove: resolved.canApprove,
-      canManage: resolved.canManage,
-      isExecutiveOrAdmin: resolved.levelRank >= 3 || roleCode === "SUPER_ADMIN"
+      levelRank: isExecutiveOrAdmin ? 3 : 1,
+      canApprove: isExecutiveOrAdmin,
+      canManage: isExecutiveOrAdmin,
+      isExecutiveOrAdmin
     };
   } catch (e) {
     return {
