@@ -775,7 +775,7 @@ export default {
             ).bind(empCode).all();
             if (results && results[0]) {
               dbUser = results[0];
-            } else {
+            } else if (!isExecutiveOrAdmin && !WORKER_SYSTEM_USERS[empCode]) {
               // Từ chối 100% tài khoản có status != 'ACTIVE'
               return { authenticated: false, error: "ACCOUNT_INACTIVE_OR_NOT_FOUND" };
             }
