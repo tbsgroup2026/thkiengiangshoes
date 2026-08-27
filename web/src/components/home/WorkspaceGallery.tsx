@@ -396,17 +396,13 @@ export default function WorkspaceGallery() {
                       </span>
                     </h3>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setLightboxDepId(dep.id);
-                        setLightboxIndex(0);
-                      }}
+                    <a
+                      href="https://thkiengiangshoes.tbsgroup2026.workers.dev/work"
                       className="px-3.5 py-1.5 rounded-full bg-[#f4fbf7] hover:bg-emerald-100/80 text-[#006838] border border-emerald-200/60 text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
                     >
                       <span>Vào nhanh</span>
                       <IconArrowRight size={14} className="stroke-[2.5]" />
-                    </button>
+                    </a>
                   </div>
 
                   {/* Dynamic Column Responsive Grid matching Reference Screenshot 2 */}
