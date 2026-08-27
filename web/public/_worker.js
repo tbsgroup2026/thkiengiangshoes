@@ -1004,30 +1004,7 @@ export default {
       }
     }
 
-    // API Route: CI Kaizen Proposals & Evaluations (/api/ci-kaizen*)
-    if (url.pathname.startsWith("/api/ci-kaizen")) {
-      if (request.method === "OPTIONS") {
-        return new Response(null, { headers: SECURE_JSON_HEADERS });
-      }
-      try {
-        let items = [];
-        if (env.DB && (url.pathname === "/api/ci-kaizen" || url.pathname === "/api/ci-kaizen/")) {
-          try {
-            const { results } = await env.DB.prepare(
-              `SELECT * FROM ci_kaizen_proposals ORDER BY created_at DESC LIMIT 100`
-            ).all();
-            if (results) items = results;
-          } catch (e) {}
-        }
-        return new Response(JSON.stringify({ success: true, proposals: items, data: items, evaluations: [], rate: 5 }), {
-          headers: SECURE_JSON_HEADERS
-        });
-      } catch (err) {
-        return new Response(JSON.stringify({ success: true, proposals: [], data: [], evaluations: [] }), {
-          headers: SECURE_JSON_HEADERS
-        });
-      }
-    }
+
 
     // 0.0 API Route: Employee Auto-Fill Lookup by MSNV (/api/employee/lookup?code=...)
     if (url.pathname === "/api/employee/lookup" && request.method === "GET") {
