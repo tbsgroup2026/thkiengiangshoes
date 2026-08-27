@@ -61,17 +61,7 @@ export default function HeroSection() {
             {/* Left Content Column (7 cols) */}
             <div className="lg:col-span-7 space-y-6 sm:space-y-8 text-center lg:text-left">
               
-              {/* Badge: Skechers Chain Office */}
-              <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-[#0d3b2e]/90 border border-[#2fd39a]/35 shadow-lg backdrop-blur-md">
-                <span className="w-2 h-2 rounded-full bg-[#2fd39a] animate-pulse" />
-                <span className="text-[#2fd39a] text-xs font-bold uppercase tracking-wider">
-                  {t("hero.chain_office")}
-                </span>
-                <span className="text-[#2fd39a]/40">|</span>
-                <span className="text-white/90 text-xs font-medium">
-                  {t("hero.skechers_tbs")}
-                </span>
-              </div>
+
 
               {/* Main Headline */}
               <div className="space-y-3 sm:space-y-4">
