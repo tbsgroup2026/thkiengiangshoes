@@ -618,46 +618,58 @@ export default function WorkDashboardPage() {
     showToast("Đổi mật khẩu tài khoản thành công!");
   };
 
-  // Department Hero Banner Configurations (Screenshot 1 matching)
+  // Department Hero Banner Configurations (Authentic Local Images matching SẢNH/Văn phòng/Nhà máy)
   const deptBanners: Record<string, { bg: string; title: string; sub: string; appCount: number }> = {
     hr: {
-      bg: "/images/crawled/Da-giay1.jpg",
+      bg: "/images/brands/Văn phòng/1787810869509_5373416762128407822_5373416762128407822_4243291c07f467487e67e1e1e47b8905.jpg",
       title: "Nhân Sự - Hành Chánh",
       sub: "Quản lý văn thư, tài sản, phòng họp, tuyển dụng và lịch công tác toàn chuỗi.",
       appCount: 10,
     },
     finance: {
-      bg: "/images/crawled/Vat-tu.jpg",
+      bg: "/images/brands/Văn phòng/1787810869515_5373416762128407822_5373416762128407822_6da05db9aa42d610e93fbea9c4a9866e.jpg",
       title: "Kế Toán & Quản Trị",
       sub: "Quản lý tài chính, ngân sách, chi phí sản xuất và báo cáo tài chính hợp nhất.",
       appCount: 10,
     },
     rd: {
-      bg: "/images/crawled/De-giay.jpg",
+      bg: "/images/brands/Phòng Đào Tạo/1787810869499_5373416762128407822_5373416762128407822_49d7659c53b21702dff5c8f39212d143.jpg",
       title: "R&D (Phát Triển Sản Phẩm)",
       sub: "Nghiên cứu công nghệ đế giày SKECHERS, thiết kế mẫu & chuyển giao kỹ thuật.",
       appCount: 6,
     },
     ci: {
-      bg: "/images/crawled/Da-giay2.jpg",
+      bg: "/images/brands/Nhà máy/1787810869511_5373416762128407822_5373416762128407822_f5d1738107b86346f69bf64f3e28dd0d.jpg",
       title: "CN-CI (Cải Tiến Liên Tục)",
       sub: "Thúc đẩy phong trào Kaizen, cải tiến Gemba Walk và năng suất tự động hóa 4.0.",
       appCount: 4,
     },
     qc: {
-      bg: "/images/crawled/Muitat.jpg",
+      bg: "/images/brands/Nhà máy/1787810869517_5373416762128407822_5373416762128407822_41abd142fb008caa305e9bf9ea4c9a85.jpg",
       title: "Quản Lý Chất Lượng (QC)",
       sub: "Kiểm soát tiêu chuẩn chất lượng SKECHERS, chỉ số OEE và tỷ lệ lỗi trên chuyền.",
       appCount: 8,
     },
+    logistics: {
+      bg: "/images/brands/Nhà máy/1787810869519_5373416762128407822_5373416762128407822_5785e047e50798460c205ce3bbebc186.jpg",
+      title: "Kho & Logistics",
+      sub: "Điều phối logistics, vật tư & chuỗi cung ứng nhà máy SKECHERS Kiên Giang.",
+      appCount: 7,
+    },
+    production: {
+      bg: "/images/brands/Nhà máy/1787810869521_5373416762128407822_5373416762128407822_d92bcaa1035c5426a9529806beab4645.jpg",
+      title: "Tổ Hợp Nhà Máy",
+      sub: "Quản lý chuỗi xưởng sản xuất, máy móc thiết bị và điều hành ca sản xuất.",
+      appCount: 9,
+    },
     supply: {
-      bg: "/images/tbs-logistics-hub.png",
+      bg: "/images/brands/Nhà máy/1787810869523_5373416762128407822_5373416762128407822_d7fb8deb4933b3043195a08e573c4a74.jpg",
       title: "Kế Hoạch Chuẩn Bị - TTPP",
       sub: "Điều phối logistics, cung ứng vật tư & chuỗi cung ứng chuỗi nhà máy SKECHERS.",
       appCount: 7,
     },
     factory: {
-      bg: "/images/tbs-factory-plant.png",
+      bg: "/images/brands/Nhà máy/1787810869525_5373416762128407822_5373416762128407822_3d8c02353c2266fec97bdab159909d67.jpg",
       title: "Tổ Hợp Nhà Máy",
       sub: "Quản lý chuỗi xưởng sản xuất, máy móc thiết bị và điều hành ca sản xuất.",
       appCount: 9,
