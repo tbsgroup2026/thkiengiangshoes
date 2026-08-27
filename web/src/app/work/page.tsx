@@ -765,7 +765,7 @@ export default function WorkDashboardPage() {
          ════════════════════════════════════════════════════════════════ */}
       <aside
         className={`hidden lg:flex bg-white h-screen flex-col border-r border-slate-200/80 flex-shrink-0 shadow-sm transition-all duration-300 ease-in-out z-30 ${
-          isSidebarCollapsed ? "w-20 px-2.5 py-4" : "w-80 lg:w-[360px] p-4 lg:p-5"
+          isSidebarCollapsed ? "w-20 px-2.5 py-4" : "w-64 lg:w-72 xl:w-80 p-3.5 sm:p-4 lg:p-5"
         }`}
       >
         {/* Executive Brand Lockup & Header Toggle Button (Fixed Top) */}
@@ -1734,12 +1734,12 @@ export default function WorkDashboardPage() {
             <div className="space-y-4">
               {/* TOP ROW: 4 Metric Cards (Left Column - 10% Reduced Width) + Donut Ring Chart (Right Column) */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
-                {/* Left Column (4 Cards Vertical Stack - 10% Reduced Width: lg:col-span-3.5 / lg:col-span-3) */}
-                <div className="lg:col-span-3.5 xl:col-span-3 flex flex-col justify-between gap-2.5">
+                {/* Left Column (4 Cards Vertical Stack) */}
+                <div className="lg:col-span-4 xl:col-span-3 flex flex-col justify-between gap-2.5">
                   {/* Card 1: R&D (Phòng phát triển) */}
                   <div
                     onClick={() => setSelectedDept(selectedDept === "rd" ? null : "rd")}
-                    className="p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm hover:shadow-md hover:border-[#006838]/60 transition-all cursor-pointer flex items-center gap-3 group flex-1"
+                    className="p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm hover:shadow-md hover:border-[#006838]/60 transition-all cursor-pointer flex items-center gap-3 group flex-1 min-w-0"
                   >
                     <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#006838] flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform border border-emerald-100">
                       <IconUsers size={20} />
@@ -1751,15 +1751,15 @@ export default function WorkDashboardPage() {
                       <div className="text-xl font-black text-slate-900 tracking-tight mt-0.5">
                         1,248
                       </div>
-                      <div className="flex items-center gap-1 text-[11px] font-bold text-[#006838] mt-0.5">
-                        <IconArrowUpRight size={12} />
-                        <span>+12% so với tháng trước</span>
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-[#006838] mt-0.5 truncate">
+                        <IconArrowUpRight size={12} className="flex-shrink-0" />
+                        <span className="truncate">+12% so với tháng trước</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Card 2: Đơn Hàng */}
-                  <div className="p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:shadow-md hover:border-[#006838]/60 transition-all flex items-center gap-3 group flex-1">
+                  <div className="p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:shadow-md hover:border-[#006838]/60 transition-all flex items-center gap-3 group flex-1 min-w-0">
                     <div className="w-10 h-10 rounded-xl bg-[#e6f4ed] text-[#006838] flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform border border-emerald-100">
                       <IconClipboardList size={20} />
                     </div>
@@ -1770,9 +1770,9 @@ export default function WorkDashboardPage() {
                       <div className="text-xl font-black text-slate-900 tracking-tight mt-0.5">
                         342
                       </div>
-                      <div className="flex items-center gap-1 text-[11px] font-bold text-[#006838] mt-0.5">
-                        <IconArrowUpRight size={12} />
-                        <span>+8% so với tháng trước</span>
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-[#006838] mt-0.5 truncate">
+                        <IconArrowUpRight size={12} className="flex-shrink-0" />
+                        <span className="truncate">+8% so với tháng trước</span>
                       </div>
                     </div>
                   </div>
@@ -1780,7 +1780,7 @@ export default function WorkDashboardPage() {
                   {/* Card 3: Chỉ Số Phòng Sản Xuất (TH-NM) */}
                   <div
                     onClick={() => setSelectedDept(selectedDept === "production" ? null : "production")}
-                    className="p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:shadow-md hover:border-[#006838]/60 transition-all cursor-pointer flex items-center gap-3 group flex-1"
+                    className="p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:shadow-md hover:border-[#006838]/60 transition-all cursor-pointer flex items-center gap-3 group flex-1 min-w-0"
                   >
                     <div className="w-10 h-10 rounded-xl bg-[#e6f4ed] text-[#006838] flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform border border-emerald-100">
                       <IconPackage size={20} />
@@ -1792,9 +1792,9 @@ export default function WorkDashboardPage() {
                       <div className="text-xl font-black text-slate-900 tracking-tight mt-0.5">
                         586
                       </div>
-                      <div className="flex items-center gap-1 text-[11px] font-bold text-[#006838] mt-0.5">
-                        <IconArrowUpRight size={12} />
-                        <span>+15% so với tháng trước</span>
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-[#006838] mt-0.5 truncate">
+                        <IconArrowUpRight size={12} className="flex-shrink-0" />
+                        <span className="truncate">+15% so với tháng trước</span>
                       </div>
                     </div>
                   </div>
@@ -1802,7 +1802,7 @@ export default function WorkDashboardPage() {
                   {/* Card 4: Hiệu Suất & Chỉ Số Chất Lượng (QC) */}
                   <div
                     onClick={() => setSelectedDept(selectedDept === "qc" ? null : "qc")}
-                    className="p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:shadow-md hover:border-[#006838]/60 transition-all cursor-pointer flex items-center gap-3 group flex-1"
+                    className="p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:shadow-md hover:border-[#006838]/60 transition-all cursor-pointer flex items-center gap-3 group flex-1 min-w-0"
                   >
                     <div className="w-10 h-10 rounded-xl bg-[#e6f4ed] text-[#006838] flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform border border-emerald-100">
                       <IconTrendingUp size={20} />
@@ -1814,23 +1814,23 @@ export default function WorkDashboardPage() {
                       <div className="text-xl font-black text-slate-900 tracking-tight mt-0.5">
                         92%
                       </div>
-                      <div className="flex items-center gap-1 text-[11px] font-bold text-[#006838] mt-0.5">
-                        <IconArrowUpRight size={12} />
-                        <span>+5% so với tháng trước</span>
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-[#006838] mt-0.5 truncate">
+                        <IconArrowUpRight size={12} className="flex-shrink-0" />
+                        <span className="truncate">+5% so với tháng trước</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Right Column (TỔNG CẢI TIẾN - Donut Chart Block - Expanded Width) */}
-                <div className="lg:col-span-8.5 xl:col-span-9 p-5 lg:p-6 rounded-2xl bg-white border border-slate-200/80 shadow-sm flex flex-col justify-between">
+                {/* Right Column (TỔNG CẢI TIẾN - Donut Chart Block) */}
+                <div className="lg:col-span-8 xl:col-span-9 p-4 sm:p-5 lg:p-6 rounded-2xl bg-white border border-slate-200/80 shadow-sm flex flex-col justify-between min-w-0">
                   {/* Card Header */}
-                  <div className="flex items-center justify-between pb-2">
+                  <div className="flex items-center justify-between pb-2 flex-wrap gap-2">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#006838] flex items-center justify-center border border-emerald-100">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#006838] flex items-center justify-center border border-emerald-100 flex-shrink-0">
                         <IconSettings size={22} />
                       </div>
-                      <h3 className="text-xl font-black text-slate-900 tracking-tight">
+                      <h3 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
                         TỔNG CẢI TIẾN
                       </h3>
                     </div>
@@ -1848,9 +1848,9 @@ export default function WorkDashboardPage() {
                   </div>
 
                   {/* Donut Ring Visual */}
-                  <div className="relative py-3 flex flex-col lg:flex-row items-center justify-center gap-8 my-auto">
+                  <div className="relative py-3 flex flex-col lg:flex-row items-center justify-center gap-6 xl:gap-8 my-auto w-full min-w-0">
                     {/* Donut SVG Ring Graphic */}
-                    <div className="relative w-64 h-64 lg:w-72 lg:h-72 flex-shrink-0 flex items-center justify-center">
+                    <div className="relative w-48 h-48 sm:w-56 sm:h-56 lg:w-60 lg:h-60 xl:w-64 xl:h-64 flex-shrink-0 flex items-center justify-center">
                       <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                         {/* Blue: Nhân sự hành chánh (22.7%) */}
                         <circle
@@ -1932,21 +1932,21 @@ export default function WorkDashboardPage() {
                       </svg>
 
                       {/* Donut Center Label */}
-                      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                        <span className="text-[11px] font-black text-[#006838] uppercase tracking-wider block">
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-2">
+                        <span className="text-[10px] sm:text-[11px] font-black text-[#006838] uppercase tracking-wider block">
                           TBS GROUP
                         </span>
-                        <span className="text-4xl font-black text-slate-900 tracking-tight block my-0.5">
+                        <span className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight block my-0.5">
                           582
                         </span>
-                        <span className="text-xs font-semibold text-slate-500 block">
+                        <span className="text-[11px] sm:text-xs font-semibold text-slate-500 block">
                           Tổng Cải Tiến
                         </span>
                       </div>
                     </div>
 
                     {/* Donut Chart Legend Labels Grid */}
-                    <div className="grid grid-cols-2 gap-x-6 gap-y-3.5 w-full max-w-md">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 sm:gap-x-6 gap-y-2 sm:gap-y-3 w-full max-w-md min-w-0">
                       <div className="flex items-start gap-2.5 p-1.5 rounded-xl hover:bg-slate-50">
                         <span className="w-3 h-3 rounded-full bg-blue-600 flex-shrink-0 mt-1" />
                         <div>

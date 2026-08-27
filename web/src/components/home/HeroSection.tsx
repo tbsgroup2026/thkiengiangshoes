@@ -62,7 +62,7 @@ export default function HeroSection() {
             {/* Left Column: Copy & CTAs & Stats */}
             <div className="lg:col-span-7 space-y-6">
               {/* Main Headline */}
-              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white leading-[1.08] tracking-tight">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black text-white leading-[1.08] tracking-tight">
                 {cmsHero.titlePrefix || t("hero.chain_office")} <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#2fd39a] via-[#52e8b2] to-[#f2dc9a]">
                   {cmsHero.titleHighlight || t("hero.skechers_tbs")}
@@ -126,7 +126,7 @@ export default function HeroSection() {
             </div>
 
             {/* Right Column: Hero Visual Block matching exact screenshot */}
-            <div className="lg:col-span-5 relative min-h-[440px] h-[440px] z-10 mt-6 lg:mt-0">
+            <div className="lg:col-span-5 relative min-h-[380px] sm:min-h-[420px] lg:min-h-[440px] h-[400px] sm:h-[440px] z-10 mt-6 lg:mt-0">
               {/* 1. Main Card (Top-Right): Hands Circle Image */}
               <div className="absolute top-0 right-0 w-[80%] h-[68%] rounded-[26px] overflow-hidden border border-[#2fd39a]/35 shadow-2xl z-10 group bg-[#0d2419]">
                 <img
@@ -146,9 +146,9 @@ export default function HeroSection() {
               </div>
 
               {/* 3. Dark Quote Badge: Bottom-Right Quote Box */}
-              <div className="absolute bottom-[10%] -right-2 z-30 bg-[#08221a]/90 backdrop-blur-[14px] border border-[#2fd39a]/45 rounded-[20px] p-[16px_20px] max-w-[230px] shadow-2xl">
-                <div className="w-[40px] h-[2.5px] bg-gradient-to-r from-[#2fd39a] to-[#1fae7d] rounded-full mb-[10px]" />
-                <p className="font-serif italic text-white text-[16px] sm:text-[17px] leading-[1.4]">
+              <div className="absolute bottom-[5%] sm:bottom-[10%] right-0 sm:-right-2 z-30 bg-[#08221a]/90 backdrop-blur-[14px] border border-[#2fd39a]/45 rounded-[20px] p-3.5 sm:p-[16px_20px] max-w-[190px] sm:max-w-[230px] shadow-2xl">
+                <div className="w-[30px] sm:w-[40px] h-[2.5px] bg-gradient-to-r from-[#2fd39a] to-[#1fae7d] rounded-full mb-2 sm:mb-[10px]" />
+                <p className="font-serif italic text-white text-sm sm:text-[17px] leading-[1.4]">
                   &ldquo;{cmsHero.quoteBadgeText || "Chung sức kiến tạo tương lai"}&rdquo;
                 </p>
               </div>
