@@ -887,9 +887,14 @@ export default {
     // Auto-migrate schema columns & legacy codes lazily
     await ensureDatabaseColumnsAndLegacyCode(env);
 
-    // 1. HTTP to HTTPS 301 Permanent Redirect
+    // 1. HTTP to HTTPS 301 Permanent Redirect — bỏ qua khi chạy cục bộ (localhost/127.0.0.1, VD
+    // "wrangler dev" lúc test) vì không có TLS thật ở đó: Worker luôn thấy request là "http" dù
+    // trình duyệt đã đổi sang "https" (không có ai chuyển tiếp x-forwarded-proto), gây lặp
+    // redirect vô hạn (ERR_TOO_MANY_REDIRECTS). Không ảnh hưởng production — hostname thật không
+    // bao giờ là localhost/127.0.0.1.
     const proto = request.headers.get("x-forwarded-proto") || url.protocol.replace(":", "");
-    if (proto === "http") {
+    const isLocalHost = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+    if (proto === "http" && !isLocalHost) {
       return Response.redirect(`https://${url.host}${url.pathname}${url.search}`, 301);
     }
 

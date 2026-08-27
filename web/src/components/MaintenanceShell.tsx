@@ -66,21 +66,24 @@ export default function MaintenanceShell({
 
   // MMTB có đăng nhập RIÊNG (cookie mmtb_token, xem /maintenance/login) — không dùng chung phiên
   // đăng nhập của cả trang thkiengiangshoes. Mọi trang bọc trong MaintenanceShell đều tự kiểm tra
-  // ở đây, chưa đăng nhập thì đưa thẳng về /maintenance/login.
+  // ở đây, chưa đăng nhập thì đưa thẳng về /maintenance/login. CHỈ coi là đã đăng nhập khi API trả
+  // đúng 200 — mọi mã khác (401 chưa đăng nhập, 404 endpoint không tồn tại vd chạy nhầm "next dev"
+  // thay vì "wrangler dev", 500...) đều đưa về /maintenance/login, không cho vào xem "hờ" như
+  // trước (trước đây chỉ chặn đúng 401, các mã khác lọt qua).
   const [authChecked, setAuthChecked] = useState(false);
   useEffect(() => {
     let cancelled = false;
     fetch('/api/mmtb-kg/me')
       .then((r) => {
         if (cancelled) return;
-        if (r.status === 401) {
-          router.replace('/maintenance/login');
+        if (r.ok) {
+          setAuthChecked(true);
           return;
         }
-        setAuthChecked(true);
+        router.replace('/maintenance/login');
       })
       .catch(() => {
-        if (!cancelled) setAuthChecked(true); // Lỗi mạng — vẫn cho vào, để trang tự báo lỗi khi gọi API thật
+        if (!cancelled) router.replace('/maintenance/login');
       });
     return () => {
       cancelled = true;
