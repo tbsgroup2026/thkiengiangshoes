@@ -2,6 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "thkiengiangshoes",
   "main": "public/_worker.js",
+  "account_id": "3b346f8398b8d1143acd52516011cfb4",
   "compatibility_date": "2024-09-23",
   "compatibility_flags": [
     "nodejs_compat"
