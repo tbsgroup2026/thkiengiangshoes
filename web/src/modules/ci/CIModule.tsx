@@ -1211,14 +1211,6 @@ export default function CIModule() {
 
         {/* Action Buttons Bar */}
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Nộp Hồ Sơ 5 Bước Button */}
-          <button
-            onClick={() => setIsFiveStepModalOpen(true)}
-            className="px-4 py-1.5 rounded-xl bg-[#006838] hover:bg-[#004d29] text-white text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-md border border-emerald-500"
-          >
-            <IconSend size={15} className="text-amber-300" />
-            <span>Nộp Hồ Sơ 5 Bước</span>
-          </button>
 
           <button
             onClick={() => setActiveTab("EARLY_WARNING")}
