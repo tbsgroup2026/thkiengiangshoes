@@ -5,6 +5,7 @@ import Link from "next/link";
 import NotificationCenter from "@/components/NotificationCenter";
 import DonutChartModal from "@/components/DonutChartModal";
 import UserAvatar from "@/components/UserAvatar";
+import ThemeFontControlModal from "@/components/ThemeFontControlModal";
 import { getCurrentUser, formatTitleWithDepartment } from "@/lib/userProfiles";
 import Can from "@/components/Can";
 import { PERMISSIONS } from "@/lib/permissions";
@@ -43,6 +44,7 @@ import {
   IconBriefcase,
   IconPlane,
   IconId,
+  IconAdjustments,
   IconCalendarEvent,
   IconClockCheck,
   IconSchool,
@@ -251,6 +253,7 @@ export default function WorkDashboardPage() {
 
   // Donut Chart Modal State & Interactive Chart Hover States
   const [isDonutModalOpen, setIsDonutModalOpen] = useState(false);
+  const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [hoveredQcIndex, setHoveredQcIndex] = useState<number | null>(null);
   const [hoveredCiIndex, setHoveredCiIndex] = useState<number | null>(null);
 
@@ -1005,10 +1008,19 @@ export default function WorkDashboardPage() {
             {/* Fullscreen Toggle (Hidden on Mobile < 768px) */}
             <button
               onClick={toggleFullscreen}
-              className="hidden md:flex min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors shadow-2xs items-center justify-center"
+              className="hidden md:flex min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors shadow-2xs items-center justify-center cursor-pointer"
               title="Toàn màn hình"
             >
               <IconMaximize size={20} />
+            </button>
+
+            {/* System Theme & Font Size Button */}
+            <button
+              onClick={() => setIsThemeModalOpen(true)}
+              className="hidden md:flex min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-200 text-[#006838] hover:bg-emerald-100 transition-colors shadow-2xs items-center justify-center cursor-pointer"
+              title="Cấu hình màu sắc & chữ hệ thống"
+            >
+              <IconAdjustments size={20} />
             </button>
 
             {/* User Avatar & Executive Dropdown Menu (Min 44x44px Touch Target) */}
@@ -2546,6 +2558,12 @@ export default function WorkDashboardPage() {
           <span className="text-xs font-bold">{toastMessage}</span>
         </div>
       )}
+
+      {/* System Theme Color & Font Size Modal */}
+      <ThemeFontControlModal
+        isOpen={isThemeModalOpen}
+        onClose={() => setIsThemeModalOpen(false)}
+      />
     </div>
   );
 }

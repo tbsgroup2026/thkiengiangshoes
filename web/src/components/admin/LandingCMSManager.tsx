@@ -15,8 +15,11 @@ import {
   IconEye,
   IconPlus,
   IconTrash,
+  IconPalette,
+  IconTextSize,
 } from "@tabler/icons-react";
 import { LandingCMSConfig } from "@/lib/landingCMS";
+import { THEME_COLOR_OPTIONS, FONT_SIZE_OPTIONS, applySystemThemeAndFont } from "@/components/ThemeFontControlModal";
 
 interface Props {
   landingCMS: LandingCMSConfig;
@@ -47,6 +50,28 @@ export default function LandingCMSManager({
     "hero" | "workspace" | "excellence" | "products"
   >(initialSubSection || "hero");
   const [uploadingProdIdx, setUploadingProdIdx] = useState<number | null>(null);
+
+  const [selectedThemeColor, setSelectedThemeColor] = useState<string>("EMERALD");
+  const [selectedFontSize, setSelectedFontSize] = useState<string>("NORMAL");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedColor = localStorage.getItem("tbs_theme_color") || "EMERALD";
+      const savedFont = localStorage.getItem("tbs_font_size") || "NORMAL";
+      setSelectedThemeColor(savedColor);
+      setSelectedFontSize(savedFont);
+    }
+  }, []);
+
+  const handleThemeColorChange = (colorId: string) => {
+    setSelectedThemeColor(colorId);
+    applySystemThemeAndFont(colorId, selectedFontSize);
+  };
+
+  const handleFontSizeChange = (fontId: string) => {
+    setSelectedFontSize(fontId);
+    applySystemThemeAndFont(selectedThemeColor, fontId);
+  };
 
   useEffect(() => {
     if (initialSubSection) {
@@ -271,6 +296,89 @@ export default function LandingCMSManager({
          ════════════════════════════════════════════════════════════════ */}
       {activeSubSection === "hero" && (
         <div className="space-y-6 animate-in fade-in duration-150">
+          {/* System Theme Color & Font Size Control Card matching screenshot */}
+          <div className="p-6 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-[#08221a] text-white border border-slate-700 shadow-md space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-700/80 pb-3.5 flex-wrap gap-2">
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-tight flex items-center gap-2 text-emerald-400">
+                  <IconPalette size={18} />
+                  <span>Cấu Hình Màu Sắc Nền Tảng &amp; Kích Thước Chữ (Theme &amp; Font Size)</span>
+                </h3>
+                <p className="text-xs text-slate-400 font-medium mt-0.5">
+                  Tùy chỉnh tông màu chủ đạo hệ thống và tỷ lệ kích thước chữ hiển thị toàn bộ nền tảng real-time
+                </p>
+              </div>
+              <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black uppercase border border-emerald-500/30">
+                Real-time Sync
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Theme Color Picker */}
+              <div className="space-y-2.5">
+                <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                  <IconPalette size={15} className="text-emerald-400" />
+                  <span>Màu sắc chủ đạo hệ thống (Theme Color):</span>
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {THEME_COLOR_OPTIONS.map((c) => {
+                    const isSelected = selectedThemeColor === c.id;
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => handleThemeColorChange(c.id)}
+                        className={`p-2 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2 ${
+                          isSelected
+                            ? "border-emerald-400 bg-white/15 ring-2 ring-emerald-400/40"
+                            : "border-slate-700 bg-slate-800/60 hover:bg-slate-800"
+                        }`}
+                      >
+                        <span
+                          className="w-4 h-4 rounded-full flex-shrink-0 border border-white/40 shadow-2xs"
+                          style={{ backgroundColor: c.primaryColor }}
+                        />
+                        <span className="text-[11px] font-bold text-slate-200 truncate">
+                          {c.name.split(" ")[0]} {c.name.split(" ")[1]}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Font Size Selector */}
+              <div className="space-y-2.5">
+                <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                  <IconTextSize size={15} className="text-emerald-400" />
+                  <span>Kích thước chữ hệ thống (Font Size):</span>
+                </label>
+                <div className="grid grid-cols-4 gap-2">
+                  {FONT_SIZE_OPTIONS.map((f) => {
+                    const isSelected = selectedFontSize === f.id;
+                    return (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => handleFontSizeChange(f.id)}
+                        className={`py-2 px-1.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
+                          isSelected
+                            ? "border-emerald-400 bg-emerald-600 text-white font-black"
+                            : "border-slate-700 bg-slate-800/60 hover:bg-slate-800 text-slate-300 font-bold"
+                        }`}
+                      >
+                        <span className="text-xs">{f.name}</span>
+                        <span className={`text-[10px] ${isSelected ? "text-emerald-100" : "text-slate-400"}`}>
+                          {f.percentage}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Headline & Quotes */}
           <div className="p-6 rounded-3xl bg-white border border-slate-200/90 shadow-2xs space-y-4">
             <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
