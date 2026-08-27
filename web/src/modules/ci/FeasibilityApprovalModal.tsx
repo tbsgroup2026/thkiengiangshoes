@@ -150,8 +150,8 @@ export default function FeasibilityApprovalModal({
                 </span>
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-full bg-slate-200 overflow-hidden shrink-0 flex items-center justify-center text-slate-600 font-bold text-xs">
-                    {proposal.avatar_url ? (
-                      <img src={proposal.avatar_url} alt="" className="w-full h-full object-cover" />
+                    {(proposal as any).avatar_url ? (
+                      <img src={(proposal as any).avatar_url} alt="" className="w-full h-full object-cover" />
                     ) : (
                       (proposal.proposer_name || "U").substring(0, 1)
                     )}
@@ -161,7 +161,7 @@ export default function FeasibilityApprovalModal({
                       {proposal.proposer_name || proposal.proposer_emp_code}
                     </div>
                     <div className="text-[10.5px] text-slate-500 truncate">
-                      {proposal.department || proposal.workshop || proposal.region || "Phòng Kỹ thuật"}
+                      {proposal.department || proposal.factory || proposal.region || "Phòng Kỹ thuật"}
                     </div>
                   </div>
                 </div>
@@ -184,7 +184,7 @@ export default function FeasibilityApprovalModal({
                   Nhóm SP
                 </span>
                 <span className="px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-700 font-bold text-xs inline-flex items-center gap-1 border border-emerald-200/80">
-                  <span>{proposal.product_group || proposal.category_label || proposal.category || "Giày Running"}</span>
+                  <span>{(proposal as any).product_group || proposal.category_label || proposal.category || "Quai"}</span>
                 </span>
               </div>
 
