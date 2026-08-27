@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -14,102 +14,17 @@ import {
   IconCamera,
   IconBuildingFactory,
   IconArrowRight,
-  IconChevronDown,
 } from "@tabler/icons-react";
-import { LOGIN_ROLE_OPTIONS } from "@/lib/permissions";
 import { loginWithD1Database, loginUserProfile, SYSTEM_USERS } from "@/lib/userProfiles";
-
-const EXECUTIVE_PERSONNEL_MAP: Record<string, Array<{ empCode: string; name: string; title: string; dept: string }>> = {
-  deputy_ceo: [
-    { empCode: "119504004", name: "Bùi Đình Trung", title: "P.TGĐ KHCB & TTPP", dept: "KHCB & TTPP" },
-  ],
-  director: [
-    { empCode: "101403004", name: "Nguyễn Hữu Đạt", title: "GĐ KD PTSP", dept: "KD PTSP" },
-    { empCode: "201306001", name: "Trần Hoàng Thảo", title: "GĐ CN-PPH & CI", dept: "CN-PPH & CI" },
-    { empCode: "200105001", name: "Lê Văn Phương", title: "GĐ KHCB VT", dept: "KHCB VT" },
-  ],
-  deputy_director: [
-    { empCode: "201604020", name: "Phạm Thị Dương", title: "PGĐ QLCL & AUDIT", dept: "QLCL & LAB" },
-    { empCode: "210608003", name: "Vũ Thành Lê", title: "PGĐ KHCB ĐHSX", dept: "KHCB ĐHSX" },
-    { empCode: "201403017", name: "Lý Huỳnh Duy", title: "PGĐ KHCB VT", dept: "KHCB VT" },
-  ],
-};
 
 export default function LoginPage() {
   const router = useRouter();
-  const [selectedRole, setSelectedRole] = useState<string>("employee");
   const [empCode, setEmpCode] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [executiveMap, setExecutiveMap] = useState<Record<string, Array<{ empCode: string; name: string; title: string; dept: string }>>>(EXECUTIVE_PERSONNEL_MAP);
-
-  useEffect(() => {
-    async function loadD1Users() {
-      try {
-        const res = await fetch("/api/users");
-        if (res.ok) {
-          const json = await res.json();
-          if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-            const newMap: Record<string, Array<{ empCode: string; name: string; title: string; dept: string }>> = {
-              deputy_ceo: [],
-              director: [],
-              deputy_director: [],
-            };
-
-            json.data.forEach((u: any) => {
-              const role = String(u.role_code || u.roleCode || "").toUpperCase();
-              const item = {
-                empCode: u.emp_code || u.empCode || "",
-                name: u.name || "N/A",
-                title: u.title || u.vtcv_hien_tai || "Lãnh đạo",
-                dept: u.department || u.phong_ban_hien_tai || "",
-              };
-
-              if (!item.empCode) return;
-
-              if (role === "PHO_TONG_GIAM_DOC" || role === "DEPUTY_CEO" || role === "P.TGĐ" || role === "PTGĐ") {
-                newMap.deputy_ceo.push(item);
-              } else if (role === "GIAM_DOC" || role === "DIRECTOR" || role === "GĐ") {
-                newMap.director.push(item);
-              } else if (role === "PHO_GIAM_DOC" || role === "DEPUTY_DIRECTOR" || role === "PGĐ") {
-                newMap.deputy_director.push(item);
-              }
-            });
-
-            // Fallback to static defaults if any role list is empty
-            Object.keys(EXECUTIVE_PERSONNEL_MAP).forEach((key) => {
-              if (!newMap[key] || newMap[key].length === 0) {
-                newMap[key] = EXECUTIVE_PERSONNEL_MAP[key];
-              }
-            });
-
-            setExecutiveMap(newMap);
-          }
-        }
-      } catch (e) {
-        // use default static map on error
-      }
-    }
-
-    loadD1Users();
-  }, []);
-
-  const selectedRoleOpt = LOGIN_ROLE_OPTIONS.find((r) => r.value === selectedRole) || LOGIN_ROLE_OPTIONS[6];
-  const isPasswordOnly = selectedRoleOpt.loginMethod === "password_only";
-
-  const handleRoleChange = (val: string) => {
-    setSelectedRole(val);
-    setError("");
-    const execList = executiveMap[val] || EXECUTIVE_PERSONNEL_MAP[val];
-    if (execList && execList.length > 0) {
-      setEmpCode(execList[0].empCode);
-    } else {
-      setEmpCode("");
-    }
-  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,20 +33,21 @@ export default function LoginPage() {
 
     try {
       const cleanEmpCode = empCode.trim();
-      const targetIdentifier = cleanEmpCode || selectedRole;
-
-      if (!password && isPasswordOnly) {
-        throw new Error("Vui lòng nhập mật khẩu xác thực");
+      if (!cleanEmpCode) {
+        throw new Error("Vui lòng nhập mã số nhân viên");
+      }
+      if (!password) {
+        throw new Error("Vui lòng nhập mật khẩu");
       }
 
-      // Đăng nhập và nạp chính xác Profile + Avatar theo MSNV đồng bộ với Cloudflare D1 Database
-      const profile = await loginWithD1Database(targetIdentifier, password, selectedRole);
+      // Đăng nhập và nạp chính xác Profile + Avatar theo MSNV — vai trò/quyền hạn lấy đúng từ
+      // tài khoản (đã bỏ chọn tay "Chức vụ / Vai trò đăng nhập" ở form trước đây).
+      await loginWithD1Database(cleanEmpCode, password);
 
-      const targetUrl = (selectedRole === "admin" || cleanEmpCode === "ADMIN-2026" || profile.empCode === "ADMIN-2026")
-        ? "/admin"
-        : (profile.redirectUrl || "/work");
-
-      router.push(targetUrl);
+      // Đăng nhập xong QUAY VỀ TRANG CHỦ — không tự nhảy sang /work hay bất kỳ trang nào theo vai
+      // trò nữa. Header đã tự đổi sang menu người dùng + hiện link "/work" khi đã đăng nhập (xem
+      // Header.tsx), người dùng tự bấm vào khi muốn đi tiếp.
+      router.push("/");
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Có lỗi xảy ra khi đăng nhập";
@@ -166,7 +82,7 @@ export default function LoginPage() {
               <span className="text-[#0f4133]">Tổ hợp Kiên Giang - TBS Group</span>
             </h1>
             <p className="text-xs text-gray-500 leading-relaxed">
-              Chọn vai trò và nhập thông tin tài khoản bên dưới để bắt đầu làm việc
+              Nhập mã số nhân viên và mật khẩu bên dưới để bắt đầu làm việc
             </p>
           </div>
 
@@ -178,78 +94,29 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Field 1: Chức vụ / Vai trò Dropdown */}
+            {/* Mã số nhân viên — bỏ hẳn bước chọn tay Chức vụ/Vai trò trước khi nhập (trước đây
+                dùng để suy ra role, giờ role/quyền hạn lấy đúng từ chính tài khoản khi đăng nhập). */}
             <div className="space-y-1.5">
-              <label htmlFor="roleSelect" className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
-                <IconShieldCheck size={15} className="text-[#08221a]" />
-                <span>Chức vụ / Vai trò đăng nhập</span>
+              <label htmlFor="empCode" className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
+                <IconUser size={15} className="text-gray-500" />
+                <span>Mã số nhân viên (MSNV)</span>
               </label>
-              <div className="relative">
-                <select
-                  id="roleSelect"
-                  value={selectedRole}
-                  onChange={(e) => handleRoleChange(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 focus:outline-none focus:border-[#08221a] focus:ring-2 focus:ring-[#08221a]/10 transition-all appearance-none cursor-pointer pr-10"
-                >
-                  {LOGIN_ROLE_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-                <IconChevronDown size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-              </div>
+              <input
+                id="empCode"
+                type="text"
+                required
+                value={empCode}
+                onChange={(e) => setEmpCode(e.target.value)}
+                placeholder="VD: 202608001, 102104041..."
+                className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#08221a] focus:ring-2 focus:ring-[#08221a]/10 transition-all placeholder:text-gray-400"
+              />
             </div>
-
-            {/* Field 2a: Sub-dropdown chọn tên Lãnh Đạo (Giám Đốc, PGĐ, P.TGĐ) */}
-            {selectedRoleOpt.loginMethod === "select_person" && (executiveMap[selectedRole] || EXECUTIVE_PERSONNEL_MAP[selectedRole]) && (
-              <div className="space-y-1.5 animate-in fade-in duration-200">
-                <label htmlFor="execSelect" className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
-                  <IconUser size={15} className="text-[#08221a]" />
-                  <span>Chọn Nhân Sự Lãnh Đạo tương ứng</span>
-                </label>
-                <div className="relative">
-                  <select
-                    id="execSelect"
-                    value={empCode}
-                    onChange={(e) => setEmpCode(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-emerald-50/80 border border-emerald-300 rounded-xl text-xs font-extrabold text-[#08221a] focus:outline-none focus:border-[#08221a] focus:ring-2 focus:ring-[#08221a]/10 transition-all appearance-none cursor-pointer pr-10"
-                  >
-                    {(executiveMap[selectedRole] || EXECUTIVE_PERSONNEL_MAP[selectedRole] || []).map((person) => (
-                      <option key={person.empCode} value={person.empCode}>
-                        {person.name} — {person.title} ({person.dept}) [Mã NV: {person.empCode}]
-                      </option>
-                    ))}
-                  </select>
-                  <IconChevronDown size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#08221a] pointer-events-none" />
-                </div>
-              </div>
-            )}
-
-            {/* Field 2b: Mã số nhân viên — DÀNH CHO "msnv_password" (CBCNV, Trưởng Phòng) */}
-            {selectedRoleOpt.loginMethod === "msnv_password" && (
-              <div className="space-y-1.5 animate-in fade-in duration-200">
-                <label htmlFor="empCode" className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
-                  <IconUser size={15} className="text-gray-500" />
-                  <span>Mã số nhân viên (MSNV)</span>
-                </label>
-                <input
-                  id="empCode"
-                  type="text"
-                  required
-                  value={empCode}
-                  onChange={(e) => setEmpCode(e.target.value)}
-                  placeholder={selectedRole === "department_head" ? "VD: 102105038, 222102020, 201404004, NS-001, KT-001..." : "VD: 202608001, 102104041..."}
-                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#08221a] focus:ring-2 focus:ring-[#08221a]/10 transition-all placeholder:text-gray-400"
-                />
-              </div>
-            )}
 
             {/* Field 3: Mật khẩu */}
             <div className="space-y-1.5">
               <label htmlFor="password" className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
                 <IconLock size={15} className="text-gray-500" />
-                <span>Mật khẩu {isPasswordOnly && "xác thực vai trò"}</span>
+                <span>Mật khẩu</span>
               </label>
               <div className="relative">
                 <input

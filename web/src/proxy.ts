@@ -41,7 +41,12 @@ function isPublicPath(pathname: string): boolean {
 }
 
 export async function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname: rawPathname } = request.nextUrl;
+  // next.config.ts có trailingSlash: true nên URL thực tế luôn có dấu "/" cuối (VD "/login/"),
+  // trong khi PUBLIC_ROUTES/PROTECTED_PATHS bên dưới viết không có dấu "/" cuối — bỏ dấu "/" cuối
+  // trước khi so khớp để tránh vòng lặp redirect vô hạn (đã xảy ra thật với /login, /about,
+  // /contact, /mobile-guide — mọi route "public" liệt kê exact-match ở trên).
+  const pathname = rawPathname !== '/' && rawPathname.endsWith('/') ? rawPathname.slice(0, -1) : rawPathname;
 
   // 1. Allow public website pages & static assets
   if (

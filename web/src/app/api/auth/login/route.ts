@@ -303,7 +303,26 @@ export async function POST(request: Request) {
         departmentId: 3,
         departmentCode: 'SAN_XUAT',
         departmentName: 'Tổ Hợp Nhà Máy & Sản Xuất',
-        redirectUrl: '/maintenance',
+        redirectUrl: '/work',
+        validPasswords: ['123456', '21032004', 'Admin@123456'],
+      },
+      // Nhân sự TEST — tạo thử để kiểm tra luồng đăng nhập/tạo nhân sự mới ở local, dữ liệu giả
+      // (không phải database thật, xem giải thích đã báo ở hội thoại). Xoá khi không cần nữa.
+      'TEST-001': {
+        userId: 999,
+        empCode: 'TEST-001',
+        name: 'Nguyễn Văn Test',
+        title: 'Nhân Viên Bảo Trì MMTB (test)',
+        email: 'test001@tbsgroup.vn',
+        phone: '0900000001',
+        roleId: 8,
+        roleCode: 'KY_THUAT_VIEN',
+        roles: ['employee', 'maintenance'],
+        roleLevel: 4,
+        departmentId: 3,
+        departmentCode: 'SAN_XUAT',
+        departmentName: 'Tổ Hợp Nhà Máy & Sản Xuất',
+        redirectUrl: '/work',
         validPasswords: ['123456', '21032004', 'Admin@123456'],
       },
       'LG-001': {
