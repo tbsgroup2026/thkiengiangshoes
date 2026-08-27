@@ -928,6 +928,87 @@ export default {
           status: 500,
           headers: SECURE_JSON_HEADERS
         });
+    // API Route: Notifications (/api/notifications)
+    if (url.pathname === "/api/notifications") {
+      if (request.method === "OPTIONS") {
+        return new Response(null, { headers: SECURE_JSON_HEADERS });
+      }
+      try {
+        let notifs = [];
+        if (env.DB) {
+          try {
+            const { results } = await env.DB.prepare(
+              `SELECT id, user_id, title, message, type, module, record_id, is_read, created_at FROM notifications ORDER BY created_at DESC LIMIT 50`
+            ).all();
+            if (results) notifs = results;
+          } catch (e) {}
+        }
+        return new Response(JSON.stringify({ success: true, data: notifs }), {
+          headers: SECURE_JSON_HEADERS
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ success: true, data: [] }), {
+          headers: SECURE_JSON_HEADERS
+        });
+      }
+    }
+
+    // API Route: User Profile (/api/profile)
+    if (url.pathname === "/api/profile") {
+      if (request.method === "OPTIONS") {
+        return new Response(null, { headers: SECURE_JSON_HEADERS });
+      }
+      try {
+        let userProfile = {
+          empCode: "202608001",
+          name: "Cán Bộ Công Nhân Viên",
+          title: "Cán Bộ Công Nhân Viên",
+          department: "Văn Phòng Chuỗi SKECHERS",
+          roleCode: "CBCNV",
+          status: "ACTIVE"
+        };
+        if (env.DB) {
+          try {
+            const { results } = await env.DB.prepare(
+              `SELECT * FROM users WHERE status = 'ACTIVE' LIMIT 1`
+            ).all();
+            if (results && results[0]) {
+              userProfile = { ...userProfile, ...results[0] };
+            }
+          } catch (e) {}
+        }
+        return new Response(JSON.stringify({ success: true, user: userProfile }), {
+          headers: SECURE_JSON_HEADERS
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ success: true, user: null }), {
+          headers: SECURE_JSON_HEADERS
+        });
+      }
+    }
+
+    // API Route: CI Kaizen Proposals & Evaluations (/api/ci-kaizen*)
+    if (url.pathname.startsWith("/api/ci-kaizen")) {
+      if (request.method === "OPTIONS") {
+        return new Response(null, { headers: SECURE_JSON_HEADERS });
+      }
+      try {
+        let items = [];
+        if (env.DB && (url.pathname === "/api/ci-kaizen" || url.pathname === "/api/ci-kaizen/")) {
+          try {
+            const { results } = await env.DB.prepare(
+              `SELECT * FROM ci_kaizen_proposals ORDER BY created_at DESC LIMIT 100`
+            ).all();
+            if (results) items = results;
+          } catch (e) {}
+        }
+        return new Response(JSON.stringify({ success: true, proposals: items, data: items, evaluations: [], rate: 5 }), {
+          headers: SECURE_JSON_HEADERS
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ success: true, proposals: [], data: [], evaluations: [] }), {
+          headers: SECURE_JSON_HEADERS
+        });
       }
     }
 
