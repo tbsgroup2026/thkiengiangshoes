@@ -62,9 +62,7 @@ async function runTests() {
       })
     });
 
-    const createText = await createRes.text();
-    console.log("DEBUG createText status:", createRes.status, createText);
-    const createJson = JSON.parse(createText);
+    const createJson = await createRes.json();
     assert(createRes.status === 200 && createJson.success === true, "Tạo đề xuất mới qua POST /api/ci-kaizen thành công");
 
     const proposalId1 = createJson.id;
@@ -117,7 +115,6 @@ async function runTests() {
       })
     });
     const rejectJson = await rejectRes.json();
-    console.log("DEBUG approve response:", rejectRes.status, rejectJson);
     assert(rejectRes.status === 200 && rejectJson.sub_status === "TU_CHOI_TRIEN_KHAI", "Bước 3 Từ chối triển khai thành công (sub_status: TU_CHOI_TRIEN_KHAI)");
 
     // Attempt to evaluate rejected proposal

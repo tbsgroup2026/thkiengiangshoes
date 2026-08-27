@@ -2762,9 +2762,7 @@ export default {
         try {
           const user = await verifyServerAuth(request, env);
           if (!user || !user.authenticated) {
-            const authHeader = request.headers.get("authorization") || request.headers.get("Authorization") || "";
-            const cookieHeader = request.headers.get("cookie") || request.headers.get("Cookie") || "";
-            return new Response(JSON.stringify({ success: false, error: "UNAUTHORIZED", message: "Vui lòng đăng nhập để phê duyệt đề xuất!", debugAuth: { authHeader, cookieHeader, user } }), { status: 401, headers: SECURE_JSON_HEADERS });
+            return new Response(JSON.stringify({ success: false, error: "UNAUTHORIZED", message: "Vui lòng đăng nhập để phê duyệt đề xuất!" }), { status: 401, headers: SECURE_JSON_HEADERS });
           }
 
           const userRole = (user.roleCode || "").toUpperCase();
