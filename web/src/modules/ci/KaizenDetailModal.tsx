@@ -718,100 +718,125 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
       </div>
 
       {/* SECTION 3 — 📈 HIỆU QUẢ CẢI TIẾN */}
-      <div className="space-y-3">
-        <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
-          <span>📈</span>
-          <span>HIỆU QUẢ CẢI TIẾN</span>
-        </h4>
+      {(() => {
+        const timeBefore = Number(proposal.time_before_seconds || (proposal as any).timeBeforeSeconds || 0);
+        const timeAfter = Number(proposal.time_after_seconds || (proposal as any).timeAfterSeconds || 0);
+        const savedSecs = Number(proposal.saved_seconds || (proposal as any).savedSeconds || Math.max(0, timeBefore - timeAfter));
+        const efficiencyVnd = Number(
+          proposal.efficiency_value_vnd || (proposal as any).efficiencyValueVND || Math.round(savedSecs * 12.5)
+        );
+        const pairQty = Number(
+          proposal.pair_quantity || (proposal as any).pairQuantity || (proposal as any).so_luong_giay || (proposal as any).quantity || 0
+        );
+        const totalSavingsVnd = Number(
+          proposal.total_savings_vnd ||
+          (proposal as any).totalSavingsVND ||
+          (proposal as any).tong_tien_tiet_kiem ||
+          (pairQty > 0 ? efficiencyVnd * pairQty : 0)
+        );
+        const totalSavingsWordsText =
+          proposal.total_savings_words ||
+          (proposal as any).totalSavingsWords ||
+          (proposal as any).tong_tien_bang_chu ||
+          (totalSavingsVnd > 0 ? convertNumberToWords(totalSavingsVnd) : "");
 
-        {pricingDir === "TRI_GIA" || pricingDir === "Trị giá" ? (
-          <div className="p-4 rounded-2xl bg-[#006838] text-white shadow-sm flex items-center justify-between">
-            <div>
-              <span className="text-[10px] font-extrabold uppercase text-emerald-200 block">
-                HIỆU QUẢ QUY ĐỔI VNĐ/ĐÔI
-              </span>
-              <span className="text-xl font-black text-white block">
-                {Math.round((proposal.saved_seconds || 0) * 12.5).toLocaleString("vi-VN")} VNĐ
-              </span>
-            </div>
-            <span className="px-3 py-1 bg-emerald-800 text-emerald-100 rounded-lg text-xs font-extrabold">
-              Trị giá
-            </span>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {/* Thẻ 1: TRƯỚC */}
-            <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
-              <span className="text-[10px] font-extrabold uppercase text-slate-400 block">TRƯỚC</span>
-              <span className="text-xl font-black text-slate-900 block">
-                {proposal.time_before_seconds ? `${proposal.time_before_seconds}` : "0"}
-              </span>
-              <span className="text-[10px] font-bold text-slate-500 block">giây</span>
-            </div>
+        return (
+          <div className="space-y-3">
+            <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
+              <span>📈</span>
+              <span>HIỆU QUẢ CẢI TIẾN</span>
+            </h4>
 
-            {/* Thẻ 2: SAU */}
-            <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
-              <span className="text-[10px] font-extrabold uppercase text-slate-400 block">SAU</span>
-              <span className="text-xl font-black text-slate-900 block">
-                {proposal.time_after_seconds ? `${proposal.time_after_seconds}` : "0"}
-              </span>
-              <span className="text-[10px] font-bold text-slate-500 block">giây</span>
-            </div>
-
-            {/* Thẻ 3: TIẾT KIỆM */}
-            <div className="p-3.5 rounded-2xl bg-purple-50 border border-purple-200 shadow-2xs space-y-1">
-              <span className="text-[10px] font-extrabold uppercase text-purple-700 block">TIẾT KIỆM</span>
-              <span className="text-xl font-black text-purple-900 block">
-                {proposal.saved_seconds ? `${proposal.saved_seconds}` : "0"}
-              </span>
-              <span className="text-[10px] font-bold text-purple-600 block">
-                giây {proposal.time_before_seconds && proposal.saved_seconds ? `(${Math.round((proposal.saved_seconds / proposal.time_before_seconds) * 100)}%)` : ""}
-              </span>
-            </div>
-
-            {/* Thẻ 4: HIỆU QUẢ - NỔI BẬT NỀN XANH EMERALD ĐẬM */}
-            <div className="p-3.5 rounded-2xl bg-[#006838] text-white space-y-1 shadow-md">
-              <span className="text-[10px] font-extrabold uppercase text-emerald-200 block">HIỆU QUẢ</span>
-              <span className="text-base sm:text-lg font-black text-white block truncate">
-                {Math.round((proposal.saved_seconds || 0) * 12.5).toLocaleString("vi-VN")} VNĐ
-              </span>
-              <span className="text-[10px] font-bold text-emerald-200 block">quy đổi / đôi</span>
-            </div>
-
-            {/* Thẻ 5: TỔNG TIẾT KIỆM (NẾU CÓ SỐ LƯỢNG GIÀY) */}
-            {(Number(proposal.pair_quantity || (proposal as any).so_luong_giay || 0) > 0 || Number(proposal.total_savings_vnd || (proposal as any).tong_tien_tiet_kiem || 0) > 0) && (
-              <div className="p-3.5 rounded-2xl bg-[#00522c] text-white space-y-1 shadow-md border border-emerald-400/30 col-span-2 sm:col-span-1">
-                <span className="text-[10px] font-extrabold uppercase text-amber-300 block">TỔNG TIẾT KIỆM</span>
-                <span className="text-base sm:text-lg font-black text-white block truncate">
-                  {(
-                    Number(proposal.total_savings_vnd || (proposal as any).tong_tien_tiet_kiem || 0) ||
-                    Math.round((proposal.saved_seconds || 0) * 12.5) * Number(proposal.pair_quantity || (proposal as any).so_luong_giay || 0)
-                  ).toLocaleString("vi-VN")}{" "}
-                  VNĐ
+            {pricingDir === "TRI_GIA" || pricingDir === "Trị giá" ? (
+              <div className="p-4 rounded-2xl bg-[#006838] text-white shadow-sm flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-extrabold uppercase text-emerald-200 block">
+                    HIỆU QUẢ QUY ĐỔI VNĐ/ĐÔI
+                  </span>
+                  <span className="text-xl font-black text-white block">
+                    {efficiencyVnd.toLocaleString("vi-VN")} VNĐ
+                  </span>
+                </div>
+                <span className="px-3 py-1 bg-emerald-800 text-emerald-100 rounded-lg text-xs font-extrabold">
+                  Trị giá
                 </span>
-                <span className="text-[10px] font-bold text-emerald-200 block truncate">
-                  cho {Number(proposal.pair_quantity || (proposal as any).so_luong_giay || 0).toLocaleString("vi-VN")} đôi
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                {/* Thẻ 1: TRƯỚC */}
+                <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
+                  <span className="text-[10px] font-extrabold uppercase text-slate-400 block">TRƯỚC</span>
+                  <span className="text-xl font-black text-slate-900 block">
+                    {timeBefore ? `${timeBefore}` : "0"}
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-500 block">giây</span>
+                </div>
+
+                {/* Thẻ 2: SAU */}
+                <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
+                  <span className="text-[10px] font-extrabold uppercase text-slate-400 block">SAU</span>
+                  <span className="text-xl font-black text-slate-900 block">
+                    {timeAfter ? `${timeAfter}` : "0"}
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-500 block">giây</span>
+                </div>
+
+                {/* Thẻ 3: TIẾT KIỆM */}
+                <div className="p-3.5 rounded-2xl bg-purple-50 border border-purple-200 shadow-2xs space-y-1">
+                  <span className="text-[10px] font-extrabold uppercase text-purple-700 block">TIẾT KIỆM</span>
+                  <span className="text-xl font-black text-purple-900 block">
+                    {savedSecs}
+                  </span>
+                  <span className="text-[10px] font-bold text-purple-600 block">
+                    giây {timeBefore && savedSecs ? `(${Math.round((savedSecs / timeBefore) * 100)}%)` : ""}
+                  </span>
+                </div>
+
+                {/* Thẻ 4: HIỆU QUẢ */}
+                <div className="p-3.5 rounded-2xl bg-[#006838] text-white space-y-1 shadow-md">
+                  <span className="text-[10px] font-extrabold uppercase text-emerald-200 block">HIỆU QUẢ</span>
+                  <span className="text-base sm:text-lg font-black text-white block truncate">
+                    {efficiencyVnd.toLocaleString("vi-VN")} VNĐ
+                  </span>
+                  <span className="text-[10px] font-bold text-emerald-200 block">quy đổi / đôi</span>
+                </div>
+
+                {/* Thẻ 5: SỐ LƯỢNG GIÀY (ĐÔI) */}
+                <div className="p-3.5 rounded-2xl bg-blue-50 border border-blue-200 shadow-2xs space-y-1">
+                  <span className="text-[10px] font-extrabold uppercase text-blue-700 block">SỐ LƯỢNG GIÀY</span>
+                  <span className="text-base sm:text-lg font-black text-blue-950 block truncate">
+                    {pairQty > 0 ? pairQty.toLocaleString("vi-VN") : "0"}
+                  </span>
+                  <span className="text-[10px] font-bold text-blue-600 block">đôi / đơn hàng</span>
+                </div>
+
+                {/* Thẻ 6: TỔNG TIẾT KIỆM */}
+                <div className="p-3.5 rounded-2xl bg-[#00522c] text-white space-y-1 shadow-md border border-emerald-400/30">
+                  <span className="text-[10px] font-extrabold uppercase text-amber-300 block">TỔNG TIẾT KIỆM</span>
+                  <span className="text-base sm:text-lg font-black text-white block truncate">
+                    {totalSavingsVnd > 0 ? `${totalSavingsVnd.toLocaleString("vi-VN")} VNĐ` : "0 VNĐ"}
+                  </span>
+                  <span className="text-[10px] font-bold text-emerald-200 block truncate">
+                    {pairQty > 0 ? `cho ${pairQty.toLocaleString("vi-VN")} đôi` : "tính quy đổi"}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* DÒNG TIỀN BẰNG CHỮ */}
+            {totalSavingsWordsText && (
+              <div className="p-3 rounded-2xl bg-emerald-50/80 border border-emerald-200 text-left">
+                <span className="text-xs text-slate-700">
+                  <strong className="text-slate-900 font-black">Bằng chữ: </strong>
+                  <span className="italic font-bold text-emerald-950">
+                    "{totalSavingsWordsText}"
+                  </span>
                 </span>
               </div>
             )}
           </div>
-        )}
-
-        {/* DÒNG TIỀN BẰNG CHỮ */}
-        {(proposal.total_savings_words || (proposal as any).tong_tien_bang_chu || Number(proposal.total_savings_vnd || (proposal as any).tong_tien_tiet_kiem || 0) > 0) && (
-          <div className="p-3 rounded-2xl bg-emerald-50/80 border border-emerald-200 text-left">
-            <span className="text-xs text-slate-700">
-              <strong className="text-slate-900 font-black">Bằng chữ: </strong>
-              <span className="italic font-bold text-emerald-950">
-                "{proposal.total_savings_words || (proposal as any).tong_tien_bang_chu || convertNumberToWords(
-                  Number(proposal.total_savings_vnd || (proposal as any).tong_tien_tiet_kiem || 0) ||
-                  Math.round((proposal.saved_seconds || 0) * 12.5) * Number(proposal.pair_quantity || (proposal as any).so_luong_giay || 0)
-                )}"
-              </span>
-            </span>
-          </div>
-        )}
-      </div>
+        );
+      })()}
 
       {/* SECTION 4 — 🖼 So Sánh Hình Ảnh */}
       <div className="space-y-3">
