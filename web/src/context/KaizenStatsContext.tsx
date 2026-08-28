@@ -90,9 +90,10 @@ export const KaizenStatsProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   }, []);
 
-  // Update global stats synchronously when any proposal list is fetched or loaded
-  const updateStatsFromProposals = useCallback((proposals: any[]) => {
+  // Update global stats ONLY when an unfiltered complete proposal list is provided
+  const updateStatsFromProposals = useCallback((proposals: any[], isUnfiltered = false) => {
     if (!Array.isArray(proposals) || proposals.length === 0) return;
+    if (!isUnfiltered) return; // Prevent filtered list from corrupting total system counts!
 
     let thiDua = 0;
     let choReview = 0;

@@ -961,11 +961,12 @@ export default function CIModule() {
     return { thiDua, choReview, choDanhGia, daDanhGia, luuTru };
   }, [proposals, stats, selectedRegion]);
 
-  const countThiDua = badgeCounts.thiDua;
-  const countChoReview = badgeCounts.choReview;
-  const countChoDanhGia = badgeCounts.choDanhGia;
-  const countDaDanhGia = badgeCounts.daDanhGia;
-  const countLuuTru = badgeCounts.luuTru;
+  // ⚡ Sidebar Badge Counters strictly derived from Global Single Source of Truth stats
+  const countThiDua = stats.thiDua || 0;
+  const countChoReview = stats.choReview || 0;
+  const countChoDanhGia = stats.choDanhGia || 0;
+  const countDaDanhGia = stats.daDanhGia || 0;
+  const countLuuTru = stats.luuTru || 0;
 
   return (
     <div className="min-h-screen bg-[#f1f5f9] text-slate-800 font-sans flex flex-col md:flex-row w-full selection:bg-[#006838] selection:text-white">
