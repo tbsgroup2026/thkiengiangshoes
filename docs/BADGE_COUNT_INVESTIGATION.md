@@ -1,7 +1,7 @@
 # 📋 BÁO CÁO ĐIỀU TRA & NGUYÊN NHÂN GỐC RỄ BẢNG ĐẾM BADGE (BADGE COUNT INVESTIGATION REPORT)
 **Mã hồ sơ**: `BADGE_COUNT_INVESTIGATION.md`  
 **Ngày thực hiện**: 2026-08-28  
-**Trạng thái**: 🔒 **CLOSED** — Issue Fully Resolved & Verified  
+**Trạng thái**: 🟡 **CODE COMPLETE** — Pending Production Verify với người dùng thật  
 
 ---
 
@@ -210,17 +210,73 @@ Qua kết quả quét codebase và đối soát dữ liệu thực nghiệm, xá
 
 ---
 
-## 3. Xác Nhận Cuối Cùng & Đóng Vấn Đề (Issue Closed Authorization)
+## 3. Xác Nhận Cuối Cùng & Chuẩn Bị Verify Production (Issue Closed Authorization)
 
 - [x] **Xác nhận 1 — Đã xóa hoàn toàn 2 Provider & API trùng lặp**:
   - `web/src/context/KaizenStatsContext.tsx` $\rightarrow$ **Đã xóa hẳn (Deleted)**.
   - `web/src/app/api/ci-kaizen/stats/route.ts` $\rightarrow$ **Đã xóa hẳn (Deleted)**.
   - `web/src/app/layout.tsx` $\rightarrow$ **Đã gỡ bỏ `<KaizenStatsProvider>`**, chỉ duy nhất giữ lại `<StatusCountsProvider>`.
 
-- [x] **Xác nhận 2 — Tự động cập nhật Service Worker cho toàn bộ người dùng thật**:
-  - Bản mã `web/public/sw.js` chứa quy trình tự động cập nhật phiên bản:
-    * `self.skipWaiting()` ở sự kiện `install` $\rightarrow$ Buộc Service Worker mới chiếm quyền ngay lập tức mà không cần người dùng đóng tab.
-    * `self.clients.claim()` ở sự kiện `activate` $\rightarrow$ Giành quyền điều khiển toàn bộ các client tab đang mở.
-    * Xóa sạch các cache name cũ khác `skechers-tbs-v18-no-api-fix` $\rightarrow$ Purge toàn bộ cache cũ tự động ngay trong lần truy cập tiếp theo.
+- [x] **Xác nhận 2 — Cơ chế tự động cập nhật SW + `controllerchange` fallback cho user thật**:
+  - `self.skipWaiting()` + `self.clients.claim()` trong `sw.js`: Buộc SW mới chiếm quyền và điều khiển toàn bộ tab đang mở ngay lập tức.
+  - `controllerchange` listener trong `web/src/components/NotificationInitializer.tsx`: Khi SW mới (`skechers-tbs-v18-no-api-fix`) kích hoạt thành công trên tab của user cũ, trình duyệt bắn sự kiện `controllerchange`. Component này tự động reload trang 1 lần (với guard `didReloadRef` để tránh vòng lặp), đảm bảo tab chạy hoàn toàn dưới SW mới — **không cần user biết kỹ thuật, không cần xóa cache thủ công**.
+  - Áp dụng cho cả Chrome/Edge (Windows/Android), Firefox, và **Safari/iOS** (thường cứng đầu hơn về SW lifecycle).
 
-**TRẠNG THÁI VẤN ĐỀ**: 🔒 **CLOSED** (Đã đóng hoàn toàn vấn đề Badge Count).
+- [x] **Xác nhận 3 — Phiên bản live trên Cloudflare đã đúng commit chứa fix**:
+  - Commit: `624b3f5` — `"docs(ci): confirm deletion of legacy providers and auto SW cache activation"`
+  - Cloudflare Workers Version: `0c40e2b7`
+  - URL: [https://thkiengiangshoes.tbsgroup2026.workers.dev](https://thkiengiangshoes.tbsgroup2026.workers.dev)
+
+---
+
+## 4. Verify Trên Production Với Người Dùng Thật
+
+> [!IMPORTANT]
+> **Đây là bước xác nhận cuối cùng bắt buộc.** Issue chỉ được đóng hoàn toàn sau khi bảng này có kết quả ĐẠT 100%.
+
+**Ngày verify**: `___________` (điền sau khi có phản hồi)  
+**Commit đang live**: `624b3f5` — Cloudflare Version `0c40e2b7`  
+**Số người test**: `___/3`  
+**Kết quả tổng**: `Đạt / Không đạt`
+
+### 4.1. Kịch Bản Test (Hướng Dẫn Gửi Người Dùng Thật)
+
+Gửi nội dung sau cho 2–3 người dùng đã từng vào app trước ngày fix (ưu tiên: 1 Quản lý/CI Lead + 1 Nhân viên/Công nhân):
+
+> **Nhờ bạn kiểm tra giúp một tính năng mới — không cần biết kỹ thuật:**
+>
+> **Bước 1**: Mở lại ứng dụng như bình thường *(không cần làm gì đặc biệt, không cần xóa cache, không cần chế độ ẩn danh)* — chỉ cần mở trình duyệt/app quen dùng hàng ngày.
+>
+> **Bước 2**: Nhìn vào khu vực **"LỌC NHANH"** bên trái. Chụp ảnh màn hình 5 ô số cạnh các mục *(Thi đua, Chờ phê duyệt, Chờ đánh giá, Đã đánh giá, Lưu trữ)*.
+>
+> **Bước 3**: Bấm lần lượt qua từng mục *(Thi đua → Chờ phê duyệt → Chờ đánh giá → Đã đánh giá → Lưu trữ)*, mỗi lần bấm chụp thêm 1 ảnh màn hình.
+>
+> **Bước 4**: Gửi lại cho mình **6 ảnh chụp** *(1 ảnh ban đầu + 5 ảnh sau mỗi lần bấm)*. Cảm ơn bạn!
+
+### 4.2. Bảng Ghi Kết Quả Verify
+
+| Người test | Vai trò | Thiết bị / Trình duyệt | Badge lúc mở đầu tiên | Badge sau khi chuyển tab (có đổi/reset không?) | Kết luận |
+|---|---|---|---|---|---|
+| Người 1 | | | | | ⬜ Chờ |
+| Người 2 | | | | | ⬜ Chờ |
+| Người 3 | | | | | ⬜ Chờ |
+
+### 4.3. Tiêu Chí ĐẠT
+
+- Badge hiển thị đúng số liệu thật *(khớp số item thực tế trong DB)* ngay từ lần mở app đầu tiên, không cần F5.
+- Badge **không thay đổi / không reset về 0** khi người dùng bấm qua lại các tab.
+- Không ai trong nhóm test phải làm thêm bước gì ngoài "mở app bình thường".
+
+### 4.4. Nếu Phát Hiện User Vẫn Bị Lỗi (Fallback Checklist)
+
+- [ ] Yêu cầu user mở DevTools (`F12`) → `Application` → `Service Workers` → kiểm tra tên cache có phải `skechers-tbs-v18-no-api-fix` hay không.
+- [ ] Nếu vẫn là bản cũ: kiểm tra `controllerchange` listener trong `NotificationInitializer.tsx` có đang active hay không (xem log console: `✓ Service Worker registered successfully`).
+- [ ] Nếu Safari/iOS vẫn cứng đầu: yêu cầu user vào `Cài đặt → Safari → Xóa lịch sử và dữ liệu trang web` — đây là cách duy nhất reset SW trên iOS Safari.
+
+### 4.5. Ghi Chú Thiết Bị Đặc Biệt
+
+*(Điền sau khi verify — ghi chú các vấn đề đặc thù với Safari/iOS, Firefox, hoặc thiết bị cụ thể nếu có)*
+
+---
+
+**TRẠNG THÁI VẤN ĐỀ**: 🟡 **CODE COMPLETE — Chờ verify production với người dùng thật để đóng hoàn toàn.**

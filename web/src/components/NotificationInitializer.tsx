@@ -1,14 +1,41 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { requestNotificationPermission, registerServiceWorker, syncPushSubscriptionToServer } from "@/lib/browserNotifications";
 
 /**
- * Auto-initialize notification system when app loads
- * Registers Service Worker and syncs push subscriptions
- * Deferred permission request to avoid popup confusion on first load
+ * Auto-initialize notification system when app loads.
+ * Registers Service Worker, syncs push subscriptions, and handles
+ * automatic SW update propagation for all real users via controllerchange.
+ *
+ * When a new SW version (skechers-tbs-v18-no-api-fix) activates via
+ * skipWaiting() + clients.claim(), the `controllerchange` event fires on
+ * every open tab. We then do a single silent reload so the tab runs under
+ * the new SW immediately — no manual cache clearing needed by users.
  */
 export default function NotificationInitializer() {
+  const didReloadRef = useRef(false);
+
+  useEffect(() => {
+    // ── SW UPDATE AUTO-PROPAGATION (controllerchange) ──────────────────────
+    // Fires when a new SW takes control (skipWaiting + clients.claim).
+    // We reload once per session so the tab is fully migrated to the new SW.
+    if ("serviceWorker" in navigator) {
+      const handleControllerChange = () => {
+        if (didReloadRef.current) return;   // Guard: reload once per session only
+        didReloadRef.current = true;
+        // Small delay so the SW can finish activation before reload
+        setTimeout(() => {
+          window.location.reload();
+        }, 300);
+      };
+      navigator.serviceWorker.addEventListener("controllerchange", handleControllerChange);
+      return () => {
+        navigator.serviceWorker.removeEventListener("controllerchange", handleControllerChange);
+      };
+    }
+  }, []);
+
   useEffect(() => {
     const initNotifications = async () => {
       try {
