@@ -845,31 +845,72 @@ export default function CIModule() {
   };
 
   // Filtered List Computation
+  // Synchronized Filtered List Computation
   const filteredProposals = proposals.filter((p) => {
     if (selectedRegion !== "ALL" && !matchRegionFilter(p.region, selectedRegion)) {
       return false;
     }
-    // Filter by registration type or Thi đua flag
-    if (selectedRegType === "THI_DUA") {
-      if (Number(p.is_thi_dua) !== 1) return false;
-    } else if (selectedRegType !== "ALL") {
-      if (p.registration_type !== selectedRegType) return false;
+    if (selectedCategory !== "ALL" && p.category !== selectedCategory) {
+      return false;
     }
-    // Filter by sub-status
-    if (selectedSubStatus !== "ALL") {
-      const appStatus = String(p.approval_status || "").toUpperCase();
-      const subStatus = String(p.sub_status || "").toUpperCase();
-      const mainStatus = String(p.status || "").toUpperCase();
 
+    const appStatus = String(p.approval_status || "").toUpperCase();
+    const subStatus = String(p.sub_status || "").toUpperCase();
+    const mainStatus = String(p.status || "").toUpperCase();
+    const regType = String(p.registration_type || "").toUpperCase();
+
+    // 1. Filter by registration type / Thi đua / Lưu trữ
+    if (selectedRegType === "THI_DUA") {
+      const isThiDuaItem =
+        Number(p.is_thi_dua) === 1 ||
+        regType === "THI_DUA" ||
+        subStatus === "CHO_DANH_GIA" ||
+        subStatus === "DA_DANH_GIA" ||
+        appStatus === "PHE_DUYET";
+      if (!isThiDuaItem) return false;
+    } else if (selectedRegType === "LUU_TRU") {
+      const isLuuTruItem = subStatus === "LUU_TRU" || regType === "LUU_TRU" || mainStatus === "ARCHIVED";
+      if (!isLuuTruItem) return false;
+    } else if (selectedRegType !== "ALL") {
+      if (regType !== selectedRegType) return false;
+    }
+
+    // 2. Filter by sub-status
+    if (selectedSubStatus !== "ALL") {
       if (selectedSubStatus === "CHO_REVIEW") {
-        const isNotChoReview = appStatus === "PHE_DUYET" || appStatus === "TU_CHOI" || subStatus === "CHO_DANH_GIA" || subStatus === "DA_DANH_GIA" || subStatus === "LUU_TRU" || mainStatus === "APPROVED" || mainStatus === "REJECTED" || mainStatus === "ARCHIVED";
+        const isNotChoReview =
+          appStatus === "PHE_DUYET" ||
+          appStatus === "TU_CHOI" ||
+          subStatus === "CHO_DANH_GIA" ||
+          subStatus === "DA_DANH_GIA" ||
+          subStatus === "LUU_TRU" ||
+          mainStatus === "APPROVED" ||
+          mainStatus === "REJECTED" ||
+          mainStatus === "ARCHIVED";
         if (isNotChoReview) return false;
       } else if (selectedSubStatus === "CHO_DANH_GIA") {
-        if (!(subStatus === "CHO_DANH_GIA" || appStatus === "PHE_DUYET" || mainStatus === "APPROVED")) return false;
+        const isChoDanhGia =
+          subStatus === "CHO_DANH_GIA" ||
+          appStatus === "PHE_DUYET" ||
+          mainStatus === "APPROVED" ||
+          mainStatus === "IMPLEMENTED" ||
+          regType === "CHO_DANH_GIA";
+        const isExcluded =
+          subStatus === "DA_DANH_GIA" ||
+          subStatus === "LUU_TRU" ||
+          appStatus === "DA_DANH_GIA" ||
+          appStatus === "TU_CHOI";
+        if (!isChoDanhGia || isExcluded) return false;
       } else if (selectedSubStatus === "DA_DANH_GIA") {
-        if (!(subStatus === "DA_DANH_GIA" || appStatus === "DA_DANH_GIA")) return false;
+        const isDaDanhGia =
+          subStatus === "DA_DANH_GIA" ||
+          appStatus === "DA_DANH_GIA" ||
+          Number(p.average_score || (p as any).score || 0) > 0 ||
+          Boolean((p as any).award_title);
+        if (!isDaDanhGia) return false;
       }
     }
+
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const matchSearch =
@@ -911,7 +952,13 @@ export default function CIModule() {
       }
 
       // 1. Thi đua
-      if (Number(p.is_thi_dua) === 1 || regType === "THI_DUA" || subStatus === "CHO_DANH_GIA" || subStatus === "DA_DANH_GIA" || appStatus === "PHE_DUYET") {
+      if (
+        Number(p.is_thi_dua) === 1 ||
+        regType === "THI_DUA" ||
+        subStatus === "CHO_DANH_GIA" ||
+        subStatus === "DA_DANH_GIA" ||
+        appStatus === "PHE_DUYET"
+      ) {
         thiDua++;
       }
 
@@ -930,14 +977,28 @@ export default function CIModule() {
       }
 
       // 3. Chờ đánh giá
-      if (subStatus === "CHO_DANH_GIA" || appStatus === "PHE_DUYET" || mainStatus === "APPROVED") {
-        if (subStatus !== "DA_DANH_GIA" && subStatus !== "LUU_TRU" && appStatus !== "DA_DANH_GIA") {
-          choDanhGia++;
-        }
+      const isChoDanhGia =
+        subStatus === "CHO_DANH_GIA" ||
+        appStatus === "PHE_DUYET" ||
+        mainStatus === "APPROVED" ||
+        mainStatus === "IMPLEMENTED" ||
+        regType === "CHO_DANH_GIA";
+      const isExcludedFromChoDanhGia =
+        subStatus === "DA_DANH_GIA" ||
+        subStatus === "LUU_TRU" ||
+        appStatus === "DA_DANH_GIA" ||
+        appStatus === "TU_CHOI";
+      if (isChoDanhGia && !isExcludedFromChoDanhGia) {
+        choDanhGia++;
       }
 
       // 4. Đã đánh giá
-      if (subStatus === "DA_DANH_GIA" || appStatus === "DA_DANH_GIA" || Number(p.average_score || 0) > 0) {
+      if (
+        subStatus === "DA_DANH_GIA" ||
+        appStatus === "DA_DANH_GIA" ||
+        Number(p.average_score || (p as any).score || 0) > 0 ||
+        Boolean((p as any).award_title)
+      ) {
         daDanhGia++;
       }
 
