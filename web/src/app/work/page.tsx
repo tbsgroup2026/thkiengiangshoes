@@ -1788,21 +1788,6 @@ export default function WorkDashboardPage() {
           {/* IF HIỆU SUẤT NHÀ MÁY (PHÒNG SẢN XUẤT) IS SELECTED */}
           {selectedDept === "production" && (
             <div className="space-y-4 my-auto">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {[
-                  { title: "Sản Lượng Tháng", val: "586,000 Đôi", trend: "+15%" },
-                  { title: "Số Dây Chuyền", val: "33 Chuyền", trend: "100% Hoạt động" },
-                  { title: "Hiệu Suất Chuyền", val: "92.4%", trend: "+5%" },
-                  { title: "Tiến Độ Đơn Hàng", val: "89.2%", trend: "Đạt kế hoạch" },
-                ].map((item, idx) => (
-                  <div key={idx} className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-1.5">
-                    <span className="text-xs font-bold text-slate-500">{item.title}</span>
-                    <div className="text-xl font-black text-slate-900">{item.val}</div>
-                    <span className="text-xs text-[#006838] font-bold block">{item.trend} so với tháng trước</span>
-                  </div>
-                ))}
-              </div>
-
               <ProductionPerformanceModule />
             </div>
           )}
