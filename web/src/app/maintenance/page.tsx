@@ -15,14 +15,27 @@ import {
   IconFilter,
   IconSearch,
   IconX,
+  IconFlask,
 } from '@tabler/icons-react';
 import MaintenanceShell from '@/components/MaintenanceShell';
 import FilterSelect from '@/components/FilterSelect';
-import DateRangeFilter from '@/components/DateRangeFilter';
+import DateRangeFilter, { inDateRange } from '@/components/DateRangeFilter';
 import ParetoChart, { type ParetoItem } from '@/components/charts/ParetoChart';
 import TrendChart, { type TrendPoint } from '@/components/charts/TrendChart';
+import { generateMockOverviewData } from '@/lib/mmtbMockOverview';
 
-type Machine = { id: string; statusName: string };
+type Machine = {
+  id: string;
+  statusName: string;
+  code: string;
+  name: string;
+  machineTypeName: string | null;
+  factoryId: string | null;
+  areaId: string | null;
+  areaName: string | null;
+  lineId: string | null;
+  lineName: string | null;
+};
 type ScheduleMachine = { id: string; status: 'unscheduled' | 'overdue' | 'upcoming' | 'scheduled' };
 type Proposal = { id: string; resolved: boolean };
 
@@ -101,6 +114,10 @@ export default function OverviewPage() {
   const [reliabilitySearch, setReliabilitySearch] = useState('');
   const [detailMachineCode, setDetailMachineCode] = useState<string | null>(null);
 
+  // ---- Dữ liệu mẫu (bật/tắt cạnh nút Lọc) — chỉ hiện khi CHƯA có sự cố thật nào khớp bộ lọc ----
+  const [testDataOn, setTestDataOn] = useState(true);
+  const [appliedFilters, setAppliedFilters] = useState({ factoryId: '', areaId: '', lineId: '', dateFrom: '', dateTo: '' });
+
   async function loadOverview(params: { factoryId: string; areaId: string; lineId: string; dateFrom: string; dateTo: string }) {
     try {
       setLoading(true);
@@ -167,19 +184,50 @@ export default function OverviewPage() {
   );
 
   function handleApplyFilter() {
-    loadOverview({ factoryId: pFactoryId, areaId: pAreaId, lineId: pLineId, dateFrom: pDateFrom, dateTo: pDateTo });
+    const params = { factoryId: pFactoryId, areaId: pAreaId, lineId: pLineId, dateFrom: pDateFrom, dateTo: pDateTo };
+    setAppliedFilters(params);
+    loadOverview(params);
   }
+
+  // ---- Dữ liệu mẫu — sinh từ máy THẬT (đúng mã/Nhà máy/Khu vực/Line) để lọc theo bộ lọc phía
+  // trên hoạt động y như dữ liệu thật, chỉ dùng khi chưa có sự cố thật nào khớp bộ lọc hiện tại.
+  const mockPool = useMemo(() => generateMockOverviewData(machines), [machines]);
+  const filteredMockIncidents = useMemo(
+    () =>
+      mockPool.incidents.filter(
+        (i) =>
+          (!appliedFilters.factoryId || i.factoryId === appliedFilters.factoryId) &&
+          (!appliedFilters.areaId || i.areaId === appliedFilters.areaId) &&
+          (!appliedFilters.lineId || i.lineId === appliedFilters.lineId) &&
+          inDateRange(i.createdAt, appliedFilters.dateFrom, appliedFilters.dateTo)
+      ),
+    [mockPool, appliedFilters]
+  );
+  const filteredMockLogs = useMemo(
+    () =>
+      mockPool.logs.filter(
+        (l) =>
+          (!appliedFilters.factoryId || l.factoryId === appliedFilters.factoryId) &&
+          (!appliedFilters.areaId || l.areaId === appliedFilters.areaId) &&
+          (!appliedFilters.lineId || l.lineId === appliedFilters.lineId) &&
+          inDateRange(l.createdAt, appliedFilters.dateFrom, appliedFilters.dateTo)
+      ),
+    [mockPool, appliedFilters]
+  );
+  const usingMockData = incidents.length === 0 && testDataOn && filteredMockIncidents.length > 0;
+  const effectiveIncidents: OverviewIncident[] = incidents.length > 0 ? incidents : testDataOn ? filteredMockIncidents : [];
+  const effectiveLogs: OverviewLog[] = incidents.length > 0 ? logs : testDataOn ? filteredMockLogs : [];
 
   // ---- Tính MTTA/MTTR/MTTD cho từng sự cố ----
   const enriched = useMemo(
     () =>
-      incidents.map((i) => ({
+      effectiveIncidents.map((i) => ({
         ...i,
         mtta: i.acceptedAt ? minutesBetween(i.createdAt, i.acceptedAt) : null,
         mttr: i.acceptedAt && i.completedAt ? minutesBetween(i.acceptedAt, i.completedAt) : null,
         mttd: i.completedAt ? minutesBetween(i.createdAt, i.completedAt) : null,
       })),
-    [incidents]
+    [effectiveIncidents]
   );
 
   const kpi = useMemo(() => {
@@ -250,7 +298,7 @@ export default function OverviewPage() {
 
   const paretoByParts: ParetoItem[] = useMemo(() => {
     const map = new Map<string, number>();
-    for (const l of logs) {
+    for (const l of effectiveLogs) {
       if (!l.partsReplaced) continue;
       try {
         const parsed: PartsPayload = JSON.parse(l.partsReplaced);
@@ -389,15 +437,40 @@ export default function OverviewPage() {
               <span className="block text-[11px] font-bold text-gray-500 mb-1">Khoảng thời gian</span>
               <DateRangeFilter from={pDateFrom} to={pDateTo} onFromChange={setPDateFrom} onToChange={setPDateTo} />
             </label>
-            <button
-              onClick={handleApplyFilter}
-              disabled={loading}
-              className="flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-accent text-white text-xs font-bold hover:bg-accent-light disabled:opacity-50 h-[38px]"
-            >
-              <IconFilter size={14} /> {loading ? 'Đang lọc...' : 'Lọc'}
-            </button>
+            <div className="flex flex-col items-stretch gap-1">
+              <button
+                type="button"
+                onClick={() => setTestDataOn((v) => !v)}
+                title={
+                  incidents.length > 0
+                    ? 'Đã có sự cố thật khớp bộ lọc — luôn ưu tiên hiện dữ liệu thật, nút này không có tác dụng'
+                    : testDataOn
+                      ? 'Đang hiện dữ liệu mẫu — bấm để tắt'
+                      : 'Đang tắt dữ liệu mẫu — bấm để bật lại'
+                }
+                className={`flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold border transition self-end ${
+                  testDataOn ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-gray-50 border-gray-200 text-gray-400'
+                }`}
+              >
+                <IconFlask size={12} />
+                Dữ liệu mẫu: {testDataOn ? 'Bật' : 'Tắt'}
+              </button>
+              <button
+                onClick={handleApplyFilter}
+                disabled={loading}
+                className="flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-accent text-white text-xs font-bold hover:bg-accent-light disabled:opacity-50 h-[38px]"
+              >
+                <IconFilter size={14} /> {loading ? 'Đang lọc...' : 'Lọc'}
+              </button>
+            </div>
           </div>
         </div>
+
+        {usingMockData && (
+          <div className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-[11px] font-bold w-fit">
+            <IconFlask size={13} /> Đang hiển thị dữ liệu mẫu (chưa có sự cố thật khớp bộ lọc) — tắt ở nút &quot;Dữ liệu mẫu&quot; phía trên nếu không muốn xem
+          </div>
+        )}
 
         {/* KPI cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">

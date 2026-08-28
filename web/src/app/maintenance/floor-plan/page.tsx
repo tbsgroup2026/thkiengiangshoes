@@ -396,7 +396,17 @@ export default function FloorPlanPage() {
         {error && <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">⚠️ {error}</div>}
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-wrap items-center gap-2.5">
-          <FilterSelect value={factoryId} onChange={setFactoryId} options={factories} placeholder="-- Chọn nhà máy --" />
+          <span className="text-[11px] font-bold text-gray-400 uppercase mr-0.5">Nhà máy:</span>
+          {factories.map((f) => (
+            <button
+              key={f.id}
+              onClick={() => setFactoryId(f.id)}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition ${factoryId === f.id ? 'bg-accent text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+            >
+              {f.name}
+            </button>
+          ))}
+          {factoryId && floors.length > 0 && <span className="w-px h-6 bg-gray-200 mx-1" />}
           {floors.map((f) => (
             <button
               key={f.id}
