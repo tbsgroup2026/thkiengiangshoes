@@ -9,6 +9,7 @@ import {
   IconCalendar,
   IconLoader2,
 } from "@tabler/icons-react";
+import { convertNumberToWords } from "@/lib/numberToWords";
 import { KaizenProposal } from "./CIModule";
 
 interface FeasibilityApprovalModalProps {
@@ -26,6 +27,7 @@ interface FeasibilityApprovalModalProps {
     efficiency_value_vnd?: number;
     pair_quantity?: number;
     total_savings_vnd?: number;
+    total_savings_words?: string;
   }) => void;
 }
 
@@ -138,6 +140,8 @@ export default function FeasibilityApprovalModal({
         }
       }
 
+      const savingsInWords = convertNumberToWords(totalSavingsVndVal);
+
       const res = await fetch("/api/ci-kaizen/approve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -153,6 +157,8 @@ export default function FeasibilityApprovalModal({
           so_luong_giay: decision === "APPROVE" ? pairQtyVal : (proposal.pair_quantity || 0),
           totalSavingsVND: decision === "APPROVE" ? totalSavingsVndVal : 0,
           tong_tien_tiet_kiem: decision === "APPROVE" ? totalSavingsVndVal : 0,
+          totalSavingsWords: decision === "APPROVE" ? savingsInWords : "",
+          tong_tien_bang_chu: decision === "APPROVE" ? savingsInWords : "",
         }),
       });
 
@@ -168,6 +174,7 @@ export default function FeasibilityApprovalModal({
           efficiency_value_vnd: json.efficiency_value_vnd !== undefined ? json.efficiency_value_vnd : efficiencyVndVal,
           pair_quantity: json.pair_quantity !== undefined ? json.pair_quantity : pairQtyVal,
           total_savings_vnd: json.total_savings_vnd !== undefined ? json.total_savings_vnd : totalSavingsVndVal,
+          total_savings_words: json.total_savings_words !== undefined ? json.total_savings_words : savingsInWords,
         });
         onClose();
       } else {
@@ -481,6 +488,16 @@ export default function FeasibilityApprovalModal({
                     {totalSavingsVndVal.toLocaleString("vi-VN")}
                   </span>
                   <span className="text-[8.5px] font-bold text-emerald-200 block">VNĐ</span>
+                </div>
+              </div>
+
+              {/* DÒNG HIỂN THỊ SỐ TIỀN BẰNG CHỮ */}
+              <div className="pt-2 border-t border-emerald-200/80 text-left">
+                <div className="text-[11.5px] font-bold text-slate-700 flex items-start sm:items-center gap-1.5 flex-wrap">
+                  <span className="font-extrabold text-slate-900 not-italic shrink-0">Bằng chữ:</span>
+                  <span className="italic text-emerald-950 font-semibold bg-white/90 px-2.5 py-0.5 rounded-lg border border-emerald-300/80 shadow-2xs leading-relaxed text-xs">
+                    "{convertNumberToWords(totalSavingsVndVal)}"
+                  </span>
                 </div>
               </div>
             </div>

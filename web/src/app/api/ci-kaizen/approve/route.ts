@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
+import { convertNumberToWords } from '@/lib/numberToWords';
 
 export const dynamic = 'force-static';
 
@@ -26,6 +27,8 @@ export async function POST(request: Request) {
       so_luong_giay,
       totalSavingsVND,
       tong_tien_tiet_kiem,
+      totalSavingsWords,
+      tong_tien_bang_chu,
     } = body;
 
     if (!proposalId) {
@@ -34,6 +37,9 @@ export async function POST(request: Request) {
 
     const pairQty = Number(pairQuantity || so_luong_giay || 0);
     const totalSavings = Number(totalSavingsVND || tong_tien_tiet_kiem || 0);
+    const totalSavingsWordsVal = String(
+      totalSavingsWords || tong_tien_bang_chu || (totalSavings > 0 ? convertNumberToWords(totalSavings) : 'Không đồng')
+    );
     const timeBefore = Number(timeBeforeSeconds || 0);
     const timeAfter = Number(timeAfterSeconds || 0);
     const savedSecs = Number(savedSeconds || Math.max(0, timeBefore - timeAfter));
@@ -51,6 +57,7 @@ export async function POST(request: Request) {
         // Auto-migration: ensure new columns exist in ci_kaizen_proposals
         await db.prepare('ALTER TABLE ci_kaizen_proposals ADD COLUMN pair_quantity INTEGER DEFAULT 0').run().catch(() => {});
         await db.prepare('ALTER TABLE ci_kaizen_proposals ADD COLUMN total_savings_vnd REAL DEFAULT 0').run().catch(() => {});
+        await db.prepare('ALTER TABLE ci_kaizen_proposals ADD COLUMN total_savings_words TEXT').run().catch(() => {});
 
         const query = `
           UPDATE ci_kaizen_proposals
@@ -63,6 +70,7 @@ export async function POST(request: Request) {
               efficiency_value_vnd = ?,
               pair_quantity = ?,
               total_savings_vnd = ?,
+              total_savings_words = ?,
               review_comment = COALESCE(?, review_comment),
               updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
@@ -80,6 +88,7 @@ export async function POST(request: Request) {
             efficiencyVnd,
             pairQty,
             totalSavings,
+            totalSavingsWordsVal,
             note || null,
             proposalId
           )
@@ -119,6 +128,7 @@ export async function POST(request: Request) {
       efficiency_value_vnd: efficiencyVnd,
       pair_quantity: pairQty,
       total_savings_vnd: totalSavings,
+      total_savings_words: totalSavingsWordsVal,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Lỗi xử lý phê duyệt';

@@ -27,6 +27,7 @@ import {
   IconPlus,
   IconTrendingUp,
 } from "@tabler/icons-react";
+import { convertNumberToWords } from "@/lib/numberToWords";
 import { KaizenProposal } from "./CIModule";
 import { usePermission } from "@/hooks/usePermission";
 import FeasibilityApprovalModal from "./FeasibilityApprovalModal";
@@ -793,6 +794,21 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
                 </span>
               </div>
             )}
+          </div>
+        )}
+
+        {/* DÒNG TIỀN BẰNG CHỮ */}
+        {(proposal.total_savings_words || (proposal as any).tong_tien_bang_chu || Number(proposal.total_savings_vnd || (proposal as any).tong_tien_tiet_kiem || 0) > 0) && (
+          <div className="p-3 rounded-2xl bg-emerald-50/80 border border-emerald-200 text-left">
+            <span className="text-xs text-slate-700">
+              <strong className="text-slate-900 font-black">Bằng chữ: </strong>
+              <span className="italic font-bold text-emerald-950">
+                "{proposal.total_savings_words || (proposal as any).tong_tien_bang_chu || convertNumberToWords(
+                  Number(proposal.total_savings_vnd || (proposal as any).tong_tien_tiet_kiem || 0) ||
+                  Math.round((proposal.saved_seconds || 0) * 12.5) * Number(proposal.pair_quantity || (proposal as any).so_luong_giay || 0)
+                )}"
+              </span>
+            </span>
           </div>
         )}
       </div>

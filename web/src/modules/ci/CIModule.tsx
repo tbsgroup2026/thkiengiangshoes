@@ -81,6 +81,8 @@ export interface KaizenProposal {
   so_luong_giay?: number;
   total_savings_vnd?: number;
   tong_tien_tiet_kiem?: number;
+  total_savings_words?: string;
+  tong_tien_bang_chu?: string;
   before_image_url?: string;
   after_image_url?: string;
   attachments_json?: string;
