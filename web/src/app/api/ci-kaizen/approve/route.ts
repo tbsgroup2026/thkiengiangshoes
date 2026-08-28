@@ -1,0 +1,127 @@
+import { NextResponse } from 'next/server';
+import { verifyToken } from '@/lib/auth';
+
+export const dynamic = 'force-static';
+
+function getDbBinding(): any {
+  return (process.env as any).DB || (globalThis as any).DB || null;
+}
+
+export async function POST(request: Request) {
+  try {
+    const authHeader = request.headers.get('authorization');
+    const token = authHeader?.replace('Bearer ', '');
+    const session = token ? await verifyToken(token) : null;
+
+    const body = await request.json();
+    const {
+      proposalId,
+      decision,
+      note,
+      timeBeforeSeconds,
+      timeAfterSeconds,
+      savedSeconds,
+      efficiencyValueVND,
+      pairQuantity,
+      so_luong_giay,
+      totalSavingsVND,
+      tong_tien_tiet_kiem,
+    } = body;
+
+    if (!proposalId) {
+      return NextResponse.json({ success: false, message: 'Mã đề xuất không hợp lệ' }, { status: 400 });
+    }
+
+    const pairQty = Number(pairQuantity || so_luong_giay || 0);
+    const totalSavings = Number(totalSavingsVND || tong_tien_tiet_kiem || 0);
+    const timeBefore = Number(timeBeforeSeconds || 0);
+    const timeAfter = Number(timeAfterSeconds || 0);
+    const savedSecs = Number(savedSeconds || Math.max(0, timeBefore - timeAfter));
+    const efficiencyVnd = Number(efficiencyValueVND || Math.round(savedSecs * 12.5));
+
+    const isApproved = decision === 'APPROVE';
+    const status = isApproved ? 'UNDER_REVIEW' : 'REJECTED';
+    const subStatus = isApproved ? 'CHO_DANH_GIA' : 'TU_CHOI_TRIEN_KHAI';
+    const approvalStatus = isApproved ? 'PHE_DUYET' : 'TU_CHOI';
+
+    const db = getDbBinding();
+
+    if (db) {
+      try {
+        // Auto-migration: ensure new columns exist in ci_kaizen_proposals
+        await db.prepare('ALTER TABLE ci_kaizen_proposals ADD COLUMN pair_quantity INTEGER DEFAULT 0').run().catch(() => {});
+        await db.prepare('ALTER TABLE ci_kaizen_proposals ADD COLUMN total_savings_vnd REAL DEFAULT 0').run().catch(() => {});
+
+        const query = `
+          UPDATE ci_kaizen_proposals
+          SET approval_status = ?,
+              sub_status = ?,
+              status = ?,
+              time_before_seconds = ?,
+              time_after_seconds = ?,
+              saved_seconds = ?,
+              efficiency_value_vnd = ?,
+              pair_quantity = ?,
+              total_savings_vnd = ?,
+              review_comment = COALESCE(?, review_comment),
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `;
+
+        await db
+          .prepare(query)
+          .bind(
+            approvalStatus,
+            subStatus,
+            status,
+            timeBefore,
+            timeAfter,
+            savedSecs,
+            efficiencyVnd,
+            pairQty,
+            totalSavings,
+            note || null,
+            proposalId
+          )
+          .run();
+
+        // Log audit history
+        await db
+          .prepare(`
+            INSERT INTO ci_kaizen_status_history (
+              proposal_id, from_status, to_status, action, actor_id, actor_name, note, created_at
+            ) VALUES (?, 'SUBMITTED', ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+          `)
+          .bind(
+            proposalId,
+            subStatus,
+            isApproved ? 'APPROVE' : 'REJECT',
+            session?.empCode || 'ADMIN-2026',
+            session?.name || 'Người Phê Duyệt',
+            note || (isApproved ? 'Đã phê duyệt tính khả thi (Bước 3)' : 'Từ chối triển khai')
+          )
+          .run()
+          .catch(() => {});
+      } catch (dbErr) {
+        console.warn('[APPROVE API] DB update warning:', dbErr);
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: isApproved ? 'Đã phê duyệt sáng kiến thành công!' : 'Đã từ chối triển khai sáng kiến.',
+      status,
+      sub_status: subStatus,
+      approval_status: approvalStatus,
+      time_before_seconds: timeBefore,
+      time_after_seconds: timeAfter,
+      saved_seconds: savedSecs,
+      efficiency_value_vnd: efficiencyVnd,
+      pair_quantity: pairQty,
+      total_savings_vnd: totalSavings,
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Lỗi xử lý phê duyệt';
+    return NextResponse.json({ success: false, message }, { status: 500 });
+  }
+}

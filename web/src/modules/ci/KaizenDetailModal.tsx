@@ -776,6 +776,23 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
               </span>
               <span className="text-[10px] font-bold text-emerald-200 block">quy đổi / đôi</span>
             </div>
+
+            {/* Thẻ 5: TỔNG TIẾT KIỆM (NẾU CÓ SỐ LƯỢNG GIÀY) */}
+            {(Number(proposal.pair_quantity || (proposal as any).so_luong_giay || 0) > 0 || Number(proposal.total_savings_vnd || (proposal as any).tong_tien_tiet_kiem || 0) > 0) && (
+              <div className="p-3.5 rounded-2xl bg-[#00522c] text-white space-y-1 shadow-md border border-emerald-400/30 col-span-2 sm:col-span-1">
+                <span className="text-[10px] font-extrabold uppercase text-amber-300 block">TỔNG TIẾT KIỆM</span>
+                <span className="text-base sm:text-lg font-black text-white block truncate">
+                  {(
+                    Number(proposal.total_savings_vnd || (proposal as any).tong_tien_tiet_kiem || 0) ||
+                    Math.round((proposal.saved_seconds || 0) * 12.5) * Number(proposal.pair_quantity || (proposal as any).so_luong_giay || 0)
+                  ).toLocaleString("vi-VN")}{" "}
+                  VNĐ
+                </span>
+                <span className="text-[10px] font-bold text-emerald-200 block truncate">
+                  cho {Number(proposal.pair_quantity || (proposal as any).so_luong_giay || 0).toLocaleString("vi-VN")} đôi
+                </span>
+              </div>
+            )}
           </div>
         )}
       </div>

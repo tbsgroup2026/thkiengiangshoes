@@ -23,6 +23,9 @@ interface FeasibilityApprovalModalProps {
     time_before_seconds?: number;
     time_after_seconds?: number;
     saved_seconds?: number;
+    efficiency_value_vnd?: number;
+    pair_quantity?: number;
+    total_savings_vnd?: number;
   }) => void;
 }
 
@@ -37,18 +40,24 @@ export default function FeasibilityApprovalModal({
   const [note, setNote] = useState<string>("");
   const [timeBefore, setTimeBefore] = useState<number | string>(proposal?.time_before_seconds || 0);
   const [timeAfter, setTimeAfter] = useState<number | string>(proposal?.time_after_seconds || 0);
+  const [pairQuantity, setPairQuantity] = useState<number | string>(
+    proposal?.pair_quantity || (proposal as any)?.so_luong_giay || (proposal as any)?.quantity || ""
+  );
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [pairQtyError, setPairQtyError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen && proposal) {
       setDecision(initialDecision);
       setNote("");
       setErrorMsg(null);
+      setPairQtyError(null);
       
       const pBefore = Number(proposal.time_before_seconds || 0);
       const pAfter = Number(proposal.time_after_seconds || 0);
       const pSaved = Number(proposal.saved_seconds || 0);
+      const pQty = Number(proposal.pair_quantity || (proposal as any).so_luong_giay || (proposal as any).quantity || 0);
 
       if (pBefore > 0 || pAfter > 0) {
         setTimeBefore(pBefore);
@@ -61,6 +70,8 @@ export default function FeasibilityApprovalModal({
         setTimeBefore(0);
         setTimeAfter(0);
       }
+
+      setPairQuantity(pQty > 0 ? pQty : "");
     }
   }, [isOpen, initialDecision, proposal]);
 
@@ -68,6 +79,7 @@ export default function FeasibilityApprovalModal({
 
   const rawBefore = Number(timeBefore) || 0;
   const rawAfter = Number(timeAfter) || 0;
+  const rawPairQty = Number(pairQuantity) || 0;
   const pSaved = Number(proposal?.saved_seconds || 0);
 
   let beforeVal = Math.max(0, rawBefore);
@@ -80,7 +92,9 @@ export default function FeasibilityApprovalModal({
     beforeVal = pSaved;
   }
 
+  const pairQtyVal = Math.max(0, Math.floor(rawPairQty));
   const efficiencyVndVal = Math.round(savedVal * 12.5);
+  const totalSavingsVndVal = efficiencyVndVal * pairQtyVal;
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "20/05/2024";
@@ -100,10 +114,25 @@ export default function FeasibilityApprovalModal({
     try {
       setSubmitting(true);
       setErrorMsg(null);
+      setPairQtyError(null);
 
       if (decision === "APPROVE") {
+        let hasErr = false;
+
         if (beforeVal < 0 || afterVal < 0) {
           setErrorMsg("❌ Thời gian Trước và Sau phải là số không âm!");
+          hasErr = true;
+        }
+
+        if (!pairQuantity || pairQtyVal < 1) {
+          setPairQtyError("Vui lòng nhập số lượng giày (≥ 1)");
+          if (!hasErr) {
+            setErrorMsg("❌ Vui lòng nhập số lượng giày của đơn hàng!");
+          }
+          hasErr = true;
+        }
+
+        if (hasErr) {
           setSubmitting(false);
           return;
         }
@@ -120,6 +149,10 @@ export default function FeasibilityApprovalModal({
           timeAfterSeconds: decision === "APPROVE" ? afterVal : (proposal.time_after_seconds || 0),
           savedSeconds: decision === "APPROVE" ? savedVal : (proposal.saved_seconds || 0),
           efficiencyValueVND: decision === "APPROVE" ? efficiencyVndVal : 0,
+          pairQuantity: decision === "APPROVE" ? pairQtyVal : (proposal.pair_quantity || 0),
+          so_luong_giay: decision === "APPROVE" ? pairQtyVal : (proposal.pair_quantity || 0),
+          totalSavingsVND: decision === "APPROVE" ? totalSavingsVndVal : 0,
+          tong_tien_tiet_kiem: decision === "APPROVE" ? totalSavingsVndVal : 0,
         }),
       });
 
@@ -132,6 +165,9 @@ export default function FeasibilityApprovalModal({
           time_before_seconds: json.time_before_seconds !== undefined ? json.time_before_seconds : beforeVal,
           time_after_seconds: json.time_after_seconds !== undefined ? json.time_after_seconds : afterVal,
           saved_seconds: json.saved_seconds !== undefined ? json.saved_seconds : savedVal,
+          efficiency_value_vnd: json.efficiency_value_vnd !== undefined ? json.efficiency_value_vnd : efficiencyVndVal,
+          pair_quantity: json.pair_quantity !== undefined ? json.pair_quantity : pairQtyVal,
+          total_savings_vnd: json.total_savings_vnd !== undefined ? json.total_savings_vnd : totalSavingsVndVal,
         });
         onClose();
       } else {
@@ -336,20 +372,21 @@ export default function FeasibilityApprovalModal({
             </div>
           </div>
 
-          {/* NHẬP SỐ LIỆU THỜI GIAN TRƯỚC/SAU KHI PHÊ DUYỆT */}
+          {/* NHẬP SỐ LIỆU THỜI GIAN TRƯỚC/SAU KHI PHÊ DUYỆT & SỐ LƯỢNG GIÀY */}
           {decision === "APPROVE" && (
             <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="font-extrabold text-xs text-emerald-900 flex items-center gap-1.5">
                   <span>⏱️</span>
-                  <span>Nhập thời gian thử nghiệm &amp; đánh giá hiệu quả (giây)</span>
+                  <span>Nhập thời gian thử nghiệm &amp; đánh giá hiệu quả</span>
                 </span>
                 <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100/90 border border-emerald-200 px-2.5 py-0.5 rounded-full">
                   12.5đ / giây
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* HÀNG 3 Ô INPUT: TRƯỚC (GIÂY), SAU (GIÂY), SỐ LƯỢNG GIÀY (ĐÔI) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-1">
                   <label className="text-[11px] font-bold text-slate-700 block">
                     TRƯỚC (giây) <span className="text-rose-600 font-bold">*</span>
@@ -379,36 +416,71 @@ export default function FeasibilityApprovalModal({
                     className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-black text-slate-900 bg-white outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 shadow-2xs"
                   />
                 </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-700 block truncate" title="SỐ LƯỢNG GIÀY (ĐÔI) *">
+                    SỐ LƯỢNG GIÀY (ĐÔI) <span className="text-rose-600 font-bold">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    step="1"
+                    value={pairQuantity}
+                    onChange={(e) => {
+                      setPairQuantity(e.target.value);
+                      if (pairQtyError) setPairQtyError(null);
+                    }}
+                    placeholder="Nhập số đôi giày..."
+                    className={`w-full p-2.5 rounded-xl border text-xs font-black text-slate-900 bg-white outline-none focus:ring-1 shadow-2xs ${
+                      pairQtyError
+                        ? "border-rose-400 focus:border-rose-600 focus:ring-rose-600 bg-rose-50/40"
+                        : "border-slate-300 focus:border-emerald-600 focus:ring-emerald-600"
+                    }`}
+                  />
+                  {pairQtyError && (
+                    <p className="text-[10.5px] font-bold text-rose-600 mt-0.5 animate-in fade-in">
+                      {pairQtyError}
+                    </p>
+                  )}
+                </div>
               </div>
 
-              {/* CARDS PREVIEW CỦA HIỆU QUẢ */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                <div className="p-2.5 rounded-xl bg-white border border-slate-200 space-y-0.5 shadow-2xs">
+              {/* CARDS PREVIEW CỦA HIỆU QUẢ (5 HÀNG CARD REALTIME) */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1">
+                <div className="p-2 rounded-xl bg-white border border-slate-200 space-y-0.5 shadow-2xs">
                   <span className="text-[9px] font-extrabold uppercase text-slate-400 block">TRƯỚC</span>
-                  <span className="text-sm font-black text-slate-900 block">{beforeVal}</span>
+                  <span className="text-xs sm:text-sm font-black text-slate-900 block">{beforeVal}</span>
                   <span className="text-[9px] font-bold text-slate-500 block">giây</span>
                 </div>
 
-                <div className="p-2.5 rounded-xl bg-white border border-slate-200 space-y-0.5 shadow-2xs">
+                <div className="p-2 rounded-xl bg-white border border-slate-200 space-y-0.5 shadow-2xs">
                   <span className="text-[9px] font-extrabold uppercase text-slate-400 block">SAU</span>
-                  <span className="text-sm font-black text-slate-900 block">{afterVal}</span>
+                  <span className="text-xs sm:text-sm font-black text-slate-900 block">{afterVal}</span>
                   <span className="text-[9px] font-bold text-slate-500 block">giây</span>
                 </div>
 
-                <div className="p-2.5 rounded-xl bg-purple-50 border border-purple-200 space-y-0.5 shadow-2xs">
+                <div className="p-2 rounded-xl bg-purple-50 border border-purple-200 space-y-0.5 shadow-2xs">
                   <span className="text-[9px] font-extrabold uppercase text-purple-700 block">TIẾT KIỆM</span>
-                  <span className="text-sm font-black text-purple-900 block">{savedVal}</span>
-                  <span className="text-[9px] font-bold text-purple-600 block">
-                    giây {beforeVal > 0 ? `(${Math.round((savedVal / beforeVal) * 100)}%)` : ""}
+                  <span className="text-xs sm:text-sm font-black text-purple-900 block">{savedVal}s</span>
+                  <span className="text-[8.5px] font-bold text-purple-600 block truncate">
+                    {beforeVal > 0 ? `${Math.round((savedVal / beforeVal) * 100)}%` : "0%"}
                   </span>
                 </div>
 
-                <div className="p-2.5 rounded-xl bg-[#006838] text-white space-y-0.5 shadow-sm">
+                <div className="p-2 rounded-xl bg-[#006838] text-white space-y-0.5 shadow-xs">
                   <span className="text-[9px] font-extrabold uppercase text-emerald-200 block">HIỆU QUẢ</span>
-                  <span className="text-xs font-black text-white block truncate">
-                    {efficiencyVndVal.toLocaleString("vi-VN")} VNĐ
+                  <span className="text-xs font-black text-white block truncate" title={`${efficiencyVndVal.toLocaleString("vi-VN")} VNĐ`}>
+                    {efficiencyVndVal.toLocaleString("vi-VN")}
                   </span>
-                  <span className="text-[9px] font-bold text-emerald-200 block">quy đổi / đôi</span>
+                  <span className="text-[8.5px] font-bold text-emerald-200 block">VNĐ / đôi</span>
+                </div>
+
+                <div className="p-2 rounded-xl bg-[#00522c] text-white space-y-0.5 shadow-sm border border-emerald-500/30 col-span-2 sm:col-span-1">
+                  <span className="text-[9px] font-extrabold uppercase text-amber-300 block">TỔNG TIẾT KIỆM</span>
+                  <span className="text-xs font-black text-white block truncate" title={`${totalSavingsVndVal.toLocaleString("vi-VN")} VNĐ`}>
+                    {totalSavingsVndVal.toLocaleString("vi-VN")}
+                  </span>
+                  <span className="text-[8.5px] font-bold text-emerald-200 block">VNĐ</span>
                 </div>
               </div>
             </div>

@@ -77,6 +77,10 @@ export interface KaizenProposal {
   time_before_seconds?: number;
   time_after_seconds?: number;
   efficiency_value_vnd?: number;
+  pair_quantity?: number;
+  so_luong_giay?: number;
+  total_savings_vnd?: number;
+  tong_tien_tiet_kiem?: number;
   before_image_url?: string;
   after_image_url?: string;
   attachments_json?: string;
