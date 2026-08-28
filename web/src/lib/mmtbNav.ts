@@ -8,7 +8,6 @@ export type MmtbNavEntry = MmtbNavLeaf | MmtbNavGroup;
 export const MMTB_NAV: MmtbNavEntry[] = [
   { type: 'link', id: 'overview', label: 'Tổng Quan', href: '/maintenance', iconName: 'IconLayoutDashboard' },
   { type: 'link', id: 'machines', label: 'Danh Sách MMTB', href: '/maintenance/machines', iconName: 'IconDeviceLaptop' },
-  { type: 'link', id: 'employees', label: 'Nhân Sự', href: '/maintenance/employees', iconName: 'IconUsers' },
   { type: 'link', id: 'schedule', label: 'Bảo Dưỡng MMTB', href: '/maintenance/schedule', iconName: 'IconTools' },
   { type: 'link', id: 'tickets', label: 'Nhu Cầu Sửa Chữa', href: '/maintenance/tickets', iconName: 'IconClipboardList' },
   { type: 'link', id: 'proposals', label: 'Đề Xuất Cải Tiến', href: '/maintenance/proposals', iconName: 'IconBulb' },
@@ -18,6 +17,7 @@ export const MMTB_NAV: MmtbNavEntry[] = [
     label: 'Danh Mục',
     iconName: 'IconCategory',
     children: [
+      { type: 'link', id: 'employees', label: 'Nhân Sự', href: '/maintenance/employees', iconName: 'IconUsers' },
       { type: 'link', id: 'cat-areas', label: 'Quản Lý Khu Vực', href: '/maintenance/categories/areas', iconName: 'IconMapPin' },
       { type: 'link', id: 'cat-failure', label: 'Danh Mục Hư', href: '/maintenance/failure-categories', iconName: 'IconAlertTriangle' },
       { type: 'link', id: 'cat-maintenance', label: 'Bảo Trì', href: '/maintenance/categories/maintenance-periods', iconName: 'IconCalendarStats' },

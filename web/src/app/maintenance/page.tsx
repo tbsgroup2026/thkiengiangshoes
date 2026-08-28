@@ -77,7 +77,6 @@ export default function OverviewPage() {
       <div className="p-4 sm:p-6 space-y-4">
         <div>
           <h1 className="text-2xl font-extrabold text-tbs-dark">Tổng Quan</h1>
-          <p className="text-xs text-gray-500 mt-1">Dữ liệu thật, đồng bộ trực tiếp từ hệ thống MMTB (tbsMayMoc)</p>
         </div>
 
         {error && <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">⚠️ {error}</div>}

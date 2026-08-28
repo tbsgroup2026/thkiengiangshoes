@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { IconClockHour4, IconStopwatch, IconStar, IconTrophy } from '@tabler/icons-react';
 import MaintenanceShell from '@/components/MaintenanceShell';
 import FilterSelect from '@/components/FilterSelect';
+import DateRangeFilter, { inDateRange } from '@/components/DateRangeFilter';
 
 type ResponseTimeIncident = {
   id: string;
@@ -35,26 +36,34 @@ function formatMinutes(m: number): string {
   return `${h} giờ ${rem} phút`;
 }
 
+type CategoryOption = { id: string; name: string };
+
 export default function ResponseTimePage() {
   const [incidents, setIncidents] = useState<ResponseTimeIncident[]>([]);
   const [logs, setLogs] = useState<ResponseTimeLog[]>([]);
+  const [factories, setFactories] = useState<CategoryOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [factoryId, setFactoryId] = useState('');
+  const [factoryName, setFactoryName] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   useEffect(() => {
     (async () => {
       try {
         setLoading(true);
         setError(null);
-        const res = await fetch('/api/mmtb-kg/response-time');
-        const result = await res.json();
-        if (result.success) {
-          setIncidents(result.incidents || []);
-          setLogs(result.logs || []);
+        const [resRes, facRes] = await Promise.all([
+          fetch('/api/mmtb-kg/response-time').then((r) => r.json()),
+          fetch('/api/mmtb-kg/categories?type=FACTORY').then((r) => r.json()),
+        ]);
+        if (resRes.success) {
+          setIncidents(resRes.incidents || []);
+          setLogs(resRes.logs || []);
         } else {
-          setError(result.error || 'Không lấy được dữ liệu');
+          setError(resRes.error || 'Không lấy được dữ liệu');
         }
+        if (facRes.success) setFactories(facRes.data || []);
       } catch {
         setError('Không kết nối được tới hệ thống MMTB');
       } finally {
@@ -63,17 +72,20 @@ export default function ResponseTimePage() {
     })();
   }, []);
 
-  const factoryOptions = useMemo(() => {
-    const set = new Set<string>();
-    incidents.forEach((i) => i.factoryName && set.add(i.factoryName));
-    return Array.from(set).sort((a, b) => a.localeCompare(b, 'vi')).map((name) => ({ id: name, name }));
-  }, [incidents]);
-
   const filteredIncidents = useMemo(
-    () => incidents.filter((i) => !factoryId || i.factoryName === factoryId),
-    [incidents, factoryId],
+    () =>
+      incidents.filter(
+        (i) => (!factoryName || i.factoryName === factoryName) && inDateRange(i.createdAt, dateFrom, dateTo),
+      ),
+    [incidents, factoryName, dateFrom, dateTo],
   );
-  const filteredLogs = useMemo(() => logs.filter((l) => !factoryId || l.factoryName === factoryId), [logs, factoryId]);
+  const filteredLogs = useMemo(
+    () =>
+      logs.filter(
+        (l) => (!factoryName || l.factoryName === factoryName) && inDateRange(l.createdAt, dateFrom, dateTo),
+      ),
+    [logs, factoryName, dateFrom, dateTo],
+  );
 
   const overall = useMemo(() => {
     const acceptTimes = filteredIncidents.map((i) => minutesBetween(i.createdAt, i.acceptedAt));
@@ -125,13 +137,13 @@ export default function ResponseTimePage() {
       <div className="p-4 sm:p-6 space-y-4">
         <div>
           <h1 className="text-2xl font-extrabold text-tbs-dark">Thời Gian Phản Hồi</h1>
-          <p className="text-xs text-gray-500 mt-1">Dữ liệu thật, đồng bộ trực tiếp từ hệ thống MMTB (tbsMayMoc)</p>
         </div>
 
         {error && <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">⚠️ {error}</div>}
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-wrap items-center gap-2.5">
-          <FilterSelect value={factoryId} onChange={setFactoryId} options={factoryOptions} placeholder="Tất cả nhà máy" />
+          <FilterSelect value={factoryName} onChange={setFactoryName} options={factories.map((f) => ({ id: f.name, name: f.name }))} placeholder="Tất cả nhà máy" />
+          <DateRangeFilter from={dateFrom} to={dateTo} onFromChange={setDateFrom} onToChange={setDateTo} />
         </div>
 
         {loading ? (

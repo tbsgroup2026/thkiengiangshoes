@@ -102,7 +102,7 @@ export default function FloorPlanPage() {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch(`/api/maintenance/floor-plan?factoryId=${fid}`);
+      const res = await fetch(`/api/mmtb-kg/floor-plan?factoryId=${fid}`);
       const result = await res.json();
       if (result.success) {
         setFactory(result.factory ?? null);
@@ -143,12 +143,12 @@ export default function FloorPlanPage() {
 
   useEffect(() => {
     if (mode !== 'draw-path' || !floorId) { setPaths([]); return; }
-    fetch(`/api/maintenance/map-path?floorId=${floorId}`).then((r) => r.json()).then((r) => { if (r.success) setPaths(r.data || []); });
+    fetch(`/api/mmtb-kg/map-path?floorId=${floorId}`).then((r) => r.json()).then((r) => { if (r.success) setPaths(r.data || []); });
   }, [mode, floorId]);
 
   useEffect(() => {
     if (mode !== 'add-georef' || !floorId) { setGeorefPoints([]); return; }
-    fetch(`/api/maintenance/map-georef?floorId=${floorId}`).then((r) => r.json()).then((r) => { if (r.success) setGeorefPoints(r.data || []); });
+    fetch(`/api/mmtb-kg/map-georef?floorId=${floorId}`).then((r) => r.json()).then((r) => { if (r.success) setGeorefPoints(r.data || []); });
   }, [mode, floorId]);
 
   function pctFromClick(e: React.MouseEvent<HTMLDivElement>): { x: number; y: number } | null {
@@ -164,7 +164,7 @@ export default function FloorPlanPage() {
     if (!pt) return;
 
     if (mode === 'pin-machine' && pinMachineId) {
-      const res = await fetch(`/api/maintenance/machines/${pinMachineId}/position`, {
+      const res = await fetch(`/api/mmtb-kg/machines/${pinMachineId}/position`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mapX: pt.x, mapY: pt.y }),
       });
       const result = await res.json();
@@ -189,7 +189,7 @@ export default function FloorPlanPage() {
     }
 
     if (mode === 'pin-default' && pinDefaultId) {
-      const res = await fetch(`/api/maintenance/default-pin/${pinDefaultId}`, {
+      const res = await fetch(`/api/mmtb-kg/default-pin/${pinDefaultId}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mapX: pt.x, mapY: pt.y }),
       });
       const result = await res.json();
@@ -201,7 +201,7 @@ export default function FloorPlanPage() {
 
   async function handleSaveAreaBoundary() {
     if (!drawAreaId || drawAreaPoints.length < 3) return alert('Cần tối thiểu 3 điểm để tạo 1 vùng khoanh');
-    const res = await fetch(`/api/maintenance/area-boundary/${drawAreaId}`, {
+    const res = await fetch(`/api/mmtb-kg/area-boundary/${drawAreaId}`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ boundaryPoints: drawAreaPoints }),
     });
     const result = await res.json();
@@ -213,7 +213,7 @@ export default function FloorPlanPage() {
   async function handleClearAreaBoundary() {
     if (!drawAreaId) return;
     if (!confirm('Xoá vùng khoanh của khu vực này?')) return;
-    const res = await fetch(`/api/maintenance/area-boundary/${drawAreaId}`, {
+    const res = await fetch(`/api/mmtb-kg/area-boundary/${drawAreaId}`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ boundaryPoints: null }),
     });
     const result = await res.json();
@@ -242,7 +242,7 @@ export default function FloorPlanPage() {
 
   async function handleDeletePath(id: string) {
     if (!confirm('Xoá đoạn đường đi này?')) return;
-    const res = await fetch(`/api/maintenance/map-path/${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/mmtb-kg/map-path/${id}`, { method: 'DELETE' });
     const result = await res.json();
     if (!result.success) return alert(result.error || 'Không xoá được');
     setPaths((prev) => prev.filter((p) => p.id !== id));
@@ -279,7 +279,7 @@ export default function FloorPlanPage() {
 
   async function handleDeleteGeoPoint(id: string) {
     if (!confirm('Xoá điểm hiệu chỉnh GPS này?')) return;
-    const res = await fetch(`/api/maintenance/map-georef/${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/mmtb-kg/map-georef/${id}`, { method: 'DELETE' });
     const result = await res.json();
     if (!result.success) return alert(result.error || 'Không xoá được');
     setGeorefPoints((prev) => prev.filter((p) => p.id !== id));
@@ -294,7 +294,7 @@ export default function FloorPlanPage() {
 
   async function handleSaveGeofence() {
     if (!factoryId) return;
-    const res = await fetch(`/api/maintenance/geofence/${factoryId}`, {
+    const res = await fetch(`/api/mmtb-kg/geofence/${factoryId}`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         geofenceLat: geofenceLat ? Number(geofenceLat) : null,
@@ -330,7 +330,7 @@ export default function FloorPlanPage() {
 
   async function handleRenameFloor() {
     if (!currentFloor || !floorNameDraft.trim()) return;
-    const res = await fetch(`/api/maintenance/floors/${currentFloor.id}`, {
+    const res = await fetch(`/api/mmtb-kg/floors/${currentFloor.id}`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: floorNameDraft.trim() }),
     });
     const result = await res.json();
@@ -342,7 +342,7 @@ export default function FloorPlanPage() {
   async function handleDeleteFloor() {
     if (!currentFloor) return;
     if (!confirm(`Xoá Tầng "${currentFloor.name}"? Toàn bộ vùng khoanh/đường đi/điểm GPS của Tầng này cũng bị xoá.`)) return;
-    const res = await fetch(`/api/maintenance/floors/${currentFloor.id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/mmtb-kg/floors/${currentFloor.id}`, { method: 'DELETE' });
     const result = await res.json();
     if (!result.success) return alert(result.error || 'Không xoá được Tầng');
     await loadFloorPlan(factoryId);
@@ -365,7 +365,7 @@ export default function FloorPlanPage() {
       });
       const uploadResult = await uploadRes.json();
       if (!uploadResult.success) return alert(uploadResult.error || 'Tải ảnh lên thất bại');
-      const res = await fetch(`/api/maintenance/floors/${currentFloor.id}`, {
+      const res = await fetch(`/api/mmtb-kg/floors/${currentFloor.id}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ floorPlanImageUrl: uploadResult.url }),
       });
       const result = await res.json();

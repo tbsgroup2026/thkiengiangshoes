@@ -351,7 +351,7 @@ export default function MachinesPage() {
         machineTypeId: formData.machineTypeId || null,
         statusId: formData.statusId,
       };
-      const url = editingId ? `/api/maintenance/machines/${editingId}` : '/api/mmtb-kg/machines';
+      const url = editingId ? `/api/mmtb-kg/machines/${editingId}` : '/api/mmtb-kg/machines';
       const res = await fetch(url, {
         method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -375,7 +375,7 @@ export default function MachinesPage() {
     if (!confirm(`Xoá máy "${m.name}" (${m.code})? Hành động này không thể hoàn tác.`)) return;
     setDeletingId(m.id);
     try {
-      const res = await fetch(`/api/maintenance/machines/${m.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/mmtb-kg/machines/${m.id}`, { method: 'DELETE' });
       const result = await res.json();
       if (!result.success) {
         alert(result.error || 'Không xoá được máy');
@@ -505,14 +505,11 @@ export default function MachinesPage() {
   }
 
   return (
-    <MaintenanceShell title="Danh Sách MMTB" subtitle={`${filtered.length} máy — dữ liệu thật, đồng bộ trực tiếp từ tbsMayMoc`}>
+    <MaintenanceShell title="Danh Sách MMTB" subtitle={`${filtered.length} máy — Tổ hợp Kiên Giang`}>
     <div className="p-4 sm:p-6 space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-extrabold text-tbs-dark">Danh Sách MMTB</h1>
-          <p className="text-xs text-gray-500 mt-1">
-            Dữ liệu thật, đồng bộ trực tiếp từ hệ thống Quản lý MMTB (tbsMayMoc) — Tổ hợp Kiên Giang · {filtered.length} máy
-          </p>
         </div>
         <div className="flex items-center gap-2">
           <button

@@ -106,15 +106,15 @@ export default function MaintenanceShell({
 
   return (
     <div className="min-h-screen bg-tbs-light flex text-slate-800 font-sans antialiased">
-      {/* SIDEBAR */}
+      {/* SIDEBAR — nền tối xanh đậm, đồng bộ màu trang đăng nhập (#08221a) */}
       <aside
-        className={`hidden lg:flex ${collapsed ? 'w-20' : 'w-64'} bg-white border-r border-slate-200/90 flex-col flex-shrink-0 transition-all duration-300 sticky top-0 h-screen shadow-2xs`}
+        className={`hidden lg:flex ${collapsed ? 'w-20' : 'w-64'} bg-[#08221a] border-r border-white/10 flex-col flex-shrink-0 transition-all duration-300 sticky top-0 h-screen shadow-xl`}
       >
-        <div className="p-4 flex items-center justify-between border-b border-slate-100 min-h-[58px]">
+        <div className="p-4 flex items-center justify-between border-b border-white/10 min-h-[58px]">
           {!collapsed ? (
             <Link href="/work" className="flex items-center gap-2 min-w-0">
               <img src="/images/tbs-logo.png" alt="TBS Group Logo" className="h-7 w-auto object-contain flex-shrink-0" />
-              <span className="text-xs font-black text-tbs-dark truncate">Quản Lý MMTB</span>
+              <span className="text-xs font-black text-white truncate">Quản Lý MMTB</span>
             </Link>
           ) : (
             <Link href="/work" className="mx-auto">
@@ -123,7 +123,7 @@ export default function MaintenanceShell({
           )}
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 flex-shrink-0 ml-1"
+            className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-white/60 hover:text-white flex-shrink-0 ml-1 transition-colors"
           >
             {collapsed ? <IconChevronRight size={15} /> : <IconChevronLeft size={15} />}
           </button>
@@ -138,11 +138,13 @@ export default function MaintenanceShell({
                 <Link
                   key={entry.id}
                   href={entry.href}
-                  className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-                    isActive ? 'bg-emerald-50 text-accent font-extrabold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-150 border-l-2 ${
+                    isActive
+                      ? 'bg-accent/20 text-accent-light font-extrabold border-accent-light'
+                      : 'border-transparent text-white/55 hover:bg-white/[0.06] hover:text-white'
                   }`}
                 >
-                  <Icon size={17} className={isActive ? 'text-accent' : 'text-slate-500'} />
+                  <Icon size={17} className={isActive ? 'text-accent-light' : 'text-white/40'} />
                   {!collapsed && <span className="truncate">{entry.label}</span>}
                 </Link>
               );
@@ -156,11 +158,11 @@ export default function MaintenanceShell({
               <div key={entry.id}>
                 <button
                   onClick={() => setOpenGroups((prev) => ({ ...prev, [entry.id]: !isOpen }))}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-                    hasActiveChild ? 'text-accent' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-150 ${
+                    hasActiveChild ? 'text-accent-light' : 'text-white/55 hover:bg-white/[0.06] hover:text-white'
                   }`}
                 >
-                  <GroupIcon size={17} className={hasActiveChild ? 'text-accent' : 'text-slate-500'} />
+                  <GroupIcon size={17} className={hasActiveChild ? 'text-accent-light' : 'text-white/40'} />
                   {!collapsed && (
                     <>
                       <span className="truncate flex-1 text-left">{entry.label}</span>
@@ -169,7 +171,7 @@ export default function MaintenanceShell({
                   )}
                 </button>
                 {!collapsed && isOpen && (
-                  <div className="ml-3.5 pl-3 border-l border-slate-100 space-y-0.5 mt-0.5">
+                  <div className="ml-3.5 pl-3 border-l border-white/10 space-y-0.5 mt-0.5">
                     {entry.children.map((c) => {
                       const CIcon = ICONS[c.iconName] ?? IconTools;
                       const isActive = pathname === c.href;
@@ -177,11 +179,11 @@ export default function MaintenanceShell({
                         <Link
                           key={c.id}
                           href={c.href}
-                          className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all ${
-                            isActive ? 'bg-emerald-50 text-accent' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                          className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all duration-150 ${
+                            isActive ? 'bg-accent/20 text-accent-light' : 'text-white/40 hover:bg-white/[0.06] hover:text-white/80'
                           }`}
                         >
-                          <CIcon size={14} className={isActive ? 'text-accent' : 'text-slate-400'} />
+                          <CIcon size={14} className={isActive ? 'text-accent-light' : 'text-white/30'} />
                           <span className="truncate">{c.label}</span>
                         </Link>
                       );
@@ -193,17 +195,17 @@ export default function MaintenanceShell({
           })}
         </nav>
 
-        <div className="p-3 border-t border-slate-100 space-y-0.5">
+        <div className="p-3 border-t border-white/10 space-y-0.5">
           <Link
             href="/work"
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-50 hover:text-tbs-dark"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-white/50 hover:bg-white/[0.06] hover:text-white transition-colors duration-150"
           >
             <IconArrowLeft size={16} />
             {!collapsed && <span>Về Trang Chủ</span>}
           </Link>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-rose-500 hover:bg-rose-50"
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 transition-colors duration-150"
           >
             <IconLogout size={16} />
             {!collapsed && <span>Đăng Xuất MMTB</span>}

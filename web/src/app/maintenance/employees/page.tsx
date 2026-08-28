@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { IconPlus, IconPencil, IconTrash, IconUsers } from '@tabler/icons-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import * as XLSX from 'xlsx';
+import { IconPlus, IconPencil, IconTrash, IconUsers, IconFileSpreadsheet } from '@tabler/icons-react';
 import MaintenanceShell from '@/components/MaintenanceShell';
 import FilterSelect from '@/components/FilterSelect';
 
@@ -47,6 +48,18 @@ const EMPTY_FORM: FormData = {
   factoryId: '', areaId: '', isTeamLead: false, extraAreaIds: [],
 };
 
+const IMPORT_TEMPLATE_HEADERS = ['Mã nhân viên', 'Tên', 'SĐT', 'Mật khẩu', 'Vai trò (Vận hành/Bảo trì)', 'Nhà máy', 'Khu vực'] as const;
+
+type ImportRow = { rowNumber: number; label: string; payload: {
+  employeeCode: string; name: string; phone: string | null; password: string; role: Role;
+  factoryId: string; areaId: string | null;
+} };
+type ImportRowError = { rowNumber: number; label: string; message: string };
+
+function normLoose(s: unknown): string {
+  return String(s ?? '').normalize('NFC').trim().toLowerCase();
+}
+
 // Nhân Sự — Thêm/Sửa/Xoá tài khoản đăng nhập App Mobile Native THẬT của nhân viên KG. Không tạo/
 // sửa được tài khoản Quản trị (ADMIN) — tbsMayMoc chặn ở server, chỉ Admin toàn quyền làm được.
 export default function EmployeesPage() {
@@ -66,6 +79,14 @@ export default function EmployeesPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Nhập Excel hàng loạt
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importRows, setImportRows] = useState<ImportRow[]>([]);
+  const [importRowErrors, setImportRowErrors] = useState<ImportRowError[]>([]);
+  const [importSubmitting, setImportSubmitting] = useState(false);
+  const [importResult, setImportResult] = useState<{ success: number; failed: string[] } | null>(null);
 
   const load = async () => {
     try {
@@ -152,7 +173,7 @@ export default function EmployeesPage() {
         isTeamLead: formData.role === 'MAINTENANCE' ? formData.isTeamLead : false,
         extraAreaIds: formData.role === 'MAINTENANCE' && formData.isTeamLead ? formData.extraAreaIds : [],
       };
-      const url = editingId ? `/api/maintenance/employees/${editingId}` : '/api/mmtb-kg/employees';
+      const url = editingId ? `/api/mmtb-kg/employees/${editingId}` : '/api/mmtb-kg/employees';
       const res = await fetch(url, {
         method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -176,7 +197,7 @@ export default function EmployeesPage() {
     if (!confirm(`Xoá tài khoản "${e.name}" (${e.employeeCode})? Nhân viên này sẽ không đăng nhập được nữa.`)) return;
     setDeletingId(e.id);
     try {
-      const res = await fetch(`/api/maintenance/employees/${e.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/mmtb-kg/employees/${e.id}`, { method: 'DELETE' });
       const result = await res.json();
       if (!result.success) {
         alert(result.error || 'Không xoá được');
@@ -190,17 +211,154 @@ export default function EmployeesPage() {
     }
   }
 
+  function handleExport() {
+    const rows = filtered.map((e) => ({
+      'Mã nhân viên': e.employeeCode,
+      Tên: e.name,
+      SĐT: e.phone ?? '',
+      'Vai trò': ROLE_LABEL[e.role],
+      'Nhà máy': e.factory?.name ?? '',
+      'Khu vực': e.area?.name ?? '',
+      'Trưởng team': e.isTeamLead ? 'Có' : '',
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Nhan_Su');
+    XLSX.writeFile(wb, `Nhan_Su_MMTB_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }
+
+  function handleDownloadTemplate() {
+    const ws = XLSX.utils.aoa_to_sheet([
+      [...IMPORT_TEMPLATE_HEADERS],
+      ['NV-001', 'Nguyễn Văn A', '0900000000', '123456', 'Vận hành', 'KG1', 'Xưởng 1'],
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Mau_Nhap_NhanSu');
+    XLSX.writeFile(wb, 'Mau_Nhap_Nhan_Su_MMTB.xlsx');
+  }
+
+  function findByName(list: CategoryOption[], name: string, parentId?: string | null): CategoryOption | undefined {
+    const n = normLoose(name);
+    if (!n) return undefined;
+    const candidates = list.filter((c) => normLoose(c.name) === n);
+    if (candidates.length <= 1) return candidates[0];
+    return candidates.find((c) => !parentId || c.parentId === parentId) ?? candidates[0];
+  }
+
+  function handleImportFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setImportResult(null);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = new Uint8Array(ev.target?.result as ArrayBuffer);
+        const wb = XLSX.read(data, { type: 'array' });
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
+
+        const okRows: ImportRow[] = [];
+        const errRows: ImportRowError[] = [];
+
+        rows.forEach((r, idx) => {
+          const rowNumber = idx + 2;
+          const employeeCode = String(r['Mã nhân viên'] ?? '').trim();
+          const name = String(r['Tên'] ?? '').trim();
+          const phone = String(r['SĐT'] ?? '').trim();
+          const password = String(r['Mật khẩu'] ?? '').trim();
+          const roleRaw = normLoose(r['Vai trò (Vận hành/Bảo trì)'] ?? r['Vai trò'] ?? '');
+          const label = `Dòng ${rowNumber}${employeeCode ? ` (${employeeCode})` : ''}`;
+
+          if (!employeeCode || !name || !password) {
+            errRows.push({ rowNumber, label, message: 'Thiếu Mã nhân viên / Tên / Mật khẩu' });
+            return;
+          }
+          const role: Role | null = roleRaw.includes('bảo trì') || roleRaw.includes('bao tri') ? 'MAINTENANCE'
+            : roleRaw.includes('vận hành') || roleRaw.includes('van hanh') || !roleRaw ? 'OPERATOR' : null;
+          if (!role) {
+            errRows.push({ rowNumber, label, message: `Vai trò không hợp lệ "${r['Vai trò (Vận hành/Bảo trì)']}"` });
+            return;
+          }
+          const factory = findByName(factories, String(r['Nhà máy'] ?? ''));
+          if (!factory) {
+            errRows.push({ rowNumber, label, message: `Không tìm thấy Nhà máy "${r['Nhà máy']}"` });
+            return;
+          }
+          const area = findByName(areas, String(r['Khu vực'] ?? ''), factory.id);
+
+          okRows.push({
+            rowNumber,
+            label,
+            payload: { employeeCode, name, phone: phone || null, password, role, factoryId: factory.id, areaId: area?.id ?? null },
+          });
+        });
+
+        setImportRows(okRows);
+        setImportRowErrors(errRows);
+        setImportOpen(true);
+      } catch {
+        alert('Không đọc được file Excel — kiểm tra lại định dạng file (.xlsx)');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  async function handleImportSubmit() {
+    if (importRows.length === 0) return;
+    setImportSubmitting(true);
+    let success = 0;
+    const failed: string[] = [];
+    for (const row of importRows) {
+      try {
+        const res = await fetch('/api/mmtb-kg/employees', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(row.payload),
+        });
+        const result = await res.json();
+        if (result.success) success++;
+        else failed.push(`${row.label}: ${result.error || 'Lỗi không rõ'}`);
+      } catch {
+        failed.push(`${row.label}: Không kết nối được`);
+      }
+    }
+    setImportSubmitting(false);
+    setImportResult({ success, failed });
+    setImportRows([]);
+    setImportRowErrors([]);
+    if (success > 0) await load();
+  }
+
   return (
     <MaintenanceShell title="Nhân Sự" subtitle="Tài khoản đăng nhập App Mobile Native — Tổ hợp Kiên Giang">
       <div className="p-4 sm:p-6 space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-2xl font-extrabold text-tbs-dark">Nhân Sự</h1>
-            <p className="text-xs text-gray-500 mt-1">Dữ liệu thật, tài khoản đăng nhập App Mobile — {filtered.length} nhân viên</p>
           </div>
-          <button onClick={openCreateForm} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-tbs-dark text-white text-xs font-bold hover:opacity-90">
-            <IconPlus size={15} /> Thêm Nhân Viên
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={openCreateForm} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-tbs-dark text-white text-xs font-bold hover:opacity-90">
+              <IconPlus size={15} /> Thêm Nhân Viên
+            </button>
+            <input ref={importInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportFileChange} />
+            <button
+              onClick={() => importInputRef.current?.click()}
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700"
+            >
+              <IconFileSpreadsheet size={15} /> Nhập Excel
+            </button>
+            <button onClick={handleDownloadTemplate} className="px-3 py-2.5 text-[11px] font-bold text-blue-600 hover:underline">
+              Tải mẫu
+            </button>
+            <button
+              onClick={handleExport}
+              disabled={filtered.length === 0}
+              className="px-4 py-2.5 rounded-xl bg-accent text-white text-xs font-bold hover:bg-accent-light disabled:opacity-40"
+            >
+              ⬇ Xuất Excel
+            </button>
+          </div>
         </div>
 
         {error && <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">⚠️ {error}</div>}
@@ -361,6 +519,80 @@ export default function EmployeesPage() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* NHẬP EXCEL — xem trước dòng lỗi/hợp lệ trước khi ghi thật */}
+      {importOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-2xl w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <h3 className="font-bold text-lg text-tbs-dark">Nhập Excel — Xem Trước</h3>
+            <p className="text-xs text-gray-500">
+              <span className="font-bold text-emerald-600">{importRows.length} dòng hợp lệ</span>
+              {importRowErrors.length > 0 && <> · <span className="font-bold text-rose-600">{importRowErrors.length} dòng lỗi</span></>}
+            </p>
+            {importRowErrors.length > 0 && (
+              <div className="rounded-xl bg-rose-50 border border-rose-200 p-3 space-y-1 max-h-40 overflow-y-auto">
+                {importRowErrors.map((e) => (
+                  <div key={e.rowNumber} className="text-xs text-rose-700"><span className="font-bold">{e.label}:</span> {e.message}</div>
+                ))}
+              </div>
+            )}
+            {importRows.length > 0 && (
+              <div className="rounded-xl border border-gray-100 overflow-hidden">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="bg-gray-50 font-semibold text-gray-500">
+                      <th className="p-2.5">Dòng</th>
+                      <th className="p-2.5">Mã NV</th>
+                      <th className="p-2.5">Tên</th>
+                      <th className="p-2.5">Vai trò</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {importRows.map((r) => (
+                      <tr key={r.rowNumber}>
+                        <td className="p-2.5 text-gray-400">{r.rowNumber}</td>
+                        <td className="p-2.5 font-mono font-bold text-accent">{r.payload.employeeCode}</td>
+                        <td className="p-2.5">{r.payload.name}</td>
+                        <td className="p-2.5">{ROLE_LABEL[r.payload.role]}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button type="button" onClick={() => { setImportOpen(false); setImportRows([]); setImportRowErrors([]); }} className="px-4 py-2.5 rounded-xl bg-gray-100 text-gray-600 text-xs font-bold hover:bg-gray-200">Huỷ</button>
+              <button
+                type="button"
+                onClick={async () => { await handleImportSubmit(); setImportOpen(false); }}
+                disabled={importRows.length === 0 || importSubmitting}
+                className="px-5 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 disabled:opacity-50"
+              >
+                {importSubmitting ? 'Đang nhập...' : `Nhập ${importRows.length} nhân viên`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* KẾT QUẢ NHẬP EXCEL */}
+      {importResult && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-4">
+            <h3 className="font-bold text-lg text-tbs-dark">Kết Quả Nhập Excel</h3>
+            <p className="text-sm">
+              <span className="font-bold text-emerald-600">{importResult.success} nhân viên đã thêm thành công</span>
+              {importResult.failed.length > 0 && <span className="font-bold text-rose-600"> · {importResult.failed.length} thất bại</span>}
+            </p>
+            {importResult.failed.length > 0 && (
+              <div className="rounded-xl bg-rose-50 border border-rose-200 p-3 space-y-1 max-h-52 overflow-y-auto">
+                {importResult.failed.map((f, i) => <div key={i} className="text-xs text-rose-700">{f}</div>)}
+              </div>
+            )}
+            <button onClick={() => setImportResult(null)} className="w-full py-2.5 bg-tbs-dark text-white rounded-xl font-bold text-xs">Đóng</button>
+          </div>
         </div>
       )}
     </MaintenanceShell>

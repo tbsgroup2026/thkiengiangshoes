@@ -84,7 +84,7 @@ export default function CategoriesManager({
       setLoading(true);
       setError(null);
       const results = await Promise.all(
-        fetchTypes.map((t) => fetch(`/api/maintenance/categories?type=${t}`).then((r) => r.json())),
+        fetchTypes.map((t) => fetch(`/api/mmtb-kg/categories?type=${t}`).then((r) => r.json())),
       );
       const next = { ...EMPTY };
       results.forEach((r, i) => {
@@ -170,7 +170,7 @@ export default function CategoriesManager({
     setSubmitting(true);
     setFormError(null);
     try {
-      const url = editingId ? `/api/maintenance/categories/${editingId}` : '/api/mmtb-kg/categories';
+      const url = editingId ? `/api/mmtb-kg/categories/${editingId}` : '/api/mmtb-kg/categories';
       const extra = {
         ...(tabConfig.hasDays ? { days: Number(formDays) } : {}),
         ...(tabConfig.hasColor ? { colorHex: formColor } : {}),
@@ -202,7 +202,7 @@ export default function CategoriesManager({
     if (!confirm(`Xoá "${c.name}"? Hành động này không thể hoàn tác.`)) return;
     setDeletingId(c.id);
     try {
-      const res = await fetch(`/api/maintenance/categories/${c.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/mmtb-kg/categories/${c.id}`, { method: 'DELETE' });
       const result = await res.json();
       if (!result.success) {
         alert(result.error || 'Không xoá được');
@@ -223,7 +223,6 @@ export default function CategoriesManager({
       <div className="p-4 sm:p-6 space-y-4">
         <div>
           <h1 className="text-2xl font-extrabold text-tbs-dark">{pageTitle}</h1>
-          <p className="text-xs text-gray-500 mt-1">Thêm/Sửa/Xoá trực tiếp — đồng bộ ngay với hệ thống MMTB (tbsMayMoc)</p>
         </div>
 
         {error && <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">⚠️ {error}</div>}
@@ -234,8 +233,8 @@ export default function CategoriesManager({
               <button
                 key={k}
                 onClick={() => { setTab(k); setShowForm(false); }}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
-                  tab === k ? 'bg-tbs-dark text-white shadow-md' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                className={`px-5 py-2.5 rounded-xl text-sm font-bold transition ${
+                  tab === k ? 'bg-tbs-dark text-white shadow-md' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-accent/40'
                 }`}
               >
                 {ALL_TAB_CONFIG[k].label}
@@ -251,15 +250,19 @@ export default function CategoriesManager({
         )}
 
         {(tabConfig.parentLevel === 'FACTORY' || tabConfig.parentLevel === 'AREA' || tabConfig.parentLevel === 'PRODUCTION_LINE') && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-wrap items-center gap-2.5">
-            <span className="text-xs font-bold text-gray-500 flex items-center gap-1.5">
-              <IconBuildingFactory2 size={15} /> Phạm vi:
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-wrap items-center gap-3">
+            <span className="flex items-center gap-2 text-sm font-extrabold text-tbs-dark shrink-0">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-accent">
+                <IconBuildingFactory2 size={18} />
+              </span>
+              Phạm vi
             </span>
             <FilterSelect
               value={scopeFactoryId}
               onChange={(v) => { setScopeFactoryId(v); setScopeAreaId(''); setScopeLineId(''); }}
               options={data.FACTORY}
               placeholder="-- Chọn nhà máy --"
+              className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold min-w-[180px] disabled:opacity-50"
             />
             {(tabConfig.parentLevel === 'AREA' || tabConfig.parentLevel === 'PRODUCTION_LINE') && (
               <FilterSelect
@@ -268,6 +271,7 @@ export default function CategoriesManager({
                 options={areasUnderScope}
                 placeholder={scopeFactoryId ? '-- Chọn khu vực --' : 'Chọn nhà máy trước'}
                 disabled={!scopeFactoryId}
+                className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold min-w-[180px] disabled:opacity-50"
               />
             )}
             {tabConfig.parentLevel === 'PRODUCTION_LINE' && (
@@ -277,60 +281,61 @@ export default function CategoriesManager({
                 options={linesUnderScope}
                 placeholder={scopeAreaId ? '-- Chọn chuyền --' : 'Chọn khu vực trước'}
                 disabled={!scopeAreaId}
+                className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold min-w-[180px] disabled:opacity-50"
               />
             )}
           </div>
         )}
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-xl overflow-hidden">
-          <div className="flex items-center justify-between p-4 border-b border-gray-100">
-            <span className="text-xs font-bold text-gray-500">{items.length} mục</span>
+          <div className="flex items-center justify-between p-5 border-b border-gray-100">
+            <span className="text-sm font-extrabold text-tbs-dark">{items.length} mục</span>
             {!readOnlyTab && (
               <button
                 onClick={openCreateForm}
                 disabled={!canCreate}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-accent text-white text-xs font-bold hover:bg-accent-light disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-accent text-white text-sm font-bold hover:bg-accent-light disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <IconPlus size={14} /> Thêm {tabConfig.label}
+                <IconPlus size={16} /> Thêm {tabConfig.label}
               </button>
             )}
           </div>
           <div className="divide-y divide-gray-100">
-            {loading && <div className="p-4 text-xs text-gray-400">Đang tải...</div>}
+            {loading && <div className="p-5 text-sm text-gray-400">Đang tải...</div>}
             {!loading && items.length === 0 && (
-              <div className="p-4 text-xs text-gray-400">
+              <div className="p-5 text-sm text-gray-400">
                 {readOnlyTab || tabConfig.parentLevel === 'SCOPE_KG' ? 'Chưa có mục nào' : canCreate ? 'Chưa có mục nào — bấm Thêm để tạo mới' : 'Vui lòng chọn đủ phạm vi ở trên'}
               </div>
             )}
             {items.map((c) => {
               const shared = isShared(c);
               return (
-                <div key={c.id} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50/80">
-                  <div className="flex items-center gap-2">
+                <div key={c.id} className="flex items-center justify-between px-5 py-4 hover:bg-gray-50/80">
+                  <div className="flex items-center gap-3">
                     {tabConfig.hasColor && (
-                      <span className="w-3.5 h-3.5 rounded-full border border-gray-200 shrink-0" style={{ backgroundColor: c.colorHex || '#94a3b8' }} />
+                      <span className="w-4 h-4 rounded-full border border-gray-200 shrink-0" style={{ backgroundColor: c.colorHex || '#94a3b8' }} />
                     )}
                     <div>
-                      <div className="text-xs font-bold text-tbs-dark flex items-center gap-1.5">
+                      <div className="text-sm font-extrabold text-tbs-dark flex items-center gap-2">
                         {c.name}
                         {shared && <span className="px-1.5 py-0.5 bg-slate-200 text-slate-600 rounded text-[10px] font-bold">Chung</span>}
                       </div>
-                      {tabConfig.hasDays && c.days != null && <div className="text-[11px] text-gray-400 mt-0.5">{c.days} ngày</div>}
-                      {tabConfig.hasQuantity && c.quantity != null && <div className="text-[11px] text-gray-400 mt-0.5">Tồn kho: {c.quantity}</div>}
+                      {tabConfig.hasDays && c.days != null && <div className="text-xs text-gray-400 mt-0.5">{c.days} ngày</div>}
+                      {tabConfig.hasQuantity && c.quantity != null && <div className="text-xs text-gray-400 mt-0.5">Tồn kho: {c.quantity}</div>}
                     </div>
                   </div>
                   {!readOnlyTab && !shared && (
-                    <div className="flex items-center gap-1.5">
-                      <button onClick={() => openEditForm(c)} title="Sửa" className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100">
-                        <IconPencil size={14} />
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => openEditForm(c)} title="Sửa" className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100">
+                        <IconPencil size={16} />
                       </button>
                       <button
                         onClick={() => handleDelete(c)}
                         disabled={deletingId === c.id}
                         title="Xoá"
-                        className="p-1.5 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100 disabled:opacity-40"
+                        className="p-2 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100 disabled:opacity-40"
                       >
-                        <IconTrash size={14} />
+                        <IconTrash size={16} />
                       </button>
                     </div>
                   )}

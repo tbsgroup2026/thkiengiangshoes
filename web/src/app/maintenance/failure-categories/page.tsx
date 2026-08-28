@@ -69,7 +69,7 @@ export default function FailureCategoriesPage() {
     setSubmitting(true);
     setFormError(null);
     try {
-      const url = editingId ? `/api/maintenance/failure-categories/${editingId}` : '/api/mmtb-kg/failure-categories';
+      const url = editingId ? `/api/mmtb-kg/failure-categories/${editingId}` : '/api/mmtb-kg/failure-categories';
       const body = { name: formName.trim(), isOther: formIsOther, order: Number(formOrder) || 0 };
       const res = await fetch(url, {
         method: editingId ? 'PUT' : 'POST',
@@ -94,7 +94,7 @@ export default function FailureCategoriesPage() {
     if (!confirm(`Xoá "${c.name}"?`)) return;
     setDeletingId(c.id);
     try {
-      const res = await fetch(`/api/maintenance/failure-categories/${c.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/mmtb-kg/failure-categories/${c.id}`, { method: 'DELETE' });
       const result = await res.json();
       if (!result.success) {
         alert(result.error || 'Không xoá được');

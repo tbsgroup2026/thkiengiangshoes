@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { IconPlus, IconPencil, IconTrash, IconSpeakerphone } from '@tabler/icons-react';
 import MaintenanceShell from '@/components/MaintenanceShell';
 import FilterSelect from '@/components/FilterSelect';
+import DateRangeFilter, { inDateRange } from '@/components/DateRangeFilter';
 
 type CategoryOption = { id: string; name: string };
 
@@ -42,6 +43,8 @@ export default function AnnouncementsPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   const load = async () => {
     try {
@@ -65,6 +68,11 @@ export default function AnnouncementsPage() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const filtered = useMemo(
+    () => announcements.filter((a) => inDateRange(a.createdAt, dateFrom, dateTo)),
+    [announcements, dateFrom, dateTo]
+  );
 
   function openCreateForm() {
     setEditingId(null);
@@ -100,7 +108,7 @@ export default function AnnouncementsPage() {
         targetFactoryId: formData.targetFactoryId,
         targetRole: formData.targetRole || null,
       };
-      const url = editingId ? `/api/maintenance/announcements/${editingId}` : '/api/mmtb-kg/announcements';
+      const url = editingId ? `/api/mmtb-kg/announcements/${editingId}` : '/api/mmtb-kg/announcements';
       const res = await fetch(url, {
         method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -124,7 +132,7 @@ export default function AnnouncementsPage() {
     if (!confirm(`Xoá thông báo "${a.title}"? (đã gửi tới máy nhân viên rồi, xoá chỉ gỡ khỏi lịch sử)`)) return;
     setDeletingId(a.id);
     try {
-      const res = await fetch(`/api/maintenance/announcements/${a.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/mmtb-kg/announcements/${a.id}`, { method: 'DELETE' });
       const result = await res.json();
       if (!result.success) {
         alert(result.error || 'Không xoá được');
@@ -153,13 +161,19 @@ export default function AnnouncementsPage() {
 
         {error && <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">⚠️ {error}</div>}
 
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-wrap items-center gap-2.5">
+          <DateRangeFilter from={dateFrom} to={dateTo} onFromChange={setDateFrom} onToChange={setDateTo} />
+        </div>
+
         {loading && <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center text-xs text-gray-400">Đang tải...</div>}
-        {!loading && announcements.length === 0 && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center text-xs text-gray-400">Chưa có thông báo nào</div>
+        {!loading && filtered.length === 0 && (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center text-xs text-gray-400">
+            {announcements.length === 0 ? 'Chưa có thông báo nào' : 'Không có thông báo trong khoảng thời gian này'}
+          </div>
         )}
 
         <div className="space-y-2.5">
-          {announcements.map((a) => (
+          {filtered.map((a) => (
             <div key={a.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-start gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600">
                 <IconSpeakerphone size={18} />

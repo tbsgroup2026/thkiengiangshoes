@@ -141,9 +141,6 @@ export default function MaintenanceSchedulePage() {
       <div className="p-4 sm:p-6 space-y-4">
         <div>
           <h1 className="text-2xl font-extrabold text-tbs-dark">Bảo Dưỡng MMTB</h1>
-          <p className="text-xs text-gray-500 mt-1">
-            Dữ liệu thật, đồng bộ trực tiếp từ hệ thống MMTB (tbsMayMoc) — Tổ hợp Kiên Giang
-          </p>
         </div>
 
         {error && (

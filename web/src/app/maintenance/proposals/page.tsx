@@ -1,9 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { IconPackage, IconSchool, IconPlayerPause, IconCircleCheck } from '@tabler/icons-react';
+import { IconPackage, IconSchool, IconPlayerPause, IconCircleCheck, IconClipboardList, IconClock } from '@tabler/icons-react';
 import MaintenanceShell from '@/components/MaintenanceShell';
 import FilterSelect from '@/components/FilterSelect';
+import DateRangeFilter, { inDateRange } from '@/components/DateRangeFilter';
+
+type CategoryOption = { id: string; name: string };
 
 type Proposal = {
   id: string;
@@ -39,20 +42,26 @@ function formatDateTime(iso: string): string {
 
 export default function ProposalsPage() {
   const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [factories, setFactories] = useState<CategoryOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'PENDING' | 'RESOLVED'>('PENDING');
   const [filterFactoryId, setFilterFactoryId] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const load = async () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch('/api/mmtb-kg/proposals');
-      const result = await res.json();
-      if (result.success) setProposals(result.data || []);
-      else setError(result.error || 'Không lấy được dữ liệu');
+      const [propRes, facRes] = await Promise.all([
+        fetch('/api/mmtb-kg/proposals').then((r) => r.json()),
+        fetch('/api/mmtb-kg/categories?type=FACTORY').then((r) => r.json()),
+      ]);
+      if (propRes.success) setProposals(propRes.data || []);
+      else setError(propRes.error || 'Không lấy được dữ liệu');
+      if (facRes.success) setFactories(facRes.data || []);
     } catch {
       setError('Không kết nối được tới hệ thống MMTB');
     } finally {
@@ -65,27 +74,30 @@ export default function ProposalsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const factoryOptions = useMemo(() => {
-    const map = new Map<string, string>();
-    proposals.forEach((p) => {
-      const f = p.incident.machine.area?.parent;
-      if (f) map.set(f.id, f.name);
-    });
-    return Array.from(map, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name, 'vi'));
-  }, [proposals]);
-
   const filtered = useMemo(() => {
     return proposals.filter((p) => {
       const matchesStatus = filterStatus === 'ALL' || (filterStatus === 'PENDING' ? !p.resolved : p.resolved);
       const matchesFactory = !filterFactoryId || p.incident.machine.area?.parent?.id === filterFactoryId;
-      return matchesStatus && matchesFactory;
+      const matchesDate = inDateRange(p.createdAt, dateFrom, dateTo);
+      return matchesStatus && matchesFactory && matchesDate;
     });
-  }, [proposals, filterStatus, filterFactoryId]);
+  }, [proposals, filterStatus, filterFactoryId, dateFrom, dateTo]);
+
+  const stats = useMemo(() => {
+    let unresolved = 0, resolved = 0, parts = 0, retrain = 0, hold = 0;
+    for (const p of proposals) {
+      if (p.resolved) resolved++; else unresolved++;
+      if (p.type === 'PARTS_REQUEST') parts++;
+      else if (p.type === 'RETRAIN_OPERATOR') retrain++;
+      else hold++;
+    }
+    return { total: proposals.length, unresolved, resolved, parts, retrain, hold };
+  }, [proposals]);
 
   async function toggleResolved(p: Proposal) {
     setUpdatingId(p.id);
     try {
-      const res = await fetch(`/api/maintenance/proposals/${p.id}`, {
+      const res = await fetch(`/api/mmtb-kg/proposals/${p.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ resolved: !p.resolved }),
@@ -108,10 +120,29 @@ export default function ProposalsPage() {
       <div className="p-4 sm:p-6 space-y-4">
         <div>
           <h1 className="text-2xl font-extrabold text-tbs-dark">Đề Xuất Cải Tiến</h1>
-          <p className="text-xs text-gray-500 mt-1">Dữ liệu thật, đồng bộ trực tiếp từ hệ thống MMTB (tbsMayMoc) — {filtered.length} đề xuất</p>
         </div>
 
         {error && <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">⚠️ {error}</div>}
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {[
+            { label: 'Tổng đề xuất', value: stats.total, icon: IconClipboardList, bg: 'bg-blue-50', iconBg: 'bg-blue-100', text: 'text-blue-600' },
+            { label: 'Chưa xử lý', value: stats.unresolved, icon: IconClock, bg: 'bg-rose-50', iconBg: 'bg-rose-100', text: 'text-rose-600' },
+            { label: 'Đã xử lý', value: stats.resolved, icon: IconCircleCheck, bg: 'bg-emerald-50', iconBg: 'bg-emerald-100', text: 'text-emerald-600' },
+            { label: 'Cần bổ sung vật tư', value: stats.parts, icon: IconPackage, bg: 'bg-amber-50', iconBg: 'bg-amber-100', text: 'text-amber-600' },
+            { label: 'Đào tạo lại công nhân', value: stats.retrain, icon: IconSchool, bg: 'bg-violet-50', iconBg: 'bg-violet-100', text: 'text-violet-600' },
+          ].map((c) => (
+            <div key={c.label} className={`flex items-center gap-3 rounded-2xl ${c.bg} p-4 shadow-sm`}>
+              <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${c.iconBg}`}>
+                <c.icon size={22} className={c.text} />
+              </div>
+              <div className="min-w-0">
+                <div className="truncate text-2xl font-extrabold text-tbs-dark">{c.value}</div>
+                <div className="truncate text-xs font-semibold text-gray-500">{c.label}</div>
+              </div>
+            </div>
+          ))}
+        </div>
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-wrap items-center gap-2.5">
           {[
@@ -129,7 +160,8 @@ export default function ProposalsPage() {
               {s.label}
             </button>
           ))}
-          <FilterSelect value={filterFactoryId} onChange={setFilterFactoryId} options={factoryOptions} placeholder="Tất cả nhà máy" />
+          <FilterSelect value={filterFactoryId} onChange={setFilterFactoryId} options={factories.map((f) => ({ id: f.id, name: f.name }))} placeholder="Tất cả nhà máy" />
+          <DateRangeFilter from={dateFrom} to={dateTo} onFromChange={setDateFrom} onToChange={setDateTo} />
         </div>
 
         {loading && <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center text-xs text-gray-400">Đang tải...</div>}
