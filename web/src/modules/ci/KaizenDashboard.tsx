@@ -67,6 +67,21 @@ const DASHBOARD_CATEGORIES = [
   { id: "OTHER", label: "8.Khác", color: "#64748b" },
 ];
 
+// Award structure configuration (Single source of truth for Kaizen Leaderboard Prizes)
+export const KAIZEN_AWARD_STRUCTURE = [
+  { maxRank: 1, amountVnd: 1000000, valueTr: 1.0, title: "Giải Nhất" },
+  { maxRank: 3, amountVnd: 500000, valueTr: 0.5, title: "Giải Nhì" },
+  { maxRank: 8, amountVnd: 300000, valueTr: 0.3, title: "Giải Ba" },
+  { maxRank: 18, amountVnd: 200000, valueTr: 0.2, title: "Giải Tư" },
+  { maxRank: 38, amountVnd: 100000, valueTr: 0.1, title: "Giải Khuyến Khích" },
+];
+
+export function getAwardValueTrByRank(rank: number): number {
+  if (rank <= 0) return 0;
+  const award = KAIZEN_AWARD_STRUCTURE.find((item) => rank <= item.maxRank);
+  return award ? award.valueTr : 0;
+}
+
 // Helper to format currency in Million VNĐ (Tr)
 const formatMillion = (val: number): string => {
   const num = isNaN(val) ? 0 : val;
@@ -936,9 +951,6 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
               <h3 className="text-xs font-black tracking-wide uppercase">
                 Một số cải tiến được khen thưởng
               </h3>
-              <p className="text-[10px] font-extrabold text-amber-300/90 pt-0.5">
-                Cơ cấu giải thưởng: 🥇 Nhất: 01 giải (1.000.000đ) | 🥈 Nhì: 02 giải (500.000đ/giải) | 🥉 Ba: 05 giải (300.000đ/giải) | 🎖️ Tư: 10 giải (200.000đ/giải) | 🎗️ Khuyến khích: 20 giải (100.000đ/giải) — Tổng quỹ: 8.500.000đ
-              </p>
             </div>
           </div>
 
@@ -967,7 +979,8 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
               {top5Proposals.length > 0 ? (
                 top5Proposals.map((item, idx) => {
-                  const val = getProposalValue(item);
+                  const rank = idx + 1;
+                  const prizeValueTr = getAwardValueTrByRank(rank);
                   return (
                     <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
                       {/* Column 1: Hạng */}
@@ -1012,7 +1025,7 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
 
                       {/* Column 5: Giá trị */}
                       <td className="py-3 px-4 text-right font-black text-emerald-600 text-sm whitespace-nowrap">
-                        {formatMillion(val)}
+                        {formatMillion(prizeValueTr)}
                       </td>
                     </tr>
                   );
