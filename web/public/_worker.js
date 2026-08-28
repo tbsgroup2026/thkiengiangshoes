@@ -565,7 +565,9 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
     const type = searchParams.get("type");
     const READABLE = ["FACTORY", "AREA", "PRODUCTION_LINE", "TEAM", "MACHINE_TYPE", "PART", "MAINTENANCE_PERIOD", "MACHINE_STATUS"];
     if (!type || READABLE.indexOf(type) === -1) return mmtbJson({ success: false, error: "Loại danh mục không hợp lệ" }, 400);
-    const r = await mmtbCall(env, token, `/api/categories?type=${type}`);
+    const parentId = searchParams.get("parentId");
+    const qs = `?type=${type}${parentId ? `&parentId=${encodeURIComponent(parentId)}` : ""}`;
+    const r = await mmtbCall(env, token, `/api/categories${qs}`);
     return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không lấy được danh mục từ tbsMayMoc" }, r.ok ? 200 : r.status || 502);
   }
   if (mmtbPath === "/categories" && request.method === "POST") {
@@ -679,6 +681,18 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
   // ---- Thời gian phản hồi ----
   if (mmtbPath === "/response-time" && request.method === "GET") {
     const r = await mmtbCall(env, token, "/api/response-time");
+    return mmtbJson(r.ok ? { success: true, ...r.data } : { success: false, error: r.data.error || "Không lấy được dữ liệu từ tbsMayMoc" }, r.ok ? 200 : r.status || 502);
+  }
+
+  // ---- Tổng Quan (KPI MTTA/MTTR/MTTD, Trend, Pareto, độ tin cậy từng máy) ----
+  if (mmtbPath === "/overview-report" && request.method === "GET") {
+    const qs = new URLSearchParams();
+    ["factoryId", "areaId", "lineId", "dateFrom", "dateTo"].forEach((k) => {
+      const v = searchParams.get(k);
+      if (v) qs.set(k, v);
+    });
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    const r = await mmtbCall(env, token, `/api/overview-report${suffix}`);
     return mmtbJson(r.ok ? { success: true, ...r.data } : { success: false, error: r.data.error || "Không lấy được dữ liệu từ tbsMayMoc" }, r.ok ? 200 : r.status || 502);
   }
 
