@@ -72,14 +72,22 @@ export default function ProductionPerformanceModule() {
   const factories = useMemo<ProductionFactory[]>(() => generateProductionMockData(), []);
   const [factoryId, setFactoryId] = useState(factories[0]?.id ?? '');
   const [lineNumber, setLineNumber] = useState<number | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(true);
 
   const factory = factories.find((f) => f.id === factoryId) ?? null;
   const line: ProductionLine | null = factory && lineNumber != null ? factory.lines.find((l) => l.lineNumber === lineNumber) ?? null : null;
   const style = (factory && FACTORY_STYLE[factory.id]) || DEFAULT_STYLE;
 
+  // Bấm lại đúng Nhà máy đang chọn → chỉ ẩn/hiện khung "Chọn chuyền" (không đổi dữ liệu đang xem).
+  // Bấm sang Nhà máy khác → chọn nhà máy đó, về chế độ xem toàn nhà máy, tự mở khung chọn chuyền.
   function handleSelectFactory(id: string) {
+    if (id === factoryId) {
+      setPickerOpen((v) => !v);
+      return;
+    }
     setFactoryId(id);
     setLineNumber(null);
+    setPickerOpen(true);
   }
 
   const linesMeetingTargetNow = useMemo(() => {
@@ -167,31 +175,33 @@ export default function ProductionPerformanceModule() {
         {line ? <span className="font-bold text-[#006838]">Chuyền {line.lineNumber}</span> : 'Toàn nhà máy (tất cả chuyền)'}
       </div>
 
-      {/* Chọn chuyền */}
-      <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm">
-        <div className="text-xs font-bold text-slate-400 mb-2.5">Chọn chuyền để xem riêng (không chọn = xem cả nhà máy)</div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setLineNumber(null)}
-            className={`px-3 py-2 rounded-xl text-xs font-bold transition ${
-              lineNumber === null ? 'bg-[#006838] text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            Toàn nhà máy
-          </button>
-          {factory?.lines.map((l) => (
+      {/* Chọn chuyền — bấm lại ô Nhà máy đang chọn ở hàng trên để ẩn/hiện khung này */}
+      {pickerOpen && (
+        <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm">
+          <div className="text-xs font-bold text-slate-400 mb-2.5">Chọn chuyền để xem riêng (không chọn = xem cả nhà máy)</div>
+          <div className="flex flex-wrap gap-2">
             <button
-              key={l.lineNumber}
-              onClick={() => setLineNumber(l.lineNumber)}
+              onClick={() => setLineNumber(null)}
               className={`px-3 py-2 rounded-xl text-xs font-bold transition ${
-                lineNumber === l.lineNumber ? 'bg-[#006838] text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                lineNumber === null ? 'bg-[#006838] text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
               }`}
             >
-              Chuyền {l.lineNumber}
+              Toàn nhà máy
             </button>
-          ))}
+            {factory?.lines.map((l) => (
+              <button
+                key={l.lineNumber}
+                onClick={() => setLineNumber(l.lineNumber)}
+                className={`px-3 py-2 rounded-xl text-xs font-bold transition ${
+                  lineNumber === l.lineNumber ? 'bg-[#006838] text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                Chuyền {l.lineNumber}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {factory && factoryAggregate && (
         <>
