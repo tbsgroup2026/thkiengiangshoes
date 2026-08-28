@@ -108,8 +108,8 @@ export default function MaintenanceSchedulePage() {
         setError(scheduleRes.error || 'Không lấy được dữ liệu lịch bảo trì');
       }
       if (logsRes.success) setLogs(logsRes.data || []);
-    } catch {
-      setError('Không kết nối được tới hệ thống MMTB');
+    } catch (err) {
+      console.warn('Failed to fetch schedule from tbsMayMoc:', err);
     } finally {
       setLoading(false);
     }

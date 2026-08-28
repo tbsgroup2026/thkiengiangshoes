@@ -31,8 +31,8 @@ export default function MmtbLoginPage() {
         return;
       }
       router.push('/maintenance');
-    } catch {
-      setError('Không kết nối được tới hệ thống MMTB');
+    } catch (err) {
+      console.warn('Failed to reach MMTB login:', err);
     } finally {
       setLoading(false);
     }

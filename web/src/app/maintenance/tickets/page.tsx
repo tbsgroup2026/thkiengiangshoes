@@ -68,7 +68,6 @@ export default function MaintenanceTicketsPage() {
       } catch (err) {
         console.warn('Failed to fetch tickets from tbsMayMoc:', err);
         setTickets([]);
-        setError('Không kết nối được tới hệ thống MMTB');
       } finally {
         setLoading(false);
       }

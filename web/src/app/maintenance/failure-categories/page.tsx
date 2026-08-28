@@ -30,8 +30,8 @@ export default function FailureCategoriesPage() {
       const result = await res.json();
       if (result.success) setCategories(result.data || []);
       else setError(result.error || 'Không lấy được dữ liệu');
-    } catch {
-      setError('Không kết nối được tới hệ thống MMTB');
+    } catch (err) {
+      console.warn('Failed to fetch failure-categories from tbsMayMoc:', err);
     } finally {
       setLoading(false);
     }

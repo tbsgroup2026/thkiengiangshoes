@@ -62,8 +62,8 @@ export default function ProposalsPage() {
       if (propRes.success) setProposals(propRes.data || []);
       else setError(propRes.error || 'Không lấy được dữ liệu');
       if (facRes.success) setFactories(facRes.data || []);
-    } catch {
-      setError('Không kết nối được tới hệ thống MMTB');
+    } catch (err) {
+      console.warn('Failed to fetch proposals from tbsMayMoc:', err);
     } finally {
       setLoading(false);
     }

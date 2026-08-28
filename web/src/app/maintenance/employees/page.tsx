@@ -101,8 +101,8 @@ export default function EmployeesPage() {
       else setError(empRes.error || 'Không lấy được dữ liệu');
       if (facRes.success) setFactories(facRes.data || []);
       if (areaRes.success) setAreas(areaRes.data || []);
-    } catch {
-      setError('Không kết nối được tới hệ thống MMTB');
+    } catch (err) {
+      console.warn('Failed to fetch employees from tbsMayMoc:', err);
     } finally {
       setLoading(false);
     }

@@ -483,7 +483,8 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
     try {
       const machinesRes = await mmtbCall(env, token, "/api/machines");
       if (!machinesRes.ok) return mmtbJson({ success: false, error: machinesRes.data.error || "Không lấy được dữ liệu máy móc từ tbsMayMoc" }, machinesRes.status);
-      const data = (machinesRes.data || []).map((m) => ({
+      if (!Array.isArray(machinesRes.data)) return mmtbJson({ success: false, error: "Dữ liệu máy móc trả về không hợp lệ từ tbsMayMoc, thử lại sau" }, 502);
+      const data = machinesRes.data.map((m) => ({
         id: m.id, code: m.code, name: m.name, serial: m.serialNumber,
         factoryId: m.area && m.area.parent ? m.area.parent.id : null,
         factoryName: m.area && m.area.parent ? m.area.parent.name : null,
@@ -501,25 +502,10 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
       return mmtbJson({ success: false, error: err.message || "Không lấy được dữ liệu máy móc từ tbsMayMoc" }, 502);
     }
   }
-  if (mmtbPath === "/machines/filters" && request.method === "GET") {
-    try {
-      const [factoriesRes, areasRes, linesRes, teamsRes, typesRes, statusesRes] = await Promise.all([
-        mmtbCall(env, token, "/api/categories?type=FACTORY"),
-        mmtbCall(env, token, "/api/categories?type=AREA"),
-        mmtbCall(env, token, "/api/categories?type=PRODUCTION_LINE"),
-        mmtbCall(env, token, "/api/categories?type=TEAM"),
-        mmtbCall(env, token, "/api/categories?type=MACHINE_TYPE"),
-        mmtbCall(env, token, "/api/categories?type=MACHINE_STATUS"),
-      ]);
-      const filters = {
-        factories: factoriesRes.data || [], areas: areasRes.data || [], productionLines: linesRes.data || [],
-        teams: teamsRes.data || [], machineTypes: typesRes.data || [], statuses: statusesRes.data || [],
-      };
-      return mmtbJson({ success: true, filters });
-    } catch (err) {
-      return mmtbJson({ success: false, error: err.message || "Không lấy được danh mục lọc từ tbsMayMoc" }, 502);
-    }
-  }
+  // (Từng có /machines/filters gộp 6 lệnh song song ở đây — bỏ hẳn vì gộp nhiều fetch song song
+  // trong CÙNG 1 lượt xử lý của Worker từng lỗi ngẫu nhiên trên Cloudflare thật dù từng loại gọi
+  // riêng lẻ vẫn ổn; trang machines/page.tsx giờ để trình duyệt tự gọi 6 loại /categories?type=
+  // song song thay vì qua route gộp này.)
   if (mmtbPath === "/machines" && request.method === "POST") {
     try {
       const body = await request.json();
@@ -567,7 +553,8 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
     try {
       const r = await mmtbCall(env, token, "/api/incidents?limit=200");
       if (!r.ok) return mmtbJson({ success: false, error: r.data.error || "Không lấy được dữ liệu sự cố từ tbsMayMoc" }, r.status);
-      const data = (r.data || []).map((i) => ({
+      if (!Array.isArray(r.data)) return mmtbJson({ success: false, error: "Dữ liệu sự cố trả về không hợp lệ từ tbsMayMoc, thử lại sau" }, 502);
+      const data = r.data.map((i) => ({
         id: i.id,
         ticketCode: `SC-${String(i.id).slice(-6).toUpperCase()}`,
         machineCode: i.machine.code, machineName: i.machine.name,

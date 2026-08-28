@@ -64,8 +64,8 @@ export default function ResponseTimePage() {
           setError(resRes.error || 'Không lấy được dữ liệu');
         }
         if (facRes.success) setFactories(facRes.data || []);
-      } catch {
-        setError('Không kết nối được tới hệ thống MMTB');
+      } catch (err) {
+        console.warn('Failed to fetch response-time from tbsMayMoc:', err);
       } finally {
         setLoading(false);
       }

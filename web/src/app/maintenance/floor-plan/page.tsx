@@ -115,8 +115,8 @@ export default function FloorPlanPage() {
       } else {
         setError(result.error || 'Không lấy được dữ liệu');
       }
-    } catch {
-      setError('Không kết nối được tới hệ thống MMTB');
+    } catch (err) {
+      console.warn('Failed to fetch floor-plan from tbsMayMoc:', err);
     } finally {
       setLoading(false);
     }

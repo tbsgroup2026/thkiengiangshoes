@@ -174,11 +174,18 @@ export default function MachinesPage() {
     try {
       setLoading(true);
       setError(null);
-      // Máy móc (nặng, ~2500 máy) và bộ lọc (nhẹ) tách 2 request riêng — gộp chung từng vượt giới
-      // hạn CPU time của Cloudflare Worker khi chạy thật (xem _worker.js).
-      const [machinesRes, filtersRes] = await Promise.all([
+      // Máy móc (nặng, ~2500 máy) gọi riêng khỏi 6 danh mục lọc — và 6 danh mục lọc để TRÌNH
+      // DUYỆT tự gọi song song (không proxy gộp qua Worker) vì gộp 6 lệnh chạy song song trong
+      // CÙNG 1 lượt xử lý của Cloudflare Worker từng vượt giới hạn tài nguyên khi chạy thật (dù
+      // từng loại gọi riêng lẻ vẫn ổn) — trình duyệt không bị giới hạn này.
+      const [machinesRes, factoriesRes, areasRes, linesRes, teamsRes, typesRes, statusesRes] = await Promise.all([
         fetch('/api/mmtb-kg/machines').then((r) => r.json()),
-        fetch('/api/mmtb-kg/machines/filters').then((r) => r.json()),
+        fetch('/api/mmtb-kg/categories?type=FACTORY').then((r) => r.json()),
+        fetch('/api/mmtb-kg/categories?type=AREA').then((r) => r.json()),
+        fetch('/api/mmtb-kg/categories?type=PRODUCTION_LINE').then((r) => r.json()),
+        fetch('/api/mmtb-kg/categories?type=TEAM').then((r) => r.json()),
+        fetch('/api/mmtb-kg/categories?type=MACHINE_TYPE').then((r) => r.json()),
+        fetch('/api/mmtb-kg/categories?type=MACHINE_STATUS').then((r) => r.json()),
       ]);
       if (machinesRes.success && Array.isArray(machinesRes.data)) {
         setMachines(machinesRes.data);
@@ -186,11 +193,17 @@ export default function MachinesPage() {
         setMachines([]);
         setError(machinesRes.error || 'Không lấy được dữ liệu');
       }
-      setFilterOptions(filtersRes.success ? filtersRes.filters || EMPTY_FILTERS : EMPTY_FILTERS);
+      setFilterOptions({
+        factories: factoriesRes.success && Array.isArray(factoriesRes.data) ? factoriesRes.data : [],
+        areas: areasRes.success && Array.isArray(areasRes.data) ? areasRes.data : [],
+        productionLines: linesRes.success && Array.isArray(linesRes.data) ? linesRes.data : [],
+        teams: teamsRes.success && Array.isArray(teamsRes.data) ? teamsRes.data : [],
+        machineTypes: typesRes.success && Array.isArray(typesRes.data) ? typesRes.data : [],
+        statuses: statusesRes.success && Array.isArray(statusesRes.data) ? statusesRes.data : [],
+      });
     } catch (err) {
       console.warn('Failed to fetch machines from tbsMayMoc:', err);
       setMachines([]);
-      setError('Không kết nối được tới hệ thống MMTB');
     } finally {
       setLoading(false);
     }

@@ -57,8 +57,8 @@ export default function AnnouncementsPage() {
       if (annRes.success) setAnnouncements(annRes.data || []);
       else setError(annRes.error || 'Không lấy được dữ liệu');
       if (facRes.success) setFactories(facRes.data || []);
-    } catch {
-      setError('Không kết nối được tới hệ thống MMTB');
+    } catch (err) {
+      console.warn('Failed to fetch announcements from tbsMayMoc:', err);
     } finally {
       setLoading(false);
     }

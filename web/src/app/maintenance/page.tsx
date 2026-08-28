@@ -136,8 +136,8 @@ export default function OverviewPage() {
       } else {
         setError(result.error || 'Không lấy được dữ liệu phân tích');
       }
-    } catch {
-      setError('Không kết nối được tới hệ thống MMTB');
+    } catch (err) {
+      console.warn('Failed to fetch overview-report from tbsMayMoc:', err);
     } finally {
       setLoading(false);
     }

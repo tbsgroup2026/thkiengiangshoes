@@ -91,8 +91,8 @@ export default function CategoriesManager({
         next[fetchTypes[i]] = r.success && Array.isArray(r.data) ? r.data : [];
       });
       setData(next);
-    } catch {
-      setError('Không kết nối được tới hệ thống MMTB');
+    } catch (err) {
+      console.warn('Failed to fetch categories from tbsMayMoc:', err);
     } finally {
       setLoading(false);
     }
