@@ -18,6 +18,7 @@ import HRRecruitmentView from "@/modules/hr/components/HRRecruitmentView";
 import HRAttendancePayrollView from "@/modules/hr/components/HRAttendancePayrollView";
 import HRContractsView from "@/modules/hr/components/HRContractsView";
 import QualityModule from "@/modules/quality/QualityModule";
+import ProductionPerformanceModule from "@/modules/production/ProductionPerformanceModule";
 import RDModule from "@/modules/rd/RDModule";
 import CNCIWrapper from "@/modules/ci/CNCIWrapper";
 import MobileBottomNav from "@/components/mobile/MobileBottomNav";
@@ -723,8 +724,8 @@ export default function WorkDashboardPage() {
     },
     production: {
       bg: "/images/brands/Nhà máy/1787810869521_5373416762128407822_5373416762128407822_d92bcaa1035c5426a9529806beab4645.jpg",
-      title: "Tổ Hợp Nhà Máy",
-      sub: "Quản lý chuỗi xưởng sản xuất, máy móc thiết bị và điều hành ca sản xuất.",
+      title: "Hiệu Suất Nhà Máy",
+      sub: "Sản lượng theo giờ, PPH/RFT từng chuyền và điều hành ca sản xuất.",
       appCount: 9,
     },
     supply: {
@@ -735,8 +736,8 @@ export default function WorkDashboardPage() {
     },
     factory: {
       bg: "/images/brands/Nhà máy/1787810869525_5373416762128407822_5373416762128407822_3d8c02353c2266fec97bdab159909d67.jpg",
-      title: "Tổ Hợp Nhà Máy",
-      sub: "Quản lý chuỗi xưởng sản xuất, máy móc thiết bị và điều hành ca sản xuất.",
+      title: "Hiệu Suất Nhà Máy",
+      sub: "Sản lượng theo giờ, PPH/RFT từng chuyền và điều hành ca sản xuất.",
       appCount: 9,
     },
   };
@@ -802,8 +803,8 @@ export default function WorkDashboardPage() {
     {
       id: "production",
       num: "07",
-      name: "Tổ hợp Nhà máy",
-      sub: "Quản lý tổ hợp nhà máy & sản xuất chuỗi",
+      name: "Hiệu Suất Nhà Máy",
+      sub: "Sản lượng theo giờ, PPH/RFT từng chuyền",
       icon: IconBuildingFactory,
       hasData: true,
     },
@@ -1784,29 +1785,15 @@ export default function WorkDashboardPage() {
               <QualityModule onNavigateToApp={(url) => window.open(url, "_blank")} />
             </div>
           )}
-          {/* IF TH-NM (PHÒNG SẢN XUẤT) IS SELECTED */}
+          {/* IF HIỆU SUẤT NHÀ MÁY (PHÒNG SẢN XUẤT) IS SELECTED */}
           {selectedDept === "production" && (
             <div className="space-y-4 my-auto">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-black text-slate-900">
-                    🏭 Chỉ Số Tổ hợp Nhà máy (TH-NM)
-                  </h2>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Thống kê 33 dây chuyền sản xuất giày SKECHERS thuộc hệ thống nhà máy TBS Group.
-                  </p>
-                </div>
-                <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">
-                  Dữ liệu Sản Xuất Live
-                </span>
-              </div>
-
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                  { title: "Sản Lượng Tháng", val: "586,000 Đôi", trend: "+15%", color: "emerald" },
-                  { title: "Số Dây Chuyền", val: "33 Chuyền", trend: "100% Hoạt động", color: "blue" },
-                  { title: "Hiệu Suất Chuyền", val: "92.4%", trend: "+5%", color: "purple" },
-                  { title: "Tiến Độ Đơn Hàng", val: "89.2%", trend: "Đạt kế hoạch", color: "amber" },
+                  { title: "Sản Lượng Tháng", val: "586,000 Đôi", trend: "+15%" },
+                  { title: "Số Dây Chuyền", val: "33 Chuyền", trend: "100% Hoạt động" },
+                  { title: "Hiệu Suất Chuyền", val: "92.4%", trend: "+5%" },
+                  { title: "Tiến Độ Đơn Hàng", val: "89.2%", trend: "Đạt kế hoạch" },
                 ].map((item, idx) => (
                   <div key={idx} className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-1.5">
                     <span className="text-xs font-bold text-slate-500">{item.title}</span>
@@ -1815,6 +1802,8 @@ export default function WorkDashboardPage() {
                   </div>
                 ))}
               </div>
+
+              <ProductionPerformanceModule />
             </div>
           )}
 
@@ -1876,7 +1865,7 @@ export default function WorkDashboardPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <span className="text-xs font-bold text-slate-600 block truncate">
-                        Chỉ Số Tổ hợp Nhà máy (TH-NM)
+                        Hiệu Suất Nhà Máy
                       </span>
                       <div className="text-xl font-black text-slate-900 tracking-tight mt-0.5">
                         586
@@ -2087,7 +2076,7 @@ export default function WorkDashboardPage() {
                       <div className="flex items-start gap-2.5 p-1.5 rounded-xl hover:bg-slate-50 col-span-2">
                         <span className="w-3 h-3 rounded-full bg-purple-600 flex-shrink-0 mt-1" />
                         <div>
-                          <span className="text-slate-600 block text-xs font-semibold leading-snug">Tổ hợp Nhà máy (TH-NM)</span>
+                          <span className="text-slate-600 block text-xs font-semibold leading-snug">Hiệu Suất Nhà Máy</span>
                           <div className="text-slate-900 font-black text-xs mt-0.5">24 <span className="text-pink-600 font-bold">(4.1%)</span></div>
                         </div>
                       </div>
