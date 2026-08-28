@@ -3179,9 +3179,20 @@ export default {
           const newSubStatus = isApprove ? "CHO_DANH_GIA" : "TU_CHOI_TRIEN_KHAI";
           const newStatus = isApprove ? "APPROVED" : "REJECTED";
 
-          const tBefore = isApprove ? (timeBeforeSeconds !== undefined ? Number(timeBeforeSeconds) : (proposal.time_before_seconds || 0)) : (proposal.time_before_seconds || 0);
-          const tAfter = isApprove ? (timeAfterSeconds !== undefined ? Number(timeAfterSeconds) : (proposal.time_after_seconds || 0)) : (proposal.time_after_seconds || 0);
-          const tSaved = isApprove ? (savedSeconds !== undefined ? Number(savedSeconds) : Math.max(0, tBefore - tAfter)) : (proposal.saved_seconds || 0);
+          const pBefore = Number(proposal.time_before_seconds || 0);
+          const pAfter = Number(proposal.time_after_seconds || 0);
+          const pSaved = Number(proposal.saved_seconds || 0);
+
+          let tBefore = isApprove ? (timeBeforeSeconds !== undefined && Number(timeBeforeSeconds) > 0 ? Number(timeBeforeSeconds) : pBefore) : pBefore;
+          let tAfter = isApprove ? (timeAfterSeconds !== undefined && Number(timeAfterSeconds) >= 0 ? Number(timeAfterSeconds) : pAfter) : pAfter;
+          let tSaved = isApprove ? (savedSeconds !== undefined && Number(savedSeconds) > 0 ? Number(savedSeconds) : Math.max(0, tBefore - tAfter)) : pSaved;
+
+          if (tSaved <= 0 && pSaved > 0) {
+            tSaved = pSaved;
+          }
+          if (tBefore <= 0 && tSaved > 0) {
+            tBefore = tSaved + tAfter;
+          }
 
           await env.DB.prepare(`
             UPDATE ci_kaizen_proposals

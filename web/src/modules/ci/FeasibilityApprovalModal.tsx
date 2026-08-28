@@ -45,16 +45,41 @@ export default function FeasibilityApprovalModal({
       setDecision(initialDecision);
       setNote("");
       setErrorMsg(null);
-      setTimeBefore(proposal.time_before_seconds ?? 0);
-      setTimeAfter(proposal.time_after_seconds ?? 0);
+      
+      const pBefore = Number(proposal.time_before_seconds || 0);
+      const pAfter = Number(proposal.time_after_seconds || 0);
+      const pSaved = Number(proposal.saved_seconds || 0);
+
+      if (pBefore > 0 || pAfter > 0) {
+        setTimeBefore(pBefore);
+        setTimeAfter(pAfter);
+      } else if (pSaved > 0) {
+        // Automatically pre-fill Before = saved_seconds (e.g. 30s) and After = 0s if only saved_seconds is present
+        setTimeBefore(pSaved);
+        setTimeAfter(0);
+      } else {
+        setTimeBefore(0);
+        setTimeAfter(0);
+      }
     }
   }, [isOpen, initialDecision, proposal]);
 
   if (!isOpen || !proposal) return null;
 
-  const beforeVal = Math.max(0, Number(timeBefore) || 0);
-  const afterVal = Math.max(0, Number(timeAfter) || 0);
-  const savedVal = Math.max(0, beforeVal - afterVal);
+  const rawBefore = Number(timeBefore) || 0;
+  const rawAfter = Number(timeAfter) || 0;
+  const pSaved = Number(proposal?.saved_seconds || 0);
+
+  let beforeVal = Math.max(0, rawBefore);
+  let afterVal = Math.max(0, rawAfter);
+  let savedVal = Math.max(0, beforeVal - afterVal);
+
+  // Preserve existing proposal.saved_seconds if input was not manually modified to a custom difference
+  if (beforeVal === 0 && afterVal === 0 && pSaved > 0) {
+    savedVal = pSaved;
+    beforeVal = pSaved;
+  }
+
   const efficiencyVndVal = Math.round(savedVal * 12.5);
 
   const formatDate = (dateStr?: string) => {
