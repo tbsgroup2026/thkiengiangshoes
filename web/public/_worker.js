@@ -3147,7 +3147,7 @@ export default {
           }
 
           const body = await request.json();
-          const { proposalId, decision, note } = body; // decision: 'APPROVE' | 'REJECT'
+          const { proposalId, decision, note, timeBeforeSeconds, timeAfterSeconds, savedSeconds } = body; // decision: 'APPROVE' | 'REJECT'
 
           if (!proposalId || !decision) {
             return new Response(JSON.stringify({ success: false, error: "MISSING_PARAMS", message: "Thiếu proposalId hoặc decision (APPROVE/REJECT)" }), { status: 400, headers: SECURE_JSON_HEADERS });
@@ -3179,16 +3179,21 @@ export default {
           const newSubStatus = isApprove ? "CHO_DANH_GIA" : "TU_CHOI_TRIEN_KHAI";
           const newStatus = isApprove ? "APPROVED" : "REJECTED";
 
+          const tBefore = isApprove ? (timeBeforeSeconds !== undefined ? Number(timeBeforeSeconds) : (proposal.time_before_seconds || 0)) : (proposal.time_before_seconds || 0);
+          const tAfter = isApprove ? (timeAfterSeconds !== undefined ? Number(timeAfterSeconds) : (proposal.time_after_seconds || 0)) : (proposal.time_after_seconds || 0);
+          const tSaved = isApprove ? (savedSeconds !== undefined ? Number(savedSeconds) : Math.max(0, tBefore - tAfter)) : (proposal.saved_seconds || 0);
+
           await env.DB.prepare(`
             UPDATE ci_kaizen_proposals
-            SET approval_status = ?, sub_status = ?, status = ?, approved_by = ?, approved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+            SET approval_status = ?, sub_status = ?, status = ?, approved_by = ?, approved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP,
+                time_before_seconds = ?, time_after_seconds = ?, saved_seconds = ?
             WHERE id = ?
-          `).bind(newApprovalStatus, newSubStatus, newStatus, user.empCode || user.id || "ADMIN", proposalId).run();
+          `).bind(newApprovalStatus, newSubStatus, newStatus, user.empCode || user.id || "ADMIN", tBefore, tAfter, tSaved, proposalId).run();
 
           await env.DB.prepare(`
             INSERT INTO ci_kaizen_status_history (proposal_id, from_status, to_status, action, actor_id, actor_name, note)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-          `).bind(proposalId, proposal.sub_status || "CHO_REVIEW", newSubStatus, isApprove ? "APPROVE" : "REJECT", user.empCode || "USER", user.name || "Cán bộ Quản lý", safeVal(note, isApprove ? "Phê duyệt triển khai sáng kiến" : "Từ chối triển khai sáng kiến")).run();
+          `).bind(proposalId, proposal.sub_status || "CHO_REVIEW", newSubStatus, isApprove ? "APPROVE" : "REJECT", user.empCode || "USER", user.name || "Cán bộ Quản lý", safeVal(note, isApprove ? `Phê duyệt triển khai (Trước: ${tBefore}s, Sau: ${tAfter}s, Tiết kiệm: ${tSaved}s)` : "Từ chối triển khai sáng kiến")).run();
 
           return new Response(JSON.stringify({
             success: true,
@@ -3196,7 +3201,10 @@ export default {
             proposalId,
             approval_status: newApprovalStatus,
             sub_status: newSubStatus,
-            status: newStatus
+            status: newStatus,
+            time_before_seconds: tBefore,
+            time_after_seconds: tAfter,
+            saved_seconds: tSaved
           }), { headers: SECURE_JSON_HEADERS });
 
         } catch(err) {

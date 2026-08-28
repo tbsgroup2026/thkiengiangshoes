@@ -606,6 +606,9 @@ export default function KaizenDetailModal({
           proposal.approval_status = updated.approval_status;
           proposal.sub_status = updated.sub_status;
           proposal.status = updated.status;
+          if (updated.time_before_seconds !== undefined) proposal.time_before_seconds = updated.time_before_seconds;
+          if (updated.time_after_seconds !== undefined) proposal.time_after_seconds = updated.time_after_seconds;
+          if (updated.saved_seconds !== undefined) proposal.saved_seconds = updated.saved_seconds;
           setStep3Msg(
             updated.approval_status === "PHE_DUYET"
               ? "✅ Đã phê duyệt tính khả thi (Bước 3) thành công!"

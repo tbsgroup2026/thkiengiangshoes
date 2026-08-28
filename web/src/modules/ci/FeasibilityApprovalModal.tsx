@@ -16,7 +16,14 @@ interface FeasibilityApprovalModalProps {
   proposal: KaizenProposal | null;
   initialDecision?: "APPROVE" | "REJECT";
   onClose: () => void;
-  onSuccess: (updatedStatus: { status: string; sub_status: string; approval_status: string }) => void;
+  onSuccess: (updatedStatus: {
+    status: string;
+    sub_status: string;
+    approval_status: string;
+    time_before_seconds?: number;
+    time_after_seconds?: number;
+    saved_seconds?: number;
+  }) => void;
 }
 
 export default function FeasibilityApprovalModal({
@@ -28,18 +35,27 @@ export default function FeasibilityApprovalModal({
 }: FeasibilityApprovalModalProps) {
   const [decision, setDecision] = useState<"APPROVE" | "REJECT">(initialDecision);
   const [note, setNote] = useState<string>("");
+  const [timeBefore, setTimeBefore] = useState<number | string>(proposal?.time_before_seconds || 0);
+  const [timeAfter, setTimeAfter] = useState<number | string>(proposal?.time_after_seconds || 0);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && proposal) {
       setDecision(initialDecision);
       setNote("");
       setErrorMsg(null);
+      setTimeBefore(proposal.time_before_seconds ?? 0);
+      setTimeAfter(proposal.time_after_seconds ?? 0);
     }
-  }, [isOpen, initialDecision]);
+  }, [isOpen, initialDecision, proposal]);
 
   if (!isOpen || !proposal) return null;
+
+  const beforeVal = Math.max(0, Number(timeBefore) || 0);
+  const afterVal = Math.max(0, Number(timeAfter) || 0);
+  const savedVal = Math.max(0, beforeVal - afterVal);
+  const efficiencyVndVal = Math.round(savedVal * 12.5);
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "20/05/2024";
@@ -60,6 +76,14 @@ export default function FeasibilityApprovalModal({
       setSubmitting(true);
       setErrorMsg(null);
 
+      if (decision === "APPROVE") {
+        if (beforeVal < 0 || afterVal < 0) {
+          setErrorMsg("❌ Thời gian Trước và Sau phải là số không âm!");
+          setSubmitting(false);
+          return;
+        }
+      }
+
       const res = await fetch("/api/ci-kaizen/approve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -67,6 +91,10 @@ export default function FeasibilityApprovalModal({
           proposalId: proposal.id,
           decision,
           note: note.trim() || (decision === "APPROVE" ? "Đã phê duyệt tính khả thi (Bước 3)" : "Không đạt tính khả thi"),
+          timeBeforeSeconds: decision === "APPROVE" ? beforeVal : (proposal.time_before_seconds || 0),
+          timeAfterSeconds: decision === "APPROVE" ? afterVal : (proposal.time_after_seconds || 0),
+          savedSeconds: decision === "APPROVE" ? savedVal : (proposal.saved_seconds || 0),
+          efficiencyValueVND: decision === "APPROVE" ? efficiencyVndVal : 0,
         }),
       });
 
@@ -76,6 +104,9 @@ export default function FeasibilityApprovalModal({
           status: json.status || (decision === "APPROVE" ? "UNDER_REVIEW" : "REJECTED"),
           sub_status: json.sub_status || (decision === "APPROVE" ? "CHO_DANH_GIA" : "TU_CHOI_TRIEN_KHAI"),
           approval_status: json.approval_status || (decision === "APPROVE" ? "PHE_DUYET" : "TU_CHOI"),
+          time_before_seconds: json.time_before_seconds !== undefined ? json.time_before_seconds : beforeVal,
+          time_after_seconds: json.time_after_seconds !== undefined ? json.time_after_seconds : afterVal,
+          saved_seconds: json.saved_seconds !== undefined ? json.saved_seconds : savedVal,
         });
         onClose();
       } else {
@@ -279,6 +310,84 @@ export default function FeasibilityApprovalModal({
               </label>
             </div>
           </div>
+
+          {/* NHẬP SỐ LIỆU THỜI GIAN TRƯỚC/SAU KHI PHÊ DUYỆT */}
+          {decision === "APPROVE" && (
+            <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-extrabold text-xs text-emerald-900 flex items-center gap-1.5">
+                  <span>⏱️</span>
+                  <span>Nhập thời gian thử nghiệm &amp; đánh giá hiệu quả (giây)</span>
+                </span>
+                <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100/90 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                  12.5đ / giây
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-700 block">
+                    TRƯỚC (giây) <span className="text-rose-600 font-bold">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="any"
+                    value={timeBefore}
+                    onChange={(e) => setTimeBefore(e.target.value)}
+                    placeholder="VD: 60"
+                    className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-black text-slate-900 bg-white outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 shadow-2xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-700 block">
+                    SAU (giây) <span className="text-rose-600 font-bold">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="any"
+                    value={timeAfter}
+                    onChange={(e) => setTimeAfter(e.target.value)}
+                    placeholder="VD: 30"
+                    className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-black text-slate-900 bg-white outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 shadow-2xs"
+                  />
+                </div>
+              </div>
+
+              {/* CARDS PREVIEW CỦA HIỆU QUẢ */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                <div className="p-2.5 rounded-xl bg-white border border-slate-200 space-y-0.5 shadow-2xs">
+                  <span className="text-[9px] font-extrabold uppercase text-slate-400 block">TRƯỚC</span>
+                  <span className="text-sm font-black text-slate-900 block">{beforeVal}</span>
+                  <span className="text-[9px] font-bold text-slate-500 block">giây</span>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-white border border-slate-200 space-y-0.5 shadow-2xs">
+                  <span className="text-[9px] font-extrabold uppercase text-slate-400 block">SAU</span>
+                  <span className="text-sm font-black text-slate-900 block">{afterVal}</span>
+                  <span className="text-[9px] font-bold text-slate-500 block">giây</span>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-purple-50 border border-purple-200 space-y-0.5 shadow-2xs">
+                  <span className="text-[9px] font-extrabold uppercase text-purple-700 block">TIẾT KIỆM</span>
+                  <span className="text-sm font-black text-purple-900 block">{savedVal}</span>
+                  <span className="text-[9px] font-bold text-purple-600 block">
+                    giây {beforeVal > 0 ? `(${Math.round((savedVal / beforeVal) * 100)}%)` : ""}
+                  </span>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-[#006838] text-white space-y-0.5 shadow-sm">
+                  <span className="text-[9px] font-extrabold uppercase text-emerald-200 block">HIỆU QUẢ</span>
+                  <span className="text-xs font-black text-white block truncate">
+                    {efficiencyVndVal.toLocaleString("vi-VN")} VNĐ
+                  </span>
+                  <span className="text-[9px] font-bold text-emerald-200 block">quy đổi / đôi</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* GHI CHÚ (KHÔNG BẮT BUỘC) */}
           <div className="space-y-1">
