@@ -30,6 +30,7 @@ import {
   IconBuildingStore,
 } from '@tabler/icons-react';
 import { getCurrentUser, setUserAvatar, fetchUserAvatarsFromServer, logoutUserProfile, formatTitleWithDepartment } from '@/lib/userProfiles';
+import { isUserInAdminWhitelist } from '@/lib/adminWhitelist';
 
 interface NotificationItem {
   id: number;
@@ -682,24 +683,26 @@ export default function Header() {
                         </div>
                       </button>
 
-                      {/* Option 3: Trang Quản Trị / Admin Panel */}
-                      <Link
-                        href="/admin"
-                        onClick={() => setUserDropdownOpen(false)}
-                        className="w-full p-2.5 rounded-xl text-left flex items-center gap-3 text-xs font-bold text-[#2fd39a] bg-[#2fd39a]/10 hover:bg-[#2fd39a]/20 border border-[#2fd39a]/30 hover:border-[#2fd39a] transition-all cursor-pointer group my-1"
-                      >
-                        <div className="w-8 h-8 rounded-xl bg-[#2fd39a] text-[#041a13] flex items-center justify-center group-hover:scale-105 transition-transform flex-shrink-0 font-extrabold shadow-md shadow-emerald-950/40">
-                          <IconShieldCheck size={18} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-extrabold text-[#2fd39a] group-hover:text-white flex items-center gap-1">
-                            <span>{lang === "VN" ? "Trang Quản Trị (Admin Mode)" : "Admin Panel"}</span>
+                      {/* Option 3: Trang Quản Trị / Admin Panel (Only rendered for Whitelisted Admins) */}
+                      {isUserInAdminWhitelist(userInfo) && (
+                        <Link
+                          href="/admin"
+                          onClick={() => setUserDropdownOpen(false)}
+                          className="w-full p-2.5 rounded-xl text-left flex items-center gap-3 text-xs font-bold text-[#2fd39a] bg-[#2fd39a]/10 hover:bg-[#2fd39a]/20 border border-[#2fd39a]/30 hover:border-[#2fd39a] transition-all cursor-pointer group my-1"
+                        >
+                          <div className="w-8 h-8 rounded-xl bg-[#2fd39a] text-[#041a13] flex items-center justify-center group-hover:scale-105 transition-transform flex-shrink-0 font-extrabold shadow-md shadow-emerald-950/40">
+                            <IconShieldCheck size={18} />
                           </div>
-                          <div className="text-[10px] text-emerald-300/80 font-normal truncate">
-                            {lang === "VN" ? "Truy cập hệ thống quản trị /admin" : "Access admin system"}
+                          <div className="flex-1 min-w-0">
+                            <div className="font-extrabold text-[#2fd39a] group-hover:text-white flex items-center gap-1">
+                              <span>{lang === "VN" ? "Trang Quản Trị (Admin Mode)" : "Admin Panel"}</span>
+                            </div>
+                            <div className="text-[10px] text-emerald-300/80 font-normal truncate">
+                              {lang === "VN" ? "Truy cập hệ thống quản trị /admin" : "Access admin system"}
+                            </div>
                           </div>
-                        </div>
-                      </Link>
+                        </Link>
+                      )}
 
                       <div className="my-1.5 border-t border-white/10" />
 
@@ -787,13 +790,15 @@ export default function Header() {
                 >
                   Hệ Thống Quản Trị
                 </Link>
-                <Link
-                  href="/admin"
-                  onClick={() => setMobileOpen(false)}
-                  className="block py-2.5 text-sm font-extrabold text-[#f2dc9a] border-b border-white/10 bg-emerald-900/40 rounded-xl"
-                >
-                  🛡️ Cổng Quản Trị (Admin)
-                </Link>
+                {isUserInAdminWhitelist(userInfo) && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setMobileOpen(false)}
+                    className="block py-2.5 text-sm font-extrabold text-[#f2dc9a] border-b border-white/10 bg-emerald-900/40 rounded-xl"
+                  >
+                    🛡️ Cổng Quản Trị (Admin)
+                  </Link>
+                )}
               </>
             )}
 

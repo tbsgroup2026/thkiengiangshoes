@@ -414,6 +414,113 @@ export default {
       return Response.redirect(new URL("/work", request.url), 301);
     }
 
+    // ════════════════════════════════════════════════════════════════
+    // 🛡️ SERVER-SIDE ACCESS GUARD FOR /admin AND /api/admin/*
+    // ════════════════════════════════════════════════════════════════
+    if (pathname === "/admin" || pathname.startsWith("/admin/") || pathname.startsWith("/api/admin/")) {
+      const userAuth = await verifyServerAuth(request, env);
+      const WORKER_ADMIN_WHITELIST = new Set([
+        "202608001",
+        "2026080001",
+        "201809012",
+        "PGĐ-005",
+        "PGD-005",
+        "anhy.work.2004@gmail.com",
+        "huypna@tbsgroup.vn",
+        "vukt@tbsgroup.vn"
+      ]);
+
+      let isAllowed = false;
+      if (userAuth && userAuth.authenticated && userAuth.empCode) {
+        const cleanCode = String(userAuth.empCode).trim().toUpperCase();
+        if (WORKER_ADMIN_WHITELIST.has(cleanCode) || WORKER_ADMIN_WHITELIST.has(userAuth.empCode)) {
+          isAllowed = true;
+        }
+      }
+
+      if (!isAllowed) {
+        const clientIp = request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for") || "127.0.0.1";
+        const attemptedEmpCode = userAuth?.empCode || "ANONYMOUS";
+        const targetUrl = request.url;
+
+        console.warn(`[SECURITY 403 AUDIT ALERT] Unauthorized access attempt to ${pathname} by ${attemptedEmpCode} from IP ${clientIp}`);
+
+        if (env && env.DB) {
+          try {
+            await env.DB.prepare(`
+              CREATE TABLE IF NOT EXISTS audit_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                ip_address TEXT,
+                emp_code TEXT,
+                action TEXT,
+                target_url TEXT,
+                status TEXT,
+                details TEXT
+              )
+            `).run().catch(() => {});
+
+            await env.DB.prepare(`
+              INSERT INTO audit_logs (ip_address, emp_code, action, target_url, status, details)
+              VALUES (?, ?, 'UNAUTHORIZED_ADMIN_ACCESS', ?, 'BLOCKED_403', ?)
+            `).bind(clientIp, attemptedEmpCode, targetUrl, `User ${attemptedEmpCode} is not in ADMIN_WHITELIST`).run().catch(() => {});
+          } catch (logErr) {
+            console.warn("[AUDIT LOG ERROR]", logErr);
+          }
+        }
+
+        if (pathname.startsWith("/api/")) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: "403 Forbidden: Bạn không có quyền truy cập trang quản trị này!",
+            code: "FORBIDDEN"
+          }), {
+            status: 403,
+            headers: {
+              ...SECURE_JSON_HEADERS,
+              "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0"
+            }
+          });
+        }
+
+        return new Response(`<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>403 Forbidden - Không Có Quyền Truy Cập</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; padding: 20px; text-align: center; }
+    .card { background: #1e293b; border: 1px solid #334155; padding: 40px; border-radius: 24px; max-width: 480px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+    .icon { font-size: 56px; margin-bottom: 16px; }
+    h1 { color: #f43f5e; font-size: 22px; font-weight: 800; margin: 0 0 12px 0; }
+    p { color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 0 0 24px 0; }
+    a { display: inline-block; background: #006838; color: white; text-decoration: none; padding: 12px 28px; border-radius: 12px; font-weight: 700; font-size: 14px; transition: all 0.2s; }
+    a:hover { background: #004d29; transform: translateY(-1px); }
+  </style>
+  <script>
+    alert("⚠️ Bạn không có quyền truy cập trang này. Mọi hành vi cố tình truy cập đã được hệ thống ghi nhận nhật ký bảo mật!");
+    window.location.href = "/work";
+  </script>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">🚫</div>
+    <h1>403 Forbidden - Truy Cập Bị Từ Chối</h1>
+    <p>Rất tiếc! Tài khoản của bạn không nằm trong danh sách được phép truy cập Trang Quản Trị (/admin).</p>
+    <a href="/work">Quay Lại Trang Chủ Work</a>
+  </div>
+</body>
+</html>`, {
+          status: 403,
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0"
+          }
+        });
+      }
+    }
+
     const ROLE_ACCOUNTS = {
       TONG_GIAM_DOC: {
         empCode: "TGĐ-001",

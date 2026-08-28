@@ -21,6 +21,7 @@ import {
 import { usePermission } from "@/hooks/usePermission";
 import { PERMISSIONS } from "@/lib/permissions";
 import { getCurrentUser } from "@/lib/userProfiles";
+import { isUserInAdminWhitelist } from "@/lib/adminWhitelist";
 
 export default function AdminLayout({
   children,
@@ -41,33 +42,8 @@ export default function AdminLayout({
         return;
       }
       try {
-        const userRoles: string[] = user?.roles || [];
-        const empCode: string = user?.empCode || "";
-        const roleCode: string = user?.roleCode || "";
-
-        const hasAdminPermission =
-          userRoles.includes("admin") ||
-          userRoles.includes("ceo") ||
-          userRoles.includes("deputy_ceo") ||
-          userRoles.includes("director") ||
-          userRoles.includes("deputy_director") ||
-          roleCode === "SUPER_ADMIN" ||
-          roleCode === "SYSTEM_ADMIN" ||
-          roleCode === "TONG_GIAM_DOC" ||
-          empCode === "202608001" ||
-          empCode === "2026080001" ||
-          empCode === "ADMIN-2026" ||
-          empCode === "TGĐ-001" ||
-          empCode === "PTGĐ-002" ||
-          empCode === "GĐ-003" ||
-          empCode === "PGĐ-004" ||
-          canAny([
-            PERMISSIONS.ADMIN_MANAGE_USERS,
-            PERMISSIONS.ADMIN_MANAGE_ROLES,
-            PERMISSIONS.ADMIN_MANAGE_DEPARTMENTS,
-          ]);
-
-        if (!hasAdminPermission) {
+        const hasWhitelistPermission = isUserInAdminWhitelist(user);
+        if (!hasWhitelistPermission) {
           setIsAuthorized(false);
         } else {
           setIsAuthorized(true);
@@ -76,7 +52,7 @@ export default function AdminLayout({
         setIsAuthorized(false);
       }
     }
-  }, [canAny, roles, router]);
+  }, [router]);
 
   if (isAuthorized === false) {
     return (

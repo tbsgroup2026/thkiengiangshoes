@@ -50,6 +50,8 @@ import ShoeLinesManager from "@/components/admin/ShoeLinesManager";
 import WorkspaceCMSManager from "@/components/admin/WorkspaceCMSManager";
 import * as XLSX from "xlsx";
 import { INITIAL_370_EMPLOYEES } from "@/lib/initialEmployees";
+import { getCurrentUser } from "@/lib/userProfiles";
+import { isUserInAdminWhitelist } from "@/lib/adminWhitelist";
 
 interface EmployeeAccount {
   id: string;
@@ -111,6 +113,14 @@ export default function AdminPage() {
   const [saveErrorCMS, setSaveErrorCMS] = useState<string | null>(null);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const currentUser = getCurrentUser();
+      if (!currentUser || !isUserInAdminWhitelist(currentUser)) {
+        window.location.href = "/work";
+        return;
+      }
+    }
+
     // 1. Instant local read
     const localConfig = getLandingCMS();
     setLandingCMS(localConfig);

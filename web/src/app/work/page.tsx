@@ -22,6 +22,7 @@ import RDModule from "@/modules/rd/RDModule";
 import CNCIWrapper from "@/modules/ci/CNCIWrapper";
 import MobileBottomNav from "@/components/mobile/MobileBottomNav";
 import MobileNavDrawer from "@/components/mobile/MobileNavDrawer";
+import { isUserInAdminWhitelist } from "@/lib/adminWhitelist";
 import {
   IconHome,
   IconLeaf,
@@ -1187,24 +1188,26 @@ export default function WorkDashboardPage() {
                         </div>
                       </button>
 
-                      {/* Option 3: Trang Quản Trị (Admin Mode) */}
-                      <Link
-                        href="/admin"
-                        onClick={() => setIsUserDropdownOpen(false)}
-                        className="w-full p-2.5 rounded-xl text-left flex items-center gap-3 text-xs font-bold text-[#006838] bg-emerald-50 hover:bg-[#006838] hover:text-white border border-emerald-200/80 transition-all cursor-pointer group my-1 shadow-2xs"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-[#006838] text-white group-hover:bg-white group-hover:text-[#006838] flex items-center justify-center transition-colors flex-shrink-0">
-                          <IconShieldCheck size={18} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-black text-slate-900 group-hover:text-white flex items-center gap-1">
-                            <span>Trang Quản Trị (Admin Mode)</span>
+                      {/* Option 3: Trang Quản Trị (Admin Mode) - Only rendered for Whitelisted Admins */}
+                      {isUserInAdminWhitelist(userInfo) && (
+                        <Link
+                          href="/admin"
+                          onClick={() => setIsUserDropdownOpen(false)}
+                          className="w-full p-2.5 rounded-xl text-left flex items-center gap-3 text-xs font-bold text-[#006838] bg-emerald-50 hover:bg-[#006838] hover:text-white border border-emerald-200/80 transition-all cursor-pointer group my-1 shadow-2xs"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-[#006838] text-white group-hover:bg-white group-hover:text-[#006838] flex items-center justify-center transition-colors flex-shrink-0">
+                            <IconShieldCheck size={18} />
                           </div>
-                          <div className="text-[10px] text-slate-500 group-hover:text-emerald-100 font-medium truncate">
-                            Truy cập hệ thống quản trị /admin
+                          <div className="flex-1 min-w-0">
+                            <div className="font-black text-slate-900 group-hover:text-white flex items-center gap-1">
+                              <span>Trang Quản Trị (Admin Mode)</span>
+                            </div>
+                            <div className="text-[10px] text-slate-500 group-hover:text-emerald-100 font-medium truncate">
+                              Truy cập hệ thống quản trị /admin
+                            </div>
                           </div>
-                        </div>
-                      </Link>
+                        </Link>
+                      )}
 
                       <div className="h-[1px] bg-slate-100 my-1" />
 
