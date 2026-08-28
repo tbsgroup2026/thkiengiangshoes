@@ -1825,10 +1825,11 @@ export default function CIModule() {
                     evalErrors.awardTitle ? "border-rose-500 bg-rose-50/40 text-rose-900" : "border-slate-300 focus:border-amber-600"
                   }`}
                 >
-                  <option value="Giải Nhất">🥇 Giải Nhất</option>
-                  <option value="Giải Nhì">🥈 Giải Nhì</option>
-                  <option value="Giải Ba">🥉 Giải Ba</option>
-                  <option value="Giải Khuyến Khích">🎗️ Giải Khuyến Khích</option>
+                  <option value="Giải Nhất">🥇 Giải Nhất (1.000.000đ)</option>
+                  <option value="Giải Nhì">🥈 Giải Nhì (500.000đ)</option>
+                  <option value="Giải Ba">🥉 Giải Ba (300.000đ)</option>
+                  <option value="Giải Tư">🎖️ Giải Tư (200.000đ)</option>
+                  <option value="Giải Khuyến Khích">🎗️ Giải Khuyến Khích (100.000đ)</option>
                 </select>
                 {evalErrors.awardTitle && (
                   <p className="text-[11px] font-bold text-rose-600 mt-1">{evalErrors.awardTitle}</p>
@@ -1847,7 +1848,7 @@ export default function CIModule() {
                   value={evalForm.scorePoints}
                   onChange={(e) => {
                     const val = parseFloat(e.target.value || "0");
-                    const autoAward = val >= 90 ? "Giải Nhất" : val >= 80 ? "Giải Nhì" : val >= 70 ? "Giải Ba" : "Giải Khuyến Khích";
+                    const autoAward = val >= 90 ? "Giải Nhất" : val >= 80 ? "Giải Nhì" : val >= 70 ? "Giải Ba" : val >= 60 ? "Giải Tư" : "Giải Khuyến Khích";
                     setEvalForm({ ...evalForm, scorePoints: val, awardTitle: autoAward });
                     if (evalErrors.scorePoints) setEvalErrors({ ...evalErrors, scorePoints: undefined });
                     if (evalErrors.awardTitle) setEvalErrors({ ...evalErrors, awardTitle: undefined });
@@ -1857,7 +1858,7 @@ export default function CIModule() {
                   }`}
                 />
                 <span className="text-[10px] text-amber-700 font-medium block">
-                  💡 Hạng giải tự động xếp theo điểm ranking: ≥90đ (Nhất), ≥80đ (Nhì), ≥70đ (Ba), &lt;70đ (Khuyến Khích).
+                  💡 Hạng giải tự động xếp: ≥90đ (Nhất - 1TR), ≥80đ (Nhì - 500k), ≥70đ (Ba - 300k), ≥60đ (Tư - 200k), &lt;60đ (Khuyến Khích - 100k).
                 </span>
                 {evalErrors.scorePoints && (
                   <p className="text-[11px] font-bold text-rose-600 mt-1">{evalErrors.scorePoints}</p>

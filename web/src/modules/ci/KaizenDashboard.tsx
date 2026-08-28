@@ -929,12 +929,17 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
           ROW 4: TABLE CẢI TIẾN TIÊU BIỂU (TOP 5 THI ĐUA)
          ════════════════════════════════════════════════════════════════ */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
-        <div className="bg-[#0b1739] text-white px-4 py-3 flex items-center justify-between">
+        <div className="bg-[#0b1739] text-white px-4 py-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <IconStar size={18} className="text-amber-400" />
-            <h3 className="text-xs font-black tracking-wide uppercase">
-              Một số cải tiến được khen thưởng
-            </h3>
+            <IconStar size={18} className="text-amber-400 shrink-0" />
+            <div>
+              <h3 className="text-xs font-black tracking-wide uppercase">
+                Một số cải tiến được khen thưởng
+              </h3>
+              <p className="text-[10px] font-extrabold text-amber-300/90 pt-0.5">
+                Cơ cấu giải thưởng: 🥇 Nhất: 01 giải (1.000.000đ) | 🥈 Nhì: 02 giải (500.000đ/giải) | 🥉 Ba: 05 giải (300.000đ/giải) | 🎖️ Tư: 10 giải (200.000đ/giải) | 🎗️ Khuyến khích: 20 giải (100.000đ/giải) — Tổng quỹ: 8.500.000đ
+              </p>
+            </div>
           </div>
 
           {onBackToLibrary && (
