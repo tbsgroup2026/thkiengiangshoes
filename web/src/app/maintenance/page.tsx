@@ -191,32 +191,29 @@ export default function OverviewPage() {
 
   // ---- Dữ liệu mẫu — sinh từ máy THẬT (đúng mã/Nhà máy/Khu vực/Line) để lọc theo bộ lọc phía
   // trên hoạt động y như dữ liệu thật, chỉ dùng khi chưa có sự cố thật nào khớp bộ lọc hiện tại.
+  // Lọc incidents/logs mẫu CÙNG 1 lượt theo chỉ số (không lọc 2 mảng riêng rẽ) để đảm bảo luôn
+  // đồng bộ tuyệt đối — tránh trường hợp 1 biểu đồ (vd Top linh kiện, tính từ logs) còn dữ liệu
+  // trong khi các biểu đồ khác (tính từ incidents) đã trống, hoặc ngược lại.
   const mockPool = useMemo(() => generateMockOverviewData(machines), [machines]);
-  const filteredMockIncidents = useMemo(
-    () =>
-      mockPool.incidents.filter(
-        (i) =>
-          (!appliedFilters.factoryId || i.factoryId === appliedFilters.factoryId) &&
-          (!appliedFilters.areaId || i.areaId === appliedFilters.areaId) &&
-          (!appliedFilters.lineId || i.lineId === appliedFilters.lineId) &&
-          inDateRange(i.createdAt, appliedFilters.dateFrom, appliedFilters.dateTo)
-      ),
-    [mockPool, appliedFilters]
-  );
-  const filteredMockLogs = useMemo(
-    () =>
-      mockPool.logs.filter(
-        (l) =>
-          (!appliedFilters.factoryId || l.factoryId === appliedFilters.factoryId) &&
-          (!appliedFilters.areaId || l.areaId === appliedFilters.areaId) &&
-          (!appliedFilters.lineId || l.lineId === appliedFilters.lineId) &&
-          inDateRange(l.createdAt, appliedFilters.dateFrom, appliedFilters.dateTo)
-      ),
-    [mockPool, appliedFilters]
-  );
-  const usingMockData = incidents.length === 0 && testDataOn && filteredMockIncidents.length > 0;
-  const effectiveIncidents: OverviewIncident[] = incidents.length > 0 ? incidents : testDataOn ? filteredMockIncidents : [];
-  const effectiveLogs: OverviewLog[] = incidents.length > 0 ? logs : testDataOn ? filteredMockLogs : [];
+  const mockMatchIndex = useMemo(() => {
+    const idxs: number[] = [];
+    mockPool.incidents.forEach((inc, idx) => {
+      if (
+        (!appliedFilters.factoryId || inc.factoryId === appliedFilters.factoryId) &&
+        (!appliedFilters.areaId || inc.areaId === appliedFilters.areaId) &&
+        (!appliedFilters.lineId || inc.lineId === appliedFilters.lineId) &&
+        inDateRange(inc.createdAt, appliedFilters.dateFrom, appliedFilters.dateTo)
+      ) {
+        idxs.push(idx);
+      }
+    });
+    return idxs;
+  }, [mockPool, appliedFilters]);
+  const filteredMockIncidents = useMemo(() => mockMatchIndex.map((idx) => mockPool.incidents[idx]), [mockMatchIndex, mockPool]);
+  const filteredMockLogs = useMemo(() => mockMatchIndex.map((idx) => mockPool.logs[idx]), [mockMatchIndex, mockPool]);
+  const showMock = incidents.length === 0 && testDataOn;
+  const effectiveIncidents: OverviewIncident[] = incidents.length > 0 ? incidents : showMock ? filteredMockIncidents : [];
+  const effectiveLogs: OverviewLog[] = incidents.length > 0 ? logs : showMock ? filteredMockLogs : [];
 
   // ---- Tính MTTA/MTTR/MTTD cho từng sự cố ----
   const enriched = useMemo(
@@ -465,12 +462,6 @@ export default function OverviewPage() {
             </div>
           </div>
         </div>
-
-        {usingMockData && (
-          <div className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-[11px] font-bold w-fit">
-            <IconFlask size={13} /> Đang hiển thị dữ liệu mẫu (chưa có sự cố thật khớp bộ lọc) — tắt ở nút &quot;Dữ liệu mẫu&quot; phía trên nếu không muốn xem
-          </div>
-        )}
 
         {/* KPI cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
