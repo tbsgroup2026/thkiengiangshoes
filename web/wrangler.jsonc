@@ -21,6 +21,11 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": true
   },
+  // Nguồn sự thật DUY NHẤT cho các biến môi trường Worker — trước đây có 1 tích hợp Git riêng của
+  // Cloudflare (mục "Builds" trên Dashboard) trỏ sai Root Directory ("/" thay vì "web"), khiến nó
+  // không đọc được file này và chỉ áp lại 3 biến đã lưu tay từ trước trên Dashboard (thiếu hẳn
+  // TBSMAYMOC_API_URL) — đã disconnect tích hợp đó, giờ CHỈ còn GitHub Actions
+  // (.github/workflows/deploy-web.yml, chạy đúng "cd web" trước khi build/deploy) là nơi deploy.
   "vars": {
     "NEXT_PUBLIC_APP_URL": "https://thkiengiangshoes.tbsgroup2026.workers.dev",
     "JWT_SECRET": "tbs_group_secure_jwt_secret_key_2026",
