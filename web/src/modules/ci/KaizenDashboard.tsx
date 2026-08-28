@@ -88,14 +88,28 @@ const formatMillion = (val: number): string => {
   return `${num.toLocaleString("vi-VN", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} Tr`;
 };
 
-// Helper to extract proposal estimated monetary value (in million VNĐ)
+// Helper to extract proposal total monetary savings value (in Million VNĐ)
 const getProposalValue = (p: any): number => {
-  if (p.value !== undefined && p.value !== null) return Number(p.value);
-  if (p.estimated_value !== undefined && p.estimated_value !== null) return Number(p.estimated_value);
-  if (p.saved_seconds && p.saved_seconds > 0) {
-    // 1 saved second ~ 0.5M VNĐ estimated value
-    return (p.saved_seconds * 0.5);
+  if (!p) return 0;
+
+  // 1. Direct total_savings_vnd field (in VNĐ) -> Convert to Million VNĐ (Tr)
+  const directTotalVnd = Number(p.total_savings_vnd || (p as any).tong_tien_tiet_kiem || 0);
+  if (directTotalVnd > 0) {
+    return directTotalVnd / 1000000;
   }
+
+  // 2. Compute from pair_quantity * saved_seconds * 12.5 VNĐ
+  const pairQty = Number(p.pair_quantity || (p as any).so_luong_giay || (p as any).quantity || 0);
+  const savedSecs = Number(p.saved_seconds || 0);
+  if (pairQty > 0 && savedSecs > 0) {
+    const totalVnd = Math.round(savedSecs * 12.5) * pairQty;
+    return totalVnd / 1000000;
+  }
+
+  // 3. Fallback for non-time financial proposal fields (if value or estimated_value is already in Million VNĐ)
+  if (p.value !== undefined && p.value !== null && Number(p.value) > 0) return Number(p.value);
+  if (p.estimated_value !== undefined && p.estimated_value !== null && Number(p.estimated_value) > 0) return Number(p.estimated_value);
+
   return 0;
 };
 
@@ -184,6 +198,7 @@ const getCustomerCode = (p: KaizenProposal): string => {
 
 export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDashboardProps) {
   const [selectedMonth, setSelectedMonth] = useState<string>("ALL");
+  const [statusScope, setStatusScope] = useState<"APPROVED" | "EVALUATED" | "ALL">("APPROVED");
   const [cascadingFilterState, setCascadingFilterState] = useState<CascadingFilterState>({
     factories: [],
     workshops: [],
@@ -196,10 +211,42 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
   // METRIC COMPUTATIONS FROM REAL PROPOSALS DATA
   // ════════════════════════════════════════════════════════════════
 
-  // Filtered proposals by selected month AND 5-level cascading organizational filter
+  // Filtered proposals by statusScope, selected month, AND 5-level cascading organizational filter
   const filteredProposals = useMemo(() => {
     return proposals.filter((p) => {
-      // 1. Month Filter
+      // 1. Status Scope Filter
+      const subStatus = String(p.sub_status || "").toUpperCase();
+      const appStatus = String(p.approval_status || "").toUpperCase();
+      const mainStatus = String(p.status || "").toUpperCase();
+
+      // Always exclude rejected proposals
+      if (appStatus === "TU_CHOI" || mainStatus === "REJECTED" || subStatus === "TU_CHOI_TRIEN_KHAI") {
+        return false;
+      }
+
+      if (statusScope === "APPROVED") {
+        // Default: Only proposals that passed Step 3 Feasibility Approval or above
+        const isApprovedOrAbove =
+          subStatus === "CHO_DANH_GIA" ||
+          subStatus === "DA_DANH_GIA" ||
+          subStatus === "LUU_TRU" ||
+          appStatus === "PHE_DUYET" ||
+          appStatus === "DA_DANH_GIA" ||
+          mainStatus === "APPROVED" ||
+          mainStatus === "IMPLEMENTED" ||
+          mainStatus === "EVALUATED";
+        if (!isApprovedOrAbove) return false;
+      } else if (statusScope === "EVALUATED") {
+        // Evaluated / Archived proposals only (final evaluated figures)
+        const isEvaluated =
+          subStatus === "DA_DANH_GIA" ||
+          subStatus === "LUU_TRU" ||
+          appStatus === "DA_DANH_GIA" ||
+          Number(p.score_points || (p as any).scorePoints || 0) > 0;
+        if (!isEvaluated) return false;
+      }
+
+      // 2. Month Filter
       if (selectedMonth !== "ALL") {
         if (!p.created_at) return false;
         const d = new Date(p.created_at);
@@ -207,12 +254,12 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
         if (mYear !== selectedMonth) return false;
       }
 
-      // 2. 5-Level Cascading Organizational Multi-Select Filter
+      // 3. 5-Level Cascading Organizational Multi-Select Filter
       if (!matchCascadingFilter(p, cascadingFilterState)) return false;
 
       return true;
     });
-  }, [proposals, selectedMonth, cascadingFilterState]);
+  }, [proposals, statusScope, selectedMonth, cascadingFilterState]);
 
   // Top KPI Card Computations
   const totalCount = filteredProposals.length;
@@ -492,7 +539,21 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
             </button>
           )}
 
-          {/* Filter 1: Kỳ Báo Cáo */}
+          {/* Filter 1: Phạm Vi Trạng Thái */}
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+            <span className="text-[11px] font-bold text-slate-600 px-2">Phạm Vi:</span>
+            <select
+              value={statusScope}
+              onChange={(e) => setStatusScope(e.target.value as any)}
+              className="bg-white px-2 py-1 rounded-lg text-xs font-bold text-slate-800 outline-none border border-slate-300 focus:border-[#006838]"
+            >
+              <option value="APPROVED">🟢 Đã phê duyệt (Chính thức)</option>
+              <option value="EVALUATED">⭐ Đã đánh giá / Hoàn thành</option>
+              <option value="ALL">📋 Tất cả (Gồm chờ duyệt)</option>
+            </select>
+          </div>
+
+          {/* Filter 2: Kỳ Báo Cáo */}
           <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
             <span className="text-[11px] font-bold text-slate-600 px-2">Kỳ Báo Cáo:</span>
             <select
