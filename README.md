@@ -21,6 +21,390 @@ Hệ thống cung cấp các bộ công cụ toàn diện:
 
 ---
 
+## 🗺️ Master Flowchart: End-to-End System Workflow
+
+Mô tả chi tiết toàn bộ quy trình nghiệp vụ, luồng xử lý AI, phân quyền an ninh, phê duyệt hiện trường, quản lý sự cố MMTB và cơ cấu thi đua của hệ thống **TBS II Platform (Tổ hợp Kiên Giang)**.
+
+---
+
+### 📌 Quy Ước Hình Khối & Màu Sắc (Flowchart Legend)
+
+Bảng quy chuẩn ký hiệu trực quan được áp dụng đồng bộ cho tất cả các sơ đồ luồng hệ thống:
+
+| Hình Khối | Cú Pháp Mermaid | Loại Node & Ý Nghĩa Nghiệp Vụ | Quy Định Màu Sắc (`classDef`) |
+| :---: | :---: | :--- | :--- |
+| 🟢 **Oval bo tròn** | `([Text])` | Điểm Bắt đầu / Kết thúc thành công (Start / End) | Xanh lá đậm (`#1b5e20`) |
+| 🔵 **Chữ nhật** | `[Text]` | Thao tác / Xử lý nghiệp vụ chính (Action / Process) | Xanh dương (`#1565c0`) |
+| 🟠 **Hình thoi** | `{Text}` | Phân nhánh & Kiểm tra điều kiện (Decision / Branching) | Cam (`#e65100`) |
+| 🩵 **Hình bình hành** | `[/Text/]` | Dữ liệu Nhập/Xuất & Giao diện Form (Input / Output) | Xanh ngọc (`#00695c`) |
+| 🟣 **Bo góc** | `(Text)` | Tự động hóa & AI Engine (AI / Auto Engine) | Tím (`#4a148c`) |
+| 🔴 **Đỏ (Chữ nhật/Oval)** | `[Text]` / `([Text])` | Cảnh báo / Từ chối / Kết thúc lỗi (Alert / Reject / Error End) | Đỏ (`#b71c1c`) |
+
+---
+
+### 📑 Mục Lục Điều Hướng Flowchart (Table of Contents)
+
+1. [Sơ Đồ Tổng Quan Các Phân Hệ (Master System Overview)](#1-sơ-đồ-tổng-quan-các-phân-hệ-master-system-overview)
+2. [Luồng A: Đăng Nhập & Phân Quyền RBAC (Auth & Permissions)](#2-luồng-a-đăng-nhập--phân-quyền-rbac-auth--permissions)
+3. [Luồng B: Tiếp Nhận Báo Cáo & Chống Trùng Lặp (Issue Reporting & Duplicate Guard)](#3-luồng-b-tiếp-nhận-báo-cáo--chống-trùng-lặp-issue-reporting--duplicate-guard)
+4. [Luồng C: Xử Lý AI 5 Whys & Quản Lý SLA (AI Engine & SLA Control)](#4-luồng-c-xử-lý-ai-5-whys--quản-lý-sla-ai-engine--sla-control)
+5. [Luồng D: Phê Duyệt, Bảo Trì & Giám Sát Tái Diễn (Approval & Execution)](#5-luồng-d-phê-duyệt-bảo-trì--giám-sát-tái-diễn-approval--execution)
+6. [Luồng E: Kết Thúc, Đóng Issue & Lưu Trữ KPI (Archiving & Indexing)](#6-luồng-e-kết-thúc-đóng-issue--lưu-trữ-kpi-archiving--indexing)
+7. [Luồng F: Các Phân Hệ Mở Rộng (Dashboard, Cảnh Báo Ban, Thư Viện & Thi Đua)](#7-luồng-f-các-phân-hệ-mở-rộng-dashboard-cảnh-báo-ban-thư-viện--thi-đua)
+
+---
+
+### 1. Sơ Đồ Tổng Quan Các Phân Hệ (Master System Overview)
+
+Sơ đồ tổng thể kết nối toàn bộ các phân hệ từ Đăng nhập, Báo cáo sự cố, Xử lý AI, Phê duyệt, Bảo trì đến Lưu trữ KPI:
+
+```mermaid
+flowchart TD
+    classDef startEnd fill:#1b5e20,stroke:#2e7d32,color:#ffffff,stroke-width:2px;
+    classDef process fill:#1565c0,stroke:#1e88e5,color:#ffffff,stroke-width:2px;
+    classDef decision fill:#e65100,stroke:#fb8c00,color:#ffffff,stroke-width:2px;
+    classDef inputOutput fill:#00695c,stroke:#00897b,color:#ffffff,stroke-width:2px;
+    classDef aiEngine fill:#4a148c,stroke:#7b1fa2,color:#ffffff,stroke-width:2px;
+    classDef alertError fill:#b71c1c,stroke:#e53935,color:#ffffff,stroke-width:2px;
+
+    M_START(["🚀 Bắt đầu phiên truy cập hệ thống<br/><i>User Access Platform</i>"]) ::: startEnd
+    M_AUTH["🔒 [Module Auth] Đăng nhập & Xác thực RBAC Guard<br/><i>Role-Based Access Control</i>"] ::: process
+    M_ROLE{"Chọn vai trò tác nghiệp?<br/><i>Role Selection</i>"} ::: decision
+    
+    M_REP[/"📝 [Module Report] Tạo báo cáo Kaizen / Sự cố MMTB<br/><i>Input Form & Media Upload</i>"/] ::: inputOutput
+    M_DUP{"Kiểm tra trùng lặp báo cáo?<br/><i>Prevent Duplicate Engine</i>"} ::: decision
+    M_DUP_ERR["⚠️ Cảnh báo trùng lặp - Đề xuất gộp issue<br/><i>Status: Duplicate Blocked</i>"] ::: alertError
+    
+    M_AI("🤖 [Module AI Engine] Phỏng vấn 5 Whys & Đếm SLA<br/><i>Multi-Role Interview & Auto Root Cause</i>") ::: aiEngine
+    M_SLA{"Kiểm tra thời gian SLA (15 phút)?<br/><i>SLA Timer Check</i>"} ::: decision
+    M_TIMEOUT["🚨 SLA Timeout - Khóa Form & Phát SOS Alert<br/><i>Status: SLA Expired</i>"] ::: alertError
+    
+    M_APPROVE["⚖️ [Module Approval] Phê duyệt giải pháp & Phân công<br/><i>Feasibility Approval & Task Assignment</i>"] ::: process
+    M_SCOPE{"Kiểm tra phạm vi & ngân sách?<br/><i>Scope & Budget Check</i>"} ::: decision
+    M_SOS["📢 Escalation: Gửi thông báo khẩn tới Giám đốc nhà máy<br/><i>Status: SOS Escalated</i>"] ::: alertError
+    
+    M_MAINT["🔧 [Module Maintenance] Thực thi sửa chữa MMTB hiện trường<br/><i>Parts Replacement & Photos Proof</i>"] ::: process
+    M_INSPECT{"Kiểm tra tại chỗ (On-site Inspection)?<br/><i>Passed / Failed</i>"} ::: decision
+    M_MONITOR["👁️ [Module Monitoring] Giám sát tái diễn (24-48h)<br/><i>Recurrence Monitoring</i>"] ::: process
+    M_RECUR{"Phát hiện sự cố tái diễn?<br/><i>Has Recurrence?</i>"} ::: decision
+    
+    M_KPI[/"📊 [Module Archiving & KPI] Lưu trữ Thư viện & Tính KPI<br/><i>Knowledge Base & Reward Indexing</i>"/] ::: inputOutput
+    M_END(["🏆 Hoàn tất quy trình - Tôn vinh Thi đua<br/><i>Status: Closed & Awarded</i>"]) ::: startEnd
+
+    M_START --> M_AUTH --> M_ROLE
+    M_ROLE -->|Công nhân / Cán bộ| M_REP
+    M_ROLE -->|Ban Giám Đốc / Admin| M_KPI
+    
+    M_REP --> M_DUP
+    M_DUP -- Có trùng lặp --> M_DUP_ERR
+    M_DUP -- Hợp lệ --> M_AI
+    
+    M_AI --> M_SLA
+    M_SLA -- Hết giờ (Timeout) --> M_TIMEOUT
+    M_SLA -- Đạt SLA (3/3 hoàn thành) --> M_APPROVE
+    
+    M_APPROVE --> M_SCOPE
+    M_SCOPE -- Vượt cấp / Vượt ngân sách --> M_SOS
+    M_SCOPE -- Trong thẩm quyền --> M_MAINT
+    M_SOS --> M_MAINT
+    
+    M_MAINT --> M_INSPECT
+    M_INSPECT -- Không đạt --> M_MAINT
+    M_INSPECT -- Đạt --> M_MONITOR
+    
+    M_MONITOR --> M_RECUR
+    M_RECUR -- Có tái diễn --> M_AI
+    M_RECUR -- Không tái diễn --> M_KPI --> M_END
+```
+
+---
+
+### 2. Luồng A: Đăng Nhập & Phân Quyền RBAC (Auth & Permissions)
+
+Quy trình xác thực người dùng, phân loại vai trò và kiểm soát an ninh 2 lớp (Server Guard & Whitelist Guard):
+
+```mermaid
+flowchart TD
+    classDef startEnd fill:#1b5e20,stroke:#2e7d32,color:#ffffff,stroke-width:2px;
+    classDef process fill:#1565c0,stroke:#1e88e5,color:#ffffff,stroke-width:2px;
+    classDef decision fill:#e65100,stroke:#fb8c00,color:#ffffff,stroke-width:2px;
+    classDef inputOutput fill:#00695c,stroke:#00897b,color:#ffffff,stroke-width:2px;
+    classDef aiEngine fill:#4a148c,stroke:#7b1fa2,color:#ffffff,stroke-width:2px;
+    classDef alertError fill:#b71c1c,stroke:#e53935,color:#ffffff,stroke-width:2px;
+
+    A_START(["🚪 Nguời dùng truy cập App / Web Admin<br/><i>Access Route /work or /admin</i>"]) ::: startEnd
+    A_INPUT[/"🔑 Nhập Mã số nhân viên (MSNV) / Mật khẩu hoặc Quick Role<br/><i>Credential Input / Role Selector</i>"/] ::: inputOutput
+    A_CHECK_AUTH{"Kiểm tra Credentials hợp lệ?<br/><i>verifyServerAuth()</i>"} ::: decision
+    A_ERR_AUTH["🛑 Đăng nhập thất bại - Sai MSNV hoặc Mật khẩu<br/><i>HTTP 401 Unauthorized</i>"] ::: alertError
+    
+    A_CHECK_ROLE{"Phân loại vai trò người dùng?<br/><i>Check role_code & level_rank</i>"} ::: decision
+    
+    A_ADMIN_CHECK{"Kiểm tra Admin Whitelist?<br/><i>adminWhitelist.ts (202608001 / 201809012)</i>"} ::: decision
+    A_ADMIN_ALLOW["🟢 Phân quyền SYSTEM_ADMIN<br/><i>Full Access + Admin Portal Mode</i>"] ::: process
+    A_ADMIN_DENY["🚫 Chặn Admin Mode - Redirect /work<br/><i>HTTP 403 Forbidden</i>"] ::: alertError
+    
+    A_ROLE_DIR["👑 Ban Giám Đốc (TONG_GIAM_DOC / BGĐ)<br/><i>View Dashboard, Approval SOS, Distribute Judges</i>"] ::: process
+    A_ROLE_DEPT["👔 Trưởng Phòng / Phó GĐ (TRUONG_PHONG)<br/><i>Feasibility Approval, Assign Maintenance Task</i>"] ::: process
+    A_ROLE_CI["⭐ Hội Đồng Ban Giám Khảo (TEAM_CI / BGK)<br/><i>Evaluate 100-pt Barem, Star Rating, Competition Tag</i>"] ::: process
+    A_ROLE_LINE["👷 Line Leader / Kỹ sư hiện trường (Tech)<br/><i>5 Whys Interviewee, On-site Inspection</i>"] ::: process
+    A_ROLE_MAINT["🔧 Đội ngũ Bảo trì MMTB (Maintenance)<br/><i>Execute Ticket, Update Spare Parts & Photos</i>"] ::: process
+    A_ROLE_WORKER["👤 Công nhân / Nhân viên (WORKER)<br/><i>Submit Proposal, Track Personal Status, Vote</i>"] ::: process
+
+    A_HOME(["🖥️ Chuyển hướng về Trang Chủ nghiệp vụ theo Role<br/><i>Role-based Landing Workspace</i>"]) ::: startEnd
+
+    A_START --> A_INPUT --> A_CHECK_AUTH
+    A_CHECK_AUTH -- Không hợp lệ --> A_ERR_AUTH
+    A_CHECK_AUTH -- Hợp lệ --> A_CHECK_ROLE
+    
+    A_CHECK_ROLE -->|Mã Vai Trò: Admin| A_ADMIN_CHECK
+    A_ADMIN_CHECK -- Thuộc Whitelist --> A_ADMIN_ALLOW --> A_HOME
+    A_ADMIN_CHECK -- Không thuộc Whitelist --> A_ADMIN_DENY --> A_HOME
+    
+    A_CHECK_ROLE -->|Mã Vai Trò: BGĐ| A_ROLE_DIR --> A_HOME
+    A_CHECK_ROLE -->|Mã Vai Trò: Trưởng Phòng| A_ROLE_DEPT --> A_HOME
+    A_CHECK_ROLE -->|Mã Vai Trò: BGK/CI| A_ROLE_CI --> A_HOME
+    A_CHECK_ROLE -->|Mã Vai Trò: Line Leader/Tech| A_ROLE_LINE --> A_HOME
+    A_CHECK_ROLE -->|Mã Vai Trò: Bảo Trì| A_ROLE_MAINT --> A_HOME
+    A_CHECK_ROLE -->|Mã Vai Trò: Công Nhân| A_ROLE_WORKER --> A_HOME
+```
+
+---
+
+### 3. Luồng B: Tiếp Nhận Báo Cáo & Chống Trùng Lặp (Issue Reporting & Duplicate Guard)
+
+Quy trình nhập liệu báo cáo sự cố / sáng kiến, đối soát chống trùng lặp tự động và kích hoạt đếm ngược SLA:
+
+```mermaid
+flowchart TD
+    classDef startEnd fill:#1b5e20,stroke:#2e7d32,color:#ffffff,stroke-width:2px;
+    classDef process fill:#1565c0,stroke:#1e88e5,color:#ffffff,stroke-width:2px;
+    classDef decision fill:#e65100,stroke:#fb8c00,color:#ffffff,stroke-width:2px;
+    classDef inputOutput fill:#00695c,stroke:#00897b,color:#ffffff,stroke-width:2px;
+    classDef aiEngine fill:#4a148c,stroke:#7b1fa2,color:#ffffff,stroke-width:2px;
+    classDef alertError fill:#b71c1c,stroke:#e53935,color:#ffffff,stroke-width:2px;
+
+    B_START(["📋 Bắt đầu tạo mới Báo cáo / Sáng kiến<br/><i>Click 'Tạo mới báo cáo'</i>"]) ::: startEnd
+    B_SELECT{"Chọn hành động thao tác?<br/><i>Select User Action</i>"} ::: decision
+    
+    B_ACTION_SEARCH[/"🔍 Tra cứu lịch sử / Tra cứu PO-Style<br/><i>PO Number & Historical Lookup</i>"/] ::: inputOutput
+    B_ACTION_FORM[/"📝 Mở Form Nhập Liệu Báo Cáo (Issue Report Form)<br/><i>Multi-step Form Interface</i>"/] ::: inputOutput
+    
+    B_INPUT[/"✍️ Nhập thông tin: Khu vực, Line, Team, Category, PO, Severity, Ảnh/Video<br/><i>Fields: Region, Line, Category, Photos via Cloudinary</i>"/] ::: inputOutput
+    
+    B_DUP_ENGINE("🤖 Thuật toán kiểm tra chống trùng lặp (Prevent Duplicate Engine)<br/><i>Check Hash: Line + Category + PO + Time Window</i>") ::: aiEngine
+    B_DUP_CHECK{"Phát hiện báo cáo bị trùng lặp?<br/><i>Is Duplicate Detected?</i>"} ::: decision
+    
+    B_DUP_ALERT["⚠️ Cảnh Báo Trùng Lặp: Đã có sự cố tương tự đang mở!<br/><i>Gợi ý: Gộp chung vào Ticket đang xử lý</i>"] ::: alertError
+    B_DUP_DECIDE{"Người dùng chọn gộp ticket?<br/><i>Merge or Continue?</i>"} ::: decision
+    B_MERGE["🔗 Gộp dữ liệu vào Issue hiện hữu & Cập nhật lượt báo cáo<br/><i>Status: Ticket Merged</i>"] ::: process
+    
+    B_SAVE["🗄️ Ghi dữ liệu vào D1 Database (Bảng ci_kaizen_proposals)<br/><i>Status: SUBMITTED / CHO_REVIEW</i>"] ::: process
+    B_TIMER("⏱️ Kích hoạt SLA Investigation Countdown (15 phút)<br/><i>Start 15-Min Investigation Timer</i>") ::: aiEngine
+    
+    B_NOTIF("💬 Zalo Bot & Push Notification Relay<br/><i>Send Instant Alert to Line Leader, Dept Head & Maintenance</i>") ::: aiEngine
+    
+    B_END(["🚀 Chuyển giao thông tin sang Phân hệ AI 5 Whys<br/><i>Ready for AI Investigation</i>"]) ::: startEnd
+
+    B_START --> B_SELECT
+    B_SELECT -->|Tìm kiếm PO/Lịch sử| B_ACTION_SEARCH
+    B_SELECT -->|Tạo mới báo cáo| B_ACTION_FORM --> B_INPUT
+    
+    B_INPUT --> B_DUP_ENGINE --> B_DUP_CHECK
+    B_DUP_CHECK -- Phát hiện trùng --> B_DUP_ALERT --> B_DUP_DECIDE
+    B_DUP_DECIDE -- Đồng ý gộp --> B_MERGE --> B_END
+    B_DUP_DECIDE -- Vẫn tạo mới --> B_SAVE
+    B_DUP_CHECK -- Không trùng lặp --> B_SAVE
+    
+    B_SAVE --> B_TIMER --> B_NOTIF --> B_END
+```
+
+---
+
+### 4. Luồng C: Xử Lý AI 5 Whys & Quản Lý SLA (AI Engine & SLA Control)
+
+Quy trình phỏng vấn độc lập nhiều vai trò bằng AI 5 Whys, kiểm soát thời gian SLA 15 phút và tự động đề xuất giải pháp:
+
+```mermaid
+flowchart TD
+    classDef startEnd fill:#1b5e20,stroke:#2e7d32,color:#ffffff,stroke-width:2px;
+    classDef process fill:#1565c0,stroke:#1e88e5,color:#ffffff,stroke-width:2px;
+    classDef decision fill:#e65100,stroke:#fb8c00,color:#ffffff,stroke-width:2px;
+    classDef inputOutput fill:#00695c,stroke:#00897b,color:#ffffff,stroke-width:2px;
+    classDef aiEngine fill:#4a148c,stroke:#7b1fa2,color:#ffffff,stroke-width:2px;
+    classDef alertError fill:#b71c1c,stroke:#e53935,color:#ffffff,stroke-width:2px;
+
+    C_START(["🤖 AI 5 Whys Engine Tiếp Nhận Issue<br/><i>Trigger 5 Whys Investigation Module</i>"]) ::: startEnd
+    
+    C_INTERVIEW("🎙️ Hệ thống AI thực hiện phỏng vấn độc lập các vai trò<br/><i>Independent Interview: Worker, Tech, Line Leader</i>") ::: aiEngine
+    C_INPUT_ROLE[/"💬 Nhập câu trả lời 5 Nguyên nhân (5 Whys Data Entry)<br/><i>Input: Why 1 -> Why 2 -> Why 3 -> Why 4 -> Why 5</i>"/] ::: inputOutput
+    
+    C_CHECK_SLA{"Kiểm tra bộ đếm SLA (15 phút Countdown)?<br/><i>Is SLA Timer Expired?</i>"} ::: decision
+    
+    C_TIMEOUT_ALERT["🚨 Cảnh Báo Quá Giờ SLA (SLA Timeout Event!)<br/><i>Trạng thái: Hết hạn 15 phút điều tra</i>"] ::: alertError
+    C_LOCK_FORM["🔒 Tự động Khóa Form Nhập Liệu & Phát Alert Escalation<br/><i>Status: Form Locked & Alert Sent to Dept Head</i>"] ::: alertError
+    
+    C_CHECK_COMPLETE{"Kiểm tra số lượng phỏng vấn hoàn thành?<br/><i>Target Criteria: 3/3 Roles Responded</i>"} ::: decision
+    
+    C_AI_SYNTH("🧠 AI Engine Tổng Hợp Dữ Liệu Phỏng Vấn (AI Synthesis Engine)<br/><i>Analyze root causes & synthesize pattern</i>") ::: aiEngine
+    C_PROPOSE_OUTPUT[/"💡 AI Đề Xuất Nguyên Nhân Gốc Rễ & Giải Pháp Khắc Phục<br/><i>Output: Suggested Root Cause & Corrective Action</i>"/] ::: inputOutput
+    
+    C_END(["⚖️ Chuyển kết quả sang Luồng Phê Duyệt Của Quản Lý<br/><i>Proceed to Manager Feasibility Approval</i>"]) ::: startEnd
+
+    C_START --> C_INTERVIEW --> C_INPUT_ROLE --> C_CHECK_SLA
+    
+    C_CHECK_SLA -- Hết 15 phút (Timeout) --> C_TIMEOUT_ALERT --> C_LOCK_FORM --> C_AI_SYNTH
+    C_CHECK_SLA -- Chưa hết giờ --> C_CHECK_COMPLETE
+    
+    C_CHECK_COMPLETE -- Chưa đủ 3/3 câu trả lời --> C_INTERVIEW
+    C_CHECK_COMPLETE -- Đã hoàn tất đủ 3/3 --> C_AI_SYNTH
+    
+    C_AI_SYNTH --> C_PROPOSE_OUTPUT --> C_END
+```
+
+---
+
+### 5. Luồng D: Phê Duyệt, Bảo Trì & Giám Sát Tái Diễn (Approval & Execution)
+
+Quy trình phê duyệt giải pháp (Bước 3), phân công bảo trì, nghiệm thu tại chỗ và giám sát lặp lại sự cố (24-48h):
+
+```mermaid
+flowchart TD
+    classDef startEnd fill:#1b5e20,stroke:#2e7d32,color:#ffffff,stroke-width:2px;
+    classDef process fill:#1565c0,stroke:#1e88e5,color:#ffffff,stroke-width:2px;
+    classDef decision fill:#e65100,stroke:#fb8c00,color:#ffffff,stroke-width:2px;
+    classDef inputOutput fill:#00695c,stroke:#00897b,color:#ffffff,stroke-width:2px;
+    classDef aiEngine fill:#4a148c,stroke:#7b1fa2,color:#ffffff,stroke-width:2px;
+    classDef alertError fill:#b71c1c,stroke:#e53935,color:#ffffff,stroke-width:2px;
+
+    D_START(["⚖️ Bắt đầu luồng Phê Duyệt & Phân Công Xử Lý<br/><i>Start Approval & Maintenance Assignment</i>"]) ::: startEnd
+    
+    D_SCOPE_CHECK{"Kiểm tra phạm vi ảnh hưởng & ngân sách?<br/><i>Within Line/Shop or Cross-Department / High Cost?</i>"} ::: decision
+    
+    D_ESCALATE_ALERT["📢 Cảnh báo vượt phạm vi / vượt thẩm quyền!<br/><i>Scope Limit Exceeded Event</i>"] ::: alertError
+    D_SOS_DIR["🚨 Gửi thông báo SOS khẩn cấp tới Giám Đốc Nhà Máy (Director)<br/><i>Escalation Notification to Ban Giám Đốc</i>"] ::: alertError
+    
+    D_APPROVE_LEADER["👨‍💼 Line Leader / Trưởng Phòng duyệt Root Cause & Solution<br/><i>Status: PHE_DUYET (Bước 3)</i>"] ::: process
+    D_REJECT_STEP3["🛑 Từ chối phê duyệt triển khai<br/><i>Status: TU_CHOI_TRIEN_KHAI -> Stop Process</i>"] ::: alertError
+    
+    D_ASSIGN_TASK["📌 Dept Head phân công Ticket nhiệm vụ cho Kỹ thuật Bảo trì<br/><i>Assign Maintenance Engineer/Tech</i>"] ::: process
+    
+    D_MAINT_EXEC[/"🔧 Kỹ thuật viên bảo trì thực hiện sửa chữa MMTB<br/><i>Replace parts, record time, capture photos</i>"/] ::: inputOutput
+    D_SUBMIT_MAINT["📤 Nộp báo cáo hoàn thành sửa chữa hiện trường<br/><i>Status: Pending Inspection</i>"] ::: process
+    
+    D_INSPECT_CHECK{"👷 Line Leader kiểm tra tại chỗ (On-site Inspection)?<br/><i>Verify physical result on factory floor</i>"} ::: decision
+    D_INSPECT_FAIL["❌ Kiểm tra Không Đạt - Yêu cầu sửa chữa lại<br/><i>Status: Re-opened & Work Re-assigned</i>"] ::: alertError
+    
+    D_MONITOR("👁️ Kích hoạt giám sát tái diễn tự động (Monitoring 24-48h)<br/><i>Automated Recurrence Monitoring Engine</i>") ::: aiEngine
+    D_RECUR_CHECK{"Phát hiện sự cố lặp lại trong 48h?<br/><i>Did Issue Recur?</i>"} ::: decision
+    
+    D_END(["🏁 Hoàn thành xử lý hiện trường - Chuyển sang Đóng & Lưu Trữ<br/><i>Proceed to Archiving & KPI Module</i>"]) ::: startEnd
+
+    D_START --> D_SCOPE_CHECK
+    D_SCOPE_CHECK -- Vượt cấp / Vượt ngân sách --> D_ESCALATE_ALERT --> D_SOS_DIR --> D_APPROVE_LEADER
+    D_SCOPE_CHECK -- Trong phạm vi nhà xưởng --> D_APPROVE_LEADER
+    
+    D_APPROVE_LEADER -->|Từ chối| D_REJECT_STEP3
+    D_APPROVE_LEADER -->|Phê duyệt| D_ASSIGN_TASK
+    
+    D_ASSIGN_TASK --> D_MAINT_EXEC --> D_SUBMIT_MAINT --> D_INSPECT_CHECK
+    
+    D_INSPECT_CHECK -- Không đạt --> D_INSPECT_FAIL --> D_MAINT_EXEC
+    D_INSPECT_CHECK -- Đạt tiêu chuẩn --> D_MONITOR --> D_RECUR_CHECK
+    
+    D_RECUR_CHECK -- Có tái diễn --> D_INSPECT_FAIL
+    D_RECUR_CHECK -- Không tái diễn (Tốt) --> D_END
+```
+
+---
+
+### 6. Luồng E: Kết Thúc, Đóng Issue & Lưu Trữ KPI (Archiving & Indexing)
+
+Quy trình đánh giá chuyên môn (Bước 5), đóng ticket, index dữ liệu tiết kiệm thời gian/VNĐ vào KPI và gắn nhãn thi đua:
+
+```mermaid
+flowchart TD
+    classDef startEnd fill:#1b5e20,stroke:#2e7d32,color:#ffffff,stroke-width:2px;
+    classDef process fill:#1565c0,stroke:#1e88e5,color:#ffffff,stroke-width:2px;
+    classDef decision fill:#e65100,stroke:#fb8c00,color:#ffffff,stroke-width:2px;
+    classDef inputOutput fill:#00695c,stroke:#00897b,color:#ffffff,stroke-width:2px;
+    classDef aiEngine fill:#4a148c,stroke:#7b1fa2,color:#ffffff,stroke-width:2px;
+    classDef alertError fill:#b71c1c,stroke:#e53935,color:#ffffff,stroke-width:2px;
+
+    E_START(["🏁 Bắt đầu luồng Đóng Issue & Lưu Trữ<br/><i>Start Closure & Archiving Process</i>"]) ::: startEnd
+    
+    E_FINAL_NOTIF("💬 Gửi Cảnh báo Hoàn thành Cuối cùng (Final Completion Alert)<br/><i>Notify Director, Dept Head & Proposer via Zalo Bot</i>") ::: aiEngine
+    
+    E_EVAL_BGK["👑 Hội Đồng BGK / Team CI Đánh Giá Hiệu Quả (Bước 5)<br/><i>Grade 100-pt Barem & Star Rating (0.5 - 5.0)</i>"] ::: process
+    E_EVAL_CHECK{"Kết quả đánh giá chuyên môn?<br/><i>Pass or Fail Criteria?</i>"} ::: decision
+    
+    E_FAIL_EVAL["❌ Không Đạt Yêu Cầu Chuyên Môn<br/><i>Status: KHONG_DAT_YEU_CAU -> Archive Record</i>"] ::: alertError
+    
+    E_SAVE_KB[/"📦 Đóng Issue & Lưu Trữ Thư Viện Kiến Thức (Knowledge Base)<br/><i>Status: LUU_TRU (ci_kaizen_proposals)</i>"/] ::: inputOutput
+    
+    E_INDEX_KPI("📊 Tự động Index Số Giờ Tiết Kiệm & Hiệu Quả VNĐ vào KPI<br/><i>Calculate saved_seconds & efficiency_value_vnd</i>") ::: aiEngine
+    
+    E_BGK_TAG{"BGK / Admin Gắn Nhãn Sáng Kiến Thi Đua?<br/><i>Attach Competition Tag (is_thi_dua = 1)</i>"} ::: decision
+    
+    E_TAG_YES["🏆 Gắn nhãn THI_DUA - Đưa vào danh sách xét thưởng tháng<br/><i>Status: THI_DUA</i>"] ::: process
+    E_TAG_NO["📦 Giữ trạng thái Lưu trữ tiêu chuẩn<br/><i>Status: LUU_TRU</i>"] ::: process
+    
+    E_END(["🎉 Hoàn tất quy trình vòng đời Kaizen & Sự cố MMTB<br/><i>Lifecycle Successfully Completed</i>"]) ::: startEnd
+
+    E_START --> E_FINAL_NOTIF --> E_EVAL_BGK --> E_EVAL_CHECK
+    
+    E_EVAL_CHECK -- Không đạt --> E_FAIL_EVAL --> E_SAVE_KB
+    E_EVAL_CHECK -- Đạt tiêu chuẩn --> E_SAVE_KB
+    
+    E_SAVE_KB --> E_INDEX_KPI --> E_BGK_TAG
+    
+    E_BGK_TAG -- Có gắn nhãn --> E_TAG_YES --> E_END
+    E_BGK_TAG -- Không gắn nhãn --> E_TAG_NO --> E_END
+```
+
+---
+
+### 7. Luồng F: Các Phân Hệ Mở Rộng (Dashboard, Cảnh Báo Ban, Thư Viện & Thi Đua)
+
+Cấu trúc các module phụ trợ gồm Dashboard chỉ số hiện trường, Cảnh báo Ban 2.2, Thư viện tra cứu nhanh và Cơ cấu giải thưởng:
+
+```mermaid
+flowchart TD
+    classDef startEnd fill:#1b5e20,stroke:#2e7d32,color:#ffffff,stroke-width:2px;
+    classDef process fill:#1565c0,stroke:#1e88e5,color:#ffffff,stroke-width:2px;
+    classDef decision fill:#e65100,stroke:#fb8c00,color:#ffffff,stroke-width:2px;
+    classDef inputOutput fill:#00695c,stroke:#00897b,color:#ffffff,stroke-width:2px;
+    classDef aiEngine fill:#4a148c,stroke:#7b1fa2,color:#ffffff,stroke-width:2px;
+    classDef alertError fill:#b71c1c,stroke:#e53935,color:#ffffff,stroke-width:2px;
+
+    F_START(["🌐 Các Phân Hệ Mở Rộng Hệ Thống TBS II Platform<br/><i>Extended System Modules Architecture</i>"]) ::: startEnd
+
+    subgraph F_MOD1 ["📊 1. Phân Hệ Dashboard & Cảnh Báo Ban 2.2"]
+        F1_CACHE("⚡ Multi-layer Cache (Server 30s TTL + Client localStorage SWR)<br/><i>Zero-latency Instant Badge Hydration</i>") ::: aiEngine
+        F1_BAN22["🚨 Module Cảnh Báo Ban 2.2: Tự động phát hiện bất thường hiện trường<br/><i>Early Anomaly Detection System</i>"] ::: alertError
+    end
+
+    subgraph F_MOD2 ["📚 2. Thư Viện Sáng Kiến & Bộ Lọc Nhanh"]
+        F2_FILTER[/"🗂️ Bộ Lọc Nhanh 5 Tab: Thi đua | Chờ phê duyệt | Chờ đánh giá | Đã đánh giá | Lưu trữ<br/><i>Quick Filter Tabs Interface</i>"/] ::: inputOutput
+        F2_REGION[/"📍 Quản lý Khu Vực: Kiên Giang 1 | Kiên Giang 2 | Kiên Giang 3 | Hoàn Thiện Đế<br/><i>Region, Product Group, Category & Date Filters</i>"/] ::: inputOutput
+        F2_SOCIAL["❤️ Cơ Chế Tương Tác: Like | View | Upvote | Bình luận | Multi-Judge Review<br/><i>Engagement & Evaluation Features</i>"] ::: process
+    end
+
+    subgraph F_MOD3 ["🏆 3. Cơ Cấu Giải Thưởng Thi Đua Hàng Tháng (38 Giải - 8.5 Tr VNĐ)"]
+        F3_AWARDS[/"🥇 Giải Nhất: 1 giải (1.000.000đ)<br/>🥈 Giải Nhì: 2 giải (500.000đ/giải)<br/>🥉 Giải Ba: 5 giải (300.000đ/giải)<br/>🎖️ Giải Tư: 10 giải (200.000đ/giải)<br/>🎗️ Giải KK: 20 giải (100.000đ/giải)"/] ::: inputOutput
+    end
+
+    F_END(["🏁 Đồng bộ toàn bộ dữ liệu lên CSDL Serverless Cloudflare D1<br/><i>Synced with D1 Database & Cloudinary</i>"]) ::: startEnd
+
+    F_START --> F_MOD1
+    F_START --> F_MOD2
+    F_START --> F_MOD3
+    F_MOD1 --> F_END
+    F_MOD2 --> F_END
+    F_MOD3 --> F_END
+```
+
+---
+
 ## 🏗️ 2. KIẾN TRÚC TỔNG THỂ (HIGH-LEVEL ARCHITECTURE)
 
 Sơ đồ Mermaid dưới đây mô tả kiến trúc phân lớp thực tế của hệ thống TBS II Platform:

@@ -161,4 +161,22 @@ sequenceDiagram
 
 ---
 
+## 🏆 5. CƠ CẤU GIẢI THƯỞNG "MỘT SỐ CẢI TIẾN ĐƯỢC KHEN THƯỞNG"
+
+Bảng cơ cấu khen thưởng hàng tháng dành cho các sáng kiến Kaizen đạt thành tích xuất sắc:
+
+| Hạng Giải | Số Lượng Giải | Mức Thưởng (VNĐ / Giải) | Thành Tiền (VNĐ) |
+| :--- | :---: | :---: | :---: |
+| 🥇 **Giải Nhất** | 01 giải | 1.000.000 VNĐ | 1.000.000 VNĐ |
+| 🥈 **Giải Nhì** | 02 giải | 500.000 VNĐ / giải | 1.000.000 VNĐ |
+| 🥉 **Giải Ba** | 05 giải | 300.000 VNĐ / giải | 1.500.000 VNĐ |
+| 🎖️ **Giải Tư** | 10 giải | 200.000 VNĐ / giải | 2.000.000 VNĐ |
+| 🎗️ **Giải Khuyến Khích (Giải 5)** | 20 giải | 100.000 VNĐ / giải | 2.000.000 VNĐ |
+| 💰 **TỔNG NGHĨA VỤ KHEN THƯỞNG** | **38 giải** | — | **8.500.000 VNĐ** |
+
+*Công thức tổng ngân sách khen thưởng hàng tháng*:  
+$$\text{Tổng tiền} = 1.000.000 + (2 \times 500.000) + (5 \times 300.000) + (10 \times 200.000) + (20 \times 100.000) = 8.500.000 \text{ VNĐ}$$
+
+---
+
 > **Tài liệu ban hành**: Ban Công Nghệ & Kaizen TBS Group — 2026
