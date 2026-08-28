@@ -1,5 +1,5 @@
 // PWA Service Worker for Văn Phòng Chuỗi SKECHERS - TBS Group
-const CACHE_NAME = "skechers-tbs-v17-no-api-404-cache";
+const CACHE_NAME = "skechers-tbs-v18-no-api-fix";
 const ASSETS_TO_CACHE = [
   "/",
   "/favicon.ico",
@@ -97,11 +97,16 @@ self.addEventListener("notificationclick", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  // CRITICAL RULE: NEVER intercept or cache API requests or non-GET requests. Pass directly to browser network!
+  // CRITICAL RULE 1: Only handle http/https requests. Ignore chrome-extension://, file://, etc.
+  if (!event.request.url.startsWith("http://") && !event.request.url.startsWith("https://")) {
+    return;
+  }
+
+  // CRITICAL RULE 2: NEVER intercept or cache API requests or Next.js data requests. Pass directly to browser network!
   if (
     event.request.method !== "GET" ||
     event.request.url.includes("/api/") ||
-    event.request.url.includes("/_next/data/")
+    event.request.url.includes("/_next/")
   ) {
     return;
   }
@@ -111,10 +116,10 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
-          // NEVER cache 404, 500, or error responses! Only cache 200 OK
-          if (response.status === 200) {
+          // NEVER cache 404, 500, or error responses! Only cache 200 OK for http/https
+          if (response.status === 200 && (event.request.url.startsWith("http://") || event.request.url.startsWith("https://"))) {
             const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy).catch(() => {}));
           }
           return response;
         })
@@ -136,9 +141,9 @@ self.addEventListener("fetch", (event) => {
       }
       return fetch(event.request)
         .then((networkResponse) => {
-          if (networkResponse.status === 200) {
+          if (networkResponse.status === 200 && (event.request.url.startsWith("http://") || event.request.url.startsWith("https://"))) {
             const copy = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy).catch(() => {}));
           }
           return networkResponse;
         })

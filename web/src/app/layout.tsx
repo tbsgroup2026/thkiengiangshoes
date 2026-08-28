@@ -41,7 +41,6 @@ export const metadata: Metadata = {
   },
 };
 
-import { KaizenStatsProvider } from "@/context/KaizenStatsContext";
 import { StatusCountsProvider } from "@/context/StatusCountsContext";
 
 export default function RootLayout({
@@ -99,9 +98,7 @@ export default function RootLayout({
         <DevToolsShield />
         <NotificationInitializer />
         <StatusCountsProvider>
-          <KaizenStatsProvider>
-            {children}
-          </KaizenStatsProvider>
+          {children}
         </StatusCountsProvider>
       </body>
     </html>
