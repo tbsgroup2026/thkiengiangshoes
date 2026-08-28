@@ -261,19 +261,49 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
     });
   }, [proposals, statusScope, selectedMonth, cascadingFilterState]);
 
+  // Dynamically generate available month options from actual proposals dates
+  const monthOptions = useMemo(() => {
+    const set = new Set<string>();
+    proposals.forEach((p) => {
+      if (p.created_at) {
+        try {
+          const d = new Date(p.created_at);
+          if (!isNaN(d.getTime())) {
+            set.add(`T${d.getMonth() + 1}/${d.getFullYear()}`);
+          }
+        } catch {}
+      }
+    });
+
+    set.add("T8/2026");
+    set.add("T7/2026");
+
+    return Array.from(set).sort((a, b) => {
+      const [mA, yA] = a.replace("T", "").split("/").map(Number);
+      const [mB, yB] = b.replace("T", "").split("/").map(Number);
+      if (yB !== yA) return yB - yA;
+      return mB - mA;
+    });
+  }, [proposals]);
+
   // Top KPI Card Computations
   const totalCount = filteredProposals.length;
   const countThiDua = filteredProposals.filter((p) => p.registration_type === "THI_DUA").length;
   const countLuuTru = filteredProposals.filter((p) => p.registration_type === "LUU_TRU").length;
 
-  // Count current month T8/2026
-  const currentMonthCount = useMemo(() => {
+  // Dynamic label & count for Card 4 matching selected month or current month
+  const activeMonthLabel = selectedMonth !== "ALL" ? `Cải tiến ${selectedMonth}` : `Cải tiến T8/2026`;
+
+  const activeMonthCount = useMemo(() => {
+    if (selectedMonth !== "ALL") {
+      return filteredProposals.length;
+    }
     return filteredProposals.filter((p) => {
       if (!p.created_at) return false;
       const d = new Date(p.created_at);
-      return (d.getMonth() === 7 && d.getFullYear() === 2026) || true;
+      return !isNaN(d.getTime()) && d.getMonth() === 7 && d.getFullYear() === 2026;
     }).length;
-  }, [filteredProposals]);
+  }, [filteredProposals, selectedMonth]);
 
   const countEvaluated = filteredProposals.filter(
     (p) => p.sub_status === "DA_DANH_GIA" || (p.score_points && p.score_points > 0) || p.rating_count > 0
@@ -562,8 +592,11 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
               className="bg-white px-2.5 py-1 rounded-lg text-xs font-bold text-slate-800 outline-none border border-slate-300 focus:border-[#006838]"
             >
               <option value="ALL">Tất cả thời gian</option>
-              <option value="T8/2026">Tháng 8/2026</option>
-              <option value="T7/2026">Tháng 7/2026</option>
+              {monthOptions.map((m) => (
+                <option key={m} value={m}>
+                  Tháng {m.replace("T", "")}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -624,7 +657,7 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
           </div>
         </div>
 
-        {/* Card 4: Cải tiến T8/2026 */}
+        {/* Card 4: Dynamic Month Card */}
         <div className="relative overflow-hidden bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between">
           <div className="absolute top-0 left-0 bottom-0 w-1.5 bg-[#10b981]"></div>
           <div className="flex items-center gap-3 pl-1">
@@ -633,9 +666,9 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
             </div>
             <div>
               <span className="text-2xl font-black text-slate-900 leading-tight block">
-                {currentMonthCount}
+                {activeMonthCount}
               </span>
-              <span className="text-[11px] font-bold text-slate-500">Cải tiến T8/2026</span>
+              <span className="text-[11px] font-bold text-slate-500">{activeMonthLabel}</span>
             </div>
           </div>
         </div>
