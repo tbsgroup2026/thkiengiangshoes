@@ -205,7 +205,10 @@ async function generateRecordCode(env, options = {}) {
   }
 
   const seqStr = nextSeq.toString().padStart(4, "0");
-  // ════════════════════════════════════════════════════════════════
+  return `${prefix}${seqStr}`;
+}
+
+// ════════════════════════════════════════════════════════════════
 // ⚡ SERVER-SIDE CACHE FOR KAIZEN STATS BADGES (30s TTL)
 // ════════════════════════════════════════════════════════════════
 let KAIZEN_STATS_CACHE = null;
