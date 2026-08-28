@@ -933,7 +933,7 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
           <div className="flex items-center gap-2">
             <IconStar size={18} className="text-amber-400" />
             <h3 className="text-xs font-black tracking-wide uppercase">
-              Cải Tiến Tiêu Biểu (Top 5 Thi đua)
+              Một số cải tiến được khen thưởng
             </h3>
           </div>
 
