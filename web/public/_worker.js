@@ -2932,13 +2932,28 @@ export default {
 
           for (let i = 0; i < items.length; i++) {
             const p = items[i];
-            if (Number(p.is_thi_dua) === 1) thiDua++;
-            if (p.status === "SUBMITTED" || p.status === "UNDER_REVIEW" || p.sub_status === "CHO_REVIEW" || p.approval_status === "PENDING") {
+            const isThiDua = Number(p.is_thi_dua) === 1 || String(p.registration_type || "").toUpperCase() === "THI_DUA";
+            const appStatus = String(p.approval_status || "").toUpperCase();
+            const subStatus = String(p.sub_status || "").toUpperCase();
+            const mainStatus = String(p.status || "").toUpperCase();
+            const regType = String(p.registration_type || "").toUpperCase();
+
+            if (isThiDua) {
+              thiDua++;
+            }
+
+            if (regType === "LUU_TRU" || subStatus === "LUU_TRU" || mainStatus === "ARCHIVED") {
+              luuTru++;
+            } else if (subStatus === "DA_DANH_GIA" || appStatus === "DA_DANH_GIA") {
+              daDanhGia++;
+            } else if (subStatus === "CHO_DANH_GIA" || appStatus === "PHE_DUYET" || mainStatus === "APPROVED") {
+              choDanhGia++;
+            } else if (appStatus === "TU_CHOI" || subStatus === "TU_CHOI_TRIEN_KHAI" || mainStatus === "REJECTED") {
+              // Rejected proposal
+            } else {
+              // Any unapproved, non-rejected, pending proposal counts as Chờ phê duyệt (choReview)
               choReview++;
             }
-            if (p.sub_status === "CHO_DANH_GIA") choDanhGia++;
-            if (p.sub_status === "DA_DANH_GIA") daDanhGia++;
-            if (p.registration_type === "LUU_TRU") luuTru++;
 
             const reg = String(p.region || "").toUpperCase();
             if (reg.includes("KIÊN GIANG 1") || reg.includes("KIEN GIANG 1") || reg.includes("KG1") || reg.includes("KG 1")) {

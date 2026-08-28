@@ -585,6 +585,8 @@ export default function CIModule() {
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
         setProposals(json.data);
+        // Refresh server stats whenever proposal list updates
+        fetchStats();
       }
     } catch (err) {
       showToast("❌ Lỗi khi tải danh sách cải tiến Kaizen");
@@ -849,12 +851,17 @@ export default function CIModule() {
     }
     // Filter by sub-status
     if (selectedSubStatus !== "ALL") {
+      const appStatus = String(p.approval_status || "").toUpperCase();
+      const subStatus = String(p.sub_status || "").toUpperCase();
+      const mainStatus = String(p.status || "").toUpperCase();
+
       if (selectedSubStatus === "CHO_REVIEW") {
-        if (!(p.status === "SUBMITTED" || p.status === "UNDER_REVIEW" || !p.status || p.sub_status === "CHO_REVIEW")) return false;
+        const isNotChoReview = appStatus === "PHE_DUYET" || appStatus === "TU_CHOI" || subStatus === "CHO_DANH_GIA" || subStatus === "DA_DANH_GIA" || subStatus === "LUU_TRU" || mainStatus === "APPROVED" || mainStatus === "REJECTED" || mainStatus === "ARCHIVED";
+        if (isNotChoReview) return false;
       } else if (selectedSubStatus === "CHO_DANH_GIA") {
-        if (p.sub_status !== "CHO_DANH_GIA") return false;
+        if (!(subStatus === "CHO_DANH_GIA" || appStatus === "PHE_DUYET" || mainStatus === "APPROVED")) return false;
       } else if (selectedSubStatus === "DA_DANH_GIA") {
-        if (p.sub_status !== "DA_DANH_GIA") return false;
+        if (!(subStatus === "DA_DANH_GIA" || appStatus === "DA_DANH_GIA")) return false;
       }
     }
     if (searchQuery) {
@@ -869,7 +876,34 @@ export default function CIModule() {
     return true;
   });
 
-  // Badge Counters derived from stable statsData state (with 30s server cache + localStorage SWR)
+  // Reconcile statsData with current proposal list to guarantee badge counts match actual proposals
+  useEffect(() => {
+    if (!loading && Array.isArray(proposals)) {
+      if (selectedSubStatus === "CHO_REVIEW" && selectedRegion === "ALL" && selectedCategory === "ALL" && !searchQuery) {
+        if (statsData.choReview !== filteredProposals.length) {
+          setStatsData((prev) => ({ ...prev, choReview: filteredProposals.length }));
+        }
+      } else if (selectedSubStatus === "CHO_DANH_GIA" && selectedRegion === "ALL" && selectedCategory === "ALL" && !searchQuery) {
+        if (statsData.choDanhGia !== filteredProposals.length) {
+          setStatsData((prev) => ({ ...prev, choDanhGia: filteredProposals.length }));
+        }
+      } else if (selectedSubStatus === "DA_DANH_GIA" && selectedRegion === "ALL" && selectedCategory === "ALL" && !searchQuery) {
+        if (statsData.daDanhGia !== filteredProposals.length) {
+          setStatsData((prev) => ({ ...prev, daDanhGia: filteredProposals.length }));
+        }
+      } else if (selectedRegType === "THI_DUA" && selectedRegion === "ALL" && selectedCategory === "ALL" && !searchQuery) {
+        if (statsData.thiDua !== filteredProposals.length) {
+          setStatsData((prev) => ({ ...prev, thiDua: filteredProposals.length }));
+        }
+      } else if (selectedRegType === "LUU_TRU" && selectedRegion === "ALL" && selectedCategory === "ALL" && !searchQuery) {
+        if (statsData.luuTru !== filteredProposals.length) {
+          setStatsData((prev) => ({ ...prev, luuTru: filteredProposals.length }));
+        }
+      }
+    }
+  }, [proposals, filteredProposals.length, selectedSubStatus, selectedRegType, selectedRegion, selectedCategory, searchQuery, loading]);
+
+  // Badge Counters derived from reconciled statsData state
   const countThiDua = statsData.thiDua || 0;
   const countChoReview = statsData.choReview || 0;
   const countDaDanhGia = statsData.daDanhGia || 0;
