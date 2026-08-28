@@ -14,6 +14,29 @@ export async function POST(request: Request) {
     const token = authHeader?.replace('Bearer ', '');
     const session = token ? await verifyToken(token) : null;
 
+    // 🔴 SECURITY GUARD 1: Authentication check
+    if (!session) {
+      return NextResponse.json(
+        { success: false, message: 'Yêu cầu đăng nhập để thực hiện phê duyệt (401 Unauthorized)' },
+        { status: 401 }
+      );
+    }
+
+    // 🔴 SECURITY GUARD 2: Role authorization check
+    const roleCode = String((session as any)?.roleCode || (session as any)?.role || '').toUpperCase();
+    const isExecutiveOrAdmin = Boolean((session as any)?.isExecutiveOrAdmin) || ['TONG_GIAM_DOC', 'ADMIN'].includes(roleCode);
+    const isApproverRole =
+      isExecutiveOrAdmin ||
+      (Boolean((session as any)?.levelRank) && Number((session as any).levelRank) >= 3) ||
+      ['TONG_GIAM_DOC', 'PHO_TONG_GIAM_DOC', 'GIAM_DOC', 'PHO_GIAM_DOC', 'TRUONG_PHONG', 'CI_LEAD', 'QC', 'ADMIN'].includes(roleCode);
+
+    if (!isApproverRole) {
+      return NextResponse.json(
+        { success: false, message: 'Tài khoản của bạn không có quyền phê duyệt đề xuất này (403 Forbidden)' },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const {
       proposalId,

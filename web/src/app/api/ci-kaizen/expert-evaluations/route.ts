@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
+import { verifyToken } from '@/lib/auth';
 
 export const dynamic = 'force-static';
-import { verifyToken } from '@/lib/auth';
 
 function getDbBinding(): any {
   return (process.env as any).DB || (globalThis as any).DB || null;
@@ -80,9 +80,9 @@ export async function POST(request: Request) {
     const db = getDbBinding();
 
     if (action === 'SAVE_DRAFT' || action === 'CONFIRM') {
-      if (!isJudgeRole && session) {
+      if (!session || !isJudgeRole) {
         return NextResponse.json(
-          { error: 'Tài khoản của bạn không có quyền chấm điểm chuyên môn cho đề xuất này' },
+          { error: 'Tài khoản của bạn không có quyền chấm điểm chuyên môn cho đề xuất này (403 Forbidden)' },
           { status: 403 }
         );
       }
