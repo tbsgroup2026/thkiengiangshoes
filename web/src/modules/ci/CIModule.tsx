@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import KaizenDashboard from "./KaizenDashboard";
 import KaizenEarlyWarning from "./KaizenEarlyWarning";
@@ -882,12 +882,79 @@ export default function CIModule() {
     return true;
   });
 
-  // Badge Counters derived from persistent statsData state
-  const countThiDua = statsData.thiDua || 0;
-  const countChoReview = statsData.choReview || 0;
-  const countDaDanhGia = statsData.daDanhGia || 0;
-  const countChoDanhGia = statsData.choDanhGia || 0;
-  const countLuuTru = statsData.luuTru || 0;
+  // ⚡ Dynamic Badge Counters computed directly from loaded proposals array (with statsData fallback)
+  const badgeCounts = useMemo(() => {
+    if (!proposals || proposals.length === 0) {
+      return {
+        thiDua: statsData.thiDua || 0,
+        choReview: statsData.choReview || 0,
+        choDanhGia: statsData.choDanhGia || 0,
+        daDanhGia: statsData.daDanhGia || 0,
+        luuTru: statsData.luuTru || 0,
+      };
+    }
+
+    let thiDua = 0;
+    let choReview = 0;
+    let choDanhGia = 0;
+    let daDanhGia = 0;
+    let luuTru = 0;
+
+    for (const p of proposals) {
+      const appStatus = String(p.approval_status || "").toUpperCase();
+      const subStatus = String(p.sub_status || "").toUpperCase();
+      const mainStatus = String(p.status || "").toUpperCase();
+      const regType = String(p.registration_type || "").toUpperCase();
+
+      if (selectedRegion !== "ALL" && !matchRegionFilter(p.region, selectedRegion)) {
+        continue;
+      }
+
+      // 1. Thi đua
+      if (Number(p.is_thi_dua) === 1 || regType === "THI_DUA" || subStatus === "CHO_DANH_GIA" || subStatus === "DA_DANH_GIA" || appStatus === "PHE_DUYET") {
+        thiDua++;
+      }
+
+      // 2. Chờ phê duyệt
+      const isNotChoReview =
+        appStatus === "PHE_DUYET" ||
+        appStatus === "TU_CHOI" ||
+        subStatus === "CHO_DANH_GIA" ||
+        subStatus === "DA_DANH_GIA" ||
+        subStatus === "LUU_TRU" ||
+        mainStatus === "APPROVED" ||
+        mainStatus === "REJECTED" ||
+        mainStatus === "ARCHIVED";
+      if (!isNotChoReview) {
+        choReview++;
+      }
+
+      // 3. Chờ đánh giá
+      if (subStatus === "CHO_DANH_GIA" || appStatus === "PHE_DUYET" || mainStatus === "APPROVED") {
+        if (subStatus !== "DA_DANH_GIA" && subStatus !== "LUU_TRU" && appStatus !== "DA_DANH_GIA") {
+          choDanhGia++;
+        }
+      }
+
+      // 4. Đã đánh giá
+      if (subStatus === "DA_DANH_GIA" || appStatus === "DA_DANH_GIA" || Number(p.average_score || 0) > 0) {
+        daDanhGia++;
+      }
+
+      // 5. Lưu trữ
+      if (subStatus === "LUU_TRU" || regType === "LUU_TRU" || mainStatus === "ARCHIVED") {
+        luuTru++;
+      }
+    }
+
+    return { thiDua, choReview, choDanhGia, daDanhGia, luuTru };
+  }, [proposals, statsData, selectedRegion]);
+
+  const countThiDua = badgeCounts.thiDua;
+  const countChoReview = badgeCounts.choReview;
+  const countChoDanhGia = badgeCounts.choDanhGia;
+  const countDaDanhGia = badgeCounts.daDanhGia;
+  const countLuuTru = badgeCounts.luuTru;
 
   return (
     <div className="min-h-screen bg-[#f1f5f9] text-slate-800 font-sans flex flex-col md:flex-row w-full selection:bg-[#006838] selection:text-white">
@@ -1102,7 +1169,7 @@ export default function CIModule() {
 
                   {/* Chờ đánh giá — top-level */}
                   <button
-                    onClick={() => { setSelectedRegType("THI_DUA"); setSelectedSubStatus("CHO_DANH_GIA"); }}
+                    onClick={() => { setSelectedRegType("ALL"); setSelectedSubStatus("CHO_DANH_GIA"); }}
                     className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between transition-colors ${
                       selectedSubStatus === "CHO_DANH_GIA"
                         ? "bg-amber-950/80 text-amber-300 font-extrabold"
@@ -1120,7 +1187,7 @@ export default function CIModule() {
 
                   {/* Đã đánh giá — sub of Chờ đánh giá */}
                   <button
-                    onClick={() => { setSelectedRegType("THI_DUA"); setSelectedSubStatus("DA_DANH_GIA"); }}
+                    onClick={() => { setSelectedRegType("ALL"); setSelectedSubStatus("DA_DANH_GIA"); }}
                     className={`w-full text-left px-3 py-1 rounded-lg flex items-center justify-between text-[11px] transition-colors ${
                       selectedSubStatus === "DA_DANH_GIA"
                         ? "bg-emerald-950/80 text-emerald-300 font-extrabold"
