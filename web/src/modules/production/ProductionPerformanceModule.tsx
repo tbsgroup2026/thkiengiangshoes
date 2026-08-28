@@ -212,9 +212,9 @@ export default function ProductionPerformanceModule() {
             ))}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
             {/* Biểu đồ sản lượng theo giờ */}
-            <div className="lg:col-span-2 p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-sm">
+            <div className="lg:col-span-3 p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-sm">
               <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
                 <div>
                   <h3 className="text-sm font-black text-slate-900">
@@ -247,11 +247,11 @@ export default function ProductionPerformanceModule() {
             </div>
 
             {/* Thông tin ca / Thông tin nhà máy */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-sm">
-              <h3 className="text-sm font-black text-slate-900 mb-3">
+            <div className="lg:col-span-2 p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/80 shadow-sm">
+              <h3 className="text-base font-black text-slate-900 mb-4">
                 {line ? `Thông tin ca — Chuyền ${line.lineNumber}` : `Thông tin nhà máy — ${factory.name}`}
               </h3>
-              <dl className="space-y-2.5 text-xs">
+              <dl className="space-y-4 text-sm">
                 {line ? (
                   <>
                     {[
@@ -261,8 +261,8 @@ export default function ProductionPerformanceModule() {
                       ['Thời gian làm việc', `${line.workStart} – ${line.workEnd}`],
                     ].map(([k, v]) => (
                       <div key={k} className="flex items-center justify-between">
-                        <dt className="text-slate-500">{k}</dt>
-                        <dd className="font-bold text-slate-800">{v}</dd>
+                        <dt className="text-slate-500 font-semibold">{k}</dt>
+                        <dd className="font-black text-slate-900 text-base">{v}</dd>
                       </div>
                     ))}
                   </>
@@ -275,13 +275,13 @@ export default function ProductionPerformanceModule() {
                       ['Thời gian làm việc', '8:00 – 17:00'],
                     ].map(([k, v]) => (
                       <div key={k} className="flex items-center justify-between">
-                        <dt className="text-slate-500">{k}</dt>
-                        <dd className="font-bold text-slate-800">{v}</dd>
+                        <dt className="text-slate-500 font-semibold">{k}</dt>
+                        <dd className="font-black text-slate-900 text-base">{v}</dd>
                       </div>
                     ))}
                   </>
                 )}
-                <div className="h-px bg-slate-100 my-2" />
+                <div className="h-px bg-slate-100 my-3" />
                 {(() => {
                   const cumActual = line ? line.cumulativeActual : factoryAggregate.cumulativeActual;
                   const cumTarget = line ? line.cumulativeTarget : factoryAggregate.cumulativeTarget;
@@ -289,16 +289,16 @@ export default function ProductionPerformanceModule() {
                   return (
                     <>
                       <div className="flex items-center justify-between">
-                        <dt className="text-slate-500">Lũy kế thực tế</dt>
-                        <dd className="font-bold text-slate-800">{cumActual} đôi</dd>
+                        <dt className="text-slate-500 font-semibold">Lũy kế thực tế</dt>
+                        <dd className="font-black text-slate-900 text-base">{cumActual} đôi</dd>
                       </div>
                       <div className="flex items-center justify-between">
-                        <dt className="text-slate-500">Lũy kế chỉ tiêu</dt>
-                        <dd className="font-bold text-slate-800">{cumTarget} đôi</dd>
+                        <dt className="text-slate-500 font-semibold">Lũy kế chỉ tiêu</dt>
+                        <dd className="font-black text-slate-900 text-base">{cumTarget} đôi</dd>
                       </div>
                       <div className="flex items-center justify-between">
-                        <dt className="text-slate-500">Chênh lệch</dt>
-                        <dd className={`font-bold ${diff < 0 ? 'text-rose-600' : 'text-[#006838]'}`}>
+                        <dt className="text-slate-500 font-semibold">Chênh lệch</dt>
+                        <dd className={`font-black text-base ${diff < 0 ? 'text-rose-600' : 'text-[#006838]'}`}>
                           {diff > 0 ? '+' : ''}
                           {diff} đôi
                         </dd>

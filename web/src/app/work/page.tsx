@@ -1276,7 +1276,7 @@ export default function WorkDashboardPage() {
           {/* ════════════════════════════════════════════════════════════════
               DEPARTMENT HERO BANNER CARD (Screenshot 1 Layout)
              ════════════════════════════════════════════════════════════════ */}
-          {activeDeptObj && activeDeptObj.id !== "overview" && activeDeptObj.id !== "rd" && activeDeptObj.id !== "hr" && activeDeptObj.id !== "ci" && (
+          {activeDeptObj && activeDeptObj.id !== "overview" && activeDeptObj.id !== "rd" && activeDeptObj.id !== "hr" && activeDeptObj.id !== "ci" && activeDeptObj.id !== "production" && (
             <div className="relative w-full rounded-3xl overflow-hidden border border-slate-200/90 shadow-md flex-shrink-0 bg-slate-900 group">
               {/* Background Image with Dark Emerald Overlay */}
               <img
