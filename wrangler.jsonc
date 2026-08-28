@@ -14,6 +14,12 @@
       "database_id": "ae3a7efd-ff5d-45c2-8c49-78d1518e3aa1"
     }
   ],
+  "services": [
+    {
+      "binding": "HTPH_CLSK_SERVICE",
+      "service": "hethongphanhoiclsk"
+    }
+  ],
   "assets": {
     "directory": "web/out",
     "binding": "ASSETS",
@@ -23,6 +29,7 @@
   },
   "vars": {
     "NEXT_PUBLIC_APP_URL": "https://thkiengiangshoes.tbsgroup2026.workers.dev",
+    "HTPH_CLSK_API_URL": "https://hethongphanhoiclsk.tbsgroup2026.workers.dev",
     "JWT_SECRET": "tbs_group_secure_jwt_secret_key_2026"
   },
   "triggers": {
