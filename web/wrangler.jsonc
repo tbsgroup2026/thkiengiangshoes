@@ -23,7 +23,11 @@
   },
   "vars": {
     "NEXT_PUBLIC_APP_URL": "https://thkiengiangshoes.tbsgroup2026.workers.dev",
-    "JWT_SECRET": "tbs_group_secure_jwt_secret_key_2026"
+    "JWT_SECRET": "tbs_group_secure_jwt_secret_key_2026",
+    // Địa chỉ gốc hệ thống tbsMayMoc (KHÔNG nhạy cảm — chỉ là URL, không phải khoá bí mật) — MMTB
+    // (Tổ hợp Kiên Giang) proxy sang đây, xem handleMmtbKG() trong public/_worker.js. Chạy cục bộ
+    // đè lại giá trị này bằng file .dev.vars (không commit) trỏ về http://localhost:3000.
+    "TBSMAYMOC_API_URL": "https://tbs-may-moc-admin.tbs-quanlymaymoc.workers.dev"
   },
   "triggers": {
     "crons": [

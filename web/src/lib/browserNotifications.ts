@@ -114,6 +114,11 @@ export async function unsubscribeFromPushNotifications(): Promise<boolean> {
 
 export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
   if (typeof window === "undefined" || !("serviceWorker" in navigator)) return null;
+  // KHÔNG đăng ký Service Worker khi đang chạy `next dev` — SW cache trang "/" + tự
+  // skipWaiting()/clients.claim() (xem public/sw.js), phối hợp với việc code liên tục đổi lúc dev
+  // (Fast Refresh) gây lệch bản cache cũ với bundle mới → trang tự reload lặp lại liên tục (đúng
+  // triệu chứng "cà giựt, tự động reload"). Service Worker chỉ có ý nghĩa ở bản deploy thật.
+  if (process.env.NODE_ENV !== "production") return null;
 
   try {
     const reg = await navigator.serviceWorker.register("/sw.js", { scope: "/" });

@@ -787,6 +787,11 @@ export async function loginWithD1Database(
   const normalized = normalizeEmpCode(cleanInput);
 
   let d1Profile: UserProfile | null = null;
+  // JWT THẬT do /api/auth/login ký (jsonwebtoken) — BẮT BUỘC phải dùng đúng token này làm cookie
+  // tbs_token, vì proxy.ts (src/proxy.ts) gọi verifyToken() để xác thực mỗi lần chuyển trang; một
+  // chuỗi tự bịa (VD "tbs_token_<msnv>_<timestamp>") sẽ KHÔNG qua được verifyToken(), khiến vào
+  // /work bị đá ngược về /login dù API đăng nhập vừa báo thành công (đúng lỗi đã gặp).
+  let realToken: string | null = null;
 
   try {
     const res = await fetch("/api/auth/login", {
@@ -802,6 +807,7 @@ export async function loginWithD1Database(
     if (res.ok) {
       const json = await res.json();
       if (json.success && json.user) {
+        realToken = typeof json.token === "string" ? json.token : null;
         const u = json.user;
         const mappedCode = normalizeEmpCode(u.empCode || u.emp_code || normalized);
         const sysUser = SYSTEM_USERS[mappedCode];
@@ -850,8 +856,14 @@ export async function loginWithD1Database(
     }
     sessionStorage.setItem("tbs_current_user", JSON.stringify(finalProfile));
     localStorage.setItem("tbs_current_user", JSON.stringify(finalProfile));
-    const token = `tbs_token_${finalProfile.empCode}_${Date.now()}`;
-    document.cookie = `tbs_token=${token}; path=/; max-age=86400`;
+    // Dùng ĐÚNG JWT thật trả về từ /api/auth/login — KHÔNG tự bịa chuỗi giả nữa (xem giải thích ở
+    // trên). Chỉ khi nào API đăng nhập lỗi/không trả token (rơi vào nhánh loginUserProfile offline
+    // phía trên) mới không có realToken — trường hợp đó proxy.ts vẫn sẽ đá về /login vì
+    // verifyToken() không xác thực được, đúng hành vi mong muốn (không cho vào khi chưa xác thực
+    // thật với server).
+    if (realToken) {
+      document.cookie = `tbs_token=${realToken}; path=/; max-age=86400`;
+    }
     window.dispatchEvent(new Event("tbs_profile_updated"));
   }
 

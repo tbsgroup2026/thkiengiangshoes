@@ -108,7 +108,7 @@ export const CNCI_CARDS_DATA: CNCICard[] = [
       {
         id: "bao-duong-mmtb",
         name: "Bảo Dưỡng MMTB",
-        href: "/maintenance/tickets",
+        href: "/maintenance/schedule",
         iconName: "IconTools",
       },
       {
@@ -124,16 +124,28 @@ export const CNCI_CARDS_DATA: CNCICard[] = [
         iconName: "IconDeviceLaptop",
       },
       {
-        id: "phan-tich-sua-chua",
-        name: "Phân Tích Sửa Chữa",
-        href: "/finance/bao-cao",
+        id: "de-xuat-cai-tien",
+        name: "Đề Xuất Cải Tiến",
+        href: "/maintenance/proposals",
         iconName: "IconChartPie",
       },
       {
-        id: "thong-ke-danh-gia",
-        name: "Thống Kê Đánh Giá",
-        href: "/work/ci",
+        id: "thoi-gian-phan-hoi",
+        name: "Thời Gian Phản Hồi",
+        href: "/maintenance/response-time",
         iconName: "IconStar",
+      },
+      {
+        id: "so-do-nha-may",
+        name: "Sơ Đồ Nhà Máy",
+        href: "/maintenance/floor-plan",
+        iconName: "IconMapPin",
+      },
+      {
+        id: "danh-muc-mmtb",
+        name: "Quản Lý Danh Mục",
+        href: "/maintenance/categories",
+        iconName: "IconCategory",
       },
     ],
   },
