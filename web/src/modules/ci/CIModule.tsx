@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { useKaizenStats } from "@/context/KaizenStatsContext";
 import KaizenDashboard from "./KaizenDashboard";
 import KaizenEarlyWarning from "./KaizenEarlyWarning";
 import KaizenFiveStepSubmitForm from "./KaizenFiveStepSubmitForm";
@@ -343,60 +344,8 @@ export default function CIModule() {
   const [isCreateDropdownOpen, setIsCreateDropdownOpen] = useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
 
-  // ⚡ Fast Badge Counter State (Stale-While-Revalidate with localStorage)
-  const [statsData, setStatsData] = useState<{
-    thiDua: number;
-    choReview: number;
-    choDanhGia: number;
-    daDanhGia: number;
-    luuTru: number;
-    regions: Record<string, number>;
-  }>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const cached = localStorage.getItem("tbs_kaizen_stats_v1");
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (parsed && typeof parsed === "object" && parsed.regions) {
-            return parsed;
-          }
-        }
-      } catch (e) {}
-    }
-    return {
-      thiDua: 0,
-      choReview: 0,
-      choDanhGia: 0,
-      daDanhGia: 0,
-      luuTru: 0,
-      regions: {}
-    };
-  });
-  const [isSyncingStats, setIsSyncingStats] = useState(true);
-
-  const fetchStats = async () => {
-    try {
-      setIsSyncingStats(true);
-      const res = await fetch("/api/ci-kaizen/stats");
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success && json.stats) {
-          setStatsData(json.stats);
-          if (typeof window !== "undefined") {
-            localStorage.setItem("tbs_kaizen_stats_v1", JSON.stringify(json.stats));
-          }
-        }
-      }
-    } catch (e) {
-      console.warn("Lỗi đồng bộ badge stats:", e);
-    } finally {
-      setIsSyncingStats(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchStats();
-  }, []);
+  // ⚡ Global Badge Counter State (Single Source of Truth from KaizenStatsContext)
+  const { stats, isLoading: isSyncingStats, refetchStats: fetchStats, updateStatsFromProposals } = useKaizenStats();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -591,7 +540,8 @@ export default function CIModule() {
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
         setProposals(json.data);
-        // Refresh server stats whenever proposal list updates
+        // Refresh server stats and update global single source of truth context
+        updateStatsFromProposals(json.data);
         fetchStats();
       }
     } catch (err) {
@@ -927,11 +877,11 @@ export default function CIModule() {
   const badgeCounts = useMemo(() => {
     if (!proposals || proposals.length === 0) {
       return {
-        thiDua: statsData.thiDua || 0,
-        choReview: statsData.choReview || 0,
-        choDanhGia: statsData.choDanhGia || 0,
-        daDanhGia: statsData.daDanhGia || 0,
-        luuTru: statsData.luuTru || 0,
+        thiDua: stats.thiDua || 0,
+        choReview: stats.choReview || 0,
+        choDanhGia: stats.choDanhGia || 0,
+        daDanhGia: stats.daDanhGia || 0,
+        luuTru: stats.luuTru || 0,
       };
     }
 
@@ -1009,7 +959,7 @@ export default function CIModule() {
     }
 
     return { thiDua, choReview, choDanhGia, daDanhGia, luuTru };
-  }, [proposals, statsData, selectedRegion]);
+  }, [proposals, stats, selectedRegion]);
 
   const countThiDua = badgeCounts.thiDua;
   const countChoReview = badgeCounts.choReview;
@@ -1314,8 +1264,8 @@ export default function CIModule() {
                   {/* Sub-items */}
                   <div className="pl-4 space-y-0.5 border-l border-slate-700/80 ml-2 mb-1">
                     {TH_KG_SUB_ITEMS.map((subItem) => {
-                      const cnt = (statsData.regions && statsData.regions[subItem] !== undefined)
-                        ? statsData.regions[subItem]
+                      const cnt = (stats.regions && stats.regions[subItem] !== undefined)
+                        ? stats.regions[subItem]
                         : 0;
                       return (
                         <button

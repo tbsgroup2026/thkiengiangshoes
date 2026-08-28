@@ -41,6 +41,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { KaizenStatsProvider } from "@/context/KaizenStatsContext";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -95,7 +97,9 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col font-sans bg-canvas text-ink">
         <DevToolsShield />
         <NotificationInitializer />
-        {children}
+        <KaizenStatsProvider>
+          {children}
+        </KaizenStatsProvider>
       </body>
     </html>
   );
