@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { useKaizenStats } from "@/context/KaizenStatsContext";
+import { useStatusCounts } from "@/context/StatusCountsContext";
 import KaizenDashboard from "./KaizenDashboard";
 import KaizenEarlyWarning from "./KaizenEarlyWarning";
 import KaizenFiveStepSubmitForm from "./KaizenFiveStepSubmitForm";
@@ -344,8 +344,8 @@ export default function CIModule() {
   const [isCreateDropdownOpen, setIsCreateDropdownOpen] = useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
 
-  // ⚡ Global Badge Counter State (Single Source of Truth from KaizenStatsContext)
-  const { stats, isLoading: isSyncingStats, refetchStats: fetchStats, updateStatsFromProposals } = useKaizenStats();
+  // ⚡ Dedicated Status Counts Store (Single Source of Truth from StatusCountsContext)
+  const { counts: statusCounts, loading: isCountsLoading, refetchStatusCounts } = useStatusCounts();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -540,9 +540,6 @@ export default function CIModule() {
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
         setProposals(json.data);
-        // Refresh server stats and update global single source of truth context
-        updateStatsFromProposals(json.data);
-        fetchStats();
       }
     } catch (err) {
       showToast("❌ Lỗi khi tải danh sách cải tiến Kaizen");
@@ -629,7 +626,7 @@ export default function CIModule() {
         showToast(`🎉 Đã gửi thành công đề xuất cải tiến ${json.code || "mới"}!`);
         setIsCreateModalOpen(false);
         fetchProposals();
-        fetchStats();
+        refetchStatusCounts();
       } else {
         showToast(`❌ ${json.message || "Lỗi khi gửi đề xuất"}`);
       }
@@ -654,7 +651,7 @@ export default function CIModule() {
       if (json.success) {
         showToast(json.message || `⭐ Đã gửi đánh giá ${score} sao thành công!`);
         fetchProposals();
-        fetchStats();
+        refetchStatusCounts();
         if (activeProposal && activeProposal.id === proposalId) {
           const updated = {
             ...activeProposal,
@@ -684,6 +681,7 @@ export default function CIModule() {
       if (json.success) {
         showToast(`✅ ${json.message}`);
         fetchProposals();
+        refetchStatusCounts();
         if (activeProposal && activeProposal.id === proposalId) {
           const updated = {
             ...activeProposal,
@@ -710,6 +708,7 @@ export default function CIModule() {
         showToast("🗑️ Đã xóa đề xuất cải tiến thành công!");
         setIsDetailModalOpen(false);
         fetchProposals();
+        refetchStatusCounts();
       } else {
         showToast(`❌ ${json.message || "Lỗi khi xóa đề xuất"}`);
       }
@@ -759,6 +758,7 @@ export default function CIModule() {
         showToast(`🏆 Đã chấm điểm ${evalForm.scorePoints}đ & trao ${evalForm.awardTitle} thành công!`);
         setIsEvalModalOpen(false);
         fetchProposals();
+        refetchStatusCounts();
       } else {
         showToast(`❌ ${json.message || "Lỗi khi chấm điểm"}`);
       }
@@ -786,6 +786,7 @@ export default function CIModule() {
         showToast(`⭐ Đã gửi đánh giá ${starRating} sao thành công!`);
         setIsRatingModalOpen(false);
         fetchProposals();
+        refetchStatusCounts();
       } else {
         showToast(`❌ ${json.message || "Lỗi khi gửi đánh giá"}`);
       }
@@ -873,100 +874,12 @@ export default function CIModule() {
     return true;
   });
 
-  // ⚡ Dynamic Badge Counters computed directly from loaded proposals array (with statsData fallback)
-  const badgeCounts = useMemo(() => {
-    if (!proposals || proposals.length === 0) {
-      return {
-        thiDua: stats.thiDua || 0,
-        choReview: stats.choReview || 0,
-        choDanhGia: stats.choDanhGia || 0,
-        daDanhGia: stats.daDanhGia || 0,
-        luuTru: stats.luuTru || 0,
-      };
-    }
-
-    let thiDua = 0;
-    let choReview = 0;
-    let choDanhGia = 0;
-    let daDanhGia = 0;
-    let luuTru = 0;
-
-    for (const p of proposals) {
-      const appStatus = String(p.approval_status || "").toUpperCase();
-      const subStatus = String(p.sub_status || "").toUpperCase();
-      const mainStatus = String(p.status || "").toUpperCase();
-      const regType = String(p.registration_type || "").toUpperCase();
-
-      if (selectedRegion !== "ALL" && !matchRegionFilter(p.region, selectedRegion)) {
-        continue;
-      }
-
-      // 1. Thi đua
-      if (
-        Number(p.is_thi_dua) === 1 ||
-        regType === "THI_DUA" ||
-        subStatus === "CHO_DANH_GIA" ||
-        subStatus === "DA_DANH_GIA" ||
-        appStatus === "PHE_DUYET"
-      ) {
-        thiDua++;
-      }
-
-      // 2. Chờ phê duyệt
-      const isNotChoReview =
-        appStatus === "PHE_DUYET" ||
-        appStatus === "TU_CHOI" ||
-        subStatus === "CHO_DANH_GIA" ||
-        subStatus === "DA_DANH_GIA" ||
-        subStatus === "LUU_TRU" ||
-        mainStatus === "APPROVED" ||
-        mainStatus === "REJECTED" ||
-        mainStatus === "ARCHIVED";
-      if (!isNotChoReview) {
-        choReview++;
-      }
-
-      // 3. Chờ đánh giá
-      const isChoDanhGia =
-        subStatus === "CHO_DANH_GIA" ||
-        appStatus === "PHE_DUYET" ||
-        mainStatus === "APPROVED" ||
-        mainStatus === "IMPLEMENTED" ||
-        regType === "CHO_DANH_GIA";
-      const isExcludedFromChoDanhGia =
-        subStatus === "DA_DANH_GIA" ||
-        subStatus === "LUU_TRU" ||
-        appStatus === "DA_DANH_GIA" ||
-        appStatus === "TU_CHOI";
-      if (isChoDanhGia && !isExcludedFromChoDanhGia) {
-        choDanhGia++;
-      }
-
-      // 4. Đã đánh giá
-      if (
-        subStatus === "DA_DANH_GIA" ||
-        appStatus === "DA_DANH_GIA" ||
-        Number(p.average_score || (p as any).score || 0) > 0 ||
-        Boolean((p as any).award_title)
-      ) {
-        daDanhGia++;
-      }
-
-      // 5. Lưu trữ
-      if (subStatus === "LUU_TRU" || regType === "LUU_TRU" || mainStatus === "ARCHIVED") {
-        luuTru++;
-      }
-    }
-
-    return { thiDua, choReview, choDanhGia, daDanhGia, luuTru };
-  }, [proposals, stats, selectedRegion]);
-
-  // ⚡ Sidebar Badge Counters strictly derived from Global Single Source of Truth stats
-  const countThiDua = stats.thiDua || 0;
-  const countChoReview = stats.choReview || 0;
-  const countChoDanhGia = stats.choDanhGia || 0;
-  const countDaDanhGia = stats.daDanhGia || 0;
-  const countLuuTru = stats.luuTru || 0;
+  // ⚡ Sidebar Badge Counters strictly derived from Global Single Source of Truth (StatusCountsContext)
+  const countThiDua = statusCounts?.thi_dua ?? (isCountsLoading ? "…" : 0);
+  const countChoReview = statusCounts?.cho_phe_duyet ?? (isCountsLoading ? "…" : 0);
+  const countChoDanhGia = statusCounts?.cho_danh_gia ?? (isCountsLoading ? "…" : 0);
+  const countDaDanhGia = statusCounts?.da_danh_gia ?? (isCountsLoading ? "…" : 0);
+  const countLuuTru = statusCounts?.luu_tru ?? (isCountsLoading ? "…" : 0);
 
   return (
     <div className="min-h-screen bg-[#f1f5f9] text-slate-800 font-sans flex flex-col md:flex-row w-full selection:bg-[#006838] selection:text-white">
@@ -1113,7 +1026,7 @@ export default function CIModule() {
                 <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
                   LỌC NHANH
                 </h4>
-                {isSyncingStats && (
+                {isCountsLoading && (
                   <span className="flex h-2 w-2 relative" title="Đang đồng bộ số liệu...">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -1265,9 +1178,7 @@ export default function CIModule() {
                   {/* Sub-items */}
                   <div className="pl-4 space-y-0.5 border-l border-slate-700/80 ml-2 mb-1">
                     {TH_KG_SUB_ITEMS.map((subItem) => {
-                      const cnt = (stats.regions && stats.regions[subItem] !== undefined)
-                        ? stats.regions[subItem]
-                        : 0;
+                      const cnt = statusCounts?.regions?.[subItem] ?? (isCountsLoading ? "…" : 0);
                       return (
                         <button
                           key={subItem}
@@ -2251,6 +2162,7 @@ export default function CIModule() {
         onSuccess={() => {
           showToast("🎉 Đã lưu kết quả đánh giá hiệu quả sáng kiến!");
           fetchProposals();
+          refetchStatusCounts();
         }}
       />
 
@@ -2265,6 +2177,7 @@ export default function CIModule() {
         onSuccess={() => {
           showToast("🎉 Đã hoàn tất phê duyệt tính khả thi sáng kiến!");
           fetchProposals();
+          refetchStatusCounts();
         }}
       />
     </div>

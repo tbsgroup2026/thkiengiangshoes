@@ -42,6 +42,7 @@ export const metadata: Metadata = {
 };
 
 import { KaizenStatsProvider } from "@/context/KaizenStatsContext";
+import { StatusCountsProvider } from "@/context/StatusCountsContext";
 
 export default function RootLayout({
   children,
@@ -97,9 +98,11 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col font-sans bg-canvas text-ink">
         <DevToolsShield />
         <NotificationInitializer />
-        <KaizenStatsProvider>
-          {children}
-        </KaizenStatsProvider>
+        <StatusCountsProvider>
+          <KaizenStatsProvider>
+            {children}
+          </KaizenStatsProvider>
+        </StatusCountsProvider>
       </body>
     </html>
   );
