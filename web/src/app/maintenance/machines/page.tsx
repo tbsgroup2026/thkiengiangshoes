@@ -174,15 +174,19 @@ export default function MachinesPage() {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch('/api/mmtb-kg/machines');
-      const result = await res.json();
-      if (result.success && Array.isArray(result.data)) {
-        setMachines(result.data);
-        setFilterOptions(result.filters || EMPTY_FILTERS);
+      // Máy móc (nặng, ~2500 máy) và bộ lọc (nhẹ) tách 2 request riêng — gộp chung từng vượt giới
+      // hạn CPU time của Cloudflare Worker khi chạy thật (xem _worker.js).
+      const [machinesRes, filtersRes] = await Promise.all([
+        fetch('/api/mmtb-kg/machines').then((r) => r.json()),
+        fetch('/api/mmtb-kg/machines/filters').then((r) => r.json()),
+      ]);
+      if (machinesRes.success && Array.isArray(machinesRes.data)) {
+        setMachines(machinesRes.data);
       } else {
         setMachines([]);
-        setError(result.error || 'Không lấy được dữ liệu');
+        setError(machinesRes.error || 'Không lấy được dữ liệu');
       }
+      setFilterOptions(filtersRes.success ? filtersRes.filters || EMPTY_FILTERS : EMPTY_FILTERS);
     } catch (err) {
       console.warn('Failed to fetch machines from tbsMayMoc:', err);
       setMachines([]);
