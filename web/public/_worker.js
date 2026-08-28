@@ -205,7 +205,16 @@ async function generateRecordCode(env, options = {}) {
   }
 
   const seqStr = nextSeq.toString().padStart(4, "0");
-  return `${prefix}${seqStr}`;
+  // ════════════════════════════════════════════════════════════════
+// ⚡ SERVER-SIDE CACHE FOR KAIZEN STATS BADGES (30s TTL)
+// ════════════════════════════════════════════════════════════════
+let KAIZEN_STATS_CACHE = null;
+let KAIZEN_STATS_CACHE_TIME = 0;
+const KAIZEN_STATS_CACHE_TTL_MS = 30000; // 30 seconds max TTL
+
+function invalidateKaizenStatsCache() {
+  KAIZEN_STATS_CACHE = null;
+  KAIZEN_STATS_CACHE_TIME = 0;
 }
 
 async function ensureDatabaseColumnsAndLegacyCode(env) {
@@ -2882,6 +2891,117 @@ export default {
         );
       }
 
+      // ⚡ 0. GET /api/ci-kaizen/stats (Fast badge counter endpoint with 30s server cache)
+      if (url.pathname.endsWith("/stats") && request.method === "GET") {
+        try {
+          const now = Date.now();
+          if (KAIZEN_STATS_CACHE && (now - KAIZEN_STATS_CACHE_TIME < KAIZEN_STATS_CACHE_TTL_MS)) {
+            return new Response(JSON.stringify(KAIZEN_STATS_CACHE), {
+              headers: {
+                ...SECURE_JSON_HEADERS,
+                "X-Cache": "HIT",
+                "Cache-Control": "public, max-age=30"
+              }
+            });
+          }
+
+          const { results: list } = await env.DB.prepare("SELECT is_thi_dua, status, sub_status, approval_status, registration_type, region FROM ci_kaizen_proposals").all().catch(() => ({ results: [] }));
+          const items = list || [];
+
+          let thiDua = 0;
+          let choReview = 0;
+          let choDanhGia = 0;
+          let daDanhGia = 0;
+          let luuTru = 0;
+          const regions = {
+            "Kiên Giang 1": 0,
+            "Kiên Giang 2": 0,
+            "Kiên Giang 3": 0,
+            "Hoàn thiện đế": 0,
+            "Phòng kế hoạch": 0,
+            "Phòng CN-CI": 0,
+            "Phòng chất lượng": 0,
+            "Phòng nhân sự": 0,
+            "THKG": 0,
+            "Nhà Máy Miền Đông": 0,
+            "VP Chuỗi (R&D)": 0
+          };
+
+          for (let i = 0; i < items.length; i++) {
+            const p = items[i];
+            if (Number(p.is_thi_dua) === 1) thiDua++;
+            if (p.status === "SUBMITTED" || p.status === "UNDER_REVIEW" || p.sub_status === "CHO_REVIEW" || p.approval_status === "PENDING") {
+              choReview++;
+            }
+            if (p.sub_status === "CHO_DANH_GIA") choDanhGia++;
+            if (p.sub_status === "DA_DANH_GIA") daDanhGia++;
+            if (p.registration_type === "LUU_TRU") luuTru++;
+
+            const reg = String(p.region || "").toUpperCase();
+            if (reg.includes("KIÊN GIANG 1") || reg.includes("KIEN GIANG 1") || reg.includes("KG1") || reg.includes("KG 1")) {
+              regions["Kiên Giang 1"]++;
+            }
+            if (reg.includes("KIÊN GIANG 2") || reg.includes("KIEN GIANG 2") || reg.includes("KG2") || reg.includes("KG 2")) {
+              regions["Kiên Giang 2"]++;
+            }
+            if (reg.includes("KIÊN GIANG 3") || reg.includes("KIEN GIANG 3") || reg.includes("KG3") || reg.includes("KG 3")) {
+              regions["Kiên Giang 3"]++;
+            }
+            if (reg.includes("HOÀN THIỆN ĐẾ") || reg.includes("HOAN THIEN DE") || reg.includes("HTĐ") || reg.includes("HTD") || reg === "ĐẾ" || reg === "DE") {
+              regions["Hoàn thiện đế"]++;
+            }
+            if (reg.includes("KẾ HOẠCH") || reg.includes("KE HOACH") || reg.includes("PPC")) {
+              regions["Phòng kế hoạch"]++;
+            }
+            if (reg.includes("CN-CI") || reg.includes("CN CI") || reg.includes("CONTINUOUS IMPROVEMENT")) {
+              regions["Phòng CN-CI"]++;
+            }
+            if (reg.includes("CHẤT LƯỢNG") || reg.includes("CHAT LUONG") || reg.includes("QA") || reg.includes("QC")) {
+              regions["Phòng chất lượng"]++;
+            }
+            if (reg.includes("NHÂN SỰ") || reg.includes("NHAN SU") || reg.includes("HR") || reg.includes("HÀNH CHÍNH")) {
+              regions["Phòng nhân sự"]++;
+            }
+            if (reg.includes("THKG") || reg.includes("TH-KG") || reg.includes("KIÊN GIANG") || reg.includes("KIEN GIANG")) {
+              regions["THKG"]++;
+            }
+            if (reg.includes("MIỀN ĐÔNG") || reg.includes("MIEN DONG") || reg.includes("LONG XUYÊN")) {
+              regions["Nhà Máy Miền Đông"]++;
+            }
+            if (reg.includes("VP CHUỖI") || reg.includes("VP CHUOI") || reg.includes("R&D")) {
+              regions["VP Chuỗi (R&D)"]++;
+            }
+          }
+
+          const statsObj = {
+            success: true,
+            stats: {
+              thiDua,
+              choReview,
+              choDanhGia,
+              daDanhGia,
+              luuTru,
+              regions,
+              totalProposals: items.length
+            },
+            cachedAt: new Date(now).toISOString()
+          };
+
+          KAIZEN_STATS_CACHE = statsObj;
+          KAIZEN_STATS_CACHE_TIME = now;
+
+          return new Response(JSON.stringify(statsObj), {
+            headers: {
+              ...SECURE_JSON_HEADERS,
+              "X-Cache": "MISS",
+              "Cache-Control": "public, max-age=30"
+            }
+          });
+        } catch(err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: SECURE_JSON_HEADERS });
+        }
+      }
+
       // Auto-ensure idempotency_keys & table column migrations exist
       const ensureIdempotencyTable = async () => {
         try {
@@ -3206,6 +3326,8 @@ export default {
             VALUES (?, ?, ?, ?, ?, ?, ?)
           `).bind(proposalId, proposal.sub_status || "CHO_REVIEW", newSubStatus, isApprove ? "APPROVE" : "REJECT", user.empCode || "USER", user.name || "Cán bộ Quản lý", safeVal(note, isApprove ? `Phê duyệt triển khai (Trước: ${tBefore}s, Sau: ${tAfter}s, Tiết kiệm: ${tSaved}s)` : "Từ chối triển khai sáng kiến")).run();
 
+          invalidateKaizenStatsCache();
+
           return new Response(JSON.stringify({
             success: true,
             message: isApprove ? "🎉 Đã Phê duyệt triển khai sáng kiến thành công! Sáng kiến chuyển sang Bước 4 (Chờ đánh giá hiệu quả)." : "❌ Đã Từ chối triển khai sáng kiến. Quy trình DỪNG theo Quy định QĐ-TBKG.",
@@ -3464,6 +3586,8 @@ export default {
             INSERT INTO ci_kaizen_status_history (proposal_id, from_status, to_status, action, actor_id, actor_name, note)
             VALUES (?, ?, ?, ?, ?, ?, ?)
           `).bind(proposalId, proposal.sub_status || "LUU_TRU", proposal.sub_status || "LUU_TRU", isAdd ? "MARK_THI_DUA" : "UNMARK_THI_DUA", user.empCode || "BGK", user.name || "Ban Giám Khảo", isAdd ? "Gắn nhãn Thi đua cho sáng kiến" : "Gỡ nhãn Thi đua khỏi sáng kiến").run();
+
+          invalidateKaizenStatsCache();
 
           return new Response(JSON.stringify({
             success: true,
@@ -4264,6 +4388,7 @@ export default {
           } catch(e) {}
           await createNotification("Trưởng Phòng CI", "ci_kaizen", "INFO", id, "🚀 Đề Xuất Cải Tiến Mới", `${user?.name || finalProposerName} vừa nộp đề xuất cải tiến Kaizen: "${title}" (${code}).`);
 
+          invalidateKaizenStatsCache();
           const resPayload = JSON.stringify({ success: true, message: "Đã gửi đề xuất cải tiến Kaizen thành công!", id, code });
 
           if (idempotencyKey) {

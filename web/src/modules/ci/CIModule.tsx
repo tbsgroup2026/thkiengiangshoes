@@ -337,6 +337,61 @@ export default function CIModule() {
   const [isCreateDropdownOpen, setIsCreateDropdownOpen] = useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
 
+  // ⚡ Fast Badge Counter State (Stale-While-Revalidate with localStorage)
+  const [statsData, setStatsData] = useState<{
+    thiDua: number;
+    choReview: number;
+    choDanhGia: number;
+    daDanhGia: number;
+    luuTru: number;
+    regions: Record<string, number>;
+  }>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = localStorage.getItem("tbs_kaizen_stats_v1");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed && typeof parsed === "object" && parsed.regions) {
+            return parsed;
+          }
+        }
+      } catch (e) {}
+    }
+    return {
+      thiDua: 0,
+      choReview: 0,
+      choDanhGia: 0,
+      daDanhGia: 0,
+      luuTru: 0,
+      regions: {}
+    };
+  });
+  const [isSyncingStats, setIsSyncingStats] = useState(true);
+
+  const fetchStats = async () => {
+    try {
+      setIsSyncingStats(true);
+      const res = await fetch("/api/ci-kaizen/stats");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.stats) {
+          setStatsData(json.stats);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("tbs_kaizen_stats_v1", JSON.stringify(json.stats));
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Lỗi đồng bộ badge stats:", e);
+    } finally {
+      setIsSyncingStats(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -616,6 +671,7 @@ export default function CIModule() {
         showToast(`🎉 Đã gửi thành công đề xuất cải tiến ${json.code || "mới"}!`);
         setIsCreateModalOpen(false);
         fetchProposals();
+        fetchStats();
       } else {
         showToast(`❌ ${json.message || "Lỗi khi gửi đề xuất"}`);
       }
@@ -640,6 +696,7 @@ export default function CIModule() {
       if (json.success) {
         showToast(json.message || `⭐ Đã gửi đánh giá ${score} sao thành công!`);
         fetchProposals();
+        fetchStats();
         if (activeProposal && activeProposal.id === proposalId) {
           const updated = {
             ...activeProposal,
@@ -812,14 +869,12 @@ export default function CIModule() {
     return true;
   });
 
-  // Calculate Badge Counters
-  const countThiDua = proposals.filter((p) => Number(p.is_thi_dua) === 1).length;
-  const countChoReview = proposals.filter((p) =>
-    p.status === "SUBMITTED" || p.status === "UNDER_REVIEW" || p.sub_status === "CHO_REVIEW" || p.approval_status === "PENDING"
-  ).length;
-  const countDaDanhGia = proposals.filter((p) => p.sub_status === "DA_DANH_GIA").length;
-  const countChoDanhGia = proposals.filter((p) => p.sub_status === "CHO_DANH_GIA").length;
-  const countLuuTru = proposals.filter((p) => p.registration_type === "LUU_TRU").length;
+  // Badge Counters derived from stable statsData state (with 30s server cache + localStorage SWR)
+  const countThiDua = statsData.thiDua || 0;
+  const countChoReview = statsData.choReview || 0;
+  const countDaDanhGia = statsData.daDanhGia || 0;
+  const countChoDanhGia = statsData.choDanhGia || 0;
+  const countLuuTru = statsData.luuTru || 0;
 
   return (
     <div className="min-h-screen bg-[#f1f5f9] text-slate-800 font-sans flex flex-col md:flex-row w-full selection:bg-[#006838] selection:text-white">
@@ -962,9 +1017,17 @@ export default function CIModule() {
           {/* Navigation Section 2: LỌC NHANH (Embedded in Dark Navy Sidebar) */}
           <div className="space-y-2 pt-2 border-t border-slate-800/80">
             {!isSidebarCollapsed && (
-              <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-wider px-2">
-                LỌC NHANH
-              </h4>
+              <div className="flex items-center justify-between px-2">
+                <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                  LỌC NHANH
+                </h4>
+                {isSyncingStats && (
+                  <span className="flex h-2 w-2 relative" title="Đang đồng bộ số liệu...">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                )}
+              </div>
             )}
 
             {/* Filter 1: Loại đăng ký */}
@@ -1110,7 +1173,9 @@ export default function CIModule() {
                   {/* Sub-items */}
                   <div className="pl-4 space-y-0.5 border-l border-slate-700/80 ml-2 mb-1">
                     {TH_KG_SUB_ITEMS.map((subItem) => {
-                      const cnt = proposals.filter((p) => matchRegionFilter(p.region, subItem)).length;
+                      const cnt = (statsData.regions && statsData.regions[subItem] !== undefined)
+                        ? statsData.regions[subItem]
+                        : 0;
                       return (
                         <button
                           key={subItem}
