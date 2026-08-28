@@ -170,18 +170,14 @@ export default function ProductionPerformanceModule() {
         })}
       </div>
 
-      <div className="text-xs text-slate-500">
-        Đang xem: <span className="font-bold text-slate-700">{factory?.name}</span> ·{' '}
-        {line ? <span className="font-bold text-[#006838]">Chuyền {line.lineNumber}</span> : 'Toàn nhà máy (tất cả chuyền)'}
-      </div>
-
-      {/* Chọn chuyền — bấm lại ô Nhà máy đang chọn ở hàng trên để ẩn/hiện khung này */}
+      {/* Chọn chuyền — bấm lại ô Nhà máy đang chọn ở hàng trên để ẩn/hiện khung này. Chọn xong 1
+          chuyền cụ thể thì tự đóng khung lại (bấm lại Nhà máy hoặc chọn Nhà máy khác để mở lại). */}
       {pickerOpen && (
         <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm">
           <div className="text-xs font-bold text-slate-400 mb-2.5">Chọn chuyền để xem riêng (không chọn = xem cả nhà máy)</div>
           <div className="flex flex-wrap gap-2">
             <button
-              onClick={() => setLineNumber(null)}
+              onClick={() => { setLineNumber(null); setPickerOpen(false); }}
               className={`px-3 py-2 rounded-xl text-xs font-bold transition ${
                 lineNumber === null ? 'bg-[#006838] text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
               }`}
@@ -191,7 +187,7 @@ export default function ProductionPerformanceModule() {
             {factory?.lines.map((l) => (
               <button
                 key={l.lineNumber}
-                onClick={() => setLineNumber(l.lineNumber)}
+                onClick={() => { setLineNumber(l.lineNumber); setPickerOpen(false); }}
                 className={`px-3 py-2 rounded-xl text-xs font-bold transition ${
                   lineNumber === l.lineNumber ? 'bg-[#006838] text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
                 }`}
