@@ -9,6 +9,7 @@ export interface StatusCountsData {
   da_danh_gia: number;
   luu_tru: number;
   regions: Record<string, number>;
+  category_counts: Record<string, number>;
 }
 
 interface StatusCountsContextType {
@@ -17,7 +18,7 @@ interface StatusCountsContextType {
   refetchStatusCounts: () => Promise<void>;
 }
 
-const CACHE_KEY = "tbs_status_counts_v1";
+const CACHE_KEY = "tbs_status_counts_v2";
 
 const StatusCountsContext = createContext<StatusCountsContextType>({
   counts: null,
@@ -41,6 +42,7 @@ export const StatusCountsProvider: React.FC<{ children: React.ReactNode }> = ({ 
               da_danh_gia: Number(parsed.da_danh_gia || 0),
               luu_tru: Number(parsed.luu_tru || 0),
               regions: parsed.regions || {},
+              category_counts: parsed.category_counts || {},
             };
           }
         }
@@ -65,6 +67,7 @@ export const StatusCountsProvider: React.FC<{ children: React.ReactNode }> = ({ 
             da_danh_gia: Number(json.counts.da_danh_gia || 0),
             luu_tru: Number(json.counts.luu_tru || 0),
             regions: json.regions || {},
+            category_counts: json.category_counts || {},
           };
           setCounts(newCounts);
           if (typeof window !== "undefined") {

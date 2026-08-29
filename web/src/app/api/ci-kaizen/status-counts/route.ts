@@ -18,6 +18,7 @@ export async function GET() {
         await db.prepare('ALTER TABLE ci_kaizen_proposals ADD COLUMN approval_status TEXT DEFAULT "PHE_DUYET"').run().catch(() => {});
       } catch (e) {}
 
+      // ── Status counts (Loại đăng ký) ────────────────────────────────────
       const countsQuery = `
         SELECT 
           SUM(CASE WHEN (COALESCE(is_thi_dua, 1) = 1 OR registration_type = 'THI_DUA' OR sub_status IN ('CHO_DANH_GIA', 'DA_DANH_GIA')) THEN 1 ELSE 0 END) as thi_dua,
@@ -27,20 +28,37 @@ export async function GET() {
           SUM(CASE WHEN (sub_status = 'LUU_TRU' OR registration_type = 'LUU_TRU' OR status = 'ARCHIVED') THEN 1 ELSE 0 END) as luu_tru
         FROM ci_kaizen_proposals
       `;
-
       const countsRes = await db.prepare(countsQuery).first().catch(() => null);
 
+      // ── Region counts (Khu vực) — GROUP BY factory which stores area name ─
       const regionsQuery = `
-        SELECT region, COUNT(*) as cnt 
+        SELECT factory, COUNT(*) as cnt 
         FROM ci_kaizen_proposals 
-        GROUP BY region
+        WHERE factory IS NOT NULL AND factory != ''
+        GROUP BY factory
       `;
       const { results: regionResults } = await db.prepare(regionsQuery).all().catch(() => ({ results: [] }));
 
       const regionMap: Record<string, number> = {};
       if (Array.isArray(regionResults)) {
         for (const row of regionResults) {
-          if (row.region) regionMap[row.region] = Number(row.cnt || 0);
+          if (row.factory) regionMap[String(row.factory)] = Number(row.cnt || 0);
+        }
+      }
+
+      // ── Category counts (Phân loại) — GROUP BY category ─────────────────
+      const categoryQuery = `
+        SELECT category, COUNT(*) as cnt 
+        FROM ci_kaizen_proposals 
+        WHERE category IS NOT NULL AND category != ''
+        GROUP BY category
+      `;
+      const { results: categoryResults } = await db.prepare(categoryQuery).all().catch(() => ({ results: [] }));
+
+      const categoryMap: Record<string, number> = {};
+      if (Array.isArray(categoryResults)) {
+        for (const row of categoryResults) {
+          if (row.category) categoryMap[String(row.category)] = Number(row.cnt || 0);
         }
       }
 
@@ -56,6 +74,7 @@ export async function GET() {
         success: true,
         counts,
         regions: regionMap,
+        category_counts: categoryMap,
         timestamp: new Date().toISOString(),
       });
     }
@@ -70,6 +89,7 @@ export async function GET() {
         luu_tru: 0,
       },
       regions: {},
+      category_counts: {},
       timestamp: new Date().toISOString(),
     });
   } catch (error: unknown) {

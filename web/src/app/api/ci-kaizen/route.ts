@@ -11,29 +11,13 @@ function getDbBinding(): any {
 
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const category = searchParams.get('category');
-    const status = searchParams.get('status');
-
     const db = getDbBinding();
 
     if (db) {
-      let query = `SELECT * FROM ci_kaizen_proposals WHERE factory IN ${KG_FACTORIES_SQL}`;
-      const params: any[] = [];
-
-      if (category && category !== 'ALL') {
-        query += ` AND category = ?`;
-        params.push(category);
-      }
-
-      if (status && status !== 'ALL') {
-        query += ` AND status = ?`;
-        params.push(status);
-      }
-
-      query += ` ORDER BY created_at DESC LIMIT 100`;
-
-      const { results } = params.length > 0 ? await db.prepare(query).bind(...params).all() : await db.prepare(query).all();
+      // Always fetch ALL proposals — filtering is done client-side in CIModule
+      // This ensures sidebar counts are always computed on the full dataset
+      const query = `SELECT * FROM ci_kaizen_proposals WHERE factory IN ${KG_FACTORIES_SQL} ORDER BY created_at DESC LIMIT 500`;
+      const { results } = await db.prepare(query).all();
 
       return NextResponse.json({
         success: true,

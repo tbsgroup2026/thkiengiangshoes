@@ -520,19 +520,13 @@ export default function CIModule() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  // Fetch Proposals from D1 Database
+  // Fetch ALL Proposals from D1 Database — NO server-side filters.
+  // Filtering is done entirely client-side so sidebar counts always reflect
+  // the true totals for the full dataset, not just the current filtered view.
   const fetchProposals = async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams();
-      if (selectedCategory !== "ALL") params.append("category", selectedCategory);
-      if (selectedRegion !== "ALL") params.append("region", selectedRegion);
-      if (selectedRegType !== "ALL") params.append("registration_type", selectedRegType);
-      if (selectedSubStatus !== "ALL") params.append("sub_status", selectedSubStatus);
-      if (selectedStatus !== "ALL") params.append("status", selectedStatus);
-      if (searchQuery) params.append("search", searchQuery);
-
-      const res = await fetch(`/api/ci-kaizen?${params.toString()}`);
+      const res = await fetch(`/api/ci-kaizen`);
       if (!res.ok) {
         setLoading(false);
         return;
@@ -550,7 +544,8 @@ export default function CIModule() {
 
   useEffect(() => {
     fetchProposals();
-  }, [selectedCategory, selectedRegion, selectedRegType, selectedSubStatus, selectedStatus]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Handle View Counter Increment
   const handleRecordView = async (prop: KaizenProposal) => {
@@ -874,12 +869,32 @@ export default function CIModule() {
     return true;
   });
 
-  // ⚡ Sidebar Badge Counters strictly derived from Global Single Source of Truth (StatusCountsContext)
+  // ⚡ Sidebar Badge Counters — Loại đăng ký (from StatusCountsContext, fetched independently)
   const countThiDua = statusCounts?.thi_dua ?? (isCountsLoading ? "…" : 0);
   const countChoReview = statusCounts?.cho_phe_duyet ?? (isCountsLoading ? "…" : 0);
   const countChoDanhGia = statusCounts?.cho_danh_gia ?? (isCountsLoading ? "…" : 0);
   const countDaDanhGia = statusCounts?.da_danh_gia ?? (isCountsLoading ? "…" : 0);
   const countLuuTru = statusCounts?.luu_tru ?? (isCountsLoading ? "…" : 0);
+
+  // ⚡ Sidebar Badge Counters — Khu vực (computed from full proposals array, not filtered)
+  // Uses matchRegionFilter to normalize area name variants (KG 2 == Kiên Giang 2 etc.)
+  const regionCounts = useMemo(() => {
+    const result: Record<string, number> = {};
+    for (const subItem of TH_KG_SUB_ITEMS) {
+      result[subItem] = proposals.filter((p) => matchRegionFilter(p.factory || p.region || "", subItem)).length;
+    }
+    return result;
+  }, [proposals]);
+
+  // ⚡ Sidebar Badge Counters — Phân loại / Category (computed from full proposals array, not filtered)
+  // Each card's category field is read directly — no shared/global category state
+  const categoryCounts = useMemo(() => {
+    const result: Record<string, number> = {};
+    for (const cat of CATEGORIES) {
+      result[cat.id] = proposals.filter((p) => p.category === cat.id).length;
+    }
+    return result;
+  }, [proposals]);
 
   return (
     <div className="min-h-screen bg-[#f1f5f9] text-slate-800 font-sans flex flex-col md:flex-row w-full selection:bg-[#006838] selection:text-white">
@@ -1178,7 +1193,7 @@ export default function CIModule() {
                   {/* Sub-items */}
                   <div className="pl-4 space-y-0.5 border-l border-slate-700/80 ml-2 mb-1">
                     {TH_KG_SUB_ITEMS.map((subItem) => {
-                      const cnt = statusCounts?.regions?.[subItem] ?? (isCountsLoading ? "…" : 0);
+                      const cnt = regionCounts[subItem] ?? 0;
                       return (
                         <button
                           key={subItem}
@@ -1220,7 +1235,7 @@ export default function CIModule() {
               {(!isSidebarCollapsed && isCategoryExpanded) && (
                 <div className="space-y-0.5 pl-2 text-xs font-bold">
                   {CATEGORIES.map((c) => {
-                    const cnt = proposals.filter((p) => p.category === c.id).length;
+                    const cnt = categoryCounts[c.id] ?? 0;
                     return (
                       <button
                         key={c.id}

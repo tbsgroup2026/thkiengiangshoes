@@ -3404,6 +3404,110 @@ export default {
         );
       }
 
+      // ════════════════════════════════════════════════════════════════
+      // 📋 GET /api/ci-kaizen (Main Proposals List — ALL, no server-side filter)
+      // Frontend CIModule fetches ALL data and filters client-side so that
+      // sidebar counts for Khu vực, Phân loại, and Loại đăng ký are always
+      // computed against the full dataset, not the currently filtered subset.
+      // ════════════════════════════════════════════════════════════════
+      if ((url.pathname === "/api/ci-kaizen" || url.pathname === "/api/ci-kaizen/") && request.method === "GET") {
+        try {
+          const KG_FACTORIES = ["KG 1","KG 2","KG 3","Hoàn thiện đế","Kiên Giang 1","Kiên Giang 2","Kiên Giang 3","HTĐ KG","Phòng kế hoạch","Phòng CN-CI","Phòng chất lượng","Phòng nhân sự","P. Kế Hoạch","P. CN-CI","P. Chất Lượng","P. Nhân Sự"];
+          const placeholders = KG_FACTORIES.map(() => "?").join(",");
+          const { results } = await env.DB.prepare(
+            `SELECT * FROM ci_kaizen_proposals WHERE factory IN (${placeholders}) ORDER BY created_at DESC LIMIT 500`
+          ).bind(...KG_FACTORIES).all().catch(() => ({ results: [] }));
+
+          return new Response(JSON.stringify({
+            success: true,
+            data: results || [],
+            proposals: results || [],
+            scoped: "Kiên Giang 1, 2, 3",
+          }), {
+            headers: { ...SECURE_JSON_HEADERS, "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0" }
+          });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: SECURE_JSON_HEADERS });
+        }
+      }
+
+      // ════════════════════════════════════════════════════════════════
+      // 📊 GET /api/ci-kaizen/status-counts
+      // Returns: status counts (Loại đăng ký), region counts (Khu vực by factory),
+      // and category counts (Phân loại) — all computed directly from D1.
+      // No caching so counts are always live.
+      // ════════════════════════════════════════════════════════════════
+      if (url.pathname.endsWith("/status-counts") && request.method === "GET") {
+        try {
+          // ── Status counts (Loại đăng ký) ─────────────────────────────
+          const { results: allRows } = await env.DB.prepare(
+            "SELECT is_thi_dua, status, sub_status, approval_status, registration_type, factory, category FROM ci_kaizen_proposals"
+          ).all().catch(() => ({ results: [] }));
+          const items = allRows || [];
+
+          let thiDua = 0, choReview = 0, choDanhGia = 0, daDanhGia = 0, luuTru = 0;
+
+          // Region counts using factory field (the field where actual location is stored)
+          const regionCounts = {
+            "Kiên Giang 1": 0, "Kiên Giang 2": 0, "Kiên Giang 3": 0,
+            "Hoàn thiện đế": 0, "Phòng kế hoạch": 0, "Phòng CN-CI": 0,
+            "Phòng chất lượng": 0, "Phòng nhân sự": 0,
+          };
+
+          // Category counts (Phân loại)
+          const categoryCounts = {};
+
+          for (const p of items) {
+            const subStatus = String(p.sub_status || "").toUpperCase();
+            const appStatus = String(p.approval_status || "").toUpperCase();
+            const mainStatus = String(p.status || "").toUpperCase();
+            const regType = String(p.registration_type || "").toUpperCase();
+            const isThiDua = Number(p.is_thi_dua) === 1 || regType === "THI_DUA";
+
+            // Status counts
+            if (isThiDua || subStatus === "CHO_DANH_GIA" || subStatus === "DA_DANH_GIA") thiDua++;
+            if (regType === "LUU_TRU" || subStatus === "LUU_TRU" || mainStatus === "ARCHIVED") {
+              luuTru++;
+            } else if (subStatus === "DA_DANH_GIA" || appStatus === "DA_DANH_GIA") {
+              daDanhGia++;
+            } else if (subStatus === "CHO_DANH_GIA" || appStatus === "PHE_DUYET" || mainStatus === "APPROVED" || mainStatus === "IMPLEMENTED") {
+              choDanhGia++;
+            } else if (subStatus === "CHO_REVIEW" || (appStatus === "PENDING" && !["CHO_DANH_GIA","DA_DANH_GIA","LUU_TRU"].includes(subStatus))) {
+              choReview++;
+            }
+
+            // Region counts by factory field
+            const fac = String(p.factory || "").toUpperCase();
+            if (fac.includes("KIÊN GIANG 1") || fac.includes("KIEN GIANG 1") || fac === "KG1" || fac === "KG 1") regionCounts["Kiên Giang 1"]++;
+            else if (fac.includes("KIÊN GIANG 2") || fac.includes("KIEN GIANG 2") || fac === "KG2" || fac === "KG 2") regionCounts["Kiên Giang 2"]++;
+            else if (fac.includes("KIÊN GIANG 3") || fac.includes("KIEN GIANG 3") || fac === "KG3" || fac === "KG 3") regionCounts["Kiên Giang 3"]++;
+            else if (fac.includes("HOÀN THIỆN ĐẾ") || fac.includes("HOAN THIEN DE") || fac.includes("HTĐ") || fac.includes("HTD")) regionCounts["Hoàn thiện đế"]++;
+            else if (fac.includes("KẾ HOẠCH") || fac.includes("KE HOACH") || fac.includes("PPC")) regionCounts["Phòng kế hoạch"]++;
+            else if (fac.includes("CN-CI") || fac.includes("CN CI")) regionCounts["Phòng CN-CI"]++;
+            else if (fac.includes("CHẤT LƯỢNG") || fac.includes("CHAT LUONG") || fac.includes("QA") || fac.includes("QC")) regionCounts["Phòng chất lượng"]++;
+            else if (fac.includes("NHÂN SỰ") || fac.includes("NHAN SU") || fac.includes("HR") || fac.includes("HÀNH CHÍNH")) regionCounts["Phòng nhân sự"]++;
+
+            // Category counts by category field
+            if (p.category) {
+              const cat = String(p.category);
+              categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+            }
+          }
+
+          return new Response(JSON.stringify({
+            success: true,
+            counts: { thi_dua: thiDua, cho_phe_duyet: choReview, cho_danh_gia: choDanhGia, da_danh_gia: daDanhGia, luu_tru: luuTru },
+            regions: regionCounts,
+            category_counts: categoryCounts,
+            timestamp: new Date().toISOString(),
+          }), {
+            headers: { ...SECURE_JSON_HEADERS, "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0" }
+          });
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: SECURE_JSON_HEADERS });
+        }
+      }
+
       // ⚡ 0. GET /api/ci-kaizen/stats (Fast badge counter endpoint with 30s server cache)
       if (url.pathname.endsWith("/stats") && request.method === "GET") {
         try {
