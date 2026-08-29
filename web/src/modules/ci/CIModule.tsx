@@ -104,8 +104,47 @@ export interface KaizenProposal {
   scores_json?: string;
   evaluation_result?: string;
   approval_status?: string;
+  review_status?: "CHO_PHE_DUYET" | "TU_CHOI_DUYET" | "CHO_DANH_GIA" | "DA_DANH_GIA";
+  is_archived?: boolean | number;
   version: number;
   created_at: string;
+}
+
+export function normalizeProposal(p: KaizenProposal): KaizenProposal {
+  if (!p) return p;
+  let isArchived = Boolean(
+    Number(p.is_archived) === 1 ||
+    p.is_archived === true ||
+    p.sub_status === "LUU_TRU" ||
+    p.registration_type === "LUU_TRU" ||
+    p.status === "ARCHIVED" ||
+    p.approval_status === "TU_CHOI" ||
+    p.sub_status === "TU_CHOI_TRIEN_KHAI" ||
+    p.status === "REJECTED"
+  );
+
+  let reviewStatus = p.review_status;
+  if (!reviewStatus) {
+    const appStatus = String(p.approval_status || "").toUpperCase();
+    const subStatus = String(p.sub_status || "").toUpperCase();
+    const mainStatus = String(p.status || "").toUpperCase();
+
+    if (appStatus === "TU_CHOI" || subStatus === "TU_CHOI_TRIEN_KHAI" || mainStatus === "REJECTED") {
+      reviewStatus = "TU_CHOI_DUYET";
+    } else if (subStatus === "DA_DANH_GIA" || appStatus === "DA_DANH_GIA" || (Number(p.avg_rating || p.average_score || 0) > 0 && !["CHO_REVIEW", "CHO_DANH_GIA"].includes(subStatus))) {
+      reviewStatus = "DA_DANH_GIA";
+    } else if (subStatus === "CHO_DANH_GIA" || appStatus === "PHE_DUYET" || mainStatus === "APPROVED" || Number(p.is_thi_dua) === 1) {
+      reviewStatus = "CHO_DANH_GIA";
+    } else {
+      reviewStatus = "CHO_PHE_DUYET";
+    }
+  }
+
+  return {
+    ...p,
+    review_status: reviewStatus as any,
+    is_archived: isArchived
+  };
 }
 
 const CATEGORIES = [
@@ -790,91 +829,84 @@ export default function CIModule() {
     }
   };
 
-  // Filtered List Computation
+  // ⚡ Normalized Proposals Array (Ensures review_status and is_archived on all cards)
+  const normalizedProposals = useMemo(() => {
+    return proposals.map(normalizeProposal);
+  }, [proposals]);
+
   // Synchronized Filtered List Computation
-  const filteredProposals = proposals.filter((p) => {
-    if (selectedRegion !== "ALL" && !matchRegionFilter(p.region, selectedRegion)) {
-      return false;
-    }
-    if (selectedCategory !== "ALL" && p.category !== selectedCategory) {
-      return false;
-    }
+  const filteredProposals = useMemo(() => {
+    return normalizedProposals.filter((p) => {
+      if (selectedRegion !== "ALL" && !matchRegionFilter(p.factory || p.region || "", selectedRegion)) {
+        return false;
+      }
+      if (selectedCategory !== "ALL" && p.category !== selectedCategory) {
+        return false;
+      }
 
-    const appStatus = String(p.approval_status || "").toUpperCase();
-    const subStatus = String(p.sub_status || "").toUpperCase();
-    const mainStatus = String(p.status || "").toUpperCase();
-    const regType = String(p.registration_type || "").toUpperCase();
+      // 1. Filter by "Loại đăng ký" (Registration / Review Status & Archiving)
+      const isArchived = Boolean(p.is_archived);
+      const revStatus = p.review_status || "CHO_PHE_DUYET";
 
-    // 1. Filter by registration type / Thi đua / Lưu trữ
-    if (selectedRegType === "THI_DUA") {
-      const isThiDuaItem =
-        Number(p.is_thi_dua) === 1 ||
-        regType === "THI_DUA" ||
-        subStatus === "CHO_DANH_GIA" ||
-        subStatus === "DA_DANH_GIA" ||
-        appStatus === "PHE_DUYET";
-      if (!isThiDuaItem) return false;
-    } else if (selectedRegType === "LUU_TRU") {
-      const isLuuTruItem = subStatus === "LUU_TRU" || regType === "LUU_TRU" || mainStatus === "ARCHIVED";
-      if (!isLuuTruItem) return false;
-    } else if (selectedRegType !== "ALL") {
-      if (regType !== selectedRegType) return false;
-    }
+      if (selectedRegType === "THI_DUA") {
+        if (isArchived || (revStatus !== "CHO_DANH_GIA" && revStatus !== "DA_DANH_GIA")) {
+          return false;
+        }
+      } else if (selectedRegType === "CHO_PHE_DUYET") {
+        if (isArchived || revStatus !== "CHO_PHE_DUYET") {
+          return false;
+        }
+      } else if (selectedRegType === "CHO_DANH_GIA") {
+        if (isArchived || revStatus !== "CHO_DANH_GIA") {
+          return false;
+        }
+      } else if (selectedRegType === "DA_DANH_GIA") {
+        if (isArchived || revStatus !== "DA_DANH_GIA") {
+          return false;
+        }
+      } else if (selectedRegType === "LUU_TRU") {
+        if (!isArchived) {
+          return false;
+        }
+      }
 
-    // 2. Filter by sub-status
-    if (selectedSubStatus !== "ALL") {
-      if (selectedSubStatus === "CHO_REVIEW") {
-        const isNotChoReview =
-          appStatus === "PHE_DUYET" ||
-          appStatus === "TU_CHOI" ||
-          subStatus === "CHO_DANH_GIA" ||
-          subStatus === "DA_DANH_GIA" ||
-          subStatus === "LUU_TRU" ||
-          mainStatus === "APPROVED" ||
-          mainStatus === "REJECTED" ||
-          mainStatus === "ARCHIVED";
-        if (isNotChoReview) return false;
-      } else if (selectedSubStatus === "CHO_DANH_GIA") {
-        const isChoDanhGia =
-          subStatus === "CHO_DANH_GIA" ||
-          appStatus === "PHE_DUYET" ||
-          mainStatus === "APPROVED" ||
-          mainStatus === "IMPLEMENTED" ||
-          regType === "CHO_DANH_GIA";
-        const isExcluded =
-          subStatus === "DA_DANH_GIA" ||
-          subStatus === "LUU_TRU" ||
-          appStatus === "DA_DANH_GIA" ||
-          appStatus === "TU_CHOI";
-        if (!isChoDanhGia || isExcluded) return false;
-      } else if (selectedSubStatus === "DA_DANH_GIA") {
-        const isDaDanhGia =
-          subStatus === "DA_DANH_GIA" ||
-          appStatus === "DA_DANH_GIA" ||
-          Number(p.average_score || (p as any).score || 0) > 0 ||
-          Boolean((p as any).award_title);
-        if (!isDaDanhGia) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const matchSearch =
+          p.title.toLowerCase().includes(q) ||
+          p.code.toLowerCase().includes(q) ||
+          p.proposer_name.toLowerCase().includes(q) ||
+          p.department.toLowerCase().includes(q);
+        if (!matchSearch) return false;
+      }
+      return true;
+    });
+  }, [normalizedProposals, selectedRegion, selectedCategory, selectedRegType, searchQuery]);
+
+  // ⚡ Dynamic Sidebar Badge Counters — Computed from full normalized proposals dataset
+  const regTypeCounts = useMemo(() => {
+    let thiDua = 0, choReview = 0, choDanhGia = 0, daDanhGia = 0, luuTru = 0;
+    for (const p of normalizedProposals) {
+      if (Boolean(p.is_archived)) {
+        luuTru++;
+      } else {
+        if (p.review_status === "CHO_PHE_DUYET") choReview++;
+        else if (p.review_status === "CHO_DANH_GIA") choDanhGia++;
+        else if (p.review_status === "DA_DANH_GIA") daDanhGia++;
+
+        if (p.review_status === "CHO_DANH_GIA" || p.review_status === "DA_DANH_GIA") {
+          thiDua++;
+        }
       }
     }
+    return { thiDua, choReview, choDanhGia, daDanhGia, luuTru };
+  }, [normalizedProposals]);
 
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      const matchSearch =
-        p.title.toLowerCase().includes(q) ||
-        p.code.toLowerCase().includes(q) ||
-        p.proposer_name.toLowerCase().includes(q) ||
-        p.department.toLowerCase().includes(q);
-      if (!matchSearch) return false;
-    }
-    return true;
-  });
-
-  // ⚡ Sidebar Badge Counters — Loại đăng ký (from StatusCountsContext, fetched independently)
-  const countThiDua = statusCounts?.thi_dua ?? (isCountsLoading ? "…" : 0);
-  const countChoReview = statusCounts?.cho_phe_duyet ?? (isCountsLoading ? "…" : 0);
-  const countChoDanhGia = statusCounts?.cho_danh_gia ?? (isCountsLoading ? "…" : 0);
-  const countDaDanhGia = statusCounts?.da_danh_gia ?? (isCountsLoading ? "…" : 0);
-  const countLuuTru = statusCounts?.luu_tru ?? (isCountsLoading ? "…" : 0);
+  const countThiDua = regTypeCounts.thiDua;
+  const countChoReview = regTypeCounts.choReview;
+  const countChoDanhGia = regTypeCounts.choDanhGia;
+  const countDaDanhGia = regTypeCounts.daDanhGia;
+  const countLuuTru = regTypeCounts.luuTru;
 
   // ⚡ Sidebar Badge Counters — Khu vực (computed from full proposals array, not filtered)
   // Uses matchRegionFilter to normalize area name variants (KG 2 == Kiên Giang 2 etc.)
@@ -1074,9 +1106,9 @@ export default function CIModule() {
                 <div className="space-y-0.5 pl-2 text-xs font-bold">
                   {/* Thi đua */}
                   <button
-                    onClick={() => { setSelectedRegType("THI_DUA"); setSelectedSubStatus("ALL"); }}
-                    className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between transition-colors ${
-                      selectedRegType === "THI_DUA" && selectedSubStatus === "ALL"
+                    onClick={() => setSelectedRegType(selectedRegType === "THI_DUA" ? "ALL" : "THI_DUA")}
+                    className={`w-full text-left px-2.5 py-1 rounded-lg flex items-center justify-between transition-colors ${
+                      selectedRegType === "THI_DUA"
                         ? "bg-[#006838] text-white font-extrabold"
                         : "text-slate-300 hover:bg-slate-800/80 hover:text-white"
                     }`}
@@ -1089,11 +1121,11 @@ export default function CIModule() {
                     </span>
                   </button>
 
-                  {/* Chờ phê duyệt — top-level / sub */}
+                  {/* Chờ phê duyệt */}
                   <button
-                    onClick={() => { setSelectedRegType("ALL"); setSelectedSubStatus("CHO_REVIEW"); }}
+                    onClick={() => setSelectedRegType(selectedRegType === "CHO_PHE_DUYET" ? "ALL" : "CHO_PHE_DUYET")}
                     className={`w-full text-left px-3 py-1 rounded-lg flex items-center justify-between text-[11px] transition-colors ${
-                      selectedSubStatus === "CHO_REVIEW"
+                      selectedRegType === "CHO_PHE_DUYET"
                         ? "bg-blue-950/80 text-blue-300 font-extrabold"
                         : "text-blue-400/80 hover:bg-slate-800/60 hover:text-blue-300"
                     }`}
@@ -1107,11 +1139,11 @@ export default function CIModule() {
                     </span>
                   </button>
 
-                  {/* Chờ đánh giá — top-level */}
+                  {/* Chờ đánh giá */}
                   <button
-                    onClick={() => { setSelectedRegType("ALL"); setSelectedSubStatus("CHO_DANH_GIA"); }}
+                    onClick={() => setSelectedRegType(selectedRegType === "CHO_DANH_GIA" ? "ALL" : "CHO_DANH_GIA")}
                     className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between transition-colors ${
-                      selectedSubStatus === "CHO_DANH_GIA"
+                      selectedRegType === "CHO_DANH_GIA"
                         ? "bg-amber-950/80 text-amber-300 font-extrabold"
                         : "text-amber-400/90 hover:bg-slate-800/60 hover:text-amber-300"
                     }`}
@@ -1125,11 +1157,11 @@ export default function CIModule() {
                     </span>
                   </button>
 
-                  {/* Đã đánh giá — sub of Chờ đánh giá */}
+                  {/* Đã đánh giá */}
                   <button
-                    onClick={() => { setSelectedRegType("ALL"); setSelectedSubStatus("DA_DANH_GIA"); }}
+                    onClick={() => setSelectedRegType(selectedRegType === "DA_DANH_GIA" ? "ALL" : "DA_DANH_GIA")}
                     className={`w-full text-left px-3 py-1 rounded-lg flex items-center justify-between text-[11px] transition-colors ${
-                      selectedSubStatus === "DA_DANH_GIA"
+                      selectedRegType === "DA_DANH_GIA"
                         ? "bg-emerald-950/80 text-emerald-300 font-extrabold"
                         : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
                     }`}
@@ -1145,7 +1177,7 @@ export default function CIModule() {
 
                   {/* Lưu trữ */}
                   <button
-                    onClick={() => { setSelectedRegType("LUU_TRU"); setSelectedSubStatus("ALL"); }}
+                    onClick={() => setSelectedRegType(selectedRegType === "LUU_TRU" ? "ALL" : "LUU_TRU")}
                     className={`w-full text-left px-2.5 py-1 rounded-lg flex items-center justify-between transition-colors ${
                       selectedRegType === "LUU_TRU"
                         ? "bg-slate-800 text-white font-extrabold"
@@ -1670,8 +1702,27 @@ export default function CIModule() {
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium">
                     {filteredProposals.map((prop) => {
-                      const isPendingFeasibility = prop.sub_status === "CHO_REVIEW" || prop.status === "SUBMITTED" || prop.approval_status === "PENDING";
-                      const isPendingEvaluation = prop.sub_status === "CHO_DANH_GIA" || prop.approval_status === "PHE_DUYET";
+                      const isArchived = Boolean(prop.is_archived);
+                      const revStatus = prop.review_status || "CHO_PHE_DUYET";
+                      const isPendingFeasibility = revStatus === "CHO_PHE_DUYET" && !isArchived;
+                      const isPendingEvaluation = revStatus === "CHO_DANH_GIA" && !isArchived;
+
+                      let badgeText = "Chờ phê duyệt";
+                      let badgeStyle = "bg-blue-50 text-blue-800 border-blue-200";
+
+                      if (isArchived) {
+                        badgeText = "Lưu trữ";
+                        badgeStyle = "bg-slate-100 text-slate-700 border-slate-300";
+                      } else if (revStatus === "CHO_DANH_GIA") {
+                        badgeText = "Chờ đánh giá";
+                        badgeStyle = "bg-amber-50 text-amber-900 border-amber-200";
+                      } else if (revStatus === "DA_DANH_GIA") {
+                        badgeText = "Đã đánh giá";
+                        badgeStyle = "bg-emerald-50 text-emerald-800 border-emerald-200";
+                      } else if (revStatus === "TU_CHOI_DUYET") {
+                        badgeText = "Từ chối duyệt";
+                        badgeStyle = "bg-rose-50 text-rose-800 border-rose-200";
+                      }
 
                       return (
                         <tr key={prop.id} className="hover:bg-slate-50 transition-colors">
@@ -1685,22 +1736,8 @@ export default function CIModule() {
                           <td className="p-3">{prop.region}</td>
                           <td className="p-3">{prop.proposer_name}</td>
                           <td className="p-3 text-center">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${
-                              isPendingFeasibility
-                                ? "bg-blue-50 text-blue-800 border-blue-200"
-                                : isPendingEvaluation
-                                ? "bg-amber-50 text-amber-900 border-amber-200"
-                                : prop.sub_status === "DA_DANH_GIA"
-                                ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                                : "bg-slate-100 text-slate-700 border-slate-200"
-                            }`}>
-                              {isPendingFeasibility
-                                ? "Chờ phê duyệt"
-                                : isPendingEvaluation
-                                ? "Chờ đánh giá"
-                                : prop.sub_status === "DA_DANH_GIA"
-                                ? "Đã đánh giá"
-                                : "Lưu trữ"}
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${badgeStyle}`}>
+                              {badgeText}
                             </span>
                           </td>
                           <td className="p-3 text-center">

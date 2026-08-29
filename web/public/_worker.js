@@ -3404,6 +3404,68 @@ export default {
         );
       }
 
+      // Helper to normalize proposal with review_status & is_archived
+      function normalizeProposalBackend(p) {
+        if (!p) return p;
+        let isArchived = Boolean(
+          Number(p.is_archived) === 1 ||
+          p.is_archived === true ||
+          p.sub_status === "LUU_TRU" ||
+          p.registration_type === "LUU_TRU" ||
+          p.status === "ARCHIVED" ||
+          p.approval_status === "TU_CHOI" ||
+          p.sub_status === "TU_CHOI_TRIEN_KHAI" ||
+          p.status === "REJECTED"
+        );
+
+        let reviewStatus = p.review_status;
+        if (!reviewStatus || reviewStatus === "") {
+          const appStatus = String(p.approval_status || "").toUpperCase();
+          const subStatus = String(p.sub_status || "").toUpperCase();
+          const mainStatus = String(p.status || "").toUpperCase();
+
+          if (appStatus === "TU_CHOI" || subStatus === "TU_CHOI_TRIEN_KHAI" || mainStatus === "REJECTED") {
+            reviewStatus = "TU_CHOI_DUYET";
+          } else if (subStatus === "DA_DANH_GIA" || appStatus === "DA_DANH_GIA" || (Number(p.avg_rating || p.average_score || 0) > 0 && !["CHO_REVIEW", "CHO_DANH_GIA"].includes(subStatus))) {
+            reviewStatus = "DA_DANH_GIA";
+          } else if (subStatus === "CHO_DANH_GIA" || appStatus === "PHE_DUYET" || mainStatus === "APPROVED" || Number(p.is_thi_dua) === 1) {
+            reviewStatus = "CHO_DANH_GIA";
+          } else {
+            reviewStatus = "CHO_PHE_DUYET";
+          }
+        }
+
+        return {
+          ...p,
+          review_status: reviewStatus,
+          is_archived: isArchived ? 1 : 0
+        };
+      }
+
+      // Auto-migration for review_status and is_archived columns
+      const ensureProposalSchemaAndMigration = async () => {
+        try {
+          await env.DB.prepare("ALTER TABLE ci_kaizen_proposals ADD COLUMN review_status TEXT DEFAULT 'CHO_PHE_DUYET'").run().catch(() => {});
+          await env.DB.prepare("ALTER TABLE ci_kaizen_proposals ADD COLUMN is_archived INTEGER DEFAULT 0").run().catch(() => {});
+
+          await env.DB.prepare(`
+            UPDATE ci_kaizen_proposals
+            SET 
+              is_archived = CASE 
+                WHEN (sub_status = 'LUU_TRU' OR registration_type = 'LUU_TRU' OR status = 'ARCHIVED' OR approval_status = 'TU_CHOI' OR sub_status = 'TU_CHOI_TRIEN_KHAI') THEN 1 
+                ELSE 0 
+              END,
+              review_status = CASE 
+                WHEN (approval_status = 'TU_CHOI' OR sub_status = 'TU_CHOI_TRIEN_KHAI' OR status = 'REJECTED') THEN 'TU_CHOI_DUYET'
+                WHEN (sub_status = 'DA_DANH_GIA' OR approval_status = 'DA_DANH_GIA' OR (COALESCE(average_score, 0) > 0 AND sub_status NOT IN ('CHO_REVIEW', 'CHO_DANH_GIA'))) THEN 'DA_DANH_GIA'
+                WHEN (sub_status = 'CHO_DANH_GIA' OR approval_status = 'PHE_DUYET' OR is_thi_dua = 1) THEN 'CHO_DANH_GIA'
+                ELSE 'CHO_PHE_DUYET'
+              END
+            WHERE review_status IS NULL OR review_status = ''
+          `).run().catch(() => {});
+        } catch (e) {}
+      };
+
       // ════════════════════════════════════════════════════════════════
       // 📋 GET /api/ci-kaizen (Main Proposals List — ALL, no server-side filter)
       // Frontend CIModule fetches ALL data and filters client-side so that
@@ -3412,16 +3474,19 @@ export default {
       // ════════════════════════════════════════════════════════════════
       if ((url.pathname === "/api/ci-kaizen" || url.pathname === "/api/ci-kaizen/") && request.method === "GET") {
         try {
+          await ensureProposalSchemaAndMigration();
           const KG_FACTORIES = ["KG 1","KG 2","KG 3","Hoàn thiện đế","Kiên Giang 1","Kiên Giang 2","Kiên Giang 3","HTĐ KG","Phòng kế hoạch","Phòng CN-CI","Phòng chất lượng","Phòng nhân sự","P. Kế Hoạch","P. CN-CI","P. Chất Lượng","P. Nhân Sự"];
           const placeholders = KG_FACTORIES.map(() => "?").join(",");
           const { results } = await env.DB.prepare(
             `SELECT * FROM ci_kaizen_proposals WHERE factory IN (${placeholders}) ORDER BY created_at DESC LIMIT 500`
           ).bind(...KG_FACTORIES).all().catch(() => ({ results: [] }));
 
+          const normalizedList = (results || []).map(normalizeProposalBackend);
+
           return new Response(JSON.stringify({
             success: true,
-            data: results || [],
-            proposals: results || [],
+            data: normalizedList,
+            proposals: normalizedList,
             scoped: "Kiên Giang 1, 2, 3",
           }), {
             headers: { ...SECURE_JSON_HEADERS, "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0" }
@@ -3439,15 +3504,16 @@ export default {
       // ════════════════════════════════════════════════════════════════
       if (url.pathname.endsWith("/status-counts") && request.method === "GET") {
         try {
+          await ensureProposalSchemaAndMigration();
           // ── Status counts (Loại đăng ký) ─────────────────────────────
           const { results: allRows } = await env.DB.prepare(
-            "SELECT is_thi_dua, status, sub_status, approval_status, registration_type, factory, category FROM ci_kaizen_proposals"
+            "SELECT * FROM ci_kaizen_proposals"
           ).all().catch(() => ({ results: [] }));
-          const items = allRows || [];
+          const rawItems = allRows || [];
 
           let thiDua = 0, choReview = 0, choDanhGia = 0, daDanhGia = 0, luuTru = 0;
 
-          // Region counts using factory field (the field where actual location is stored)
+          // Region counts using factory field
           const regionCounts = {
             "Kiên Giang 1": 0, "Kiên Giang 2": 0, "Kiên Giang 3": 0,
             "Hoàn thiện đế": 0, "Phòng kế hoạch": 0, "Phòng CN-CI": 0,
@@ -3457,23 +3523,21 @@ export default {
           // Category counts (Phân loại)
           const categoryCounts = {};
 
-          for (const p of items) {
-            const subStatus = String(p.sub_status || "").toUpperCase();
-            const appStatus = String(p.approval_status || "").toUpperCase();
-            const mainStatus = String(p.status || "").toUpperCase();
-            const regType = String(p.registration_type || "").toUpperCase();
-            const isThiDua = Number(p.is_thi_dua) === 1 || regType === "THI_DUA";
+          for (const rawP of rawItems) {
+            const p = normalizeProposalBackend(rawP);
+            const isArchived = Number(p.is_archived) === 1;
 
-            // Status counts
-            if (isThiDua || subStatus === "CHO_DANH_GIA" || subStatus === "DA_DANH_GIA") thiDua++;
-            if (regType === "LUU_TRU" || subStatus === "LUU_TRU" || mainStatus === "ARCHIVED") {
+            // ⚡ Exact counting formulas per specification
+            if (isArchived) {
               luuTru++;
-            } else if (subStatus === "DA_DANH_GIA" || appStatus === "DA_DANH_GIA") {
-              daDanhGia++;
-            } else if (subStatus === "CHO_DANH_GIA" || appStatus === "PHE_DUYET" || mainStatus === "APPROVED" || mainStatus === "IMPLEMENTED") {
-              choDanhGia++;
-            } else if (subStatus === "CHO_REVIEW" || (appStatus === "PENDING" && !["CHO_DANH_GIA","DA_DANH_GIA","LUU_TRU"].includes(subStatus))) {
-              choReview++;
+            } else {
+              if (p.review_status === "CHO_PHE_DUYET") choReview++;
+              else if (p.review_status === "CHO_DANH_GIA") choDanhGia++;
+              else if (p.review_status === "DA_DANH_GIA") daDanhGia++;
+
+              if (p.review_status === "CHO_DANH_GIA" || p.review_status === "DA_DANH_GIA") {
+                thiDua++;
+              }
             }
 
             // Region counts by factory field
@@ -3948,10 +4012,10 @@ export default {
 
           await env.DB.prepare(`
             UPDATE ci_kaizen_proposals
-            SET approval_status = ?, sub_status = ?, status = ?, approved_by = ?, approved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP,
+            SET approval_status = ?, sub_status = ?, status = ?, review_status = ?, is_archived = ?, approved_by = ?, approved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP,
                 time_before_seconds = ?, time_after_seconds = ?, saved_seconds = ?
             WHERE id = ?
-          `).bind(newApprovalStatus, newSubStatus, newStatus, user.empCode || user.id || "ADMIN", tBefore, tAfter, tSaved, proposalId).run();
+          `).bind(newApprovalStatus, newSubStatus, newStatus, isApprove ? "CHO_DANH_GIA" : "TU_CHOI_DUYET", isApprove ? 0 : 1, user.empCode || user.id || "ADMIN", tBefore, tAfter, tSaved, proposalId).run();
 
           await env.DB.prepare(`
             INSERT INTO ci_kaizen_status_history (proposal_id, from_status, to_status, action, actor_id, actor_name, note)
@@ -4057,9 +4121,9 @@ export default {
 
           await env.DB.prepare(`
             UPDATE ci_kaizen_proposals
-            SET evaluation_result = ?, sub_status = ?, avg_rating = ?, scores_json = ?, propose_thi_dua = ?, evaluated_by = ?, evaluated_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+            SET evaluation_result = ?, sub_status = ?, review_status = ?, is_archived = ?, avg_rating = ?, scores_json = ?, propose_thi_dua = ?, evaluated_by = ?, evaluated_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
-          `).bind(newEvalResult, newSubStatus, avgRating, scoresJsonStr, proposeThiDuaVal, user.empCode || user.id || "ADMIN", proposalId).run();
+          `).bind(newEvalResult, newSubStatus, isPass ? "DA_DANH_GIA" : "TU_CHOI_DUYET", isPass ? 0 : 1, avgRating, scoresJsonStr, proposeThiDuaVal, user.empCode || user.id || "ADMIN", proposalId).run();
 
           await env.DB.prepare(`
             INSERT INTO ci_kaizen_status_history (proposal_id, from_status, to_status, action, actor_id, actor_name, note)
@@ -4131,7 +4195,7 @@ export default {
 
           await env.DB.prepare(`
             UPDATE ci_kaizen_proposals
-            SET status = 'ARCHIVED', sub_status = 'LUU_TRU', registration_type = 'LUU_TRU', updated_at = CURRENT_TIMESTAMP
+            SET status = 'ARCHIVED', sub_status = 'LUU_TRU', registration_type = 'LUU_TRU', is_archived = 1, updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
           `).bind(proposalId).run();
 

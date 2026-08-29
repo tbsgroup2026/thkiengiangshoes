@@ -11,21 +11,36 @@ export async function GET() {
     const db = getDbBinding();
 
     if (db) {
-      // Auto-migration: ensure required columns exist
+      // Auto-migration: ensure required columns exist and backfill
       try {
-        await db.prepare('ALTER TABLE ci_kaizen_proposals ADD COLUMN is_thi_dua INTEGER DEFAULT 1').run().catch(() => {});
-        await db.prepare('ALTER TABLE ci_kaizen_proposals ADD COLUMN sub_status TEXT DEFAULT "CHO_DANH_GIA"').run().catch(() => {});
-        await db.prepare('ALTER TABLE ci_kaizen_proposals ADD COLUMN approval_status TEXT DEFAULT "PHE_DUYET"').run().catch(() => {});
+        await db.prepare('ALTER TABLE ci_kaizen_proposals ADD COLUMN review_status TEXT DEFAULT "CHO_PHE_DUYET"').run().catch(() => {});
+        await db.prepare('ALTER TABLE ci_kaizen_proposals ADD COLUMN is_archived INTEGER DEFAULT 0').run().catch(() => {});
+
+        await db.prepare(`
+          UPDATE ci_kaizen_proposals
+          SET 
+            is_archived = CASE 
+              WHEN (sub_status = 'LUU_TRU' OR registration_type = 'LUU_TRU' OR status = 'ARCHIVED' OR approval_status = 'TU_CHOI' OR sub_status = 'TU_CHOI_TRIEN_KHAI') THEN 1 
+              ELSE 0 
+            END,
+            review_status = CASE 
+              WHEN (approval_status = 'TU_CHOI' OR sub_status = 'TU_CHOI_TRIEN_KHAI' OR status = 'REJECTED') THEN 'TU_CHOI_DUYET'
+              WHEN (sub_status = 'DA_DANH_GIA' OR approval_status = 'DA_DANH_GIA' OR (COALESCE(average_score, 0) > 0 AND sub_status NOT IN ('CHO_REVIEW', 'CHO_DANH_GIA'))) THEN 'DA_DANH_GIA'
+              WHEN (sub_status = 'CHO_DANH_GIA' OR approval_status = 'PHE_DUYET' OR is_thi_dua = 1) THEN 'CHO_DANH_GIA'
+              ELSE 'CHO_PHE_DUYET'
+            END
+          WHERE review_status IS NULL OR review_status = ''
+        `).run().catch(() => {});
       } catch (e) {}
 
       // ── Status counts (Loại đăng ký) ────────────────────────────────────
       const countsQuery = `
         SELECT 
-          SUM(CASE WHEN (COALESCE(is_thi_dua, 1) = 1 OR registration_type = 'THI_DUA' OR sub_status IN ('CHO_DANH_GIA', 'DA_DANH_GIA')) THEN 1 ELSE 0 END) as thi_dua,
-          SUM(CASE WHEN (sub_status = 'CHO_REVIEW' OR (approval_status = 'PENDING' AND sub_status NOT IN ('CHO_DANH_GIA', 'DA_DANH_GIA', 'LUU_TRU'))) THEN 1 ELSE 0 END) as cho_phe_duyet,
-          SUM(CASE WHEN (sub_status = 'CHO_DANH_GIA' OR (approval_status = 'PHE_DUYET' AND sub_status NOT IN ('DA_DANH_GIA', 'LUU_TRU'))) THEN 1 ELSE 0 END) as cho_danh_gia,
-          SUM(CASE WHEN (sub_status = 'DA_DANH_GIA' OR approval_status = 'DA_DANH_GIA' OR (COALESCE(average_score, 0) > 0 AND sub_status NOT IN ('CHO_REVIEW', 'CHO_DANH_GIA'))) THEN 1 ELSE 0 END) as da_danh_gia,
-          SUM(CASE WHEN (sub_status = 'LUU_TRU' OR registration_type = 'LUU_TRU' OR status = 'ARCHIVED') THEN 1 ELSE 0 END) as luu_tru
+          SUM(CASE WHEN (COALESCE(review_status, 'CHO_PHE_DUYET') IN ('CHO_DANH_GIA', 'DA_DANH_GIA') AND COALESCE(is_archived, 0) = 0) THEN 1 ELSE 0 END) as thi_dua,
+          SUM(CASE WHEN (COALESCE(review_status, 'CHO_PHE_DUYET') = 'CHO_PHE_DUYET' AND COALESCE(is_archived, 0) = 0) THEN 1 ELSE 0 END) as cho_phe_duyet,
+          SUM(CASE WHEN (review_status = 'CHO_DANH_GIA' AND COALESCE(is_archived, 0) = 0) THEN 1 ELSE 0 END) as cho_danh_gia,
+          SUM(CASE WHEN (review_status = 'DA_DANH_GIA' AND COALESCE(is_archived, 0) = 0) THEN 1 ELSE 0 END) as da_danh_gia,
+          SUM(CASE WHEN (COALESCE(is_archived, 0) = 1) THEN 1 ELSE 0 END) as luu_tru
         FROM ci_kaizen_proposals
       `;
       const countsRes = await db.prepare(countsQuery).first().catch(() => null);
