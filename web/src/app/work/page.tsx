@@ -665,7 +665,7 @@ export default function WorkDashboardPage() {
       });
       const json = await res.json();
       if (json.success) {
-        showToast("Đã lưu & cập nhật thông tin thành công vào D1 Database (vpchuoiskechers)!");
+        showToast("Đã lưu & cập nhật thông tin thành công vào CSDL!");
       } else {
         showToast("Cập nhật thông tin cá nhân thành công!");
       }
@@ -853,7 +853,7 @@ export default function WorkDashboardPage() {
         {/* Executive Brand Lockup & Header Toggle Button (Fixed Top) */}
         {!isSidebarCollapsed ? (
           <div className="flex items-center justify-between pb-3.5 border-b border-slate-200/80 flex-shrink-0 min-h-[56px]">
-            <Link href="/" title="Về Trang Chủ TBS Group (https://vpchuoiskechers.tbsgroup2026.workers.dev)" className="flex items-center gap-2.5 group overflow-hidden cursor-pointer">
+            <Link href="/" title="Về Trang Chủ TBS Group (https://thkiengiangshoes.tbsgroup2026.workers.dev)" className="flex items-center gap-2.5 group overflow-hidden cursor-pointer">
               <img
                 src="/images/tbs-logo.png"
                 alt="TBS Group Logo"

@@ -925,7 +925,7 @@ export default {
 
     // 2. RFC 9116 security.txt
     if (url.pathname === "/.well-known/security.txt" || url.pathname === "/security.txt") {
-      const securityText = `Contact: mailto:security@tbsgroup.vn\nExpires: 2027-12-31T23:59:59.000Z\nPreferred-Languages: vi, en\nCanonical: https://vpchuoiskechers.tbsgroup2026.workers.dev/.well-known/security.txt\nPolicy: https://vpchuoiskechers.tbsgroup2026.workers.dev/about\n`;
+      const securityText = `Contact: mailto:security@tbsgroup.vn\nExpires: 2027-12-31T23:59:59.000Z\nPreferred-Languages: vi, en\nCanonical: https://thkiengiangshoes.tbsgroup2026.workers.dev/.well-known/security.txt\nPolicy: https://thkiengiangshoes.tbsgroup2026.workers.dev/about\n`;
       return new Response(securityText, {
         headers: { "Content-Type": "text/plain; charset=utf-8" }
       });
@@ -6068,7 +6068,7 @@ export default {
       </div>
 
       <div style="text-align: center; margin-top: 24px;">
-        <a href="https://vpchuoiskechers.tbsgroup2026.workers.dev/work" class="btn">Mở Bảng Điều Khiển Live BI Dashboard →</a>
+        <a href="https://thkiengiangshoes.tbsgroup2026.workers.dev/work" class="btn">Mở Bảng Điều Khiển Live BI Dashboard →</a>
       </div>
     </div>
     <div class="footer">

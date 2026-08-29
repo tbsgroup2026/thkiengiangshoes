@@ -608,7 +608,7 @@ export default function BaoCaoPage() {
                 {/* Email Call-to-Action button */}
                 <div className="text-center pt-3">
                   <a
-                    href="https://vpchuoiskechers.tbsgroup2026.workers.dev/work"
+                    href="https://thkiengiangshoes.tbsgroup2026.workers.dev/work"
                     target="_blank"
                     rel="noreferrer"
                     className="inline-block px-5 py-2.5 rounded-xl bg-[#006838] text-white text-xs font-bold shadow-xs hover:bg-[#00522c]"

@@ -1534,7 +1534,7 @@ export default function LandingCMSManager({
       {/* Bottom Sticky Action Bar */}
       <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-md flex items-center justify-between gap-4">
         <div className="text-xs text-slate-600 font-medium">
-          Mọi thay đổi sẽ được lưu và cập nhật ngay lập tức lên trang chủ <strong className="text-[#006838]">https://vpchuoiskechers.tbsgroup2026.workers.dev/</strong>
+          Mọi thay đổi sẽ được lưu và cập nhật ngay lập tức lên trang chủ <strong className="text-[#006838]">https://thkiengiangshoes.tbsgroup2026.workers.dev/</strong>
         </div>
 
         <button

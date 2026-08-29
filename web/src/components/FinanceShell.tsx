@@ -275,7 +275,7 @@ export default function FinanceShell({
           {!isSidebarCollapsed ? (
             <Link
               href="/"
-              title="Về Trang Chủ TBS Group (https://vpchuoiskechers.tbsgroup2026.workers.dev)"
+              title="Về Trang Chủ TBS Group (https://thkiengiangshoes.tbsgroup2026.workers.dev)"
               className="flex items-center gap-2 group overflow-hidden cursor-pointer min-w-0"
             >
               <img

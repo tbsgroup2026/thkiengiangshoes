@@ -2118,13 +2118,13 @@ export default function CIModule() {
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col items-center gap-3">
                 <div className="p-3 bg-white rounded-2xl border-2 border-emerald-500 shadow-md">
                   <img
-                    src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://vpchuoiskechers.tbsgroup2026.workers.dev/work/kaizen/register"
+                    src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://thkiengiangshoes.tbsgroup2026.workers.dev/work/kaizen/register"
                     alt="Mã QR Công Nhân Nộp Bài Kaizen"
                     className="w-44 h-44 object-contain"
                   />
                 </div>
                 <span className="text-[11px] font-mono font-bold text-emerald-800 break-all bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-                  https://vpchuoiskechers.tbsgroup2026.workers.dev/work/kaizen/register
+                  https://thkiengiangshoes.tbsgroup2026.workers.dev/work/kaizen/register
                 </span>
               </div>
 
@@ -2133,7 +2133,7 @@ export default function CIModule() {
                 <button
                   type="button"
                   onClick={() => {
-                    navigator.clipboard.writeText("https://vpchuoiskechers.tbsgroup2026.workers.dev/work/kaizen/register");
+                    navigator.clipboard.writeText("https://thkiengiangshoes.tbsgroup2026.workers.dev/work/kaizen/register");
                     showToast("📋 Đã sao chép đường dẫn QR công nhân vào bộ nhớ tạm!");
                   }}
                   className="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-slate-300"

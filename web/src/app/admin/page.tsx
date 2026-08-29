@@ -1021,7 +1021,7 @@ export default function AdminPage() {
     bookingsCount: 0,
     visitorsCount: 0,
     businessTripsCount: 0,
-    status: "CONNECTED (Cloudflare D1 vpchuoiskechers)",
+    status: "CONNECTED (Cloudflare D1 Database)",
   });
 
   const fetchLiveD1Counts = async () => {
@@ -1035,7 +1035,7 @@ export default function AdminPage() {
         bookingsCount: resR?.data?.bookings?.length || 0,
         visitorsCount: resR?.data?.visitors?.length || 0,
         businessTripsCount: resB?.data?.length || 0,
-        status: "CONNECTED (Cloudflare D1 vpchuoiskechers)",
+        status: "CONNECTED (Cloudflare D1 Database)",
       });
       showToast("Đã làm mới dữ liệu D1 Database!");
     } catch (e) {
@@ -2302,7 +2302,7 @@ export default function AdminPage() {
 
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-mono space-y-2">
                 <div className="text-[#006838] font-bold">✓ Cloudflare D1 Binding: env.DB</div>
-                <div className="text-slate-700">Database ID: ae3a7efd-ff5d-45c2-8c49-78d1518e3aa1 (vpchuoiskechers)</div>
+                <div className="text-slate-700">Database ID: ae3a7efd-ff5d-45c2-8c49-78d1518e3aa1 (thkiengiangshoes)</div>
                 <div className="text-slate-500 text-[11px]">Server Region: APAC / HKG Cloudflare Edge Worker</div>
               </div>
             </div>
