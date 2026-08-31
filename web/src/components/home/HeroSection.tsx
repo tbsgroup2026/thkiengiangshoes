@@ -5,6 +5,7 @@ import Link from "next/link";
 import { IconArrowRight, IconArrowDown } from "@tabler/icons-react";
 import { useTranslation } from "@/hooks/useTranslation";
 import { getLandingCMS, fetchLandingCMSFromServer, DEFAULT_LANDING_CMS } from "@/lib/landingCMS";
+import SafeImage from "@/components/SafeImage";
 export default function HeroSection() {
   const { t, lang } = useTranslation();
   const [cmsHero, setCmsHero] = useState(DEFAULT_LANDING_CMS.hero);
@@ -232,9 +233,12 @@ export default function HeroSection() {
 
               {/* 2. Sub Card (Bottom-Left): Team Photo Banner with White Border */}
               <div className="absolute bottom-0 left-0 w-[55%] h-[48%] rounded-[22px] overflow-hidden border-[3px] border-white shadow-2xl z-20 hover:scale-[1.03] transition-transform duration-300 group/card bg-[#0d2419]">
-                <img
+                <SafeImage
+                  productId="hero-team-banner"
                   src={cmsHero.teamImage || "/images/tbs-team-banner.png"}
                   alt="Phát Huy Sức Mạnh Kiến Tạo Tương Lai"
+                  fallbackTitle="Phát Huy Sức Mạnh Kiến Tạo Tương Lai"
+                  objectFit="cover"
                   className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-500"
                 />
               </div>

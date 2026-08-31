@@ -10,6 +10,9 @@ import KaizenPublicSubmitForm from "./KaizenPublicSubmitForm";
 import KaizenDetailModal from "./KaizenDetailModal";
 import EvaluationModal from "./EvaluationModal";
 import FeasibilityApprovalModal from "./FeasibilityApprovalModal";
+import PreliminaryReviewModal from "./PreliminaryReviewModal";
+import KaizenDuplicateCompareModal from "./KaizenDuplicateCompareModal";
+import KaizenLeaderboard from "./KaizenLeaderboard";
 import {
   IconLayoutGrid,
   IconList,
@@ -102,13 +105,24 @@ export interface KaizenProposal {
   is_thi_dua?: number;
   propose_thi_dua?: number;
   scores_json?: string;
-  evaluation_result?: string;
   approval_status?: string;
-  review_status?: "CHO_PHE_DUYET" | "TU_CHOI_DUYET" | "CHO_DANH_GIA" | "DA_DANH_GIA";
+  review_status?: string;
   is_archived?: boolean | number;
+  trang_thai?: string;
+  line?: string;
+  nguoi_kiem_chung?: string;
+  anh_kiem_chung_json?: string;
+  nhan_xet_kiem_chung?: string;
+  so_giay_tiet_kiem?: number;
+  diem_hieu_qua?: number;
+  diem_tong_hop?: number;
+  hang_xep?: number;
+  merged_into_id?: string;
   version: number;
   created_at: string;
 }
+
+
 
 export function normalizeProposal(p: KaizenProposal): KaizenProposal {
   if (!p) return p;
@@ -147,7 +161,7 @@ export function normalizeProposal(p: KaizenProposal): KaizenProposal {
   };
 }
 
-const CATEGORIES = [
+export const CATEGORIES = [
   { id: "MATERIAL_SAVING", label: "1.Tiết kiệm Vật tư", color: "bg-blue-600 text-white" },
   { id: "COST_SAVING", label: "2.Tiết kiệm Chi phí", color: "bg-emerald-600 text-white" },
   { id: "PRODUCTIVITY", label: "3.Tăng Năng suất", color: "bg-blue-500 text-white" },
@@ -236,29 +250,67 @@ const TH_KG_SUB_ITEMS = [
 ];
 const MAIN_REGIONS = ["THKG"];
 
-const matchRegionFilter = (propRegion: string, filterRegion: string) => {
+const matchRegionFilter = (propRegionOrObj: any, filterRegion: string) => {
   if (!filterRegion || filterRegion === "ALL") return true;
-  if (!propRegion) return false;
+  if (!propRegionOrObj) return false;
 
-  const pr = propRegion.toUpperCase();
+  let propStr = "";
+  if (typeof propRegionOrObj === "string") {
+    propStr = propRegionOrObj;
+  } else if (typeof propRegionOrObj === "object") {
+    propStr = `${propRegionOrObj.factory || ""} ${propRegionOrObj.region || ""} ${propRegionOrObj.department || ""} ${propRegionOrObj.area || ""} ${propRegionOrObj.code || ""} ${propRegionOrObj.title || ""}`;
+  }
+
+  const pr = propStr.toUpperCase();
 
   if (filterRegion === "Kiên Giang 1" || filterRegion === "KG 1") {
-    return pr.includes("KIÊN GIANG 1") || pr.includes("KIEN GIANG 1") || pr.includes("KG 1") || pr.includes("KG1");
+    return (
+      pr.includes("KIÊN GIANG 1") ||
+      pr.includes("KIEN GIANG 1") ||
+      pr.includes("KG 1") ||
+      pr.includes("KG1") ||
+      pr.includes("KG-1") ||
+      pr.includes("MŨI KG1") ||
+      pr.includes("MUI KG1")
+    );
   }
   if (filterRegion === "Kiên Giang 2" || filterRegion === "KG 2") {
-    return pr.includes("KIÊN GIANG 2") || pr.includes("KIEN GIANG 2") || pr.includes("KG 2") || pr.includes("KG2");
+    return (
+      pr.includes("KIÊN GIANG 2") ||
+      pr.includes("KIEN GIANG 2") ||
+      pr.includes("KG 2") ||
+      pr.includes("KG2") ||
+      pr.includes("KG-2")
+    );
   }
   if (filterRegion === "Kiên Giang 3" || filterRegion === "KG 3") {
-    return pr.includes("KIÊN GIANG 3") || pr.includes("KIEN GIANG 3") || pr.includes("KG 3") || pr.includes("KG3");
+    return (
+      pr.includes("KIÊN GIANG 3") ||
+      pr.includes("KIEN GIANG 3") ||
+      pr.includes("KG 3") ||
+      pr.includes("KG3") ||
+      pr.includes("KG-3") ||
+      pr.includes("XƯỞNG SẢN XUẤT KG3") ||
+      pr.includes("XUONG SAN XUAT KG3") ||
+      pr.includes("SẢN XUẤT KG3") ||
+      pr.includes("SAN XUAT KG3")
+    );
   }
   if (filterRegion === "Hoàn thiện đế" || filterRegion === "Hoàn Thiện Đế") {
-    return pr.includes("HOÀN THIỆN ĐẾ") || pr.includes("HOAN THIEN DE") || pr.includes("HTĐ") || pr.includes("HTD") || pr === "ĐẾ" || pr === "DE";
+    return (
+      pr.includes("HOÀN THIỆN ĐẾ") ||
+      pr.includes("HOAN THIEN DE") ||
+      pr.includes("HTĐ") ||
+      pr.includes("HTD") ||
+      pr.includes("ĐẾ") ||
+      pr.includes("DE")
+    );
   }
   if (filterRegion === "Phòng kế hoạch") {
     return pr.includes("KẾ HOẠCH") || pr.includes("KE HOACH") || pr.includes("PPC");
   }
   if (filterRegion === "Phòng CN-CI") {
-    return pr.includes("CN-CI") || pr.includes("CN CI") || pr.includes("CONTINUOUS IMPROVEMENT");
+    return pr.includes("CN-CI") || pr.includes("CN CI") || pr.includes("CONTINUOUS IMPROVEMENT") || pr.includes("CI");
   }
   if (filterRegion === "Phòng chất lượng") {
     return pr.includes("CHẤT LƯỢNG") || pr.includes("CHAT LUONG") || pr.includes("QA") || pr.includes("QC");
@@ -275,8 +327,7 @@ const matchRegionFilter = (propRegion: string, filterRegion: string) => {
       pr.includes("KIEN GIANG") ||
       pr.includes("HOÀN THIỆN ĐẾ") ||
       pr.includes("HOAN THIEN DE") ||
-      pr === "ĐẾ" ||
-      pr === "DE"
+      pr.includes("KG")
     );
   }
 
@@ -297,6 +348,125 @@ const matchRegionFilter = (propRegion: string, filterRegion: string) => {
 
   return pr.includes(filterRegion.toUpperCase());
 };
+
+export function isApprovedProposal(p: KaizenProposal): boolean {
+  if (!p) return false;
+  const appStatus = String(p.approval_status || "").toUpperCase();
+  const subStatus = String(p.sub_status || p.review_status || "").toUpperCase();
+  const status = String(p.status || "").toUpperCase();
+
+  if (appStatus === "TU_CHOI" || subStatus === "TU_CHOI_TRIEN_KHAI" || status === "REJECTED") {
+    return false;
+  }
+
+  return (
+    appStatus === "PHE_DUYET" ||
+    subStatus === "CHO_DANH_GIA" ||
+    subStatus === "DA_DANH_GIA" ||
+    subStatus === "DA_DUYET" ||
+    status === "APPROVED" ||
+    status === "UNDER_REVIEW" ||
+    status === "COMPLETED" ||
+    Number(p.avg_rating || p.average_score || 0) > 0
+  );
+}
+
+export function isPendingApprovalProposal(p: KaizenProposal): boolean {
+  if (!p) return false;
+  if (isApprovedProposal(p)) return false;
+
+  const appStatus = String(p.approval_status || "").toUpperCase();
+  const subStatus = String(p.sub_status || p.review_status || "").toUpperCase();
+  const status = String(p.status || "").toUpperCase();
+
+  if (appStatus === "TU_CHOI" || subStatus === "TU_CHOI_TRIEN_KHAI" || status === "REJECTED") {
+    return false;
+  }
+
+  return true;
+}
+
+export function matchRegTypeFilter(p: KaizenProposal, regType: string): boolean {
+  if (!p) return false;
+  if (!regType || regType === "ALL") return true;
+
+  const isArchived = Boolean(p.is_archived) || p.sub_status === "LUU_TRU" || p.registration_type === "LUU_TRU" || p.status === "ARCHIVED";
+
+  if (regType === "LUU_TRU") {
+    return isArchived;
+  }
+
+  if (isArchived) return false;
+
+  if (regType === "THI_DUA") {
+    return true;
+  }
+
+  if (regType === "CHO_PHE_DUYET" || regType === "CHO_DUYET") {
+    return isPendingApprovalProposal(p);
+  }
+
+  if (regType === "DA_DANH_GIA" || regType === "DA_DUYET") {
+    return isApprovedProposal(p);
+  }
+
+  if (regType === "CAN_CHINH_SUA") {
+    return String(p.sub_status || p.trang_thai || "").toUpperCase() === "CAN_CHINH_SUA";
+  }
+
+  return true;
+}
+
+export function renderCardTopRightBadge(prop: KaizenProposal, rankInfo?: any) {
+  const isRejected =
+    Boolean(prop.is_archived) ||
+    prop.approval_status === "TU_CHOI" ||
+    prop.sub_status === "TU_CHOI_TRIEN_KHAI" ||
+    prop.sub_status === "TU_CHOI_DUYET" ||
+    prop.status === "REJECTED";
+
+  if (isRejected) {
+    return (
+      <span className="px-2 py-0.5 rounded bg-rose-600 text-white text-[9px] font-black shadow-2xs flex items-center gap-0.5">
+        ❌ Từ chối
+      </span>
+    );
+  }
+
+  const isApproved = isApprovedProposal(prop);
+  const isPending = isPendingApprovalProposal(prop);
+
+  // ⚡ Requirement 2: status = "pending" -> CHỈ hiển thị badge "Chờ duyệt", tuyệt đối KHÔNG hiển thị badge Hạng
+  if (isPending) {
+    return (
+      <span className="px-2 py-0.5 rounded bg-amber-500 text-white text-[9px] font-black shadow-2xs flex items-center gap-0.5">
+        ⏳ Chờ duyệt
+      </span>
+    );
+  }
+
+  // ⚡ Requirement 1: status = "approved" VÀ có rank -> hiển thị badge "Hạng {rank}"
+  if (isApproved) {
+    if (rankInfo) {
+      return (
+        <span className={`px-2 py-0.5 rounded text-[10px] font-black shadow-md flex items-center gap-1 ${rankInfo.badgeStyle}`}>
+          <span>{rankInfo.badgeLabel}</span>
+        </span>
+      );
+    }
+    return (
+      <span className="px-2 py-0.5 rounded bg-emerald-600 text-white text-[9px] font-black shadow-2xs flex items-center gap-0.5">
+        ✅ Đã duyệt
+      </span>
+    );
+  }
+
+  return (
+    <span className="px-2 py-0.5 rounded bg-amber-500 text-white text-[9px] font-black shadow-2xs flex items-center gap-0.5">
+      ⏳ Chờ duyệt
+    </span>
+  );
+}
 
 export default function CIModule() {
   const { isExecutiveOrAdmin } = usePermission();
@@ -340,12 +510,6 @@ export default function CIModule() {
   });
 
   useEffect(() => {
-    if (selectedRegion === "Kiên Giang 3" || selectedRegion === "Nhà Máy Miền Đông" || selectedRegion === "VP Chuỗi (R&D)") {
-      setSelectedRegion("ALL");
-    }
-  }, [selectedRegion]);
-
-  useEffect(() => {
     function loadUser() {
       if (typeof window === "undefined") return;
       const curStr = localStorage.getItem("tbs_current_user");
@@ -368,6 +532,15 @@ export default function CIModule() {
     return () => window.removeEventListener("tbs_profile_updated", loadUser);
   }, []);
 
+  // Preliminary Review Modal State (Stage 2)
+  const [isPreliminaryModalOpen, setIsPreliminaryModalOpen] = useState(false);
+  const [preliminaryProposal, setPreliminaryProposal] = useState<KaizenProposal | null>(null);
+
+  // Duplicate Compare Modal State (Stage 1)
+  const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
+  const [duplicateNewSubmission, setDuplicateNewSubmission] = useState<any>(null);
+  const [duplicateMatches, setDuplicateMatches] = useState<any[]>([]);
+
   // Modal States
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -382,6 +555,7 @@ export default function CIModule() {
   const [activeProposal, setActiveProposal] = useState<KaizenProposal | null>(null);
   const [isCreateDropdownOpen, setIsCreateDropdownOpen] = useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
+
 
   // ⚡ Dedicated Status Counts Store (Single Source of Truth from StatusCountsContext)
   const { counts: statusCounts, loading: isCountsLoading, refetchStatusCounts } = useStatusCounts();
@@ -834,40 +1008,135 @@ export default function CIModule() {
     return proposals.map(normalizeProposal);
   }, [proposals]);
 
-  // Synchronized Filtered List Computation
+  // ⚡ Helper to extract proposal savings value in Million VNĐ
+  const getProposalSavingsVal = (p: any): number => {
+    if (!p) return 0;
+    const directTotalVnd = Number(p.total_savings_vnd || (p as any).tong_tien_tiet_kiem || 0);
+    if (directTotalVnd > 0) return directTotalVnd / 1000000;
+    const savedSecs = Number(p.saved_seconds || 0);
+    const qty = Number(p.pair_quantity || (p as any).so_luong_giay || 0);
+    if (savedSecs > 0 && qty > 0) return (savedSecs * 12.5 * qty) / 1000000;
+    return Number(p.efficiency_value_vnd || 0) / 1000000;
+  };
+
+  // ⚡ Compute Thi Đua Medal Ranks Map for all normalized proposals (Chỉ xếp hạng bài ĐÃ PHÊ DUYỆT)
+  const proposalRanksMap = useMemo(() => {
+    const map: Record<string, { rank: number; rankIndex: number; rankTitle: string; badgeLabel: string; badgeStyle: string; icon: string }> = {};
+
+    const thiDuaList = normalizedProposals.filter((p) => {
+      if (!p || p.is_archived) return false;
+
+      const appStatus = String(p.approval_status || "").toUpperCase();
+      const subStatus = String(p.sub_status || p.review_status || "").toUpperCase();
+      const status = String(p.status || "").toUpperCase();
+
+      // Bài bị từ chối -> Không xếp hạng
+      if (appStatus === "TU_CHOI" || subStatus === "TU_CHOI_TRIEN_KHAI" || status === "REJECTED") {
+        return false;
+      }
+
+      // Bài chưa phê duyệt (Bước 3) -> KHÔNG XẾP HẠNG ("chưa duyệt thì chưa xếp hạng")
+      if (subStatus === "CHO_REVIEW" || appStatus === "PENDING" || status === "SUBMITTED") {
+        return false;
+      }
+
+      // Bắt buộc phải ĐÃ PHÊ DUYỆT tính khả thi
+      const isApproved =
+        appStatus === "PHE_DUYET" ||
+        subStatus === "CHO_DANH_GIA" ||
+        subStatus === "DA_DANH_GIA" ||
+        status === "UNDER_REVIEW" ||
+        status === "APPROVED" ||
+        status === "COMPLETED";
+
+      const regType = String(p.registration_type || "").toUpperCase();
+      return isApproved && (regType === "THI_DUA" || Number(p.is_thi_dua) === 1 || subStatus === "CHO_DANH_GIA" || subStatus === "DA_DANH_GIA");
+    });
+
+    const sorted = [...thiDuaList].sort((a, b) => {
+      const valA = getProposalSavingsVal(a);
+      const valB = getProposalSavingsVal(b);
+      if (valB !== valA) return valB - valA;
+
+      const scoreA = Number(a.score_points || (a as any).scorePoints || 0);
+      const scoreB = Number(b.score_points || (b as any).scorePoints || 0);
+      if (scoreB !== scoreA) return scoreB - scoreA;
+
+      const voteA = Number(a.vote_count || 0);
+      const voteB = Number(b.vote_count || 0);
+      if (voteB !== voteA) return voteB - voteA;
+
+      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return dateB - dateA;
+    });
+
+    sorted.forEach((item, index) => {
+      let rank = 1;
+      let rankTitle = "Hạng Nhất";
+      let badgeLabel = "🥇 Hạng 1";
+      let badgeStyle = "bg-amber-400 text-amber-950 font-black border border-amber-300 shadow-md";
+      let icon = "🥇";
+
+      if (index === 0) {
+        rank = 1;
+        rankTitle = "Hạng Nhất";
+        badgeLabel = "🥇 Hạng 1";
+        badgeStyle = "bg-amber-400 text-amber-950 font-black border border-amber-300 shadow-md";
+        icon = "🥇";
+      } else if (index >= 1 && index <= 2) {
+        rank = 2;
+        rankTitle = "Hạng Nhì";
+        badgeLabel = "🥈 Hạng 2";
+        badgeStyle = "bg-slate-200 text-slate-900 font-black border border-slate-300 shadow-xs";
+        icon = "🥈";
+      } else if (index >= 3 && index <= 7) {
+        rank = 3;
+        rankTitle = "Hạng Ba";
+        badgeLabel = "🥉 Hạng 3";
+        badgeStyle = "bg-amber-800 text-amber-100 font-black border border-amber-600 shadow-xs";
+        icon = "🥉";
+      } else if (index >= 8 && index <= 17) {
+        rank = 4;
+        rankTitle = "Hạng 4";
+        badgeLabel = "🎖️ Hạng 4";
+        badgeStyle = "bg-blue-100 text-blue-900 font-extrabold border border-blue-300 shadow-2xs";
+        icon = "🎖️";
+      } else if (index >= 18 && index <= 37) {
+        rank = 5;
+        rankTitle = "Hạng 5";
+        badgeLabel = "🎗️ Hạng 5";
+        badgeStyle = "bg-emerald-100 text-emerald-900 font-extrabold border border-emerald-300 shadow-2xs";
+        icon = "🎗️";
+      } else {
+        rank = index + 1;
+        rankTitle = `Hạng ${index + 1}`;
+        badgeLabel = `#${index + 1}`;
+        badgeStyle = "bg-slate-100 text-slate-700 font-bold border border-slate-200";
+        icon = "#";
+      }
+
+      map[item.id] = { rank, rankIndex: index, rankTitle, badgeLabel, badgeStyle, icon };
+    });
+
+    return map;
+  }, [normalizedProposals]);
+
+  // Synchronized Filtered List Computation with Strict User Sorting Rules:
+  // 1. Chờ phê duyệt / Chờ duyệt: Sắp xếp theo thứ tự CŨ -> MỚI (created_at ASC)
+  // 2. Thẻ có huy chương / Thi đua: Sắp xếp theo thứ tự RANKING (1 -> 2 -> 3 -> 4...)
   const filteredProposals = useMemo(() => {
-    return normalizedProposals.filter((p) => {
-      if (selectedRegion !== "ALL" && !matchRegionFilter(p.factory || p.region || "", selectedRegion)) {
+    const filtered = normalizedProposals.filter((p) => {
+      if (selectedRegion !== "ALL" && !matchRegionFilter(p, selectedRegion)) {
         return false;
       }
       if (selectedCategory !== "ALL" && p.category !== selectedCategory) {
         return false;
       }
 
-      // 1. Filter by "Loại đăng ký" (Registration / Review Status & Archiving)
-      const isArchived = Boolean(p.is_archived);
-      const revStatus = p.review_status || "CHO_PHE_DUYET";
-
-      if (selectedRegType === "THI_DUA") {
-        if (isArchived || (revStatus !== "CHO_DANH_GIA" && revStatus !== "DA_DANH_GIA")) {
-          return false;
-        }
-      } else if (selectedRegType === "CHO_PHE_DUYET") {
-        if (isArchived || revStatus !== "CHO_PHE_DUYET") {
-          return false;
-        }
-      } else if (selectedRegType === "CHO_DANH_GIA") {
-        if (isArchived || revStatus !== "CHO_DANH_GIA") {
-          return false;
-        }
-      } else if (selectedRegType === "DA_DANH_GIA") {
-        if (isArchived || revStatus !== "DA_DANH_GIA") {
-          return false;
-        }
-      } else if (selectedRegType === "LUU_TRU") {
-        if (!isArchived) {
-          return false;
-        }
+      // Filter by "Loại đăng ký" using shared predicate
+      if (!matchRegTypeFilter(p, selectedRegType)) {
+        return false;
       }
 
       if (searchQuery) {
@@ -881,23 +1150,56 @@ export default function CIModule() {
       }
       return true;
     });
-  }, [normalizedProposals, selectedRegion, selectedCategory, selectedRegType, searchQuery]);
 
-  // ⚡ Dynamic Sidebar Badge Counters — Computed from full normalized proposals dataset
+    return [...filtered].sort((a, b) => {
+      // Rule 1: Chờ phê duyệt -> Sắp xếp CŨ -> MỚI (Oldest submitted item first!)
+      if (selectedRegType === "CHO_PHE_DUYET" || selectedRegType === "CHO_DUYET") {
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return dateA - dateB; // Ascending: Oldest first!
+      }
+
+      // Rule 2: Bài có Huy chương -> Sắp xếp nghiêm ngặt theo VỊ TRÍ RANKING TỪ TRÁI SANG PHẢI (0 -> 1 -> 2 -> 3...)
+      // Hạng 1 đứng đầu tiên bên trái, tiếp theo là Hạng 2, Hạng 3, Hạng 4, Hạng 5...
+      const rankIdxA = proposalRanksMap[a.id]?.rankIndex;
+      const rankIdxB = proposalRanksMap[b.id]?.rankIndex;
+
+      if (rankIdxA !== undefined && rankIdxB !== undefined) {
+        return rankIdxA - rankIdxB; // Ascending rank index: Rank 1 (idx 0) -> Rank 2 (idx 1,2) -> Rank 3 (idx 3-7)...
+      }
+
+      // Bài có huy chương luôn xếp trước bài chưa xếp hạng
+      if (rankIdxA !== undefined && rankIdxB === undefined) return -1;
+      if (rankIdxA === undefined && rankIdxB !== undefined) return 1;
+
+      // Các bài chưa xếp hạng: Sắp xếp theo CŨ -> MỚI (created_at ASC)
+      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return dateA - dateB;
+    });
+  }, [normalizedProposals, selectedRegion, selectedCategory, selectedRegType, searchQuery, proposalRanksMap]);
+
+  // ⚡ Helper predicate to test if a proposal matches active search query
+  const matchesSearch = (p: KaizenProposal, query: string) => {
+    if (!query) return true;
+    const q = query.toLowerCase();
+    return (
+      p.title.toLowerCase().includes(q) ||
+      p.code.toLowerCase().includes(q) ||
+      p.proposer_name.toLowerCase().includes(q) ||
+      p.department.toLowerCase().includes(q)
+    );
+  };
+
+  // ⚡ Sidebar Badge Counters — Loại đăng ký (Tổng số cho từng loại đăng ký)
   const regTypeCounts = useMemo(() => {
     let thiDua = 0, choReview = 0, choDanhGia = 0, daDanhGia = 0, luuTru = 0;
     for (const p of normalizedProposals) {
-      if (Boolean(p.is_archived)) {
-        luuTru++;
-      } else {
-        if (p.review_status === "CHO_PHE_DUYET") choReview++;
-        else if (p.review_status === "CHO_DANH_GIA") choDanhGia++;
-        else if (p.review_status === "DA_DANH_GIA") daDanhGia++;
-
-        if (p.review_status === "CHO_DANH_GIA" || p.review_status === "DA_DANH_GIA") {
-          thiDua++;
-        }
-      }
+      if (matchRegTypeFilter(p, "THI_DUA")) thiDua++;
+      if (matchRegTypeFilter(p, "CHO_PHE_DUYET")) choReview++;
+      if (matchRegTypeFilter(p, "CHO_DANH_GIA")) choDanhGia++;
+      if (matchRegTypeFilter(p, "DA_DANH_GIA")) daDanhGia++;
+      if (matchRegTypeFilter(p, "LUU_TRU")) luuTru++;
     }
     return { thiDua, choReview, choDanhGia, daDanhGia, luuTru };
   }, [normalizedProposals]);
@@ -908,25 +1210,23 @@ export default function CIModule() {
   const countDaDanhGia = regTypeCounts.daDanhGia;
   const countLuuTru = regTypeCounts.luuTru;
 
-  // ⚡ Sidebar Badge Counters — Khu vực (computed from full proposals array, not filtered)
-  // Uses matchRegionFilter to normalize area name variants (KG 2 == Kiên Giang 2 etc.)
+  // ⚡ Sidebar Badge Counters — Khu vực (Tổng số cho từng khu vực)
   const regionCounts = useMemo(() => {
     const result: Record<string, number> = {};
     for (const subItem of TH_KG_SUB_ITEMS) {
-      result[subItem] = proposals.filter((p) => matchRegionFilter(p.factory || p.region || "", subItem)).length;
+      result[subItem] = normalizedProposals.filter((p) => matchRegionFilter(p, subItem)).length;
     }
     return result;
-  }, [proposals]);
+  }, [normalizedProposals]);
 
-  // ⚡ Sidebar Badge Counters — Phân loại / Category (computed from full proposals array, not filtered)
-  // Each card's category field is read directly — no shared/global category state
+  // ⚡ Sidebar Badge Counters — Phân loại / Category (Tổng số cho từng danh mục)
   const categoryCounts = useMemo(() => {
     const result: Record<string, number> = {};
     for (const cat of CATEGORIES) {
-      result[cat.id] = proposals.filter((p) => p.category === cat.id).length;
+      result[cat.id] = normalizedProposals.filter((p) => p.category === cat.id).length;
     }
     return result;
-  }, [proposals]);
+  }, [normalizedProposals]);
 
   return (
     <div className="min-h-screen bg-[#f1f5f9] text-slate-800 font-sans flex flex-col md:flex-row w-full selection:bg-[#006838] selection:text-white">
@@ -1105,8 +1405,15 @@ export default function CIModule() {
               {(!isSidebarCollapsed && isRegTypeExpanded) && (
                 <div className="space-y-0.5 pl-2 text-xs font-bold">
                   {/* Thi đua */}
+                  {/* Thi đua */}
                   <button
-                    onClick={() => setSelectedRegType(selectedRegType === "THI_DUA" ? "ALL" : "THI_DUA")}
+                    onClick={() => {
+                      const nextReg = selectedRegType === "THI_DUA" ? "ALL" : "THI_DUA";
+                      setSelectedRegType(nextReg);
+                      setSelectedRegion("ALL");
+                      setSelectedCategory("ALL");
+                      setActiveTab("LIBRARY");
+                    }}
                     className={`w-full text-left px-2.5 py-1 rounded-lg flex items-center justify-between transition-colors ${
                       selectedRegType === "THI_DUA"
                         ? "bg-[#006838] text-white font-extrabold"
@@ -1123,7 +1430,13 @@ export default function CIModule() {
 
                   {/* Chờ phê duyệt */}
                   <button
-                    onClick={() => setSelectedRegType(selectedRegType === "CHO_PHE_DUYET" ? "ALL" : "CHO_PHE_DUYET")}
+                    onClick={() => {
+                      const nextReg = selectedRegType === "CHO_PHE_DUYET" ? "ALL" : "CHO_PHE_DUYET";
+                      setSelectedRegType(nextReg);
+                      setSelectedRegion("ALL");
+                      setSelectedCategory("ALL");
+                      setActiveTab("LIBRARY");
+                    }}
                     className={`w-full text-left px-3 py-1 rounded-lg flex items-center justify-between text-[11px] transition-colors ${
                       selectedRegType === "CHO_PHE_DUYET"
                         ? "bg-blue-950/80 text-blue-300 font-extrabold"
@@ -1139,27 +1452,15 @@ export default function CIModule() {
                     </span>
                   </button>
 
-                  {/* Chờ đánh giá */}
+                  {/* Đã duyệt */}
                   <button
-                    onClick={() => setSelectedRegType(selectedRegType === "CHO_DANH_GIA" ? "ALL" : "CHO_DANH_GIA")}
-                    className={`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between transition-colors ${
-                      selectedRegType === "CHO_DANH_GIA"
-                        ? "bg-amber-950/80 text-amber-300 font-extrabold"
-                        : "text-amber-400/90 hover:bg-slate-800/60 hover:text-amber-300"
-                    }`}
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <IconClock size={13} className="text-amber-400 shrink-0" />
-                      <span>Chờ đánh giá</span>
-                    </span>
-                    <span className="px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-400 text-[9px] font-extrabold">
-                      {countChoDanhGia}
-                    </span>
-                  </button>
-
-                  {/* Đã đánh giá */}
-                  <button
-                    onClick={() => setSelectedRegType(selectedRegType === "DA_DANH_GIA" ? "ALL" : "DA_DANH_GIA")}
+                    onClick={() => {
+                      const nextReg = selectedRegType === "DA_DANH_GIA" ? "ALL" : "DA_DANH_GIA";
+                      setSelectedRegType(nextReg);
+                      setSelectedRegion("ALL");
+                      setSelectedCategory("ALL");
+                      setActiveTab("LIBRARY");
+                    }}
                     className={`w-full text-left px-3 py-1 rounded-lg flex items-center justify-between text-[11px] transition-colors ${
                       selectedRegType === "DA_DANH_GIA"
                         ? "bg-emerald-950/80 text-emerald-300 font-extrabold"
@@ -1168,7 +1469,7 @@ export default function CIModule() {
                   >
                     <span className="flex items-center gap-1.5">
                       <IconCircleCheck size={13} className="text-emerald-400 shrink-0" />
-                      <span>Đã đánh giá</span>
+                      <span>Đã duyệt</span>
                     </span>
                     <span className="px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-400 text-[9px] font-extrabold">
                       {countDaDanhGia}
@@ -1177,7 +1478,13 @@ export default function CIModule() {
 
                   {/* Lưu trữ */}
                   <button
-                    onClick={() => setSelectedRegType(selectedRegType === "LUU_TRU" ? "ALL" : "LUU_TRU")}
+                    onClick={() => {
+                      const nextReg = selectedRegType === "LUU_TRU" ? "ALL" : "LUU_TRU";
+                      setSelectedRegType(nextReg);
+                      setSelectedRegion("ALL");
+                      setSelectedCategory("ALL");
+                      setActiveTab("LIBRARY");
+                    }}
                     className={`w-full text-left px-2.5 py-1 rounded-lg flex items-center justify-between transition-colors ${
                       selectedRegType === "LUU_TRU"
                         ? "bg-slate-800 text-white font-extrabold"
@@ -1229,7 +1536,13 @@ export default function CIModule() {
                       return (
                         <button
                           key={subItem}
-                          onClick={() => setSelectedRegion(selectedRegion === subItem ? "ALL" : subItem)}
+                          onClick={() => {
+                            const nextRegion = selectedRegion === subItem ? "ALL" : subItem;
+                            setSelectedRegion(nextRegion);
+                            setSelectedRegType("ALL");
+                            setSelectedCategory("ALL");
+                            setActiveTab("LIBRARY");
+                          }}
                           className={`w-full text-left px-2 py-0.5 rounded flex items-center justify-between text-[11px] transition-colors ${
                             selectedRegion === subItem ? "bg-emerald-900/80 text-emerald-200 font-black" : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 font-medium"
                           }`}
@@ -1271,7 +1584,12 @@ export default function CIModule() {
                     return (
                       <button
                         key={c.id}
-                        onClick={() => setSelectedCategory(selectedCategory === c.id ? "ALL" : c.id)}
+                        onClick={() => {
+                          const nextCat = selectedCategory === c.id ? "ALL" : c.id;
+                          setSelectedCategory(nextCat);
+                          setSelectedRegType("ALL");
+                          setSelectedRegion("ALL");
+                        }}
                         className={`w-full text-left px-2 py-0.5 rounded-lg flex items-center justify-between transition-colors ${
                           selectedCategory === c.id ? "bg-[#006838] text-white font-extrabold" : "text-slate-300 hover:bg-slate-800/80 hover:text-white"
                         }`}
@@ -1336,8 +1654,12 @@ export default function CIModule() {
 
       {activeTab === "DASHBOARD" ? (
         <KaizenDashboard
-          proposals={proposals}
+          proposals={filteredProposals}
           onBackToLibrary={() => setActiveTab("LIBRARY")}
+          onSelectProposal={(p) => {
+            setActiveProposal(p);
+            setIsDetailModalOpen(true);
+          }}
         />
       ) : activeTab === "EARLY_WARNING" ? (
         <KaizenEarlyWarning
@@ -1347,7 +1669,16 @@ export default function CIModule() {
             setIsDetailModalOpen(true);
           }}
         />
+      ) : activeTab === ("LEADERBOARD" as any) ? (
+        <KaizenLeaderboard
+          proposals={proposals}
+          onSelectProposal={(p) => {
+            setActiveProposal(p);
+            setIsDetailModalOpen(true);
+          }}
+        />
       ) : (
+
         <>
       {/* ════════════════════════════════════════════════════════════════
           ROW 1: TITLE & ACTION BUTTONS BAR (Exact Matching Image 2)
@@ -1451,18 +1782,17 @@ export default function CIModule() {
          ════════════════════════════════════════════════════════════════ */}
       <div className="p-2.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs">
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-2">
-          {/* Category Filter */}
+          {/* Registration Type Filter (Loại đăng ký) */}
           <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
+            value={selectedRegType}
+            onChange={(e) => setSelectedRegType(e.target.value)}
             className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 text-[11px] font-bold text-slate-700 outline-none focus:border-[#006838]"
           >
             <option value="ALL">🏆 Tất cả loại</option>
-            {CATEGORIES.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label}
-              </option>
-            ))}
+            <option value="THI_DUA">🏆 Thi đua</option>
+            <option value="CHO_PHE_DUYET">👤 Chờ phê duyệt</option>
+            <option value="DA_DANH_GIA">✅ Đã duyệt</option>
+            <option value="LUU_TRU">📦 Lưu trữ</option>
           </select>
 
           {/* Search Box */}
@@ -1501,6 +1831,7 @@ export default function CIModule() {
             <option value="THKG">THKG</option>
             <option value="Kiên Giang 1">Kiên Giang 1</option>
             <option value="Kiên Giang 2">Kiên Giang 2</option>
+            <option value="Kiên Giang 3">Kiên Giang 3</option>
             <option value="Hoàn Thiện Đế">Hoàn Thiện Đế</option>
           </select>
 
@@ -1560,6 +1891,7 @@ export default function CIModule() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
               {filteredProposals.map((prop) => {
                 const catObj = CATEGORIES.find((c) => c.id === prop.category) || CATEGORIES[7];
+                const rankInfo = proposalRanksMap[prop.id];
                 return (
                   <div
                     key={prop.id}
@@ -1586,15 +1918,7 @@ export default function CIModule() {
                         <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider shadow-2xs ${catObj.color}`}>
                           {prop.category_label || catObj.label}
                         </span>
-                        {Number(prop.is_thi_dua) === 1 ? (
-                          <span className="px-1.5 py-0.5 rounded bg-amber-400 text-amber-950 text-[9px] font-black shadow-2xs flex items-center gap-0.5">
-                            🏆 Thi đua
-                          </span>
-                        ) : (
-                          <span className="px-1.5 py-0.5 rounded bg-slate-900/80 text-white text-[9px] font-mono font-bold shadow-2xs">
-                            T8/2026
-                          </span>
-                        )}
+                        {renderCardTopRightBadge(prop, rankInfo)}
                       </div>
 
                       {/* Proposer Info Bar Overlay at Bottom of Image */}
@@ -1626,7 +1950,7 @@ export default function CIModule() {
                       </div>
 
                       {/* Card Footer Actions */}
-                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500">
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500 min-h-[32px]">
                         <button
                           type="button"
                           onClick={(e) => handleVote(e, prop.id)}
@@ -1642,8 +1966,8 @@ export default function CIModule() {
                             <span>{prop.view_count || 0}</span>
                           </span>
 
-                          {/* 1. Nút "Phê duyệt" dành cho trạng thái CHỜ PHÊ DUYỆT (Bước 3 - QĐ-TBKG) */}
-                          {(prop.sub_status === "CHO_REVIEW" || prop.status === "SUBMITTED" || prop.approval_status === "PENDING") && isExecutiveOrAdmin && (
+                          {/* 1. Nút "Phê duyệt" dành cho bài Chờ duyệt */}
+                          {isPendingApprovalProposal(prop) && (
                             <button
                               type="button"
                               onClick={(e) => {
@@ -1651,29 +1975,44 @@ export default function CIModule() {
                                 setApprovalModalProposal(prop);
                                 setIsApprovalModalOpen(true);
                               }}
-                              className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black shadow-2xs transition-colors flex items-center gap-1 cursor-pointer"
+                              className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black shadow-2xs transition-colors flex items-center gap-1 cursor-pointer shrink-0"
                               title="Phê duyệt tính khả thi sáng kiến (Bước 3)"
                             >
-                              <IconShieldCheck size={12} />
+                              <IconShieldCheck size={13} />
                               <span>Phê duyệt</span>
                             </button>
                           )}
 
-                          {/* 2. Nút "Chấm điểm" dành cho trạng thái CHỜ ĐÁNH GIÁ (Bước 5 - QĐ-TBKG) */}
-                          {(prop.sub_status === "CHO_DANH_GIA" || prop.approval_status === "PHE_DUYET") && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEvaluatingProposal(prop);
-                                setIsEvaluationModalOpen(true);
-                              }}
-                              className="px-2 py-0.5 rounded bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black shadow-2xs transition-colors flex items-center gap-1 cursor-pointer"
-                              title="Chấm điểm chuyên môn 5 tiêu chí QĐ-TBKG"
-                            >
-                              <IconStar size={12} />
-                              <span>Chấm điểm</span>
-                            </button>
+                          {/* 2. Hiển thị Huy chương / Nút Chấm điểm cho bài Đã duyệt */}
+                          {isApprovedProposal(prop) && (
+                            rankInfo ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEvaluatingProposal(prop);
+                                  setIsEvaluationModalOpen(true);
+                                }}
+                                className={`px-2 py-0.5 rounded-lg text-[10px] font-black shadow-xs flex items-center gap-1 transition-transform hover:scale-105 cursor-pointer shrink-0 border ${rankInfo.badgeStyle}`}
+                                title={`Xếp hạng thi đua: ${rankInfo.rankTitle} - Bấm để xem / chấm điểm`}
+                              >
+                                <span>{rankInfo.badgeLabel}</span>
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEvaluatingProposal(prop);
+                                  setIsEvaluationModalOpen(true);
+                                }}
+                                className="px-2 py-0.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black shadow-2xs transition-colors flex items-center gap-1 cursor-pointer shrink-0"
+                                title="Chấm điểm chuyên môn 5 tiêu chí QĐ-TBKG"
+                              >
+                                <IconTrophy size={13} />
+                                <span>Chấm điểm</span>
+                              </button>
+                            )
                           )}
                         </div>
                       </div>
@@ -1702,32 +2041,46 @@ export default function CIModule() {
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium">
                     {filteredProposals.map((prop) => {
-                      const isArchived = Boolean(prop.is_archived);
-                      const revStatus = prop.review_status || "CHO_PHE_DUYET";
-                      const isPendingFeasibility = revStatus === "CHO_PHE_DUYET" && !isArchived;
-                      const isPendingEvaluation = revStatus === "CHO_DANH_GIA" && !isArchived;
+                      const rankInfo = proposalRanksMap[prop.id];
+                      const isRejected =
+                        Boolean(prop.is_archived) ||
+                        prop.approval_status === "TU_CHOI" ||
+                        prop.sub_status === "TU_CHOI_TRIEN_KHAI" ||
+                        prop.sub_status === "TU_CHOI_DUYET" ||
+                        prop.status === "REJECTED";
+                      const isApproved = isApprovedProposal(prop);
+                      const isPending = isPendingApprovalProposal(prop);
 
-                      let badgeText = "Chờ phê duyệt";
-                      let badgeStyle = "bg-blue-50 text-blue-800 border-blue-200";
+                      let badgeText = "Chờ duyệt";
+                      let badgeStyle = "bg-amber-50 text-amber-900 border-amber-200 font-extrabold";
 
-                      if (isArchived) {
-                        badgeText = "Lưu trữ";
-                        badgeStyle = "bg-slate-100 text-slate-700 border-slate-300";
-                      } else if (revStatus === "CHO_DANH_GIA") {
-                        badgeText = "Chờ đánh giá";
-                        badgeStyle = "bg-amber-50 text-amber-900 border-amber-200";
-                      } else if (revStatus === "DA_DANH_GIA") {
-                        badgeText = "Đã đánh giá";
-                        badgeStyle = "bg-emerald-50 text-emerald-800 border-emerald-200";
-                      } else if (revStatus === "TU_CHOI_DUYET") {
-                        badgeText = "Từ chối duyệt";
-                        badgeStyle = "bg-rose-50 text-rose-800 border-rose-200";
+                      if (isRejected) {
+                        badgeText = "Từ chối";
+                        badgeStyle = "bg-rose-50 text-rose-800 border-rose-200 font-extrabold";
+                      } else if (isPending) {
+                        badgeText = "Chờ duyệt";
+                        badgeStyle = "bg-amber-50 text-amber-900 border-amber-200 font-extrabold";
+                      } else if (isApproved) {
+                        if (rankInfo) {
+                          badgeText = rankInfo.badgeLabel;
+                          badgeStyle = `${rankInfo.badgeStyle} border font-black`;
+                        } else {
+                          badgeText = "Đã duyệt";
+                          badgeStyle = "bg-emerald-50 text-emerald-800 border-emerald-200 font-extrabold";
+                        }
                       }
 
                       return (
                         <tr key={prop.id} className="hover:bg-slate-50 transition-colors">
                           <td className="p-3 font-mono font-bold text-amber-700">#{prop.code}</td>
-                          <td className="p-3 font-bold text-slate-900">{prop.title}</td>
+                          <td className="p-3 font-bold text-slate-900">
+                            <span>{prop.title}</span>
+                            {isApproved && rankInfo && (
+                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-black inline-flex items-center gap-1 ml-2 ${rankInfo.badgeStyle}`}>
+                                {rankInfo.badgeLabel}
+                              </span>
+                            )}
+                          </td>
                           <td className="p-3">
                             <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-[#006838] text-[10px] font-bold border border-emerald-200">
                               {prop.category_label}
@@ -1748,7 +2101,7 @@ export default function CIModule() {
                               >
                                 Xem
                               </button>
-                              {isPendingFeasibility && isExecutiveOrAdmin && (
+                              {isPending && isExecutiveOrAdmin && (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -1761,17 +2114,17 @@ export default function CIModule() {
                                   <span>Phê duyệt</span>
                                 </button>
                               )}
-                              {isPendingEvaluation && (
+                              {isApproved && (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setEvaluatingProposal(prop);
                                     setIsEvaluationModalOpen(true);
                                   }}
-                                  className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white transition-colors cursor-pointer text-[11px] font-extrabold flex items-center gap-1"
+                                  className="w-7 h-7 rounded-lg bg-amber-500 hover:bg-amber-600 text-white transition-colors cursor-pointer flex items-center justify-center"
+                                  title="Chấm điểm chuyên môn 5 tiêu chí QĐ-TBKG"
                                 >
-                                  <IconStar size={12} />
-                                  <span>Chấm điểm</span>
+                                  <IconTrophy size={14} />
                                 </button>
                               )}
                             </div>
@@ -2232,6 +2585,81 @@ export default function CIModule() {
           refetchStatusCounts();
         }}
       />
+
+      {/* STAGE 2 PRELIMINARY FIELD REVIEW MODAL */}
+      {isPreliminaryModalOpen && preliminaryProposal && (
+        <PreliminaryReviewModal
+          proposal={preliminaryProposal}
+          onClose={() => {
+            setIsPreliminaryModalOpen(false);
+            setPreliminaryProposal(null);
+          }}
+          onSuccess={() => {
+            showToast("🎉 Đã hoàn tất sơ duyệt hiện trường!");
+            fetchProposals();
+            refetchStatusCounts();
+          }}
+        />
+      )}
+
+      {/* STAGE 1 DUPLICATE COMPARE MODAL */}
+      {isDuplicateModalOpen && duplicateNewSubmission && (
+        <KaizenDuplicateCompareModal
+          newSubmission={duplicateNewSubmission}
+          matchedMatches={duplicateMatches}
+          onConfirmMerge={async (orig) => {
+            try {
+              const res = await fetch("/api/ci-kaizen/merge", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  originalProposalId: orig.id,
+                  newAttachments: duplicateNewSubmission.attachments || [],
+                  proposerName: duplicateNewSubmission.proposerName,
+                }),
+              });
+              const json = await res.json();
+              if (json.success) {
+                showToast(`🎉 ${json.message}`);
+                setIsDuplicateModalOpen(false);
+                setIsCreateModalOpen(false);
+                fetchProposals();
+                refetchStatusCounts();
+              } else {
+                showToast(`❌ ${json.error || "Lỗi khi gộp"}`);
+              }
+            } catch (e) {
+              showToast("❌ Lỗi khi thực hiện gộp!");
+            }
+          }}
+          onProceedAsNew={async () => {
+            try {
+              const res = await fetch("/api/ci-kaizen", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  ...duplicateNewSubmission,
+                  registrationType: "THI_DUA",
+                }),
+              });
+              const json = await res.json();
+              if (json.success) {
+                showToast(`🎉 Đã gửi thành công đề xuất mới ${json.code || ""}!`);
+                setIsDuplicateModalOpen(false);
+                setIsCreateModalOpen(false);
+                fetchProposals();
+                refetchStatusCounts();
+              } else {
+                showToast(`❌ ${json.error || "Lỗi khi gửi đề xuất"}`);
+              }
+            } catch (e) {
+              showToast("❌ Lỗi kết nối!");
+            }
+          }}
+          onClose={() => setIsDuplicateModalOpen(false)}
+        />
+      )}
     </div>
   );
+
 }

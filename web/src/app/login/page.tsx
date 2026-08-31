@@ -19,8 +19,34 @@ import { loginWithD1Database, loginUserProfile, SYSTEM_USERS } from "@/lib/userP
 
 // EXECUTIVE_PERSONNEL_MAP (chọn tay Chức vụ/Vai trò trước khi đăng nhập) đã bỏ hẳn — vai trò lấy
 // đúng từ chính tài khoản (SYSTEM_USERS/userProfiles.ts) khi đăng nhập, không cần chọn tay nữa.
+// EXECUTIVE_PERSONNEL map lọc danh sách cán bộ theo đúng cấp bậc chức vụ
+const EXECUTIVE_PERSONNEL: Record<
+  string,
+  { empCode: string; name: string; title: string }[]
+> = {
+  ceo: [
+    { empCode: "200405004", name: "PHẠM MINH TÙNG", title: "Tổng Giám Đốc (TGĐ)" },
+  ],
+  deputy_ceo: [
+    { empCode: "119504004", name: "Bùi Đình Trung", title: "Phó Tổng Giám Đốc KHCB & TTPP" },
+  ],
+  director: [
+    { empCode: "101403004", name: "Nguyễn Hữu Đạt", title: "Giám Đốc Khối KD PTSP" },
+    { empCode: "201306001", name: "Trần Hoàng Thảo", title: "Giám Đốc Công Nghệ - PPH & CI" },
+    { empCode: "200105001", name: "Lê Văn Phương", title: "Giám Đốc KHCB Vật Tư" },
+  ],
+  deputy_director: [
+    { empCode: "201809012", name: "Kiều Thanh Vũ", title: "Phó Giám Đốc Phân Hệ CN CI PPH (PGĐ)" },
+    { empCode: "201604020", name: "Phạm Thị Dương", title: "Phó Giám Đốc QLCL & AUDIT (PGĐ)" },
+    { empCode: "210608003", name: "Vũ Thành Lê", title: "Phó Giám Đốc KHCB ĐHSX" },
+    { empCode: "201403017", name: "Lý Huỳnh Duy", title: "Phó Giám Đốc KHCB VT" },
+  ],
+};
+
 export default function LoginPage() {
   const router = useRouter();
+  const [quickPersonCode, setQuickPersonCode] = useState("");
+  const [selectedRoleGroup, setSelectedRoleGroup] = useState("");
   const [empCode, setEmpCode] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
@@ -28,27 +54,32 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // Kiểm tra vai trò thuộc cấp PGĐ trở lên
+  const isExecutiveRole = Boolean(selectedRoleGroup && EXECUTIVE_PERSONNEL[selectedRoleGroup]);
+  const availablePersonnel = selectedRoleGroup ? (EXECUTIVE_PERSONNEL[selectedRoleGroup] || []) : [];
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      const cleanEmpCode = empCode.trim();
-      if (!cleanEmpCode) {
-        throw new Error("Vui lòng nhập mã số nhân viên");
+      if (isExecutiveRole) {
+        if (!quickPersonCode && !empCode) {
+          throw new Error("Vui lòng chọn tên Cán bộ / Lãnh đạo từ danh sách");
+        }
+      } else {
+        if (!empCode.trim()) {
+          throw new Error("Vui lòng nhập Mã số nhân viên (MSNV)");
+        }
       }
+
       if (!password) {
-        throw new Error("Vui lòng nhập mật khẩu");
+        throw new Error("Vui lòng nhập Mật khẩu xác thực");
       }
 
-      // Đăng nhập và nạp chính xác Profile + Avatar theo MSNV — vai trò/quyền hạn lấy đúng từ
-      // tài khoản (đã bỏ chọn tay "Chức vụ / Vai trò đăng nhập" ở form trước đây).
-      await loginWithD1Database(cleanEmpCode, password);
-
-      // Đăng nhập xong QUAY VỀ TRANG CHỦ — không tự nhảy sang /work hay bất kỳ trang nào theo vai
-      // trò nữa. Header đã tự đổi sang menu người dùng + hiện link "/work" khi đã đăng nhập (xem
-      // Header.tsx), người dùng tự bấm vào khi muốn đi tiếp.
+      const cleanEmpCode = (empCode || quickPersonCode).trim();
+      await loginWithD1Database(cleanEmpCode, password, selectedRoleGroup);
       router.push("/");
     } catch (err: unknown) {
       const message =
@@ -83,8 +114,8 @@ export default function LoginPage() {
               Đăng Nhập Hệ Thống <br />
               <span className="text-[#0f4133]">Tổ hợp Kiên Giang - TBS Group</span>
             </h1>
-            <p className="text-xs text-gray-500 leading-relaxed">
-              Nhập mã số nhân viên và mật khẩu bên dưới để bắt đầu làm việc
+            <p className="text-xs text-gray-500 leading-relaxed font-medium">
+              Chọn vai trò hoặc tài khoản demo bên dưới để bắt đầu làm việc
             </p>
           </div>
 
@@ -96,29 +127,121 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Mã số nhân viên — bỏ hẳn bước chọn tay Chức vụ/Vai trò trước khi nhập (trước đây
-                dùng để suy ra role, giờ role/quyền hạn lấy đúng từ chính tài khoản khi đăng nhập). */}
+            {/* FIELD 1: Chức vụ / Vai trò đăng nhập */}
             <div className="space-y-1.5">
-              <label htmlFor="empCode" className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
-                <IconUser size={15} className="text-gray-500" />
-                <span>Mã số nhân viên (MSNV)</span>
+              <label htmlFor="roleSelect" className="text-xs font-bold text-gray-800 flex items-center gap-2">
+                <IconShieldCheck size={16} className="text-gray-700" />
+                <span>Chức vụ / Vai trò đăng nhập</span>
               </label>
-              <input
-                id="empCode"
-                type="text"
-                required
-                value={empCode}
-                onChange={(e) => setEmpCode(e.target.value)}
-                placeholder="VD: 202608001, 102104041..."
-                className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#08221a] focus:ring-2 focus:ring-[#08221a]/10 transition-all placeholder:text-gray-400"
-              />
+              <div className="relative">
+                <select
+                  id="roleSelect"
+                  value={selectedRoleGroup}
+                  onChange={(e) => {
+                    const roleVal = e.target.value;
+                    setSelectedRoleGroup(roleVal);
+                    setError("");
+
+                    if (EXECUTIVE_PERSONNEL[roleVal]) {
+                      const list = EXECUTIVE_PERSONNEL[roleVal];
+                      if (list.length === 1) {
+                        setQuickPersonCode(list[0].empCode);
+                        setEmpCode(list[0].empCode);
+                        if (!password) setPassword("123456");
+                      } else {
+                        setQuickPersonCode("");
+                        setEmpCode("");
+                      }
+                    } else {
+                      setQuickPersonCode("");
+                      setEmpCode("");
+                    }
+                  }}
+                  className="w-full px-4 py-3 bg-slate-50/80 hover:bg-slate-100/80 border border-gray-200/90 rounded-2xl text-xs font-bold text-gray-900 focus:outline-none focus:bg-white focus:border-[#08221a] focus:ring-2 focus:ring-[#08221a]/10 transition-all cursor-pointer appearance-none"
+                >
+                  <option value="">-- Chọn nhóm Chức vụ / Vai trò đăng nhập --</option>
+                  <option value="ceo">👑 Tổng Giám Đốc (TGĐ)</option>
+                  <option value="deputy_ceo">🌟 Phó Tổng Giám Đốc (P.TGĐ)</option>
+                  <option value="director">🏢 Giám Đốc Khối (GĐ)</option>
+                  <option value="deputy_director">💼 Phó Giám Đốc Khối (PGĐ)</option>
+                  <option value="department_head">👔 Trưởng Phòng (TP)</option>
+                  <option value="admin">🔧 Quản Trị Viên Hệ Thống (Admin)</option>
+                  <option value="employee">👤 Cán Bộ Công Nhân Viên (CBCNV)</option>
+                </select>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
             </div>
 
-            {/* Field 3: Mật khẩu */}
+            {/* FIELD 2 (CHỈ HIỆN KHI LÀ PGĐ TRỞ LÊN): Chọn Tên Cán bộ Lãnh đạo lọc theo chức vụ */}
+            {isExecutiveRole && (
+              <div className="space-y-1.5 animate-in fade-in duration-200">
+                <label htmlFor="quickSelect" className="text-xs font-bold text-gray-800 flex items-center gap-2">
+                  <IconSparkles size={16} className="text-amber-600" />
+                  <span>Tên Cán bộ / Lãnh đạo ({availablePersonnel.length} nhân sự)</span>
+                </label>
+                <div className="relative">
+                  <select
+                    id="quickSelect"
+                    value={quickPersonCode}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setQuickPersonCode(val);
+                      setEmpCode(val);
+                      if (val) {
+                        if (val === "202608001") {
+                          setPassword("21032004");
+                        } else if (!password) {
+                          setPassword("123456");
+                        }
+                      }
+                      setError("");
+                    }}
+                    className="w-full px-4 py-3 bg-emerald-50/90 hover:bg-emerald-100/90 border border-emerald-200 rounded-2xl text-xs font-bold text-gray-900 focus:outline-none focus:bg-white focus:border-[#08221a] focus:ring-2 focus:ring-[#08221a]/10 transition-all cursor-pointer appearance-none"
+                  >
+                    <option value="">-- Chọn tên cán bộ từ danh sách --</option>
+                    {availablePersonnel.map((person) => (
+                      <option key={person.empCode} value={person.empCode}>
+                        {person.name} — {person.title}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* FIELD 3 (CHỈ HIỆN KHI KHÔNG PHẢI PGĐ TRỞ LÊN): Nhập MSNV thủ công */}
+            {!isExecutiveRole && (
+              <div className="space-y-1.5 animate-in fade-in duration-200">
+                <label htmlFor="empCode" className="text-xs font-bold text-gray-800 flex items-center gap-2">
+                  <IconUser size={16} className="text-gray-700" />
+                  <span>Mã số nhân viên (MSNV)</span>
+                </label>
+                <input
+                  id="empCode"
+                  type="text"
+                  required={!isExecutiveRole}
+                  value={empCode}
+                  onChange={(e) => setEmpCode(e.target.value)}
+                  placeholder="VD: 202608001, 222102020, KT-001..."
+                  className="w-full px-4 py-3 bg-[#eef4ff] border border-blue-100 rounded-2xl text-xs font-bold text-gray-900 focus:outline-none focus:bg-white focus:border-[#08221a] focus:ring-2 focus:ring-[#08221a]/10 transition-all placeholder:text-gray-400 font-mono"
+                />
+              </div>
+            )}
+
+            {/* FIELD 4: Mật khẩu xác thực vai trò */}
             <div className="space-y-1.5">
-              <label htmlFor="password" className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
-                <IconLock size={15} className="text-gray-500" />
-                <span>Mật khẩu</span>
+              <label htmlFor="password" className="text-xs font-bold text-gray-800 flex items-center gap-2">
+                <IconLock size={16} className="text-gray-700" />
+                <span>Mật khẩu xác thực vai trò</span>
               </label>
               <div className="relative">
                 <input
@@ -128,12 +251,12 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-3.5 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-800 focus:outline-none focus:border-[#08221a] focus:ring-2 focus:ring-[#08221a]/10 transition-all placeholder:text-gray-400"
+                  className="w-full pl-4 pr-11 py-3 bg-[#eef4ff] border border-blue-100 rounded-2xl text-xs font-bold text-gray-900 focus:outline-none focus:bg-white focus:border-[#08221a] focus:ring-2 focus:ring-[#08221a]/10 transition-all placeholder:text-gray-400"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 p-1"
                 >
                   {showPassword ? <IconEyeOff size={16} /> : <IconEye size={16} />}
                 </button>

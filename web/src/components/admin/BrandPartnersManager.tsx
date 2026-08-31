@@ -18,6 +18,8 @@ import {
   IconExternalLink,
 } from "@tabler/icons-react";
 import { BrandPartner, DEFAULT_BRAND_PARTNERS } from "@/lib/landingCMS";
+import { uploadCloudinaryFile } from "@/lib/cloudinary";
+import SafeImage from "@/components/SafeImage";
 
 interface Props {
   brandPartners: BrandPartner[];
@@ -36,9 +38,6 @@ export default function BrandPartnersManager({ brandPartners, onChange, showToas
   const [formOrder, setFormOrder] = useState<number>(1);
   const [formIsActive, setFormIsActive] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
-
-  const CLOUDINARY_CLOUD_NAME = "dwl2xtbqa";
-  const CLOUDINARY_PRESET = "vpchuoisk";
 
   // Open Modal for Creating
   const handleOpenAddModal = () => {
@@ -80,22 +79,11 @@ export default function BrandPartnersManager({ brandPartners, onChange, showToas
       };
       reader.readAsDataURL(file);
 
-      // Upload to Cloudinary CDN
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("upload_preset", CLOUDINARY_PRESET);
-
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.secure_url) {
-          setFormLogo(data.secure_url);
-          showToast(`☁️ Tải logo "${file.name}" lên Cloudinary CDN thành công!`);
-        }
+      // Upload to Cloudinary CDN with unique public_id
+      const res = await uploadCloudinaryFile(file, { category: "brand" });
+      if (res.secure_url) {
+        setFormLogo(res.secure_url);
+        showToast(`☁️ Tải logo "${file.name}" lên Cloudinary CDN thành công!`);
       }
     } catch (e: any) {
       console.warn("Cloudinary upload warning:", e);
@@ -296,13 +284,12 @@ export default function BrandPartnersManager({ brandPartners, onChange, showToas
 
             {/* Logo Preview Container */}
             <div className="h-24 rounded-2xl bg-slate-900/90 border border-slate-800 p-3 flex items-center justify-center relative overflow-hidden group">
-              <img
+              <SafeImage
+                productId={partner.id}
                 src={partner.logo}
                 alt={partner.name}
+                fallbackTitle={partner.name}
                 className="max-h-14 max-w-full object-contain filter drop-shadow-sm group-hover:scale-105 transition-transform"
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = "none";
-                }}
               />
               <span className="text-white text-xs font-bold font-mono tracking-wider truncate px-2 max-w-full">
                 {partner.name}

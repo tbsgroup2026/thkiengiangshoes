@@ -27,6 +27,7 @@ import {
   WorkspaceDepartment,
   WorkspaceImageItem,
 } from "@/lib/landingCMS";
+import SafeImage from "@/components/SafeImage";
 
 const DEPARTMENT_ICON_MAP: Record<string, any> = {
   building: IconBuilding,
@@ -451,14 +452,13 @@ export default function WorkspaceGallery() {
                         }}
                         className="group relative h-[155px] sm:h-[180px] rounded-[22px] overflow-hidden cursor-pointer border border-slate-200/90 shadow-2xs hover:shadow-xl hover:border-[#006838] transition-all duration-300 bg-slate-50"
                       >
-                        <img
+                        <SafeImage
+                          productId={imgItem.id || idx}
                           src={imgItem.src}
                           alt={imgItem.caption || `${dep.name} ${idx + 1}`}
+                          fallbackTitle={imgItem.caption || dep.name}
+                          objectFit="cover"
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          loading="lazy"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = "/images/KGLV/MẶT TIỀN SẢNH.png";
-                          }}
                         />
                         <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
                           <IconZoomIn size={22} className="drop-shadow-md" />

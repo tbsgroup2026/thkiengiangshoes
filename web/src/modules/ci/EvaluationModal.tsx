@@ -198,7 +198,7 @@ export default function EvaluationModal({
                 </span>
               </div>
               <div>
-                <span className="text-slate-400 block font-medium">Nhóm SP</span>
+                <span className="text-slate-400 block font-medium">Phân loại</span>
                 <span className="font-bold text-slate-800 flex items-center gap-1 truncate">
                   <IconTag size={12} className="text-slate-400 shrink-0" />
                   {proposal.category_label || proposal.category}

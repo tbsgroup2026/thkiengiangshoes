@@ -32,10 +32,15 @@ export async function POST(request: Request) {
     }
 
     const roleCode = String((session as any)?.roleCode || (session as any)?.role || '').toUpperCase();
-    const isExecutiveOrAdmin = Boolean((session as any)?.isExecutiveOrAdmin) || ['TONG_GIAM_DOC', 'ADMIN'].includes(roleCode);
+    const userEmpCode = String((session as any)?.empCode || '').trim();
+    const userRoles = Array.isArray((session as any)?.roles) ? (session as any).roles : [];
+    const isExecutiveOrAdmin = Boolean((session as any)?.isExecutiveOrAdmin) || ['TONG_GIAM_DOC', 'ADMIN', 'PHO_GIAM_DOC'].includes(roleCode) || userEmpCode === '201809012';
     const isJudgeRole =
       isExecutiveOrAdmin ||
       (Boolean((session as any)?.levelRank) && Number((session as any).levelRank) >= 3) ||
+      userEmpCode === '201809012' ||
+      userRoles.includes('deputy_director') ||
+      userRoles.includes('ci') ||
       ['TONG_GIAM_DOC', 'PHO_TONG_GIAM_DOC', 'GIAM_DOC', 'PHO_GIAM_DOC', 'TRUONG_PHONG', 'CI_LEAD', 'QC', 'ADMIN'].includes(roleCode);
 
     if (!isJudgeRole && session) {

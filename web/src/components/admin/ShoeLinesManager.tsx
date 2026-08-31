@@ -17,6 +17,8 @@ import {
   IconPhoto,
 } from "@tabler/icons-react";
 import { ShoeLinesConfig, ShoeGroup, ShoeImageItem, DEFAULT_SHOE_LINES_CONFIG } from "@/lib/landingCMS";
+import { uploadCloudinaryFile } from "@/lib/cloudinary";
+import SafeImage from "@/components/SafeImage";
 
 interface Props {
   shoeLines: ShoeLinesConfig;
@@ -28,9 +30,6 @@ export default function ShoeLinesManager({ shoeLines, onChange, showToast }: Pro
   const [config, setConfig] = useState<ShoeLinesConfig>(shoeLines || DEFAULT_SHOE_LINES_CONFIG);
   const [activePreviewTab, setActivePreviewTab] = useState<"edit" | "preview">("edit");
   const [isUploading, setIsUploading] = useState(false);
-
-  const CLOUDINARY_CLOUD_NAME = "dwl2xtbqa";
-  const CLOUDINARY_PRESET = "vpchuoisk";
 
   // Update Section Main Title
   const handleTitleChange = (newTitle: string) => {
@@ -66,22 +65,11 @@ export default function ShoeLinesManager({ shoeLines, onChange, showToast }: Pro
       };
       reader.readAsDataURL(file);
 
-      // Cloudinary upload
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("upload_preset", CLOUDINARY_PRESET);
-
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.secure_url) {
-          updateItemUrl(groupId, itemIndex, data.secure_url);
-          showToast(`☁️ Tải ảnh giày "${file.name}" lên Cloudinary CDN thành công!`);
-        }
+      // Unique Cloudinary upload
+      const res = await uploadCloudinaryFile(file, { category: "shoe_lines" });
+      if (res.secure_url) {
+        updateItemUrl(groupId, itemIndex, res.secure_url);
+        showToast(`☁️ Tải ảnh giày "${file.name}" lên Cloudinary CDN thành công!`);
       }
     } catch (e: any) {
       console.warn("Cloudinary upload warning:", e);
@@ -386,9 +374,11 @@ export default function ShoeLinesManager({ shoeLines, onChange, showToast }: Pro
                   >
                     {/* Image Preview Box */}
                     <div className="aspect-square rounded-xl bg-white p-2 border border-slate-200 flex items-center justify-center relative overflow-hidden group">
-                      <img
+                      <SafeImage
+                        productId={item.id || itemIdx}
                         src={item.url}
                         alt={item.name || `Shoe ${itemIdx + 1}`}
+                        fallbackTitle={item.name || `Giày #${itemIdx + 1}`}
                         className="max-h-full max-w-full object-contain filter drop-shadow-xs"
                       />
                     </div>
@@ -496,9 +486,11 @@ export default function ShoeLinesManager({ shoeLines, onChange, showToast }: Pro
                           key={`${item.id}-${idx}`}
                           className="flex-shrink-0 flex items-center justify-center w-[150px] h-[68px] rounded-[18px] px-4 py-2 bg-white shadow-lg border border-white/30"
                         >
-                          <img
+                          <SafeImage
+                            productId={item.id || idx}
                             src={item.url}
                             alt={item.name || grp.title}
+                            fallbackTitle={item.name || grp.title}
                             className="max-h-[48px] max-w-[130px] w-auto h-auto object-contain"
                           />
                         </div>

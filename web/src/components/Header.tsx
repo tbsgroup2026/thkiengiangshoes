@@ -321,7 +321,11 @@ export default function Header() {
     };
 
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 10000); // 10s polling fallback for real-time notifications
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchNotifications();
+      }
+    }, 30000); // 30s polling fallback when tab is visible
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
@@ -435,17 +439,15 @@ export default function Header() {
               {lang === "VN" ? "Thư Viện Mẫu" : "Template Library"}
             </Link>
 
-            {/* 5. Hệ thống quản trị / Management System (Only when logged in) */}
-            {isLoggedIn && (
-              <Link
-                href="/work"
-                className={`transition-colors py-1 ${
-                  pathname === '/work' ? 'text-[#2fd39a]' : 'hover:text-[#2fd39a]'
-                }`}
-              >
-                {lang === "VN" ? "Hệ Thống Quản Trị" : "Management System"}
-              </Link>
-            )}
+            {/* 5. Hệ thống quản trị / Management System */}
+            <Link
+              href={isLoggedIn ? "/work" : "/login"}
+              className={`transition-colors py-1 ${
+                pathname === '/work' || pathname?.startsWith('/work') ? 'text-[#2fd39a]' : 'hover:text-[#2fd39a]'
+              }`}
+            >
+              {lang === "VN" ? "Hệ Thống Quản Trị" : "Management System"}
+            </Link>
 
             {/* 6. Tin tức / News */}
             <Link
@@ -781,25 +783,22 @@ export default function Header() {
               Thư Viện Mẫu
             </Link>
 
-            {isLoggedIn && (
-              <>
-                <Link
-                  href="/work"
-                  onClick={() => setMobileOpen(false)}
-                  className="block py-2.5 text-sm font-extrabold text-[#2fd39a] border-b border-white/10 bg-[#2fd39a]/10 rounded-xl"
-                >
-                  Hệ Thống Quản Trị
-                </Link>
-                {isUserInAdminWhitelist(userInfo) && (
-                  <Link
-                    href="/admin"
-                    onClick={() => setMobileOpen(false)}
-                    className="block py-2.5 text-sm font-extrabold text-[#f2dc9a] border-b border-white/10 bg-emerald-900/40 rounded-xl"
-                  >
-                    🛡️ Cổng Quản Trị (Admin)
-                  </Link>
-                )}
-              </>
+            <Link
+              href={isLoggedIn ? "/work" : "/login"}
+              onClick={() => setMobileOpen(false)}
+              className="block py-2.5 text-sm font-extrabold text-[#2fd39a] border-b border-white/10 bg-[#2fd39a]/10 rounded-xl"
+            >
+              Hệ Thống Quản Trị
+            </Link>
+
+            {isLoggedIn && isUserInAdminWhitelist(userInfo) && (
+              <Link
+                href="/admin"
+                onClick={() => setMobileOpen(false)}
+                className="block py-2.5 text-sm font-extrabold text-[#f2dc9a] border-b border-white/10 bg-emerald-900/40 rounded-xl"
+              >
+                🛡️ Cổng Quản Trị (Admin)
+              </Link>
             )}
 
             <Link

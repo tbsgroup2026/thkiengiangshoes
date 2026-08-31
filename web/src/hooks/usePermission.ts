@@ -42,8 +42,8 @@ export function usePermission() {
   const empCode = user?.empCode || "";
   const roleCode = (user as any)?.roleCode || "";
 
-  // Ban Giám Đốc hoặc Admin (Rank >= 3 hoặc Super Admin)
-  const isExecutiveOrAdmin = resolved.levelRank >= 3 || roleCode === "SUPER_ADMIN" || empCode === "ADMIN-2026";
+  // Ban Giám Đốc hoặc Admin (Rank >= 3 hoặc Super Admin hoặc PGĐ Kiều Thanh Vũ)
+  const isExecutiveOrAdmin = resolved.levelRank >= 3 || roleCode === "SUPER_ADMIN" || empCode === "ADMIN-2026" || empCode === "201809012" || roleCode === "PHO_GIAM_DOC";
 
   // Tính toán tập quyền (permissions) dựa trên vai trò thực tế của người dùng
   const userPermissions = new Set<Permission>();

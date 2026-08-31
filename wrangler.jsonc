@@ -10,8 +10,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "vpchuoiskechers",
-      "database_id": "ae3a7efd-ff5d-45c2-8c49-78d1518e3aa1"
+      "database_name": "thkiengiangshoes",
+      "database_id": "176450d4-b81b-40d0-aee6-071ce67a626f"
     }
   ],
   "services": [
@@ -28,6 +28,7 @@
     "run_worker_first": true
   },
   "vars": {
+    "SITE_ID": "thkiengiangshoes",
     "NEXT_PUBLIC_APP_URL": "https://thkiengiangshoes.tbsgroup2026.workers.dev",
     "HTPH_CLSK_API_URL": "https://hethongphanhoiclsk.tbsgroup2026.workers.dev",
     "JWT_SECRET": "tbs_group_secure_jwt_secret_key_2026"
@@ -36,5 +37,39 @@
     "crons": [
       "0 8 * * 1"
     ]
+  },
+  "env": {
+    "thkiengiangshoes": {
+      "name": "thkiengiangshoes",
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "thkiengiangshoes",
+          "database_id": "176450d4-b81b-40d0-aee6-071ce67a626f"
+        }
+      ],
+      "vars": {
+        "SITE_ID": "thkiengiangshoes",
+        "NEXT_PUBLIC_APP_URL": "https://thkiengiangshoes.tbsgroup2026.workers.dev",
+        "HTPH_CLSK_API_URL": "https://hethongphanhoiclsk.tbsgroup2026.workers.dev",
+        "JWT_SECRET": "tbs_group_secure_jwt_secret_key_2026"
+      }
+    },
+    "vpchuoiskechers": {
+      "name": "vpchuoiskechers",
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "vpchuoiskechers",
+          "database_id": "ae3a7efd-ff5d-45c2-8c49-78d1518e3aa1"
+        }
+      ],
+      "vars": {
+        "SITE_ID": "vpchuoiskechers",
+        "NEXT_PUBLIC_APP_URL": "https://vpchuoiskechers.tbsgroup2026.workers.dev",
+        "HTPH_CLSK_API_URL": "https://hethongphanhoiclsk.tbsgroup2026.workers.dev",
+        "JWT_SECRET": "tbs_group_secure_jwt_secret_key_2026"
+      }
+    }
   }
 }

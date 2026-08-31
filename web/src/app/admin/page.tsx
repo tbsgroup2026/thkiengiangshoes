@@ -52,6 +52,7 @@ import * as XLSX from "xlsx";
 import { INITIAL_370_EMPLOYEES } from "@/lib/initialEmployees";
 import { getCurrentUser } from "@/lib/userProfiles";
 import { isUserInAdminWhitelist } from "@/lib/adminWhitelist";
+import { uploadCloudinaryFile, formatCloudinaryUrl } from "@/lib/cloudinary";
 
 interface EmployeeAccount {
   id: string;
@@ -187,29 +188,18 @@ export default function AdminPage() {
   const handleCloudinaryFileUpload = async (file: File, target: "media" | "news") => {
     try {
       setIsUploadingCloudinary(true);
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("upload_preset", CLOUDINARY_PRESET);
-
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (data.secure_url) {
+      const res = await uploadCloudinaryFile(file, { category: target });
+      if (res.secure_url) {
         if (target === "media") {
           setMediaForm((prev) => ({
             ...prev,
-            url: data.secure_url,
+            url: res.secure_url,
             title: prev.title || file.name.replace(/\.[^/.]+$/, ""),
           }));
         } else {
-          setNewsForm((prev) => ({ ...prev, imageUrl: data.secure_url }));
+          setNewsForm((prev) => ({ ...prev, imageUrl: res.secure_url }));
         }
-        showToast(`☁️ Tải ảnh lên Cloudinary (${CLOUDINARY_CLOUD_NAME}) thành công!`);
-      } else {
-        alert("Lỗi Cloudinary: " + (data.error?.message || "Không thể nạp tệp!"));
+        showToast(`☁️ Tải ảnh lên Cloudinary thành công!`);
       }
     } catch (err: any) {
       alert("Lỗi kết nối Cloudinary: " + err.message);
@@ -225,35 +215,24 @@ export default function AdminPage() {
   ) => {
     try {
       setIsUploadingCloudinary(true);
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("upload_preset", CLOUDINARY_PRESET);
-
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (data.secure_url) {
+      const res = await uploadCloudinaryFile(file, { category: section });
+      if (res.secure_url) {
         if (section === "heroBg") {
-          setLandingCMS((prev) => ({ ...prev, hero: { ...prev.hero, bgImage: data.secure_url } }));
+          setLandingCMS((prev) => ({ ...prev, hero: { ...prev.hero, bgImage: res.secure_url } }));
         } else if (section === "heroHands") {
-          setLandingCMS((prev) => ({ ...prev, hero: { ...prev.hero, handsImage: data.secure_url } }));
+          setLandingCMS((prev) => ({ ...prev, hero: { ...prev.hero, handsImage: res.secure_url } }));
         } else if (section === "heroTeam") {
-          setLandingCMS((prev) => ({ ...prev, hero: { ...prev.hero, teamImage: data.secure_url } }));
+          setLandingCMS((prev) => ({ ...prev, hero: { ...prev.hero, teamImage: res.secure_url } }));
         } else if (section === "excellence") {
-          setLandingCMS((prev) => ({ ...prev, excellence: { ...prev.excellence, image: data.secure_url } }));
+          setLandingCMS((prev) => ({ ...prev, excellence: { ...prev.excellence, image: res.secure_url } }));
         } else if (section === "product" && productIndex !== undefined) {
           setLandingCMS((prev) => {
             const newItems = [...prev.products.items];
-            newItems[productIndex] = { ...newItems[productIndex], image: data.secure_url };
+            newItems[productIndex] = { ...newItems[productIndex], image: res.secure_url };
             return { ...prev, products: { ...prev.products, items: newItems } };
           });
         }
         showToast(`☁️ Tải ảnh lên Cloudinary thành công!`);
-      } else {
-        alert("Lỗi Cloudinary: " + (data.error?.message || "Không thể nạp tệp!"));
       }
     } catch (err: any) {
       alert("Lỗi tải ảnh: " + err.message);
@@ -268,16 +247,9 @@ export default function AdminPage() {
       const uploadedUrls: string[] = [];
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("upload_preset", CLOUDINARY_PRESET);
-        const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
-          method: "POST",
-          body: formData,
-        });
-        const data = await res.json();
-        if (data.secure_url) {
-          uploadedUrls.push(data.secure_url);
+        const res = await uploadCloudinaryFile(file, { category: "product" });
+        if (res.secure_url) {
+          uploadedUrls.push(res.secure_url);
         }
       }
 

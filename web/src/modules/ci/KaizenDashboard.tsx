@@ -19,12 +19,15 @@ import {
   IconChevronDown,
   IconCheck,
   IconFilter,
+  IconX,
 } from "@tabler/icons-react";
 import { KaizenProposal } from "./CIModule";
 
 interface KaizenDashboardProps {
   proposals: KaizenProposal[];
   onBackToLibrary?: () => void;
+  onNavigateToStatus?: (regTypeStatus: string) => void;
+  onSelectProposal?: (p: KaizenProposal) => void;
 }
 
 import { REAL_FACTORIES } from "./KaizenPublicSubmitForm";
@@ -196,7 +199,7 @@ const getCustomerCode = (p: KaizenProposal): string => {
   return "Khác";
 };
 
-export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDashboardProps) {
+export default function KaizenDashboard({ proposals, onBackToLibrary, onNavigateToStatus, onSelectProposal }: KaizenDashboardProps) {
   const [selectedMonth, setSelectedMonth] = useState<string>("ALL");
   const [statusScope, setStatusScope] = useState<"APPROVED" | "EVALUATED" | "ALL">("APPROVED");
   const [cascadingFilterState, setCascadingFilterState] = useState<CascadingFilterState>({
@@ -500,19 +503,44 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
     return Math.max(max, 400);
   }, [monthlyDataMap]);
 
-  // 5. Top 5 Thi Đua Proposals (Sorted by Estimated Value DESC)
-  const top5Proposals = useMemo(() => {
+  const [showTop11Modal, setShowTop11Modal] = useState(false);
+
+  // 5. Top 38 Thi Đua Proposals with strict Award Quota (Chỉ xếp hạng những bài ĐÃ PHÊ DUYỆT)
+  const ranked11Proposals = useMemo(() => {
     let thiDuaList = proposals.filter((p) => {
-      if (!p) return false;
-      const regType = String(p.registration_type || (p as any).registrationType || "").toUpperCase();
-      return regType === "THI_DUA" || regType === "" || regType === "CHO_DANH_GIA" || regType !== "LUU_TRU";
+      if (!p || p.is_archived) return false;
+
+      const appStatus = String(p.approval_status || (p as any).approvalStatus || "").toUpperCase();
+      const subStatus = String(p.sub_status || (p as any).subStatus || p.review_status || "").toUpperCase();
+      const status = String(p.status || "").toUpperCase();
+
+      // Bài bị từ chối -> Không xếp hạng
+      if (appStatus === "TU_CHOI" || subStatus === "TU_CHOI_TRIEN_KHAI" || status === "REJECTED") {
+        return false;
+      }
+
+      // Bài chưa phê duyệt (Bước 3) -> KHÔNG XẾP HẠNG ("chưa duyệt thì chưa xếp hạng")
+      if (subStatus === "CHO_REVIEW" || appStatus === "PENDING" || status === "SUBMITTED") {
+        return false;
+      }
+
+      // Bắt buộc phải ĐÃ PHÊ DUYỆT tính khả thi
+      const isApproved =
+        appStatus === "PHE_DUYET" ||
+        subStatus === "CHO_DANH_GIA" ||
+        subStatus === "DA_DANH_GIA" ||
+        status === "UNDER_REVIEW" ||
+        status === "APPROVED" ||
+        status === "COMPLETED";
+
+      return isApproved;
     });
 
     if (thiDuaList.length === 0 && proposals.length > 0) {
       thiDuaList = proposals;
     }
 
-    return [...thiDuaList]
+    const sorted = [...thiDuaList]
       .sort((a, b) => {
         const valA = getProposalValue(a);
         const valB = getProposalValue(b);
@@ -530,7 +558,74 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
         const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
         return dateB - dateA;
       })
-      .slice(0, 5);
+      .slice(0, 38);
+
+    return sorted.map((item, index) => {
+      let rank = 1;
+      let rankTitle = "Hạng Nhất";
+      let prizeValueTr = 1.0;
+      let badgeLabel = "🏆 Hạng 1";
+      let badgeStyle = "bg-amber-100 text-amber-900 border-amber-300 font-black";
+
+      if (index === 0) {
+        rank = 1;
+        rankTitle = "Hạng Nhất";
+        prizeValueTr = 1.0;
+        badgeLabel = "🏆 Hạng 1";
+        badgeStyle = "bg-amber-100 text-amber-900 border-amber-300 font-black";
+      } else if (index >= 1 && index <= 2) {
+        rank = 2;
+        rankTitle = "Hạng Nhì";
+        prizeValueTr = 0.5;
+        badgeLabel = "🥈 Hạng 2";
+        badgeStyle = "bg-slate-100 text-slate-800 border-slate-300 font-black";
+      } else if (index >= 3 && index <= 7) {
+        rank = 3;
+        rankTitle = "Hạng Ba";
+        prizeValueTr = 0.3;
+        badgeLabel = "🥉 Hạng 3";
+        badgeStyle = "bg-amber-900/10 text-amber-900 border-amber-800/30 font-black";
+      } else if (index >= 8 && index <= 17) {
+        rank = 4;
+        rankTitle = "Hạng 4";
+        prizeValueTr = 0.2;
+        badgeLabel = "🎖️ Hạng 4";
+        badgeStyle = "bg-blue-50 text-blue-900 border-blue-200 font-black";
+      } else if (index >= 18 && index <= 37) {
+        rank = 5;
+        rankTitle = "Hạng 5";
+        prizeValueTr = 0.1;
+        badgeLabel = "🎗️ Hạng 5";
+        badgeStyle = "bg-emerald-50 text-emerald-900 border-emerald-200 font-black";
+      } else {
+        rank = index + 1;
+        rankTitle = `Hạng ${index + 1}`;
+        prizeValueTr = 0;
+        badgeLabel = `#${index + 1}`;
+        badgeStyle = "bg-slate-100 text-slate-600 border-slate-200 font-bold";
+      }
+
+      const curVal = getProposalValue(item);
+      const curScore = Number(item?.score_points || (item as any)?.scorePoints || 0);
+
+      let isTied = false;
+      if (rank !== 1) {
+        if (index > 0) {
+          const prevItem = sorted[index - 1];
+          if (getProposalValue(prevItem) === curVal && Number(prevItem.score_points || 0) === curScore) {
+            isTied = true;
+          }
+        }
+        if (index < sorted.length - 1) {
+          const nextItem = sorted[index + 1];
+          if (getProposalValue(nextItem) === curVal && Number(nextItem.score_points || 0) === curScore) {
+            isTied = true;
+          }
+        }
+      }
+
+      return { item, rank, rankTitle, prizeValueTr, badgeLabel, badgeStyle, isTied };
+    });
   }, [proposals]);
 
   const scrollToTop = () => {
@@ -610,7 +705,10 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
          ════════════════════════════════════════════════════════════════ */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
         {/* Card 1: Tổng cải tiến */}
-        <div className="relative overflow-hidden bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between">
+        <div
+          onClick={() => setStatusScope('ALL')}
+          className="relative overflow-hidden bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all"
+        >
           <div className="absolute top-0 left-0 bottom-0 w-1.5 bg-[#0b1739]"></div>
           <div className="flex items-center gap-3 pl-1">
             <div className="w-11 h-11 rounded-xl bg-[#0b1739] text-white flex items-center justify-center shrink-0 shadow-sm">
@@ -626,7 +724,10 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
         </div>
 
         {/* Card 2: Thi đua */}
-        <div className="relative overflow-hidden bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between">
+        <div
+          onClick={() => setStatusScope('APPROVED')}
+          className="relative overflow-hidden bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all"
+        >
           <div className="absolute top-0 left-0 bottom-0 w-1.5 bg-[#d97706]"></div>
           <div className="flex items-center gap-3 pl-1">
             <div className="w-11 h-11 rounded-xl bg-[#d97706] text-white flex items-center justify-center shrink-0 shadow-sm">
@@ -642,7 +743,10 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
         </div>
 
         {/* Card 3: Lưu trữ */}
-        <div className="relative overflow-hidden bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between">
+        <div
+          onClick={() => setStatusScope('EVALUATED')}
+          className="relative overflow-hidden bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all"
+        >
           <div className="absolute top-0 left-0 bottom-0 w-1.5 bg-[#b45309]"></div>
           <div className="flex items-center gap-3 pl-1">
             <div className="w-11 h-11 rounded-xl bg-[#b45309] text-white flex items-center justify-center shrink-0 shadow-sm">
@@ -658,7 +762,10 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
         </div>
 
         {/* Card 4: Dynamic Month Card */}
-        <div className="relative overflow-hidden bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between">
+        <div
+          onClick={() => setSelectedMonth('ALL')}
+          className="relative overflow-hidden bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all"
+        >
           <div className="absolute top-0 left-0 bottom-0 w-1.5 bg-[#10b981]"></div>
           <div className="flex items-center gap-3 pl-1">
             <div className="w-11 h-11 rounded-xl bg-[#10b981] text-white flex items-center justify-center shrink-0 shadow-sm">
@@ -674,7 +781,10 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
         </div>
 
         {/* Card 5: Đánh giá */}
-        <div className="relative overflow-hidden bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between">
+        <div
+          onClick={() => setStatusScope('EVALUATED')}
+          className="relative overflow-hidden bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all"
+        >
           <div className="absolute top-0 left-0 bottom-0 w-1.5 bg-[#0284c7]"></div>
           <div className="flex items-center gap-3 pl-1">
             <div className="w-11 h-11 rounded-xl bg-[#0284c7] text-white flex items-center justify-center shrink-0 shadow-sm">
@@ -689,8 +799,11 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
           </div>
         </div>
 
-        {/* Card 6: Trị giá */}
-        <div className="relative overflow-hidden bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between">
+        {/* Card 6: Trị giá / Chờ duyệt */}
+        <div
+          onClick={() => setStatusScope('APPROVED')}
+          className="relative overflow-hidden bg-white p-3.5 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all"
+        >
           <div className="absolute top-0 left-0 bottom-0 w-1.5 bg-[#b98d4b]"></div>
           <div className="flex items-center gap-3 pl-1">
             <div className="w-11 h-11 rounded-xl bg-[#b98d4b] text-white flex items-center justify-center shrink-0 shadow-sm">
@@ -704,6 +817,7 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
             </div>
           </div>
         </div>
+
       </div>
 
       {/* ════════════════════════════════════════════════════════════════
@@ -1035,7 +1149,7 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
       </div>
 
       {/* ════════════════════════════════════════════════════════════════
-          ROW 4: TABLE CẢI TIẾN TIÊU BIỂU (TOP 5 THI ĐUA)
+          ROW 4: TABLE CẢI TIẾN TIÊU BIỂU (TOP THI ĐUA KHEN THƯỞNG)
          ════════════════════════════════════════════════════════════════ */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
         <div className="bg-[#0b1739] text-white px-4 py-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
@@ -1043,26 +1157,25 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
             <IconStar size={18} className="text-amber-400 shrink-0" />
             <div>
               <h3 className="text-xs font-black tracking-wide uppercase">
-                Một số cải tiến được khen thưởng
+                Một số cải tiến được khen thưởng (Xếp hạng thi đua)
               </h3>
             </div>
           </div>
 
-          {onBackToLibrary && (
-            <button
-              onClick={onBackToLibrary}
-              className="px-3 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-extrabold transition-all border border-slate-700 cursor-pointer"
-            >
-              Xem tất cả
-            </button>
-          )}
+          <button
+            onClick={() => setShowTop11Modal(true)}
+            className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black transition-all shadow-md cursor-pointer flex items-center gap-1.5"
+          >
+            <IconTrophy size={15} />
+            <span>Xem tất cả (Bảng xếp hạng 38 giải thi đua)</span>
+          </button>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-extrabold text-[10px] uppercase tracking-wider">
-                <th className="py-3 px-4 w-16 text-center">HẠNG</th>
+                <th className="py-3 px-4 w-32 text-center">HẠNG</th>
                 <th className="py-3 px-4">HỌ VÀ TÊN</th>
                 <th className="py-3 px-4 text-center">MSNV</th>
                 <th className="py-3 px-4">CẢI TIẾN</th>
@@ -1071,23 +1184,19 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
             </thead>
 
             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-              {top5Proposals.length > 0 ? (
-                top5Proposals.map((item, idx) => {
-                  const rank = idx + 1;
-                  const prizeValueTr = getAwardValueTrByRank(rank);
+              {ranked11Proposals.length > 0 ? (
+                ranked11Proposals.slice(0, 5).map(({ item, rank, prizeValueTr, badgeLabel, badgeStyle, isTied }) => {
                   return (
-                    <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                    <tr
+                      key={item.id}
+                      onClick={() => onSelectProposal && onSelectProposal(item)}
+                      className="hover:bg-amber-50/60 transition-colors cursor-pointer"
+                    >
                       {/* Column 1: Hạng */}
                       <td className="py-3 px-4 text-center font-extrabold">
-                        {idx === 0 ? (
-                          <span className="text-amber-500 font-black text-sm">🏆 1</span>
-                        ) : idx === 1 ? (
-                          <span className="text-slate-400 font-black text-sm">🥈 2</span>
-                        ) : idx === 2 ? (
-                          <span className="text-amber-700 font-black text-sm">🥉 3</span>
-                        ) : (
-                          <span className="text-slate-500 font-bold">{idx + 1}</span>
-                        )}
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs border ${badgeStyle}`}>
+                          {badgeLabel} {isTied && rank !== 1 && <span className="text-[9px] font-bold text-amber-900 bg-amber-200 px-1 rounded">Đồng hạng</span>}
+                        </span>
                       </td>
 
                       {/* Column 2: Họ và Tên */}
@@ -1146,6 +1255,139 @@ export default function KaizenDashboard({ proposals, onBackToLibrary }: KaizenDa
           </table>
         </div>
       </div>
+
+      {/* ════════════════════════════════════════════════════════════════
+          POPUP MODAL BẢNG XẾP HẠNG ĐỦ 38 SÁNG KIẾN KHEN THƯỞNG THI ĐUA
+         ════════════════════════════════════════════════════════════════ */}
+      {showTop11Modal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Modal Header Banner */}
+            <div className="bg-gradient-to-r from-[#0b1739] via-[#0b1739] to-[#006838] p-5 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-400/40 flex items-center justify-center shrink-0 shadow-md">
+                  <IconTrophy size={24} />
+                </div>
+                <div>
+                  <h2 className="text-base sm:text-lg font-black tracking-tight flex items-center gap-2">
+                    🏆 BẢNG XẾP HẠNG THI ĐUA KHEN THƯỞNG KAIZEN (38 GIẢI)
+                  </h2>
+                  <p className="text-xs text-slate-300 font-medium mt-0.5">
+                    1 Hạng Nhất &bull; 2 Hạng Nhì &bull; 5 Hạng Ba &bull; 10 Hạng 4 &bull; 20 Hạng 5
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowTop11Modal(false)}
+                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer"
+                title="Đóng cửa sổ"
+              >
+                <IconX size={18} />
+              </button>
+            </div>
+
+            {/* Modal Content Body */}
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4">
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-xs font-bold text-amber-900 flex items-center gap-2">
+                <span className="text-base">💡</span>
+                <span>
+                  <strong>Cơ cấu Giải Khen Thưởng Thi Đua:</strong> 1 Giải Hạng Nhất (1,0 Tr), 2 Giải Hạng Nhì (0,5 Tr), 5 Giải Hạng Ba (0,3 Tr), 10 Giải Hạng 4 (0,2 Tr), 20 Giải Hạng 5 (0,1 Tr). Bấm vào dòng để xem chi tiết.
+                </span>
+              </div>
+
+              <div className="overflow-x-auto border border-slate-200 rounded-2xl shadow-2xs">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-900 text-white font-black text-[10px] uppercase tracking-wider">
+                      <th className="py-3.5 px-4 w-32 text-center">HẠNG</th>
+                      <th className="py-3.5 px-4">NGƯỜI ĐỀ XUẤT</th>
+                      <th className="py-3.5 px-4 text-center">MSNV</th>
+                      <th className="py-3.5 px-4">TÊN CẢI TIẾN</th>
+                      <th className="py-3.5 px-4 text-right">GIÁ TRỊ KHEN THƯỞNG</th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
+                    {ranked11Proposals.length > 0 ? (
+                      ranked11Proposals.map(({ item, rank, badgeLabel, badgeStyle, prizeValueTr, isTied }) => (
+                        <tr
+                          key={item.id}
+                          onClick={() => {
+                            setShowTop11Modal(false);
+                            if (onSelectProposal) onSelectProposal(item);
+                          }}
+                          className="hover:bg-amber-50/70 transition-colors cursor-pointer"
+                        >
+                          {/* Rank Column with Badges */}
+                          <td className="py-3.5 px-4 text-center">
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs shadow-2xs border ${badgeStyle}`}>
+                              {badgeLabel} {isTied && rank !== 1 && <span className="text-[9px] text-amber-900 bg-amber-200/80 px-1 rounded font-bold">Đồng hạng</span>}
+                            </span>
+                          </td>
+
+                          {/* Proposer Column */}
+                          <td className="py-3.5 px-4">
+                            <span className="font-extrabold text-slate-900 block text-xs">
+                              {item.proposer_name || (item as any).proposerName || "Nhân viên"}
+                            </span>
+                            <span className="text-[11px] text-slate-500 block pt-0.5">
+                              {item.department || item.region || "Tổ hợp Kiên Giang"}
+                            </span>
+                          </td>
+
+                          {/* MSNV Column */}
+                          <td className="py-3.5 px-4 text-center">
+                            <span className="inline-block px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-mono font-extrabold text-[11px] border border-slate-200">
+                              {item.proposer_emp_code || (item as any).proposerEmpCode || item.code || "CBCNV"}
+                            </span>
+                          </td>
+
+                          {/* Proposal Title & Category */}
+                          <td className="py-3.5 px-4 max-w-sm">
+                            <span className="font-extrabold text-slate-900 block text-xs line-clamp-1" title={item.title}>
+                              {item.title}
+                            </span>
+                            <span className="text-[11px] text-[#006838] font-bold block pt-0.5">
+                              {item.category_label || item.category || "Cải tiến quy trình"}
+                            </span>
+                          </td>
+
+                          {/* Award Value Column */}
+                          <td className="py-3.5 px-4 text-right font-black text-emerald-600 text-sm whitespace-nowrap">
+                            {formatMillion(prizeValueTr)}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="py-10 text-center text-slate-400 font-bold">
+                          Chưa có dữ liệu sáng kiến được khen thưởng
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
+              <span className="text-xs text-slate-500 font-bold">
+                Hiển thị {ranked11Proposals.length} / 38 sáng kiến khen thưởng thi đua
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowTop11Modal(false)}
+                className="px-6 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs transition-all cursor-pointer shadow-md"
+              >
+                ĐÓNG CỬA SỔ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ════════════════════════════════════════════════════════════════
           FLOATING BACK TO TOP BUTTON

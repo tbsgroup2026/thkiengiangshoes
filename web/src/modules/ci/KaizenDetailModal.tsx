@@ -167,7 +167,8 @@ export default function KaizenDetailModal({
   const isApprovedStep3 = proposal?.sub_status !== "CHO_REVIEW" && proposal?.approval_status !== "PENDING" && proposal?.status !== "SUBMITTED";
 
   // Tab 2 & 3: ONLY visible if proposal is ALREADY approved (Step 3 completed) AND current account has judging permission
-  const canSeeExpertTab = isApprovedStep3 && isAssignedJudge;
+  // Tab 2 "Đánh giá chuyên môn" has been disabled per requirement
+  const canSeeExpertTab = false;
   const canSeeAwardTab = isApprovedStep3 && isAssignedJudge;
 
   // Fallback activeTab if selected tab is hidden or user lacks permission
@@ -469,8 +470,8 @@ export default function KaizenDetailModal({
                   {proposal.sub_status === "CHO_REVIEW" || proposal.approval_status === "PENDING" || proposal.status === "SUBMITTED"
                     ? "Chờ phê duyệt"
                     : proposal.sub_status === "CHO_DANH_GIA" || proposal.approval_status === "PHE_DUYET"
-                    ? "Chờ đánh giá"
-                    : "Đã đánh giá"}
+                    ? "Chờ duyệt"
+                    : "Đã duyệt"}
                 </span>
               </span>
             </div>

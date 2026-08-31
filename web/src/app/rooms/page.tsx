@@ -278,7 +278,11 @@ export default function MeetingRoomsPage() {
       }
     }
     loadD1Rooms();
-    const interval = setInterval(loadD1Rooms, 3000);
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        loadD1Rooms();
+      }
+    }, 30000); // 30s background polling when tab is active
     return () => {
       isMounted = false;
       clearInterval(interval);

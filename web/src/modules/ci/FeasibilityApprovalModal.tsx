@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   IconShieldCheck,
   IconX,
@@ -8,9 +8,14 @@ import {
   IconBuildingWarehouse,
   IconCalendar,
   IconLoader2,
+  IconPhoto,
+  IconVideo,
+  IconPlus,
+  IconUpload,
+  IconTrash,
 } from "@tabler/icons-react";
 import { convertNumberToWords } from "@/lib/numberToWords";
-import { KaizenProposal } from "./CIModule";
+import { KaizenProposal, CATEGORIES } from "./CIModule";
 
 interface FeasibilityApprovalModalProps {
   isOpen: boolean;
@@ -21,6 +26,7 @@ interface FeasibilityApprovalModalProps {
     status: string;
     sub_status: string;
     approval_status: string;
+    category?: string;
     time_before_seconds?: number;
     time_after_seconds?: number;
     saved_seconds?: number;
@@ -28,6 +34,7 @@ interface FeasibilityApprovalModalProps {
     pair_quantity?: number;
     total_savings_vnd?: number;
     total_savings_words?: string;
+    after_image_url?: string;
   }) => void;
 }
 
@@ -40,14 +47,50 @@ export default function FeasibilityApprovalModal({
 }: FeasibilityApprovalModalProps) {
   const [decision, setDecision] = useState<"APPROVE" | "REJECT">(initialDecision);
   const [note, setNote] = useState<string>("");
+  const [editedCategory, setEditedCategory] = useState<string>(
+    proposal?.category || proposal?.category_label || (proposal as any)?.product_group || "INCREASE_PRODUCTIVITY"
+  );
   const [timeBefore, setTimeBefore] = useState<number | string>(proposal?.time_before_seconds || 0);
   const [timeAfter, setTimeAfter] = useState<number | string>(proposal?.time_after_seconds || 0);
   const [pairQuantity, setPairQuantity] = useState<number | string>(
     proposal?.pair_quantity || (proposal as any)?.so_luong_giay || (proposal as any)?.quantity || ""
   );
+  const [directSavingsVnd, setDirectSavingsVnd] = useState<number | string>(
+    proposal?.total_savings_vnd || (proposal as any)?.tong_tien_tiet_kiem || ""
+  );
+  const [afterMediaList, setAfterMediaList] = useState<{ id: string; type: "image" | "video"; url: string; name?: string }[]>([]);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [pairQtyError, setPairQtyError] = useState<string | null>(null);
+
+  // ⚡ Determine Category Mode dynamically from selected Category
+  const categoryMode = React.useMemo(() => {
+    if (!proposal) return "PRODUCTIVITY_TIME";
+
+    const matchedCat = CATEGORIES.find((c) => c.id === editedCategory || c.label === editedCategory);
+    const catStr = matchedCat
+      ? matchedCat.label
+      : String(proposal.category_label || proposal.category || (proposal as any).product_group || "");
+    const cat = catStr.toLowerCase();
+
+    // 1. Tiết kiệm Vật tư
+    if (cat.includes("1.") || cat.includes("vật tư") || cat.includes("vat tu") || editedCategory === "SAVE_MATERIAL") {
+      return "MATERIAL_SAVINGS";
+    }
+    // 2. Tiết kiệm Chi phí
+    if (cat.includes("2.") || cat.includes("chi phí") || cat.includes("chi phi") || cat.includes("tài chính") || editedCategory === "SAVE_COST") {
+      return "COST_SAVINGS";
+    }
+    // 3. Tăng Năng suất (Dạng có thời gian & số lượng đôi)
+    if (cat.includes("3.") || cat.includes("năng suất") || cat.includes("nang suat") || cat.includes("thời gian") || editedCategory === "INCREASE_PRODUCTIVITY") {
+      return "PRODUCTIVITY_TIME";
+    }
+
+    // 4. An toàn lao động, 5. 5S, 6. Tự động hoá, 7. MMTB CCDC -> Non-financial
+    return "NON_FINANCIAL";
+  }, [editedCategory, proposal]);
 
   useEffect(() => {
     if (isOpen && proposal) {
@@ -55,6 +98,13 @@ export default function FeasibilityApprovalModal({
       setNote("");
       setErrorMsg(null);
       setPairQtyError(null);
+      setEditedCategory(
+        proposal.category || proposal.category_label || (proposal as any).product_group || "INCREASE_PRODUCTIVITY"
+      );
+      setNote("");
+      setErrorMsg(null);
+      setPairQtyError(null);
+      setDirectSavingsVnd(proposal.total_savings_vnd || (proposal as any).tong_tien_tiet_kiem || "");
       
       const pBefore = Number(proposal.time_before_seconds || 0);
       const pAfter = Number(proposal.time_after_seconds || 0);
@@ -65,7 +115,6 @@ export default function FeasibilityApprovalModal({
         setTimeBefore(pBefore);
         setTimeAfter(pAfter);
       } else if (pSaved > 0) {
-        // Automatically pre-fill Before = saved_seconds (e.g. 30s) and After = 0s if only saved_seconds is present
         setTimeBefore(pSaved);
         setTimeAfter(0);
       } else {
@@ -74,8 +123,61 @@ export default function FeasibilityApprovalModal({
       }
 
       setPairQuantity(pQty > 0 ? pQty : "");
+
+      // Initialize media after improvement (strictly filter out before_image_url)
+      let initialMedia: { id: string; type: "image" | "video"; url: string }[] = [];
+      const beforeUrl = proposal.before_image_url ? proposal.before_image_url.trim() : "";
+
+      if (proposal.after_image_url) {
+        const urls = proposal.after_image_url.split(",").map((s) => s.trim()).filter(Boolean);
+        urls.forEach((u, idx) => {
+          if (u !== beforeUrl) {
+            const isVid = u.endsWith(".mp4") || u.endsWith(".mov") || u.endsWith(".webm") || u.startsWith("data:video");
+            initialMedia.push({ id: `existing-after-${idx}`, type: isVid ? "video" : "image", url: u });
+          }
+        });
+      }
+      if (proposal.attachments_json) {
+        try {
+          const parsed = JSON.parse(proposal.attachments_json);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((u: string, idx: number) => {
+              if (typeof u === "string" && u !== beforeUrl && !initialMedia.some((m) => m.url === u)) {
+                const isVid = u.endsWith(".mp4") || u.endsWith(".mov") || u.endsWith(".webm") || u.startsWith("data:video");
+                initialMedia.push({ id: `att-${idx}`, type: isVid ? "video" : "image", url: u });
+              }
+            });
+          }
+        } catch {}
+      }
+      setAfterMediaList(initialMedia);
     }
   }, [isOpen, initialDecision, proposal]);
+
+  const handleAddMediaFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      const isVid = file.type.startsWith("video/") || file.name.endsWith(".mp4") || file.name.endsWith(".mov") || file.name.endsWith(".webm");
+      reader.onload = (event) => {
+        const url = event.target?.result as string;
+        if (url) {
+          setAfterMediaList((prev) => [
+            ...prev,
+            { id: `${Date.now()}-${Math.random()}`, type: isVid ? "video" : "image", url, name: file.name },
+          ]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleRemoveMedia = (id: string) => {
+    setAfterMediaList((prev) => prev.filter((m) => m.id !== id));
+  };
 
   if (!isOpen || !proposal) return null;
 
@@ -121,17 +223,24 @@ export default function FeasibilityApprovalModal({
       if (decision === "APPROVE") {
         let hasErr = false;
 
-        if (beforeVal < 0 || afterVal < 0) {
-          setErrorMsg("❌ Thời gian Trước và Sau phải là số không âm!");
-          hasErr = true;
-        }
-
-        if (!pairQuantity || pairQtyVal < 1) {
-          setPairQtyError("Vui lòng nhập số lượng giày (≥ 1)");
-          if (!hasErr) {
-            setErrorMsg("❌ Vui lòng nhập số lượng giày của đơn hàng!");
+        if (categoryMode === "PRODUCTIVITY_TIME") {
+          if (beforeVal < 0 || afterVal < 0) {
+            setErrorMsg("❌ Thời gian Trước và Sau phải là số không âm!");
+            hasErr = true;
           }
-          hasErr = true;
+
+          if (!pairQuantity || pairQtyVal < 1) {
+            setPairQtyError("Vui lòng nhập số lượng giày (≥ 1)");
+            if (!hasErr) {
+              setErrorMsg("❌ Vui lòng nhập số lượng giày của đơn hàng!");
+            }
+            hasErr = true;
+          }
+        } else if (categoryMode === "MATERIAL_SAVINGS" || categoryMode === "COST_SAVINGS") {
+          if (!directSavingsVnd || Number(directSavingsVnd) <= 0) {
+            setErrorMsg("❌ Vui lòng nhập số tiền tiết kiệm chi phí/vật tư!");
+            hasErr = true;
+          }
         }
 
         if (hasErr) {
@@ -140,7 +249,18 @@ export default function FeasibilityApprovalModal({
         }
       }
 
-      const savingsInWords = convertNumberToWords(totalSavingsVndVal);
+      const isProdTime = categoryMode === "PRODUCTIVITY_TIME";
+      const isDirectCost = categoryMode === "MATERIAL_SAVINGS" || categoryMode === "COST_SAVINGS";
+      const finalTotalSavings = isProdTime
+        ? totalSavingsVndVal
+        : isDirectCost
+        ? Number(directSavingsVnd) || 0
+        : 0;
+      const savingsInWords = convertNumberToWords(finalTotalSavings);
+
+      const mediaUrls = afterMediaList.map((m) => m.url);
+      const afterImgUrlStr = mediaUrls.length > 0 ? mediaUrls[0] : "";
+      const attachmentsJsonStr = JSON.stringify(mediaUrls);
 
       const res = await fetch("/api/ci-kaizen/approve", {
         method: "POST",
@@ -148,17 +268,20 @@ export default function FeasibilityApprovalModal({
         body: JSON.stringify({
           proposalId: proposal.id,
           decision,
+          category: editedCategory,
           note: note.trim() || (decision === "APPROVE" ? "Đã phê duyệt tính khả thi (Bước 3)" : "Không đạt tính khả thi"),
-          timeBeforeSeconds: decision === "APPROVE" ? beforeVal : (proposal.time_before_seconds || 0),
-          timeAfterSeconds: decision === "APPROVE" ? afterVal : (proposal.time_after_seconds || 0),
-          savedSeconds: decision === "APPROVE" ? savedVal : (proposal.saved_seconds || 0),
-          efficiencyValueVND: decision === "APPROVE" ? efficiencyVndVal : 0,
-          pairQuantity: decision === "APPROVE" ? pairQtyVal : (proposal.pair_quantity || 0),
-          so_luong_giay: decision === "APPROVE" ? pairQtyVal : (proposal.pair_quantity || 0),
-          totalSavingsVND: decision === "APPROVE" ? totalSavingsVndVal : 0,
-          tong_tien_tiet_kiem: decision === "APPROVE" ? totalSavingsVndVal : 0,
+          timeBeforeSeconds: isProdTime && decision === "APPROVE" ? beforeVal : 0,
+          timeAfterSeconds: isProdTime && decision === "APPROVE" ? afterVal : 0,
+          savedSeconds: isProdTime && decision === "APPROVE" ? savedVal : 0,
+          efficiencyValueVND: isProdTime && decision === "APPROVE" ? efficiencyVndVal : 0,
+          pairQuantity: isProdTime && decision === "APPROVE" ? pairQtyVal : (isDirectCost ? 1 : 0),
+          so_luong_giay: isProdTime && decision === "APPROVE" ? pairQtyVal : (isDirectCost ? 1 : 0),
+          totalSavingsVND: decision === "APPROVE" ? finalTotalSavings : 0,
+          tong_tien_tiet_kiem: decision === "APPROVE" ? finalTotalSavings : 0,
           totalSavingsWords: decision === "APPROVE" ? savingsInWords : "",
           tong_tien_bang_chu: decision === "APPROVE" ? savingsInWords : "",
+          after_image_url: afterImgUrlStr,
+          attachments_json: attachmentsJsonStr,
         }),
       });
 
@@ -168,13 +291,15 @@ export default function FeasibilityApprovalModal({
           status: json.status || (decision === "APPROVE" ? "UNDER_REVIEW" : "REJECTED"),
           sub_status: json.sub_status || (decision === "APPROVE" ? "CHO_DANH_GIA" : "TU_CHOI_TRIEN_KHAI"),
           approval_status: json.approval_status || (decision === "APPROVE" ? "PHE_DUYET" : "TU_CHOI"),
-          time_before_seconds: json.time_before_seconds !== undefined ? json.time_before_seconds : beforeVal,
-          time_after_seconds: json.time_after_seconds !== undefined ? json.time_after_seconds : afterVal,
-          saved_seconds: json.saved_seconds !== undefined ? json.saved_seconds : savedVal,
-          efficiency_value_vnd: json.efficiency_value_vnd !== undefined ? json.efficiency_value_vnd : efficiencyVndVal,
-          pair_quantity: json.pair_quantity !== undefined ? json.pair_quantity : pairQtyVal,
-          total_savings_vnd: json.total_savings_vnd !== undefined ? json.total_savings_vnd : totalSavingsVndVal,
+          category: editedCategory,
+          time_before_seconds: json.time_before_seconds !== undefined ? json.time_before_seconds : (isProdTime ? beforeVal : 0),
+          time_after_seconds: json.time_after_seconds !== undefined ? json.time_after_seconds : (isProdTime ? afterVal : 0),
+          saved_seconds: json.saved_seconds !== undefined ? json.saved_seconds : (isProdTime ? savedVal : 0),
+          efficiency_value_vnd: json.efficiency_value_vnd !== undefined ? json.efficiency_value_vnd : (isProdTime ? efficiencyVndVal : 0),
+          pair_quantity: json.pair_quantity !== undefined ? json.pair_quantity : (isProdTime ? pairQtyVal : (isDirectCost ? 1 : 0)),
+          total_savings_vnd: json.total_savings_vnd !== undefined ? json.total_savings_vnd : finalTotalSavings,
           total_savings_words: json.total_savings_words !== undefined ? json.total_savings_words : savingsInWords,
+          after_image_url: afterImgUrlStr,
         });
         onClose();
       } else {
@@ -277,14 +402,22 @@ export default function FeasibilityApprovalModal({
                 </span>
               </div>
 
-              {/* Cột 3: Nhóm SP */}
+              {/* Cột 3: Phân loại (Người duyệt có thể chọn lại tag này) */}
               <div className="space-y-1">
                 <span className="text-[11px] font-bold text-slate-400 block">
-                  Nhóm SP
+                  Phân loại
                 </span>
-                <span className="px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-700 font-bold text-xs inline-flex items-center gap-1 border border-emerald-200/80">
-                  <span>{(proposal as any).product_group || proposal.category_label || proposal.category || "Quai"}</span>
-                </span>
+                <select
+                  value={editedCategory}
+                  onChange={(e) => setEditedCategory(e.target.value)}
+                  className="px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-800 font-extrabold text-xs border border-emerald-300 outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer shadow-2xs w-full max-w-[170px]"
+                >
+                  {CATEGORIES.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Cột 4: Ngày đăng ký */}
@@ -312,6 +445,100 @@ export default function FeasibilityApprovalModal({
                 (proposal as any).solution_description ||
                 "Đề xuất cải tiến thiết kế jig gá giúp rút ngắn thời gian thay khuôn, giảm thao tác thủ công và sử dụng vật liệu sẵn có, không phát sinh chi phí lớn."}
             </p>
+          </div>
+
+          {/* HÌNH ẢNH / VIDEO TRƯỚC CẢI TIẾN (CỐ ĐỊNH TỪ NGƯỜI ĐĂNG KÝ - KHÔNG ĐƯỢC XÓA) */}
+          {proposal.before_image_url && (
+            <div className="space-y-1.5 pt-1 border-t border-slate-100">
+              <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                <IconPhoto size={14} className="text-slate-500" />
+                <span>Ảnh / Video Trước Cải Tiến (Cố định từ người đăng ký)</span>
+              </span>
+              <div className="flex gap-2">
+                <div className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 w-24 h-24 shadow-2xs">
+                  {proposal.before_image_url.endsWith(".mp4") || proposal.before_image_url.endsWith(".mov") || proposal.before_image_url.startsWith("data:video") ? (
+                    <video src={proposal.before_image_url} className="w-full h-full object-cover" />
+                  ) : (
+                    <img src={proposal.before_image_url} alt="Trước Cải Tiến" className="w-full h-full object-cover" />
+                  )}
+                  <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-black/70 text-white text-[9px] font-mono font-bold backdrop-blur-xs">
+                    🔒 Trước Cải Tiến
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* HÌNH ẢNH / VIDEO SAU CẢI TIẾN (NHIỀU ẢNH & VIDEO - CHO PHÉP TẢI / SỬA / XÓA) */}
+          <div className="space-y-2 pt-1 border-t border-slate-100">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                <IconPhoto size={14} className="text-emerald-600" />
+                <span>Hình ảnh (nhiều ảnh) / Video Sau Cải Tiến</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-[#006838] border border-emerald-200 font-extrabold text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
+              >
+                <IconPlus size={13} />
+                <span>Thêm ảnh / video</span>
+              </button>
+            </div>
+
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleAddMediaFiles}
+              multiple
+              accept="image/*,video/*"
+              className="hidden"
+            />
+
+            {/* THUMBNAILS GRID PREVIEW (ĐƯỢC PHÉP XÓA ẢNH SAU CẢI TIẾN) */}
+            {afterMediaList.length > 0 ? (
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5 pt-1">
+                {afterMediaList.map((item) => (
+                  <div key={item.id} className="relative group rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 aspect-square shadow-2xs">
+                    {item.type === "video" ? (
+                      <video src={item.url} className="w-full h-full object-cover" />
+                    ) : (
+                      <img src={item.url} alt="Sau Cải Tiến" className="w-full h-full object-cover" />
+                    )}
+
+                    {/* Badge type */}
+                    <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-black/60 text-white text-[9px] font-bold backdrop-blur-xs">
+                      {item.type === "video" ? "📹 Video" : "📷 Sau Cải Tiến"}
+                    </span>
+
+                    {/* Nút Xóa CHỈ ĐÀNH CHO ẢNH SAU CẢI TIẾN */}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveMedia(item.id)}
+                      className="absolute top-1 right-1 w-6 h-6 rounded-full bg-rose-600/90 text-white flex items-center justify-center hover:bg-rose-700 transition-colors shadow-md cursor-pointer"
+                      title="Xóa ảnh Sau Cải Tiến"
+                    >
+                      <IconTrash size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="p-3 rounded-2xl border-2 border-dashed border-slate-200 hover:border-emerald-500/50 bg-slate-50/50 hover:bg-emerald-50/20 text-center cursor-pointer transition-colors space-y-1"
+              >
+                <div className="flex justify-center text-slate-400">
+                  <IconUpload size={20} />
+                </div>
+                <p className="text-[11px] font-extrabold text-slate-600">
+                  Chưa có ảnh/video Sau cải tiến
+                </p>
+                <p className="text-[10px] text-slate-400">
+                  Bấm vào đây để tải lên nhiều hình ảnh hoặc video minh chứng Sau khi Cải tiến
+                </p>
+              </div>
+            )}
           </div>
 
           {/* KẾT QUẢ REVIEW (RADIO CARDS) */}
@@ -379,128 +606,189 @@ export default function FeasibilityApprovalModal({
             </div>
           </div>
 
-          {/* NHẬP SỐ LIỆU THỜI GIAN TRƯỚC/SAU KHI PHÊ DUYỆT & SỐ LƯỢNG GIÀY */}
+          {/* NHẬP SỐ LIỆU ĐÁNH GIÁ TÍNH KHẢ THI THEO THỂ LOẠI (7 TIÊU CHÍ KAIZEN) */}
           {decision === "APPROVE" && (
-            <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="font-extrabold text-xs text-emerald-900 flex items-center gap-1.5">
-                  <span>⏱️</span>
-                  <span>Nhập thời gian thử nghiệm &amp; đánh giá hiệu quả</span>
-                </span>
-                <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100/90 border border-emerald-200 px-2.5 py-0.5 rounded-full">
-                  12.5đ / giây
-                </span>
-              </div>
+            <>
+              {/* MODE 1: Category 3 - 3.Tăng Năng Suất (Có nhập thời gian & số lượng đôi) */}
+              {categoryMode === "PRODUCTIVITY_TIME" && (
+                <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-extrabold text-xs text-emerald-900 flex items-center gap-1.5">
+                      <span>⏱️</span>
+                      <span>Nhập thời gian thử nghiệm &amp; đánh giá hiệu quả (3. Tăng Năng suất)</span>
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100/90 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                      12.5đ / giây
+                    </span>
+                  </div>
 
-              {/* HÀNG 3 Ô INPUT: TRƯỚC (GIÂY), SAU (GIÂY), SỐ LƯỢNG GIÀY (ĐÔI) */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-700 block">
-                    TRƯỚC (giây) <span className="text-rose-600 font-bold">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    step="any"
-                    value={timeBefore}
-                    onChange={(e) => setTimeBefore(e.target.value)}
-                    placeholder="VD: 60"
-                    className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-black text-slate-900 bg-white outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 shadow-2xs"
-                  />
-                </div>
+                  {/* HÀNG 3 Ô INPUT: TRƯỚC (GIÂY), SAU (GIÂY), SỐ LƯỢNG GIÀY (ĐÔI) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700 block">
+                        TRƯỚC (giây) <span className="text-rose-600 font-bold">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        step="any"
+                        value={timeBefore}
+                        onChange={(e) => setTimeBefore(e.target.value)}
+                        placeholder="VD: 60"
+                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-black text-slate-900 bg-white outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 shadow-2xs"
+                      />
+                    </div>
 
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-700 block">
-                    SAU (giây) <span className="text-rose-600 font-bold">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    step="any"
-                    value={timeAfter}
-                    onChange={(e) => setTimeAfter(e.target.value)}
-                    placeholder="VD: 30"
-                    className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-black text-slate-900 bg-white outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 shadow-2xs"
-                  />
-                </div>
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700 block">
+                        SAU (giây) <span className="text-rose-600 font-bold">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        step="any"
+                        value={timeAfter}
+                        onChange={(e) => setTimeAfter(e.target.value)}
+                        placeholder="VD: 30"
+                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-black text-slate-900 bg-white outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 shadow-2xs"
+                      />
+                    </div>
 
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-700 block truncate" title="SỐ LƯỢNG GIÀY (ĐÔI) *">
-                    SỐ LƯỢNG GIÀY (ĐÔI) <span className="text-rose-600 font-bold">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    step="1"
-                    value={pairQuantity}
-                    onChange={(e) => {
-                      setPairQuantity(e.target.value);
-                      if (pairQtyError) setPairQtyError(null);
-                    }}
-                    placeholder="Nhập số đôi giày..."
-                    className={`w-full p-2.5 rounded-xl border text-xs font-black text-slate-900 bg-white outline-none focus:ring-1 shadow-2xs ${
-                      pairQtyError
-                        ? "border-rose-400 focus:border-rose-600 focus:ring-rose-600 bg-rose-50/40"
-                        : "border-slate-300 focus:border-emerald-600 focus:ring-emerald-600"
-                    }`}
-                  />
-                  {pairQtyError && (
-                    <p className="text-[10.5px] font-bold text-rose-600 mt-0.5 animate-in fade-in">
-                      {pairQtyError}
-                    </p>
-                  )}
-                </div>
-              </div>
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700 block truncate" title="SỐ LƯỢNG GIÀY (ĐÔI) *">
+                        SỐ LƯỢNG GIÀY (ĐÔI) <span className="text-rose-600 font-bold">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        step="1"
+                        value={pairQuantity}
+                        onChange={(e) => {
+                          setPairQuantity(e.target.value);
+                          if (pairQtyError) setPairQtyError(null);
+                        }}
+                        placeholder="Nhập số đôi giày..."
+                        className={`w-full p-2.5 rounded-xl border text-xs font-black text-slate-900 bg-white outline-none focus:ring-1 shadow-2xs ${
+                          pairQtyError
+                            ? "border-rose-400 focus:border-rose-600 focus:ring-rose-600 bg-rose-50/40"
+                            : "border-slate-300 focus:border-emerald-600 focus:ring-emerald-600"
+                        }`}
+                      />
+                      {pairQtyError && (
+                        <p className="text-[10.5px] font-bold text-rose-600 mt-0.5 animate-in fade-in">
+                          {pairQtyError}
+                        </p>
+                      )}
+                    </div>
+                  </div>
 
-              {/* CARDS PREVIEW CỦA HIỆU QUẢ (5 HÀNG CARD REALTIME) */}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1">
-                <div className="p-2 rounded-xl bg-white border border-slate-200 space-y-0.5 shadow-2xs">
-                  <span className="text-[9px] font-extrabold uppercase text-slate-400 block">TRƯỚC</span>
-                  <span className="text-xs sm:text-sm font-black text-slate-900 block">{beforeVal}</span>
-                  <span className="text-[9px] font-bold text-slate-500 block">giây</span>
-                </div>
+                  {/* CARDS PREVIEW CỦA HIỆU QUẢ */}
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1">
+                    <div className="p-2 rounded-xl bg-white border border-slate-200 space-y-0.5 shadow-2xs">
+                      <span className="text-[9px] font-extrabold uppercase text-slate-400 block">TRƯỚC</span>
+                      <span className="text-xs sm:text-sm font-black text-slate-900 block">{beforeVal}</span>
+                      <span className="text-[9px] font-bold text-slate-500 block">giây</span>
+                    </div>
 
-                <div className="p-2 rounded-xl bg-white border border-slate-200 space-y-0.5 shadow-2xs">
-                  <span className="text-[9px] font-extrabold uppercase text-slate-400 block">SAU</span>
-                  <span className="text-xs sm:text-sm font-black text-slate-900 block">{afterVal}</span>
-                  <span className="text-[9px] font-bold text-slate-500 block">giây</span>
-                </div>
+                    <div className="p-2 rounded-xl bg-white border border-slate-200 space-y-0.5 shadow-2xs">
+                      <span className="text-[9px] font-extrabold uppercase text-slate-400 block">SAU</span>
+                      <span className="text-xs sm:text-sm font-black text-slate-900 block">{afterVal}</span>
+                      <span className="text-[9px] font-bold text-slate-500 block">giây</span>
+                    </div>
 
-                <div className="p-2 rounded-xl bg-purple-50 border border-purple-200 space-y-0.5 shadow-2xs">
-                  <span className="text-[9px] font-extrabold uppercase text-purple-700 block">TIẾT KIỆM</span>
-                  <span className="text-xs sm:text-sm font-black text-purple-900 block">{savedVal}s</span>
-                  <span className="text-[8.5px] font-bold text-purple-600 block truncate">
-                    {beforeVal > 0 ? `${Math.round((savedVal / beforeVal) * 100)}%` : "0%"}
-                  </span>
-                </div>
+                    <div className="p-2 rounded-xl bg-purple-50 border border-purple-200 space-y-0.5 shadow-2xs">
+                      <span className="text-[9px] font-extrabold uppercase text-purple-700 block">TIẾT KIỆM</span>
+                      <span className="text-xs sm:text-sm font-black text-purple-900 block">{savedVal}s</span>
+                      <span className="text-[8.5px] font-bold text-purple-600 block truncate">
+                        {beforeVal > 0 ? `${Math.round((savedVal / beforeVal) * 100)}%` : "0%"}
+                      </span>
+                    </div>
 
-                <div className="p-2 rounded-xl bg-[#006838] text-white space-y-0.5 shadow-xs">
-                  <span className="text-[9px] font-extrabold uppercase text-emerald-200 block">HIỆU QUẢ</span>
-                  <span className="text-xs font-black text-white block truncate" title={`${efficiencyVndVal.toLocaleString("vi-VN")} VNĐ`}>
-                    {efficiencyVndVal.toLocaleString("vi-VN")}
-                  </span>
-                  <span className="text-[8.5px] font-bold text-emerald-200 block">VNĐ / đôi</span>
-                </div>
+                    <div className="p-2 rounded-xl bg-[#006838] text-white space-y-0.5 shadow-xs">
+                      <span className="text-[9px] font-extrabold uppercase text-emerald-200 block">HIỆU QUẢ</span>
+                      <span className="text-xs font-black text-white block truncate" title={`${efficiencyVndVal.toLocaleString("vi-VN")} VNĐ`}>
+                        {efficiencyVndVal.toLocaleString("vi-VN")}
+                      </span>
+                      <span className="text-[8.5px] font-bold text-emerald-200 block">VNĐ / đôi</span>
+                    </div>
 
-                <div className="p-2 rounded-xl bg-[#00522c] text-white space-y-0.5 shadow-sm border border-emerald-500/30 col-span-2 sm:col-span-1">
-                  <span className="text-[9px] font-extrabold uppercase text-amber-300 block">TỔNG TIẾT KIỆM</span>
-                  <span className="text-xs font-black text-white block truncate" title={`${totalSavingsVndVal.toLocaleString("vi-VN")} VNĐ`}>
-                    {totalSavingsVndVal.toLocaleString("vi-VN")}
-                  </span>
-                  <span className="text-[8.5px] font-bold text-emerald-200 block">VNĐ</span>
-                </div>
-              </div>
+                    <div className="p-2 rounded-xl bg-[#00522c] text-white space-y-0.5 shadow-sm border border-emerald-500/30 col-span-2 sm:col-span-1">
+                      <span className="text-[9px] font-extrabold uppercase text-amber-300 block">TỔNG TIẾT KIỆM</span>
+                      <span className="text-xs font-black text-white block truncate" title={`${totalSavingsVndVal.toLocaleString("vi-VN")} VNĐ`}>
+                        {totalSavingsVndVal.toLocaleString("vi-VN")}
+                      </span>
+                      <span className="text-[8.5px] font-bold text-emerald-200 block">VNĐ</span>
+                    </div>
+                  </div>
 
-              {/* DÒNG HIỂN THỊ SỐ TIỀN BẰNG CHỮ */}
-              <div className="pt-2 border-t border-emerald-200/80 text-left">
-                <div className="text-[11.5px] font-bold text-slate-700 flex items-start sm:items-center gap-1.5 flex-wrap">
-                  <span className="font-extrabold text-slate-900 not-italic shrink-0">Bằng chữ:</span>
-                  <span className="italic text-emerald-950 font-semibold bg-white/90 px-2.5 py-0.5 rounded-lg border border-emerald-300/80 shadow-2xs leading-relaxed text-xs">
-                    "{convertNumberToWords(totalSavingsVndVal)}"
-                  </span>
+                  {/* DÒNG HIỂN THỊ SỐ TIỀN BẰNG CHỮ */}
+                  <div className="pt-2 border-t border-emerald-200/80 text-left">
+                    <div className="text-[11.5px] font-bold text-slate-700 flex items-start sm:items-center gap-1.5 flex-wrap">
+                      <span className="font-extrabold text-slate-900 not-italic shrink-0">Bằng chữ:</span>
+                      <span className="italic text-emerald-950 font-semibold bg-white/90 px-2.5 py-0.5 rounded-lg border border-emerald-300/80 shadow-2xs leading-relaxed text-xs">
+                        "{convertNumberToWords(totalSavingsVndVal)}"
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              )}
+
+              {/* MODE 2: Category 1 & Category 2 - 1.Tiết kiệm Vật tư / 2.Tiết kiệm Chi phí */}
+              {(categoryMode === "MATERIAL_SAVINGS" || categoryMode === "COST_SAVINGS") && (
+                <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-extrabold text-xs text-amber-950 flex items-center gap-1.5">
+                      <span>💰</span>
+                      <span>
+                        Nhập số tiền tiết kiệm ({categoryMode === "MATERIAL_SAVINGS" ? "1. Tiết kiệm Vật tư" : "2. Tiết kiệm Chi phí"})
+                      </span>
+                    </span>
+                    <span className="text-[10px] font-bold text-amber-900 bg-amber-100 border border-amber-300 px-2.5 py-0.5 rounded-full">
+                      Tiết kiệm trực tiếp
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-slate-700 block">
+                      TỔNG SỐ TIỀN TIẾT KIỆM (VNĐ) <span className="text-rose-600 font-bold">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      step="1000"
+                      value={directSavingsVnd}
+                      onChange={(e) => setDirectSavingsVnd(e.target.value)}
+                      placeholder="Nhập số tiền tiết kiệm... VD: 5000000"
+                      className="w-full p-2.5 rounded-xl border border-amber-300 text-sm font-black text-slate-900 bg-white outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600 shadow-2xs"
+                    />
+                  </div>
+
+                  <div className="pt-2 border-t border-amber-200/80 text-left">
+                    <div className="text-[11.5px] font-bold text-slate-700 flex items-start sm:items-center gap-1.5 flex-wrap">
+                      <span className="font-extrabold text-slate-900 not-italic shrink-0">Bằng chữ:</span>
+                      <span className="italic text-amber-950 font-semibold bg-white/90 px-2.5 py-0.5 rounded-lg border border-amber-300 shadow-2xs leading-relaxed text-xs">
+                        "{convertNumberToWords(Number(directSavingsVnd) || 0)}"
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* MODE 3: Categories 4, 5, 6, 7 - An toàn lao động, 5S, Tự động hoá, MMTB CCDC (Không có thời gian/số tiền) */}
+              {categoryMode === "NON_FINANCIAL" && (
+                <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-200 space-y-2">
+                  <div className="flex items-center gap-2 text-blue-900 font-extrabold text-xs">
+                    <span className="text-sm">🛡️</span>
+                    <span>
+                      Đánh giá Phê duyệt Tính Khả thi ({proposal.category_label || proposal.category || "Cải tiến Quy trình"})
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-blue-800 font-medium leading-relaxed bg-white/80 p-2.5 rounded-xl border border-blue-200">
+                    💡 Cải tiến thuộc nhóm <strong>{(proposal as any).product_group || proposal.category_label || proposal.category}</strong> (tập trung cải thiện môi trường làm việc, an toàn lao động, chuẩn hóa 5S, tự động hóa hoặc thiết bị MMTB CCDC). Sáng kiến này <strong>không phát sinh chỉ số thời gian hay số tiền tiết kiệm trực tiếp</strong>.
+                  </p>
+                </div>
+              )}
+            </>
           )}
 
           {/* GHI CHÚ (KHÔNG BẮT BUỘC) */}

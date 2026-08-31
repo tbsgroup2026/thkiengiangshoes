@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng Ký Đề Xuất Cải Tiến Kaizen | TBS Group</title>
+  
+  <!-- Google Fonts: Inter & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Tabler Icons SVG WebFont -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+
+  <style>
+    :root {
+      --primary: #006838;
+      --primary-hover: #00522c;
+      --primary-light: #e6f4ed;
+      --accent: #10b981;
+      --navy: #0b1739;
+      --bg-slate: #f8fafc;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+      --card-bg: #ffffff;
+      --radius: 16px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03);
+      --shadow-md: 0 10px 25px -5px rgba(0,0,0,0.06), 0 8px 10px -6px rgba(0,0,0,0.04);
+      --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-slate);
+      color: var(--text-main);
+      line-height: 1.5;
+      padding-bottom: 60px;
+    }
+
+    /* Header Banner */
+    header {
+      background: linear-gradient(135deg, #0b1739 0%, #1e293b 50%, #006838 100%);
+      color: white;
+      padding: 32px 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      margin-bottom: 32px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    header::before {
+      content: "";
+      position: absolute;
+      top: -50px;
+      right: -50px;
+      width: 250px;
+      height: 250px;
+      background: radial-gradient(circle, rgba(16,185,129,0.2) 0%, rgba(0,0,0,0) 70%);
+      border-radius: 50%;
+    }
+
+    .header-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .brand-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-logo {
+      background: white;
+      padding: 8px 14px;
+      border-radius: 12px;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      color: var(--primary);
+      font-size: 20px;
+      letter-spacing: -0.5px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .header-text h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+    }
+
+    .header-text p {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+
+    /* Main Layout Container */
+    .main-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    /* Card Wrapper */
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid #f1f5f9;
+      background: #fafafa;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .card-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--navy);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-title i {
+      color: var(--primary);
+      font-size: 22px;
+    }
+
+    .card-body {
+      padding: 24px;
+    }
+
+    /* Form Styles */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 20px;
+    }
+
+    .col-12 { grid-column: span 12; }
+    .col-6 { grid-column: span 6; }
+    .col-4 { grid-column: span 4; }
+
+    @media (max-width: 768px) {
+      .col-6, .col-4 { grid-column: span 12; }
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: #334155;
+    }
+
+    .form-label .required {
+      color: #ef4444;
+      margin-left: 3px;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 10px 14px;
+      font-size: 13.5px;
+      font-family: inherit;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      background: white;
+      color: var(--text-main);
+      transition: all 0.2s ease;
+      outline: none;
+    }
+
+    .form-control:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(0, 104, 56, 0.15);
+    }
+
+    .form-control.is-invalid {
+      border-color: #ef4444;
+      background-color: #fef2f2;
+    }
+
+    .form-control.is-invalid:focus {
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+    }
+
+    textarea.form-control {
+      resize: vertical;
+      min-height: 90px;
+    }
+
+    .error-feedback {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: #dc2626;
+      display: none;
+      align-items: center;
+      gap: 4px;
+      margin-top: 2px;
+    }
+
+    .form-group.has-error .error-feedback {
+      display: flex;
+    }
+
+    /* Submit Button */
+    .btn-submit-wrap {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 8px;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: white;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 12px 28px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0, 104, 56, 0.2);
+    }
+
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(0, 104, 56, 0.3);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    /* Table & Filter Bar */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+      background: #f8fafc;
+      padding: 14px 18px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      flex: 1;
+    }
+
+    .search-input-wrap {
+      position: relative;
+      flex: 1;
+      min-width: 220px;
+    }
+
+    .search-input-wrap i {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #94a3b8;
+      font-size: 16px;
+    }
+
+    .search-input-wrap input {
+      padding-left: 36px;
+    }
+
+    .category-filter-select {
+      min-width: 180px;
+    }
+
+    .counter-badge {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--navy);
+      background: #e2e8f0;
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
+
+    /* Table Styling */
+    .table-container {
+      overflow-x: auto;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    thead th {
+      background: #f1f5f9;
+      color: #475569;
+      font-weight: 700;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-color);
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid #f1f5f9;
+      transition: background 0.15s ease;
+      cursor: pointer;
+    }
+
+    tbody tr:hover {
+      background-color: #f8fafc;
+    }
+
+    tbody td {
+      padding: 14px 16px;
+      vertical-align: middle;
+      color: #334155;
+    }
+
+    .code-badge {
+      font-family: monospace;
+      font-weight: 700;
+      color: #1e40af;
+      background: #dbeafe;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+    }
+
+    .category-pill {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11.5px;
+      font-weight: 700;
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11.5px;
+      font-weight: 700;
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .status-badge.approved {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    /* Empty state */
+    .empty-state {
+      padding: 48px 20px;
+      text-align: center;
+      color: var(--text-muted);
+    }
+
+    .empty-state i {
+      font-size: 48px;
+      color: #cbd5e1;
+      margin-bottom: 12px;
+    }
+
+    /* Toast Notification */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 1000;
+    }
+
+    .toast {
+      background: var(--navy);
+      color: white;
+      padding: 14px 20px;
+      border-radius: 12px;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13.5px;
+      font-weight: 600;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      border-left: 4px solid var(--accent);
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* Detail Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .modal-backdrop.active {
+      display: flex;
+    }
+
+    .modal-card {
+      background: white;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 650px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      animation: modalFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: scale(0.95) translateY(10px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #fafafa;
+    }
+
+    .modal-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--navy);
+    }
+
+    .btn-close {
+      background: none;
+      border: none;
+      font-size: 20px;
+      color: #94a3b8;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 8px;
+      transition: color 0.15s;
+    }
+
+    .btn-close:hover {
+      color: var(--navy);
+      background: #e2e8f0;
+    }
+
+    .modal-body {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .detail-row {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 12px;
+      font-size: 13px;
+    }
+
+    .detail-label {
+      font-weight: 700;
+      color: #64748b;
+    }
+
+    .detail-val {
+      color: #0f172a;
+      font-weight: 500;
+    }
+
+    .detail-box {
+      background: #f8fafc;
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-container">
+      <div class="brand-title-wrap">
+        <div class="brand-logo">TBS KAIZEN</div>
+        <div class="header-text">
+          <h1>Đăng Ký Đề Xuất Cải Tiến Kaizen</h1>
+          <p>Cải tiến liên tục — Nâng cao năng suất & chất lượng môi trường làm việc</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <div class="main-container">
+
+    <!-- FORM CARD -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <i class="ti ti-edit"></i>
+          <span>Biểu Mẫu Đăng Ký Đề Xuất Mới</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <form id="kaizenForm" novalidate>
+          <div class="form-grid">
+            
+            <!-- Họ và tên -->
+            <div class="form-group col-4" id="grp-fullname">
+              <label class="form-label" for="fullname">Họ và tên người đề xuất <span class="required">*</span></label>
+              <input type="text" id="fullname" class="form-control" placeholder="VD: Nguyễn Văn A">
+              <div class="error-feedback"><i class="ti ti-alert-circle"></i> Vui lòng nhập họ và tên</div>
+            </div>
+
+            <!-- Bộ phận / Phòng ban -->
+            <div class="form-group col-4" id="grp-department">
+              <label class="form-label" for="department">Bộ phận / Phòng ban <span class="required">*</span></label>
+              <input type="text" id="department" class="form-control" placeholder="VD: Xưởng Mũi KG1 / Phòng CN-CI">
+              <div class="error-feedback"><i class="ti ti-alert-circle"></i> Vui lòng nhập bộ phận / phòng ban</div>
+            </div>
+
+            <!-- Ngày đề xuất -->
+            <div class="form-group col-4" id="grp-date">
+              <label class="form-label" for="proposalDate">Ngày đề xuất <span class="required">*</span></label>
+              <input type="date" id="proposalDate" class="form-control">
+              <div class="error-feedback"><i class="ti ti-alert-circle"></i> Vui lòng chọn ngày đề xuất</div>
+            </div>
+
+            <!-- Tiêu đề đề xuất -->
+            <div class="form-group col-8" id="grp-title">
+              <label class="form-label" for="title">Tiêu đề đề xuất <span class="required">*</span></label>
+              <input type="text" id="title" class="form-control" placeholder="VD: Cải tiến gá kẹp máy may tự động giúp tăng năng suất 15%">
+              <div class="error-feedback"><i class="ti ti-alert-circle"></i> Vui lòng nhập tiêu đề đề xuất</div>
+            </div>
+
+            <!-- Phân loại cải tiến -->
+            <div class="form-group col-4" id="grp-category">
+              <label class="form-label" for="category">Phân loại cải tiến <span class="required">*</span></label>
+              <select id="category" class="form-control">
+                <option value="">-- Chọn phân loại --</option>
+                <option value="Tiết kiệm Vật tư">1. Tiết kiệm Vật tư</option>
+                <option value="Tiết kiệm Chi phí">2. Tiết kiệm Chi phí</option>
+                <option value="Tăng Năng suất">3. Tăng Năng suất</option>
+                <option value="An toàn lao động">4. An toàn lao động</option>
+                <option value="5S">5. 5S</option>
+                <option value="Tự động hoá">6. Tự động hoá</option>
+                <option value="MMTB CCDC">7. MMTB CCDC</option>
+              </select>
+              <div class="error-feedback"><i class="ti ti-alert-circle"></i> Vui lòng chọn phân loại cải tiến</div>
+            </div>
+
+            <!-- Mô tả hiện trạng -->
+            <div class="form-group col-12" id="grp-problem">
+              <label class="form-label" for="problem">Mô tả hiện trạng / Vấn đề gặp phải <span class="required">*</span></label>
+              <textarea id="problem" class="form-control" placeholder="Mô tả chi tiết khó khăn, lãng phí thời gian/nguyên vật liệu hoặc nguy cơ an toàn hiện tại..."></textarea>
+              <div class="error-feedback"><i class="ti ti-alert-circle"></i> Vui lòng mô tả hiện trạng / vấn đề</div>
+            </div>
+
+            <!-- Giải pháp cải tiến -->
+            <div class="form-group col-12" id="grp-solution">
+              <label class="form-label" for="solution">Giải pháp cải tiến đề xuất <span class="required">*</span></label>
+              <textarea id="solution" class="form-control" placeholder="Nêu rõ phương án thay đổi, thiết kế lại, tự động hoá hoặc rút ngắn công đoạn..."></textarea>
+              <div class="error-feedback"><i class="ti ti-alert-circle"></i> Vui lòng nhập giải pháp cải tiến</div>
+            </div>
+
+            <!-- Lợi ích dự kiến -->
+            <div class="form-group col-12">
+              <label class="form-label" for="benefit">Lợi ích dự kiến <span style="font-weight: normal; color: #64748b;">(Tùy chọn)</span></label>
+              <textarea id="benefit" class="form-control" placeholder="Dự kiến tiết kiệm bao nhiêu giây/đôi, bao nhiêu VNĐ/tháng hoặc cải thiện 5S/An toàn..."></textarea>
+            </div>
+
+          </div>
+
+          <div class="btn-submit-wrap">
+            <button type="submit" class="btn-primary">
+              <i class="ti ti-send"></i>
+              <span>Gửi Đề Xuất Kaizen</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- LIST TABLE CARD -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <i class="ti ti-list-check"></i>
+          <span>Danh Sách Đề Xuất Đã Đăng Ký</span>
+        </div>
+        <span class="counter-badge" id="totalCounter">0 Đề xuất</span>
+      </div>
+      <div class="card-body">
+        
+        <!-- Filter Controls Bar -->
+        <div class="filter-bar">
+          <div class="filter-group">
+            <div class="search-input-wrap">
+              <i class="ti ti-search"></i>
+              <input type="text" id="searchInput" class="form-control" placeholder="Tìm theo tiêu đề hoặc người đề xuất...">
+            </div>
+            <select id="categoryFilter" class="form-control category-filter-select">
+              <option value="ALL">🔍 Tất cả phân loại</option>
+              <option value="Tiết kiệm Vật tư">Tiết kiệm Vật tư</option>
+              <option value="Tiết kiệm Chi phí">Tiết kiệm Chi phí</option>
+              <option value="Tăng Năng suất">Tăng Năng suất</option>
+              <option value="An toàn lao động">An toàn lao động</option>
+              <option value="5S">5S</option>
+              <option value="Tự động hoá">Tự động hoá</option>
+              <option value="MMTB CCDC">MMTB CCDC</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Table View -->
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Mã Đề Xuất</th>
+                <th>Ngày</th>
+                <th>Người Đề Xuất</th>
+                <th>Bộ Phận</th>
+                <th>Tiêu Đề</th>
+                <th>Phân Loại</th>
+                <th>Trạng Thái</th>
+              </tr>
+            </thead>
+            <tbody id="proposalsTableBody">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <div id="emptyState" class="empty-state" style="display: none;">
+          <i class="ti ti-folder-off"></i>
+          <p style="font-weight: 600;">Chưa có đề xuất nào phù hợp</p>
+          <span style="font-size: 12px; color: #94a3b8;">Hãy tạo đề xuất mới từ biểu mẫu phía trên</span>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div class="toast-container">
+    <div id="toast" class="toast">
+      <i class="ti ti-circle-check" style="font-size: 20px; color: #10b981;"></i>
+      <span>Đăng ký thành công!</span>
+    </div>
+  </div>
+
+  <!-- DETAIL MODAL -->
+  <div id="detailModal" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title" id="modalProposalCode">Chi tiết đề xuất</div>
+        <button class="btn-close" id="btnCloseModal"><i class="ti ti-x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="detail-row">
+          <span class="detail-label">Người đề xuất:</span>
+          <span class="detail-val" id="modalFullname">-</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Bộ phận:</span>
+          <span class="detail-val" id="modalDepartment">-</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Ngày gửi:</span>
+          <span class="detail-val" id="modalDate">-</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Phân loại:</span>
+          <span class="detail-val" id="modalCategory">-</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Trạng thái:</span>
+          <span class="detail-val" id="modalStatus">-</span>
+        </div>
+        
+        <div style="margin-top: 8px;">
+          <span class="detail-label" style="display: block; margin-bottom: 4px;">Tiêu đề:</span>
+          <div class="detail-val" style="font-weight: 700; font-size: 14px;" id="modalTitle">-</div>
+        </div>
+
+        <div>
+          <span class="detail-label" style="display: block; margin-bottom: 4px;">Hiện trạng / Vấn đề:</span>
+          <div class="detail-box" id="modalProblem">-</div>
+        </div>
+
+        <div>
+          <span class="detail-label" style="display: block; margin-bottom: 4px;">Giải pháp cải tiến:</span>
+          <div class="detail-box" id="modalSolution">-</div>
+        </div>
+
+        <div>
+          <span class="detail-label" style="display: block; margin-bottom: 4px;">Lợi ích dự kiến:</span>
+          <div class="detail-box" id="modalBenefit">-</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    const STORAGE_KEY = "kaizen_proposals";
+
+    // Sample initial proposals if empty
+    const INITIAL_PROPOSALS = [
+      {
+        id: "KZ-0001",
+        fullname: "Đặng Thị Hồng Mũi",
+        department: "Xưởng Mũi KG2",
+        date: "2026-08-28",
+        title: "May sống công đoạn may dán dây viền, sop thể hiện may lập trình",
+        category: "Tăng Năng suất",
+        problem: "Thao tác may viền thủ công tốn 45 giây/đôi, hay bị gập nếp cong lệch.",
+        solution: "Thiết kế gá may lập trình định hình tự động công đoạn dán viền.",
+        benefit: "Rút ngắn thời gian từ 45s xuống 18s/đôi, tiết kiệm 27s/đôi.",
+        status: "Chờ duyệt"
+      },
+      {
+        id: "KZ-0002",
+        fullname: "Lâm Văn Phú",
+        department: "Bộ Phận Chuyển Đổi Số & CN-CI",
+        date: "2026-08-29",
+        title: "May lập trình dây web gót giày Skechers",
+        category: "Tăng Năng suất",
+        problem: "Định vị dây gót bằng tay không đồng đều dẫn đến phế phẩm 2.5%.",
+        solution: "Lập trình máy may tự động may định vị dây web gót chính xác 100%.",
+        benefit: "Giảm tỉ lệ phế phẩm về < 0.1%, tăng tốc độ chuyền may 15%.",
+        status: "Chờ duyệt"
+      }
+    ];
+
+    // Element Selectors
+    const form = document.getElementById("kaizenForm");
+    const fullnameInput = document.getElementById("fullname");
+    const departmentInput = document.getElementById("department");
+    const proposalDateInput = document.getElementById("proposalDate");
+    const titleInput = document.getElementById("title");
+    const categorySelect = document.getElementById("category");
+    const problemTextarea = document.getElementById("problem");
+    const solutionTextarea = document.getElementById("solution");
+    const benefitTextarea = document.getElementById("benefit");
+
+    const proposalsTableBody = document.getElementById("proposalsTableBody");
+    const emptyState = document.getElementById("emptyState");
+    const totalCounter = document.getElementById("totalCounter");
+    const searchInput = document.getElementById("searchInput");
+    const categoryFilter = document.getElementById("categoryFilter");
+    const toast = document.getElementById("toast");
+
+    // Modal elements
+    const detailModal = document.getElementById("detailModal");
+    const btnCloseModal = document.getElementById("btnCloseModal");
+
+    // Set Default Date to Today
+    function setDefaultDate() {
+      const today = new Date().toISOString().split("T")[0];
+      proposalDateInput.value = today;
+    }
+
+    // Get Proposals from LocalStorage
+    function getProposals() {
+      const data = localStorage.getItem(STORAGE_KEY);
+      if (!data) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_PROPOSALS));
+        return INITIAL_PROPOSALS;
+      }
+      try {
+        return JSON.parse(data);
+      } catch (e) {
+        return INITIAL_PROPOSALS;
+      }
+    }
+
+    // Save Proposals to LocalStorage
+    function saveProposals(proposals) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(proposals));
+    }
+
+    // Generate Next Proposal Code (KZ-0001, KZ-0002...)
+    function generateNextCode(proposals) {
+      let maxNum = 0;
+      proposals.forEach(p => {
+        if (p.id && p.id.startsWith("KZ-")) {
+          const num = parseInt(p.id.replace("KZ-", ""), 10);
+          if (!isNaN(num) && num > maxNum) maxNum = num;
+        }
+      });
+      const nextNum = maxNum + 1;
+      return "KZ-" + String(nextNum).padStart(4, "0");
+    }
+
+    // Show Toast
+    function showToast(msg = "Đăng ký thành công!") {
+      toast.querySelector("span").textContent = msg;
+      toast.classList.add("show");
+      setTimeout(() => {
+        toast.classList.remove("show");
+      }, 3000);
+    }
+
+    // Form Field Validation
+    function validateField(inputEl, groupEl) {
+      const val = inputEl.value.trim();
+      if (!val) {
+        inputEl.classList.add("is-invalid");
+        groupEl.classList.add("has-error");
+        return false;
+      } else {
+        inputEl.classList.remove("is-invalid");
+        groupEl.classList.remove("has-error");
+        return true;
+      }
+    }
+
+    // Attach Input Event Listeners for Live Validation Clearing
+    const fieldsToValidate = [
+      { input: fullnameInput, group: document.getElementById("grp-fullname") },
+      { input: departmentInput, group: document.getElementById("grp-department") },
+      { input: proposalDateInput, group: document.getElementById("grp-date") },
+      { input: titleInput, group: document.getElementById("grp-title") },
+      { input: categorySelect, group: document.getElementById("grp-category") },
+      { input: problemTextarea, group: document.getElementById("grp-problem") },
+      { input: solutionTextarea, group: document.getElementById("grp-solution") }
+    ];
+
+    fieldsToValidate.forEach(item => {
+      item.input.addEventListener("input", () => validateField(item.input, item.group));
+      item.input.addEventListener("change", () => validateField(item.input, item.group));
+    });
+
+    // Handle Form Submit
+    form.addEventListener("submit", function(e) {
+      e.preventDefault();
+
+      let isValid = true;
+      fieldsToValidate.forEach(item => {
+        const fieldValid = validateField(item.input, item.group);
+        if (!fieldValid) isValid = false;
+      });
+
+      if (!isValid) return;
+
+      const proposals = getProposals();
+      const newCode = generateNextCode(proposals);
+
+      const newProposal = {
+        id: newCode,
+        fullname: fullnameInput.value.trim(),
+        department: departmentInput.value.trim(),
+        date: proposalDateInput.value,
+        title: titleInput.value.trim(),
+        category: categorySelect.value,
+        problem: problemTextarea.value.trim(),
+        solution: solutionTextarea.value.trim(),
+        benefit: benefitTextarea.value.trim() || "Chưa cập nhật",
+        status: "Chờ duyệt"
+      };
+
+      proposals.unshift(newProposal);
+      saveProposals(proposals);
+
+      // Reset form
+      form.reset();
+      setDefaultDate();
+      fieldsToValidate.forEach(item => {
+        item.input.classList.remove("is-invalid");
+        item.group.classList.remove("has-error");
+      });
+
+      showToast("🎉 Đăng ký đề xuất Kaizen thành công!");
+      renderTable();
+    });
+
+    // Render Table Data with Search & Filter
+    function renderTable() {
+      const proposals = getProposals();
+      const query = searchInput.value.toLowerCase().trim();
+      const selectedCat = categoryFilter.value;
+
+      const filtered = proposals.filter(p => {
+        const matchSearch = p.title.toLowerCase().includes(query) || p.fullname.toLowerCase().includes(query) || p.id.toLowerCase().includes(query);
+        const matchCat = selectedCat === "ALL" || p.category === selectedCat;
+        return matchSearch && matchCat;
+      });
+
+      totalCounter.textContent = `${filtered.length} / ${proposals.length} Đề xuất`;
+
+      if (filtered.length === 0) {
+        proposalsTableBody.innerHTML = "";
+        emptyState.style.display = "block";
+        return;
+      }
+
+      emptyState.style.display = "none";
+      proposalsTableBody.innerHTML = filtered.map(p => `
+        <tr onclick="openModal('${p.id}')">
+          <td><span class="code-badge">${p.id}</span></td>
+          <td>${p.date}</td>
+          <td style="font-weight: 700; color: #0f172a;">${p.fullname}</td>
+          <td>${p.department}</td>
+          <td style="font-weight: 600; max-width: 300px;">${p.title}</td>
+          <td><span class="category-pill">${p.category}</span></td>
+          <td>
+            <span class="status-badge ${p.status === 'Đã duyệt' ? 'approved' : ''}">
+              <i class="ti ti-clock"></i> ${p.status}
+            </span>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    // Modal Details Logic
+    function openModal(id) {
+      const proposals = getProposals();
+      const item = proposals.find(p => p.id === id);
+      if (!item) return;
+
+      document.getElementById("modalProposalCode").textContent = `Chi Tiết Đề Xuất ${item.id}`;
+      document.getElementById("modalFullname").textContent = item.fullname;
+      document.getElementById("modalDepartment").textContent = item.department;
+      document.getElementById("modalDate").textContent = item.date;
+      document.getElementById("modalCategory").textContent = item.category;
+      document.getElementById("modalStatus").textContent = item.status;
+      document.getElementById("modalTitle").textContent = item.title;
+      document.getElementById("modalProblem").textContent = item.problem;
+      document.getElementById("modalSolution").textContent = item.solution;
+      document.getElementById("modalBenefit").textContent = item.benefit || "Chưa cập nhật";
+
+      detailModal.classList.add("active");
+    }
+
+    function closeModal() {
+      detailModal.classList.remove("active");
+    }
+
+    btnCloseModal.addEventListener("click", closeModal);
+    detailModal.addEventListener("click", function(e) {
+      if (e.target === detailModal) closeModal();
+    });
+
+    // Event Listeners for Filters
+    searchInput.addEventListener("input", renderTable);
+    categoryFilter.addEventListener("change", renderTable);
+
+    // Initial Load
+    document.addEventListener("DOMContentLoaded", () => {
+      setDefaultDate();
+      renderTable();
+    });
+  </script>
+</body>
+</html>

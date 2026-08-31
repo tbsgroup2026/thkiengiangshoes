@@ -30,6 +30,8 @@ import {
   LandingCMSConfig,
 } from "@/lib/landingCMS";
 import WorkspaceGallery from "@/components/home/WorkspaceGallery";
+import { uploadCloudinaryFile } from "@/lib/cloudinary";
+import SafeImage from "@/components/SafeImage";
 
 const ICON_OPTIONS = [
   { value: "building", label: "Sảnh / Tòa nhà", icon: IconBuilding },
@@ -164,22 +166,11 @@ export default function WorkspaceCMSManager({ departments, onChange, onSave, sho
       };
       reader.readAsDataURL(file);
 
-      // Cloudinary upload
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("upload_preset", CLOUDINARY_PRESET);
-
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.secure_url) {
-          updateImageSrc(depId, imgIndex, data.secure_url);
-          showToast(`☁️ Tải ảnh "${file.name}" lên Cloudinary CDN thành công!`);
-        }
+      // Unique Cloudinary upload
+      const res = await uploadCloudinaryFile(file, { category: "workspace" });
+      if (res.secure_url) {
+        updateImageSrc(depId, imgIndex, res.secure_url);
+        showToast(`☁️ Tải ảnh "${file.name}" lên Cloudinary CDN thành công!`);
       }
     } catch (e: any) {
       console.warn("Cloudinary upload warning:", e);
@@ -512,9 +503,12 @@ export default function WorkspaceCMSManager({ departments, onChange, onSave, sho
                 >
                   {/* Image Preview Box */}
                   <div className="aspect-video rounded-xl bg-slate-900 flex items-center justify-center relative overflow-hidden group">
-                    <img
+                    <SafeImage
+                      productId={imgItem.id || imgIdx}
                       src={imgItem.src}
                       alt={imgItem.caption || `Photo ${imgIdx + 1}`}
+                      fallbackTitle={imgItem.caption || `Ảnh #${imgIdx + 1}`}
+                      objectFit="cover"
                       className="w-full h-full object-cover"
                     />
                     <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-slate-950/80 text-white font-mono text-[10px] font-bold">

@@ -20,16 +20,44 @@ import {
   IconBuildingFactory,
 } from "@tabler/icons-react";
 import { INITIAL_ORG_TREE } from "./organizationTree";
+import KaizenDuplicateCompareModal from "./KaizenDuplicateCompareModal";
 
-const CATEGORIES = [
-  { id: "PRODUCTIVITY", label: "3.Tăng Năng suất", color: "bg-blue-600 text-white" },
+export const CATEGORIES = [
+  { id: "MATERIAL_SAVING", label: "1.Tiết kiệm Vật tư", color: "bg-amber-600 text-white" },
   { id: "COST_SAVING", label: "2.Tiết kiệm Chi phí", color: "bg-emerald-600 text-white" },
-  { id: "MATERIAL_SAVING", label: "1.Tiết kiệm Vật tư", color: "bg-blue-500 text-white" },
+  { id: "PRODUCTIVITY", label: "3.Tăng Năng suất", color: "bg-blue-600 text-white" },
   { id: "SAFETY", label: "4.An toàn lao động", color: "bg-[#006838] text-white" },
   { id: "5S", label: "5.5S", color: "bg-sky-500 text-white" },
   { id: "AUTOMATION", label: "6.Tự động hoá", color: "bg-indigo-600 text-white" },
   { id: "EQUIPMENT", label: "7.MMTB CCDC", color: "bg-purple-600 text-white" },
 ];
+
+export function normalizeCategoryId(catRaw?: string): string {
+  if (!catRaw) return "PRODUCTIVITY";
+  const cat = catRaw.trim();
+  if (cat === "MATERIAL_SAVING" || cat === "SAVE_MATERIAL" || cat.includes("1.") || cat.includes("Vật tư") || cat.includes("Vat tu")) {
+    return "MATERIAL_SAVING";
+  }
+  if (cat === "COST_SAVING" || cat === "SAVE_COST" || cat.includes("2.") || cat.includes("Chi phí") || cat.includes("Chi phi")) {
+    return "COST_SAVING";
+  }
+  if (cat === "PRODUCTIVITY" || cat === "INCREASE_PRODUCTIVITY" || cat.includes("3.") || cat.includes("Năng suất") || cat.includes("Nang suat")) {
+    return "PRODUCTIVITY";
+  }
+  if (cat === "SAFETY" || cat.includes("4.") || cat.includes("An toàn") || cat.includes("An toan")) {
+    return "SAFETY";
+  }
+  if (cat === "5S" || cat.includes("5.")) {
+    return "5S";
+  }
+  if (cat === "AUTOMATION" || cat.includes("6.") || cat.includes("Tự động") || cat.includes("Tu dong")) {
+    return "AUTOMATION";
+  }
+  if (cat === "EQUIPMENT" || cat === "MMTB_CCDC" || cat.includes("7.") || cat.includes("MMTB") || cat.includes("CCDC")) {
+    return "EQUIPMENT";
+  }
+  return "PRODUCTIVITY";
+}
 
 export const REAL_FACTORIES = [
   "Kiên Giang 1",
@@ -122,6 +150,10 @@ export default function KaizenPublicSubmitForm({
   const [uploading, setUploading] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [unitTitle, setUnitTitle] = useState<string>("THNM Kiên Giang");
+  const [duplicateMatches, setDuplicateMatches] = useState<any[]>([]);
+  const [duplicatePayload, setDuplicatePayload] = useState<any>(null);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -323,8 +355,8 @@ export default function KaizenPublicSubmitForm({
         factory: initialData.factory || "KG 1",
         department: initialData.department || "",
         title: initialData.title || "",
-        category: "PRODUCTIVITY",
-        categoryLabel: "3.Tăng Năng suất",
+        category: initialData.category ? normalizeCategoryId(initialData.category) : "PRODUCTIVITY",
+        categoryLabel: initialData.category_label || initialData.categoryLabel || "3.Tăng Năng suất",
         productGroup: "",
         productCode: initialData.product_code || initialData.productCode || "",
         quantity: 0,
@@ -388,30 +420,65 @@ export default function KaizenPublicSubmitForm({
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: "beforeImageUrl" | "afterImageUrl") => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    try {
+      setUploading(true);
+      showToast(`☁️ Đang tải ảnh lên Cloudinary...`);
+      
+      const uploadPromises = Array.from(files).map((file) => {
+        if (!file.type.startsWith("image/")) {
+          throw new Error("Vui lòng chọn file hình ảnh (JPG, PNG, WEBP)");
+        }
+        if (file.size > 15 * 1024 * 1024) {
+          throw new Error("Dung lượng ảnh tối đa là 15MB");
+        }
+        return uploadToCloudinary(file, "image");
+      });
+
+      const urls = await Promise.all(uploadPromises);
+      setForm((prev) => {
+        const existing = prev[fieldName] ? prev[fieldName].split(",").map((s) => s.trim()).filter(Boolean) : [];
+        const combined = Array.from(new Set([...existing, ...urls]));
+        return {
+          ...prev,
+          [fieldName]: combined.join(","),
+        };
+      });
+      showToast("✅ Ảnh đã tải lên thành công!");
+    } catch (err: any) {
+      showToast(`❌ Lỗi tải ảnh: ${err.message}`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: "beforeVideoUrl" | "afterVideoUrl") => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      showToast("❌ Vui lòng chọn file hình ảnh (JPG, PNG, WEBP)");
+    if (!file.type.startsWith("video/")) {
+      showToast("❌ Vui lòng chọn file video (MP4, MOV, WEBM, AVI)");
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      showToast("❌ Dung lượng ảnh tối đa là 10MB");
+    if (file.size > 50 * 1024 * 1024) {
+      showToast("❌ Dung lượng video tối đa là 50MB");
       return;
     }
 
     try {
       setUploading(true);
-      showToast("☁️ Đang tải ảnh lên Cloudinary...");
-      const cloudinaryUrl = await uploadToCloudinary(file, "image");
+      showToast("🎬 Đang tải video lên Cloudinary...");
+      const videoUrl = await uploadToCloudinary(file, "video");
       setForm((prev) => ({
         ...prev,
-        [fieldName]: cloudinaryUrl,
+        [fieldName]: videoUrl,
       }));
-      showToast("✅ Ảnh đã tải lên thành công!");
+      showToast("✅ Video đã tải lên thành công!");
     } catch (err: any) {
-      showToast(`❌ Lỗi tải ảnh: ${err.message}`);
+      showToast(`❌ Lỗi tải video: ${err.message}`);
     } finally {
       setUploading(false);
     }
@@ -432,12 +499,13 @@ export default function KaizenPublicSubmitForm({
       !form.proposerPosition.trim() ||
       !targetFactory ||
       !targetDept ||
-      !form.beforeDescription.trim() ||
-      !form.afterSolution.trim()
+      !form.beforeDescription.trim()
     ) {
-      showToast("⚠️ Vui lòng điền đầy đủ các trường thông tin bắt buộc!");
+      showToast("⚠️ Vui lòng điền mã số nhân viên, họ tên, đơn vị và mô tả hiện trạng trước cải tiến!");
       return;
     }
+
+    const finalAfterSolution = form.afterSolution.trim() || "Đề xuất đăng ký hiện trạng trước cải tiến";
 
     try {
       setSubmitting(true);
@@ -457,6 +525,7 @@ export default function KaizenPublicSubmitForm({
         factory: targetFactory,
         region: targetFactory,
         department: targetDept,
+        line: selectedFormLine,
         proposerMonth: currentMonth,
         proposerYear: currentYear,
         beforeImageUrl: finalBeforeImg,
@@ -465,9 +534,44 @@ export default function KaizenPublicSubmitForm({
         afterVideoUrl: "",
         efficiencyValueVND: 0,
         registrationType: "THI_DUA",
-        sub_status: "CHO_REVIEW",
+        sub_status: "CHO_DUYET",
+        trang_thai: "CHO_DUYET",
         isPublicScan: true,
       };
+
+      // ── Stage 1: Duplicate check before creating new record ──────────
+      if (!isEdit) {
+        showToast("🔍 Đang kiểm tra trùng lặp với các đề xuất hiện có...");
+        try {
+          const checkRes = await fetch("/api/ci-kaizen/check-duplicate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              factory: targetFactory,
+              region: targetFactory,
+              line: selectedFormLine,
+              category: form.category,
+              beforeDescription: form.beforeDescription,
+              afterSolution: form.afterSolution,
+              title: finalTitle,
+            }),
+          });
+          const checkJson = await checkRes.json();
+          if (checkJson.success && checkJson.isDuplicate && checkJson.matches?.length > 0) {
+            setDuplicateMatches(checkJson.matches);
+            setDuplicatePayload({
+              ...payload,
+              attachments: [
+                ...(finalBeforeImg ? [{ url: finalBeforeImg, tag: "BEFORE", type: "image" }] : []),
+                ...(finalAfterImg ? [{ url: finalAfterImg, tag: "AFTER", type: "image" }] : []),
+              ],
+            });
+            setShowDuplicateModal(true);
+            setSubmitting(false);
+            return;
+          }
+        } catch (e) {}
+      }
 
       const res = await fetch("/api/ci-kaizen", {
         method,
@@ -476,6 +580,7 @@ export default function KaizenPublicSubmitForm({
         },
         body: JSON.stringify(payload),
       });
+
 
       const json = await res.json();
       if (json.success) {
@@ -814,9 +919,39 @@ export default function KaizenPublicSubmitForm({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Phân loại cải tiến (Bắt buộc chọn 1 trong 7) */}
+              <div className="space-y-1">
+                <label className="font-black text-slate-900 flex items-center justify-between text-xs">
+                  <span>Phân loại cải tiến <span className="text-rose-600 font-bold ml-0.5">*</span></span>
+                </label>
+                <select
+                  required
+                  value={form.category}
+                  onChange={(e) => {
+                    const catId = e.target.value;
+                    const found = CATEGORIES.find((c) => c.id === catId);
+                    setForm({
+                      ...form,
+                      category: catId,
+                      categoryLabel: found ? found.label : "3.Tăng Năng suất",
+                    });
+                  }}
+                  className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-bold outline-none focus:border-[#006838] bg-white cursor-pointer ${
+                    !form.category ? "border-amber-400 bg-amber-50/50" : "border-slate-300 text-slate-800"
+                  }`}
+                >
+                  <option value="">-- Bắt buộc chọn Phân loại --</option>
+                  {CATEGORIES.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Tiêu đề cải tiến */}
               <div className="space-y-1 sm:col-span-2">
-                <label className="font-black text-slate-900">
+                <label className="font-black text-slate-900 text-xs">
                   Tiêu đề cải tiến
                 </label>
                 <input
@@ -824,20 +959,6 @@ export default function KaizenPublicSubmitForm({
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
                   placeholder="VD: Tự chế gá kẹp dưỡng may giúp giảm thao tác thừa"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-bold outline-none focus:border-[#006838]"
-                />
-              </div>
-
-              {/* mã giày */}
-              <div className="space-y-1">
-                <label className="font-black text-slate-900">
-                  mã giày
-                </label>
-                <input
-                  type="text"
-                  value={form.productCode}
-                  onChange={(e) => setForm({ ...form, productCode: e.target.value })}
-                  placeholder="VD: SK-2026-01"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-bold outline-none focus:border-[#006838]"
                 />
               </div>
@@ -858,64 +979,104 @@ export default function KaizenPublicSubmitForm({
               />
             </div>
 
-            {/* Nội dung ý tưởng đề xuất cải tiến* */}
+            {/* Nội dung ý tưởng đề xuất cải tiến (Không bắt buộc khi mới đăng ký hiện trạng) */}
             <div className="space-y-1">
               <label className="font-black text-slate-900">
-                Nội dung ý tưởng đề xuất cải tiến <span className="text-rose-600 font-bold ml-0.5">*</span>
+                Nội dung ý tưởng đề xuất cải tiến <span className="text-slate-400 font-normal ml-1">(Không bắt buộc khi mới đăng ký hiện trạng)</span>
               </label>
               <textarea
-                rows={3}
-                required
+                rows={2}
                 value={form.afterSolution}
                 onChange={(e) => setForm({ ...form, afterSolution: e.target.value })}
-                placeholder="Mô tả ý tưởng, gá kẹp mới, cải tiến quy trình và kết quả hành động đạt được..."
+                placeholder="Có thể để trống và bổ sung giải pháp sau khi được duyệt hiện trạng..."
                 className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-medium outline-none focus:border-[#006838] resize-none"
               />
             </div>
           </div>
 
           {/* ════════════════════════════════════════════════════════════════
-              SECTION D: HÌNH ẢNH MINH HỌA
+              SECTION D: HÌNH ẢNH & VIDEO TRƯỚC CẢI TIẾN (Nhiều ảnh / Video)
              ════════════════════════════════════════════════════════════════ */}
           <div className="space-y-3 pb-4 border-b border-slate-200">
             <div className="flex items-center gap-2 text-indigo-600">
               <IconPhoto size={18} />
               <h3 className="font-black text-slate-900 text-xs uppercase tracking-wide">
-                D. HÌNH ẢNH MINH HỌA
+                D. HÌNH ẢNH &amp; VIDEO TRƯỚC CẢI TIẾN (ĐÃ XẢY RA / LÃNG PHÍ)
               </h3>
             </div>
 
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-[11px] font-bold text-amber-900 flex items-center gap-2">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 text-[11px] font-bold text-[#006838] flex items-center gap-2">
               <span>📸</span>
-              <span>Ảnh Google Drive phải được chia sẻ "Bất kỳ ai có đường liên kết"</span>
+              <span>Bạn chỉ cần chọn tải lên ảnh/video hiện trạng TRƯỚC cải tiến (Có thể chọn nhiều ảnh cùng lúc)</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Before Image Upload / Paste Link */}
-              <div className="space-y-2 p-3.5 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50">
+              {/* BEFORE IMAGES (Multiple Photos Upload & Grid Preview) */}
+              <div className="space-y-2 p-3.5 rounded-2xl border-2 border-dashed border-emerald-300 bg-emerald-50/30">
                 <div className="flex items-center justify-between">
-                  <label className="font-black text-slate-900 text-xs">Ảnh TRƯỚC Cải Tiến:</label>
+                  <label className="font-black text-slate-900 text-xs flex items-center gap-1.5">
+                    <IconPhoto size={16} className="text-[#006838]" />
+                    <span>Ảnh TRƯỚC Cải Tiến (Chọn nhiều ảnh):</span>
+                  </label>
                   {form.beforeImageUrl && (
                     <button
                       type="button"
                       onClick={() => setForm({ ...form, beforeImageUrl: "" })}
-                      className="text-[11px] text-rose-600 font-bold flex items-center gap-1"
+                      className="text-[11px] text-rose-600 font-bold flex items-center gap-1 cursor-pointer"
                     >
                       <IconTrash size={13} />
-                      <span>Xóa file</span>
+                      <span>Xóa tất cả</span>
                     </button>
                   )}
                 </div>
 
+                {/* Grid preview of uploaded before images */}
                 {form.beforeImageUrl ? (
-                  <img src={form.beforeImageUrl} alt="Before" className="w-full h-32 object-cover rounded-xl border" />
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto p-1 bg-white rounded-xl border border-slate-200">
+                      {form.beforeImageUrl.split(",").map((url, idx) => {
+                        const cleanUrl = url.trim();
+                        if (!cleanUrl) return null;
+                        return (
+                          <div key={idx} className="relative group rounded-lg overflow-hidden border border-slate-200 aspect-square">
+                            <img src={cleanUrl} alt={`Before ${idx}`} className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const currentUrls = form.beforeImageUrl.split(",").map((s) => s.trim()).filter(Boolean);
+                                const updated = currentUrls.filter((_, i) => i !== idx);
+                                setForm({ ...form, beforeImageUrl: updated.join(",") });
+                              }}
+                              className="absolute top-1 right-1 bg-rose-600 text-white rounded-full p-1 shadow-md hover:bg-rose-700 transition cursor-pointer"
+                              title="Xóa ảnh này"
+                            >
+                              <IconX size={10} />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <label className="flex items-center justify-center gap-1.5 p-2 bg-white rounded-xl border border-emerald-300 cursor-pointer text-center hover:bg-emerald-50 text-[11px] font-bold text-[#006838]">
+                      <IconUpload size={14} />
+                      <span>Thêm ảnh khác</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => handleFileUpload(e, "beforeImageUrl")}
+                      />
+                    </label>
+                  </div>
                 ) : (
-                  <label className="flex flex-col items-center justify-center p-3 h-28 bg-white rounded-xl border border-slate-200 cursor-pointer text-center hover:bg-emerald-50/50">
-                    <IconUpload size={22} className="text-[#006838] mb-1" />
-                    <span className="text-[11px] font-bold text-slate-900">Upload ảnh (Tối đa 5 ảnh / 10MB)</span>
+                  <label className="flex flex-col items-center justify-center p-3 h-32 bg-white rounded-xl border border-slate-200 cursor-pointer text-center hover:bg-emerald-50/50 transition-colors">
+                    <IconUpload size={24} className="text-[#006838] mb-1" />
+                    <span className="text-[11px] font-black text-slate-900">Upload ảnh (Có thể chọn nhiều ảnh cùng lúc)</span>
+                    <span className="text-[10px] text-slate-500 font-medium">Hỗ trợ JPG, PNG, WEBP tối đa 15MB/ảnh</span>
                     <input
                       type="file"
                       accept="image/*"
+                      multiple
                       className="hidden"
                       onChange={(e) => handleFileUpload(e, "beforeImageUrl")}
                     />
@@ -923,7 +1084,7 @@ export default function KaizenPublicSubmitForm({
                 )}
 
                 <div className="space-y-1 pt-1">
-                  <label className="text-[10px] font-bold text-slate-600 block">HOẶC Dán Link Ảnh TRƯỚC (mỗi link 1 dòng):</label>
+                  <label className="text-[10px] font-bold text-slate-600 block">HOẶC Dán Link Ảnh TRƯỚC (Google Drive...):</label>
                   <textarea
                     rows={2}
                     value={form.beforeImageLink}
@@ -934,45 +1095,51 @@ export default function KaizenPublicSubmitForm({
                 </div>
               </div>
 
-              {/* After Image Upload / Paste Link */}
-              <div className="space-y-2 p-3.5 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50">
+              {/* BEFORE VIDEO (Video Upload & Link) */}
+              <div className="space-y-2 p-3.5 rounded-2xl border-2 border-dashed border-indigo-200 bg-indigo-50/30">
                 <div className="flex items-center justify-between">
-                  <label className="font-black text-slate-900 text-xs">Ảnh SAU Cải Tiến:</label>
-                  {form.afterImageUrl && (
+                  <label className="font-black text-slate-900 text-xs flex items-center gap-1.5">
+                    <IconVideo size={16} className="text-indigo-600" />
+                    <span>Video TRƯỚC Cải Tiến (Quay clip hiện trạng):</span>
+                  </label>
+                  {form.beforeVideoUrl && (
                     <button
                       type="button"
-                      onClick={() => setForm({ ...form, afterImageUrl: "" })}
-                      className="text-[11px] text-rose-600 font-bold flex items-center gap-1"
+                      onClick={() => setForm({ ...form, beforeVideoUrl: "" })}
+                      className="text-[11px] text-rose-600 font-bold flex items-center gap-1 cursor-pointer"
                     >
                       <IconTrash size={13} />
-                      <span>Xóa file</span>
+                      <span>Xóa video</span>
                     </button>
                   )}
                 </div>
 
-                {form.afterImageUrl ? (
-                  <img src={form.afterImageUrl} alt="After" className="w-full h-32 object-cover rounded-xl border" />
+                {form.beforeVideoUrl ? (
+                  <div className="space-y-1">
+                    <video src={form.beforeVideoUrl} controls className="w-full h-32 object-cover rounded-xl border bg-black" />
+                  </div>
                 ) : (
-                  <label className="flex flex-col items-center justify-center p-3 h-28 bg-white rounded-xl border border-slate-200 cursor-pointer text-center hover:bg-emerald-50/50">
-                    <IconUpload size={22} className="text-[#006838] mb-1" />
-                    <span className="text-[11px] font-bold text-slate-900">Upload ảnh (Tối đa 5 ảnh / 10MB)</span>
+                  <label className="flex flex-col items-center justify-center p-3 h-32 bg-white rounded-xl border border-slate-200 cursor-pointer text-center hover:bg-indigo-50/50 transition-colors">
+                    <IconVideo size={24} className="text-indigo-600 mb-1" />
+                    <span className="text-[11px] font-black text-slate-900">Upload Video TRƯỚC Cải Tiến</span>
+                    <span className="text-[10px] text-slate-500 font-medium">Hỗ trợ MP4, MOV, WEBM tối đa 50MB</span>
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="video/*"
                       className="hidden"
-                      onChange={(e) => handleFileUpload(e, "afterImageUrl")}
+                      onChange={(e) => handleVideoUpload(e, "beforeVideoUrl")}
                     />
                   </label>
                 )}
 
                 <div className="space-y-1 pt-1">
-                  <label className="text-[10px] font-bold text-slate-600 block">HOẶC Dán Link Ảnh SAU (mỗi link 1 dòng):</label>
-                  <textarea
-                    rows={2}
-                    value={form.afterImageLink}
-                    onChange={(e) => setForm({ ...form, afterImageLink: e.target.value })}
+                  <label className="text-[10px] font-bold text-slate-600 block">HOẶC Dán Link Video TRƯỚC (Google Drive, Youtube...):</label>
+                  <input
+                    type="text"
+                    value={form.beforeVideoLink}
+                    onChange={(e) => setForm({ ...form, beforeVideoLink: e.target.value })}
                     placeholder="https://drive.google.com/file/d/..."
-                    className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-[11px] font-medium outline-none focus:border-[#006838] resize-none"
+                    className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-[11px] font-medium outline-none focus:border-[#006838]"
                   />
                 </div>
               </div>
@@ -1019,15 +1186,61 @@ export default function KaizenPublicSubmitForm({
     </div>
   );
 
-  if (isModal) {
-    return (
-      <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 animate-in fade-in duration-200">
-        <div className="w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-          {content}
-        </div>
-      </div>
-    );
-  }
+  return (
+    <>
+      {content}
 
-  return content;
+      {showDuplicateModal && duplicatePayload && (
+        <KaizenDuplicateCompareModal
+          newSubmission={duplicatePayload}
+          matchedMatches={duplicateMatches}
+          onConfirmMerge={async (orig) => {
+            try {
+              const res = await fetch("/api/ci-kaizen/merge", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  originalProposalId: orig.id,
+                  newAttachments: duplicatePayload.attachments || [],
+                  proposerName: duplicatePayload.proposerName,
+                }),
+              });
+              const json = await res.json();
+              if (json.success) {
+                showToast(`🎉 ${json.message}`);
+                setShowDuplicateModal(false);
+                setSubmittedCode(json.originalCode || "MERGED");
+                if (onSuccess) onSuccess();
+              } else {
+                showToast(`❌ ${json.error || "Lỗi khi gộp"}`);
+              }
+            } catch (e) {
+              showToast("❌ Lỗi mạng khi thực hiện gộp!");
+            }
+          }}
+          onProceedAsNew={async () => {
+            try {
+              const res = await fetch("/api/ci-kaizen", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(duplicatePayload),
+              });
+              const json = await res.json();
+              if (json.success) {
+                setShowDuplicateModal(false);
+                setSubmittedCode(json.code || "CI-2026-OK");
+                if (onSuccess) onSuccess();
+              } else {
+                showToast(`❌ ${json.error || "Lỗi khi gửi đề xuất"}`);
+              }
+            } catch (e) {
+              showToast("❌ Lỗi mạng!");
+            }
+          }}
+          onClose={() => setShowDuplicateModal(false)}
+        />
+      )}
+    </>
+  );
 }
+

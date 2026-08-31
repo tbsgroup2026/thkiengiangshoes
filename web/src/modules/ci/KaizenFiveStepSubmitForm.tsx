@@ -268,8 +268,8 @@ export default function KaizenFiveStepSubmitForm({ onSuccessClose, onCancel }: K
       }
     }
     if (step === 2) {
-      if (!form.title.trim() || !form.beforeDescription.trim() || !form.afterSolution.trim()) {
-        showToast("⚠️ Vui lòng điền Tên tiêu đề, Mô tả hiện trạng & Giải pháp mới ở Bước 2!");
+      if (!form.title.trim() || !form.beforeDescription.trim()) {
+        showToast("⚠️ Vui lòng điền Tên tiêu đề và Mô tả hiện trạng trước cải tiến ở Bước 2!");
         return false;
       }
       if (form.pricingDirection === "THOI_GIAN" && (!form.timeBeforeSeconds || !form.timeAfterSeconds)) {

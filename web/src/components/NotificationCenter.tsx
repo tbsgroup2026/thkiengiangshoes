@@ -101,7 +101,11 @@ export default function NotificationCenter() {
     };
 
     fetchRemoteNotifications();
-    const pollInterval = setInterval(fetchRemoteNotifications, 5000);
+    const pollInterval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        fetchRemoteNotifications();
+      }
+    }, 30000); // 30s background polling when tab is active
 
     // 3. Listen to realtime custom notification events
     const handleNewNotif = (e: any) => {

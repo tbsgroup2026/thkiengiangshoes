@@ -24,10 +24,15 @@ export async function POST(request: Request) {
 
     // 🔴 SECURITY GUARD 2: Role authorization check
     const roleCode = String((session as any)?.roleCode || (session as any)?.role || '').toUpperCase();
-    const isExecutiveOrAdmin = Boolean((session as any)?.isExecutiveOrAdmin) || ['TONG_GIAM_DOC', 'ADMIN'].includes(roleCode);
+    const userEmpCode = String((session as any)?.empCode || '').trim();
+    const userRoles = Array.isArray((session as any)?.roles) ? (session as any).roles : [];
+    const isExecutiveOrAdmin = Boolean((session as any)?.isExecutiveOrAdmin) || ['TONG_GIAM_DOC', 'ADMIN', 'PHO_GIAM_DOC'].includes(roleCode) || userEmpCode === '201809012';
     const isApproverRole =
       isExecutiveOrAdmin ||
       (Boolean((session as any)?.levelRank) && Number((session as any).levelRank) >= 3) ||
+      userEmpCode === '201809012' ||
+      userRoles.includes('deputy_director') ||
+      userRoles.includes('ci') ||
       ['TONG_GIAM_DOC', 'PHO_TONG_GIAM_DOC', 'GIAM_DOC', 'PHO_GIAM_DOC', 'TRUONG_PHONG', 'CI_LEAD', 'QC', 'ADMIN'].includes(roleCode);
 
     if (!isApproverRole) {
@@ -73,6 +78,10 @@ export async function POST(request: Request) {
     const subStatus = isApproved ? 'CHO_DANH_GIA' : 'TU_CHOI_TRIEN_KHAI';
     const approvalStatus = isApproved ? 'PHE_DUYET' : 'TU_CHOI';
 
+    const afterImageUrl = body.after_image_url || body.afterImageUrl || null;
+    const attachmentsJson = body.attachments_json || body.attachmentsJson || null;
+    const categoryVal = body.category || null;
+
     const db = getDbBinding();
 
     if (db) {
@@ -81,12 +90,16 @@ export async function POST(request: Request) {
         await db.prepare('ALTER TABLE ci_kaizen_proposals ADD COLUMN pair_quantity INTEGER DEFAULT 0').run().catch(() => {});
         await db.prepare('ALTER TABLE ci_kaizen_proposals ADD COLUMN total_savings_vnd REAL DEFAULT 0').run().catch(() => {});
         await db.prepare('ALTER TABLE ci_kaizen_proposals ADD COLUMN total_savings_words TEXT').run().catch(() => {});
+        await db.prepare('ALTER TABLE ci_kaizen_proposals ADD COLUMN after_image_url TEXT').run().catch(() => {});
+        await db.prepare('ALTER TABLE ci_kaizen_proposals ADD COLUMN attachments_json TEXT').run().catch(() => {});
+        await db.prepare('ALTER TABLE ci_kaizen_proposals ADD COLUMN category TEXT').run().catch(() => {});
 
         const query = `
           UPDATE ci_kaizen_proposals
           SET approval_status = ?,
               sub_status = ?,
               status = ?,
+              category = COALESCE(?, category),
               time_before_seconds = ?,
               time_after_seconds = ?,
               saved_seconds = ?,
@@ -94,6 +107,8 @@ export async function POST(request: Request) {
               pair_quantity = ?,
               total_savings_vnd = ?,
               total_savings_words = ?,
+              after_image_url = COALESCE(?, after_image_url),
+              attachments_json = COALESCE(?, attachments_json),
               review_comment = COALESCE(?, review_comment),
               updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
@@ -105,6 +120,7 @@ export async function POST(request: Request) {
             approvalStatus,
             subStatus,
             status,
+            categoryVal,
             timeBefore,
             timeAfter,
             savedSecs,
@@ -112,6 +128,8 @@ export async function POST(request: Request) {
             pairQty,
             totalSavings,
             totalSavingsWordsVal,
+            afterImageUrl,
+            attachmentsJson,
             note || null,
             proposalId
           )

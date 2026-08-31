@@ -99,6 +99,7 @@ export const ROLES: Record<string, Permission[]> = {
     PERMISSIONS.DOC_APPROVE,
     PERMISSIONS.ROOMS_VIEW,
     PERMISSIONS.ROOMS_BOOK,
+    PERMISSIONS.CI_MANAGE,
   ],
   PHO_GIAM_DOC: [
     PERMISSIONS.WORK_VIEW_ALL_DEPTS,
@@ -108,6 +109,7 @@ export const ROLES: Record<string, Permission[]> = {
     PERMISSIONS.DOC_APPROVE,
     PERMISSIONS.ROOMS_VIEW,
     PERMISSIONS.ROOMS_BOOK,
+    PERMISSIONS.CI_MANAGE,
   ],
 
   // Level 4: Trưởng Phòng (Duyệt Cấp 1)

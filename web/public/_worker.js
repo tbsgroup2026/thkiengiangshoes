@@ -923,9 +923,14 @@ export default {
       return Response.redirect(`https://${url.host}${url.pathname}${url.search}`, 301);
     }
 
+    // Dynamic Site / Host Detection Defense
+    if (!env.SITE_ID) {
+      env.SITE_ID = url.hostname.includes("vpchuoiskechers") ? "vpchuoiskechers" : "thkiengiangshoes";
+    }
+
     // 2. RFC 9116 security.txt
     if (url.pathname === "/.well-known/security.txt" || url.pathname === "/security.txt") {
-      const securityText = `Contact: mailto:security@tbsgroup.vn\nExpires: 2027-12-31T23:59:59.000Z\nPreferred-Languages: vi, en\nCanonical: https://thkiengiangshoes.tbsgroup2026.workers.dev/.well-known/security.txt\nPolicy: https://thkiengiangshoes.tbsgroup2026.workers.dev/about\n`;
+      const securityText = `Contact: mailto:security@tbsgroup.vn\nExpires: 2027-12-31T23:59:59.000Z\nPreferred-Languages: vi, en\nCanonical: https://${url.host}/.well-known/security.txt\nPolicy: https://${url.host}/about\n`;
       return new Response(securityText, {
         headers: { "Content-Type": "text/plain; charset=utf-8" }
       });

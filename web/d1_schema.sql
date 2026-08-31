@@ -424,11 +424,29 @@ CREATE TABLE IF NOT EXISTS ci_kaizen_proposals (
     vote_count INTEGER DEFAULT 0,
     view_count INTEGER DEFAULT 0,
     rejection_reason TEXT,
-    required_reviewer_ids_json TEXT, -- JSON array of required manager employee codes snapshot at submission time
+    trang_thai TEXT DEFAULT 'CHO_DUYET', -- CHO_DUYET, CAN_CHINH_SUA, DA_DANH_GIA, DA_XEP_HANG, DA_GOP
+    line TEXT,
+    nguoi_kiem_chung TEXT,
+    anh_kiem_chung_json TEXT,
+    nhan_xet_kiem_chung TEXT,
+    so_giay_tiet_kiem INTEGER DEFAULT 0,
+    diem_hieu_qua REAL DEFAULT 0.0,
+    diem_tong_hop REAL DEFAULT 0.0,
+    hang_xep INTEGER DEFAULT 0,
+    merged_into_id TEXT,
     evaluated_at DATETIME,
     version INTEGER DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS ci_kaizen_merged_proposals (
+    id TEXT PRIMARY KEY,
+    original_proposal_id TEXT NOT NULL,
+    merged_proposal_id TEXT NOT NULL,
+    attachments_json TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (original_proposal_id) REFERENCES ci_kaizen_proposals(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS ci_kaizen_evaluations (
