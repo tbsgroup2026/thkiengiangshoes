@@ -545,7 +545,13 @@ async function mmtbVerifyMainSiteToken(tokenStr, secretStr) {
     if (!isValid) return null;
     const payBase64 = payB64.replace(/-/g, "+").replace(/_/g, "/");
     const payPadded = payBase64 + "=".repeat((4 - (payBase64.length % 4)) % 4);
-    const jsonStr = typeof atob === "function" ? atob(payPadded) : Buffer.from(payPadded, "base64").toString("utf-8");
+    // atob() trả "binary string" (1 ký tự/byte) — phải ghép lại thành bytes rồi TextDecoder mới ra
+    // đúng chuỗi UTF-8 gốc (tên/phòng ban tiếng Việt có dấu); coi thẳng output của atob() là chuỗi
+    // JSON cuối cùng (như code cũ) làm sai lệch mọi ký tự có dấu, JSON.parse() sẽ ném lỗi hoặc ra
+    // dữ liệu hỏng — đối xứng với cách signJWT() giờ đã mã hoá đúng UTF-8 ở base64UrlEncode().
+    const jsonStr = typeof atob === "function"
+      ? new TextDecoder().decode(Uint8Array.from(atob(payPadded), (c) => c.charCodeAt(0)))
+      : Buffer.from(payPadded, "base64").toString("utf-8");
     const payload = JSON.parse(jsonStr);
     if (payload.exp && Date.now() / 1000 > payload.exp) return null;
     return payload;
@@ -1754,9 +1760,22 @@ export default {
 
     async function signJWT(payload, secretStr) {
       const header = { alg: "HS256", typ: "JWT" };
+      // btoa() chỉ nhận ký tự Latin1 (0-255) — gọi thẳng trên chuỗi JSON chứa tiếng Việt có dấu
+      // (VD name:"Trần Ngọc Huy", department:"NHÂN SỰ-HC") ném lỗi "InvalidCharacterError" ngay
+      // lập tức, chặn đứng MỌI lần đăng nhập của tài khoản có tên tiếng Việt (gần như tất cả).
+      // Sửa bằng cách mã hoá UTF-8 ra bytes trước (TextEncoder) rồi mới base64 — btoa an toàn với
+      // "binary string" (1 ký tự/byte, luôn nằm trong Latin1).
       const base64UrlEncode = (strOrObj) => {
         const jsonStr = typeof strOrObj === "string" ? strOrObj : JSON.stringify(strOrObj);
-        const b64 = typeof btoa === "function" ? btoa(jsonStr) : Buffer.from(jsonStr).toString("base64");
+        const bytes = new TextEncoder().encode(jsonStr);
+        let b64;
+        if (typeof btoa === "function") {
+          let binary = "";
+          for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+          b64 = btoa(binary);
+        } else {
+          b64 = Buffer.from(bytes).toString("base64");
+        }
         return b64.replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
       };
       const headB64 = base64UrlEncode(header);
@@ -1807,7 +1826,13 @@ export default {
         const payBase64 = payB64.replace(/-/g, "+").replace(/_/g, "/");
         const payPadLen = (4 - (payBase64.length % 4)) % 4;
         const payPadded = payBase64 + "=".repeat(payPadLen);
-        const jsonStr = typeof atob === "function" ? atob(payPadded) : Buffer.from(payPadded, "base64").toString("utf-8");
+        // atob() trả "binary string" (1 ký tự/byte) — phải ghép lại thành bytes rồi TextDecoder mới ra
+    // đúng chuỗi UTF-8 gốc (tên/phòng ban tiếng Việt có dấu); coi thẳng output của atob() là chuỗi
+    // JSON cuối cùng (như code cũ) làm sai lệch mọi ký tự có dấu, JSON.parse() sẽ ném lỗi hoặc ra
+    // dữ liệu hỏng — đối xứng với cách signJWT() giờ đã mã hoá đúng UTF-8 ở base64UrlEncode().
+    const jsonStr = typeof atob === "function"
+      ? new TextDecoder().decode(Uint8Array.from(atob(payPadded), (c) => c.charCodeAt(0)))
+      : Buffer.from(payPadded, "base64").toString("utf-8");
         const payload = JSON.parse(jsonStr);
 
         if (payload.exp && Date.now() / 1000 > payload.exp) return null;
