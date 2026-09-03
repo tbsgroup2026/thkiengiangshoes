@@ -220,8 +220,19 @@ function invalidateKaizenStatsCache() {
   KAIZEN_STATS_CACHE_TIME = 0;
 }
 
+// Chạy 1 lần duy nhất cho mỗi Worker isolate (không phải mỗi request!). Trước đây hàm này được
+// await ở ĐẦU handleRequest() cho MỌI request — kể cả từng file JS/CSS/ảnh tĩnh, vì
+// run_worker_first:true khiến _worker.js thấy request trước khi rơi về env.ASSETS.fetch(). Với
+// ~20 lệnh D1 tuần tự (ALTER/UPDATE/INSERT) chạy lại trên từng asset, một lượt tải trang (vài
+// chục request tĩnh) có thể tốn hàng trăm lệnh D1 nối tiếp — đây là nguyên nhân chính gây lag,
+// phải bấm nhiều lần mới chuyển trang. Cờ module-scope này giữ nguyên trong suốt vòng đời của
+// isolate (được Cloudflare tái sử dụng cho nhiều request) nên chỉ thực sự chạy D1 1 lần.
+let __schemaMigratedOnce = false;
+
 async function ensureDatabaseColumnsAndLegacyCode(env) {
   if (!env || !env.DB) return;
+  if (__schemaMigratedOnce) return;
+  __schemaMigratedOnce = true;
   try {
     // 1. ci_kaizen_proposals
     await env.DB.prepare("ALTER TABLE ci_kaizen_proposals ADD COLUMN legacy_code TEXT").run().catch(() => {});
@@ -1024,8 +1035,13 @@ export default {
     const url = new URL(request.url);
     const pathname = url.pathname.replace(/\/$/, "") || "/";
 
-    // Auto-migrate schema columns & legacy codes lazily
-    await ensureDatabaseColumnsAndLegacyCode(env);
+    // Auto-migrate schema columns & legacy codes lazily — chỉ 1 lần/isolate (xem cờ
+    // __schemaMigratedOnce), và không chờ nó xong mới trả response (chạy nền qua waitUntil) để
+    // không cộng dồn độ trễ D1 vào mọi request, đặc biệt là các file tĩnh (JS/CSS/ảnh) vốn không
+    // hề cần migration này.
+    if (!__schemaMigratedOnce && !pathname.startsWith("/_next/") && !/\.[a-zA-Z0-9]+$/.test(pathname)) {
+      ctx.waitUntil(ensureDatabaseColumnsAndLegacyCode(env));
+    }
 
     // 1. HTTP to HTTPS 301 Permanent Redirect — bỏ qua khi chạy cục bộ (localhost/127.0.0.1, VD
     // "wrangler dev" lúc test) vì không có TLS thật ở đó: Worker luôn thấy request là "http" dù
