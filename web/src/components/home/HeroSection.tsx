@@ -11,6 +11,23 @@ export default function HeroSection() {
   const [cmsHero, setCmsHero] = useState(DEFAULT_LANDING_CMS.hero);
   const [shoeLines, setShoeLines] = useState(DEFAULT_LANDING_CMS.shoeLines);
   const [activeGroupIdx, setActiveGroupIdx] = useState(0);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // Nút "Truy Cập Hệ Thống" trước đây trỏ cứng "/work" bất kể đã đăng nhập hay chưa — chỉ là
+  // route "/work" bản thân nó lại không hề kiểm tra đăng nhập (xem RequireAuth ở work/layout.tsx,
+  // mới thêm), nên bấm vào là vào thẳng luôn dù chưa đăng nhập. Giờ kiểm tra cookie tbs_token
+  // giống hệt Header.tsx để trỏ đúng "/login" khi chưa đăng nhập, tránh nháy qua "/work" rồi mới
+  // bị bật ngược lại "/login".
+  useEffect(() => {
+    const checkAuth = () => {
+      const cookies = document.cookie.split("; ");
+      const tokenCookie = cookies.find((row) => row.startsWith("tbs_token="));
+      setIsLoggedIn(!!tokenCookie);
+    };
+    checkAuth();
+    window.addEventListener("tbs_profile_updated", checkAuth);
+    return () => window.removeEventListener("tbs_profile_updated", checkAuth);
+  }, []);
 
   useEffect(() => {
     const loadCMS = () => {
@@ -174,7 +191,7 @@ export default function HeroSection() {
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
                 <Link
-                  href="/work"
+                  href={isLoggedIn ? "/work" : "/login"}
                   prefetch={false}
                   className="px-7 py-3.5 rounded-2xl bg-gradient-to-r from-[#2fd39a] to-emerald-500 text-[#08221a] font-extrabold text-sm shadow-xl shadow-[#2fd39a]/20 hover:shadow-2xl hover:shadow-[#2fd39a]/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center gap-2 group"
                 >
