@@ -25,7 +25,9 @@
     "SITE_ID": "thkiengiangshoes",
     "NEXT_PUBLIC_APP_URL": "https://thkiengiangshoes.tbsgroup2026.workers.dev",
     "JWT_SECRET": "tbs_group_secure_jwt_secret_key_2026",
-    "TBSMAYMOC_API_URL": "https://tbs-may-moc-admin.tbs-quanlymaymoc.workers.dev"
+    "TBSMAYMOC_API_URL": "https://tbs-may-moc-admin.tbs-quanlymaymoc.workers.dev",
+    "MMTB_AUTO_LOGIN_EMP_CODE": "AMDKG",
+    "MMTB_AUTO_LOGIN_PASSWORD": "123456"
   },
   "triggers": {
     "crons": [
@@ -46,7 +48,9 @@
         "SITE_ID": "thkiengiangshoes",
         "NEXT_PUBLIC_APP_URL": "https://thkiengiangshoes.tbsgroup2026.workers.dev",
         "JWT_SECRET": "tbs_group_secure_jwt_secret_key_2026",
-        "TBSMAYMOC_API_URL": "https://tbs-may-moc-admin.tbs-quanlymaymoc.workers.dev"
+        "TBSMAYMOC_API_URL": "https://tbs-may-moc-admin.tbs-quanlymaymoc.workers.dev",
+        "MMTB_AUTO_LOGIN_EMP_CODE": "AMDKG",
+        "MMTB_AUTO_LOGIN_PASSWORD": "123456"
       }
     },
     "vpchuoiskechers": {
@@ -62,7 +66,9 @@
         "SITE_ID": "vpchuoiskechers",
         "NEXT_PUBLIC_APP_URL": "https://vpchuoiskechers.tbsgroup2026.workers.dev",
         "JWT_SECRET": "tbs_group_secure_jwt_secret_key_2026",
-        "TBSMAYMOC_API_URL": "https://tbs-may-moc-admin.tbs-quanlymaymoc.workers.dev"
+        "TBSMAYMOC_API_URL": "https://tbs-may-moc-admin.tbs-quanlymaymoc.workers.dev",
+        "MMTB_AUTO_LOGIN_EMP_CODE": "AMDKG",
+        "MMTB_AUTO_LOGIN_PASSWORD": "123456"
       }
     }
   }

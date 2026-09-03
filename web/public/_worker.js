@@ -519,6 +519,71 @@ async function mmtbCachedJson(env, cacheKey, forceRefresh, buildFn) {
   return mmtbJson(result, result.success ? 200 : status || 502);
 }
 
+// Mã nhân viên (thkiengiangshoes, KHÔNG phải mã tbsMayMoc) được coi là "admin" — khớp đúng
+// ADMIN_WHITELIST trong src/lib/adminWhitelist.ts + WORKER_ADMIN_WHITELIST ở trên. Tổ hợp KG
+// không có tài khoản tbsMayMoc riêng cho từng người trong nhóm này, nên MMTB tự đăng nhập ngầm
+// bằng 1 tài khoản dùng chung (MMTB_AUTO_LOGIN_EMP_CODE, mặc định "AMDKG") thay họ — y hệt cách
+// CI/Kaizen dùng chung phiên đăng nhập chính, chỉ khác là MMTB xác thực ở backend tbsMayMoc riêng
+// nên cần 1 bước gọi login ngầm.
+const MMTB_AUTOLOGIN_ADMIN_EMP_CODES = new Set(["202608001", "201809012", "202608002"]);
+
+// Xác minh JWT phiên đăng nhập CHÍNH của thkiengiangshoes (tbs_token, ký bằng JWT_SECRET) — bản
+// độc lập, KHÔNG dùng chung với verifyJWT() bên trong handleRequest() vì hàm đó khai báo lồng bên
+// trong handleRequest, handleMmtbKG() là hàm cấp module riêng không gọi tới được.
+async function mmtbVerifyMainSiteToken(tokenStr, secretStr) {
+  if (!tokenStr || !secretStr) return null;
+  try {
+    const parts = tokenStr.split(".");
+    if (parts.length !== 3) return null;
+    const [headB64, payB64, sigB64] = parts;
+    const enc = new TextEncoder();
+    const key = await crypto.subtle.importKey("raw", enc.encode(secretStr), { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
+    const base64 = sigB64.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+    const rawSig = typeof atob === "function" ? Uint8Array.from(atob(padded), (c) => c.charCodeAt(0)) : Buffer.from(padded, "base64");
+    const isValid = await crypto.subtle.verify("HMAC", key, rawSig, enc.encode(`${headB64}.${payB64}`));
+    if (!isValid) return null;
+    const payBase64 = payB64.replace(/-/g, "+").replace(/_/g, "/");
+    const payPadded = payBase64 + "=".repeat((4 - (payBase64.length % 4)) % 4);
+    const jsonStr = typeof atob === "function" ? atob(payPadded) : Buffer.from(payPadded, "base64").toString("utf-8");
+    const payload = JSON.parse(jsonStr);
+    if (payload.exp && Date.now() / 1000 > payload.exp) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+// Nếu request đang mang phiên đăng nhập CHÍNH (tbs_token) hợp lệ của 1 tài khoản nằm trong nhóm
+// admin whitelist, tự gọi đăng nhập MMTB ngầm bằng tài khoản dùng chung — trả về { token, cookie }
+// nếu thành công, null nếu không đủ điều kiện (im lặng rơi về màn hình đăng nhập MMTB thủ công).
+async function mmtbTryAutoLoginAsAdmin(request, env) {
+  try {
+    const cookieHeader = request.headers.get("cookie") || request.headers.get("Cookie") || "";
+    const match = cookieHeader.match(/tbs_token=([^;]+)/);
+    if (!match) return null;
+    const mainToken = decodeURIComponent(match[1]);
+    const payload = await mmtbVerifyMainSiteToken(mainToken, env.JWT_SECRET);
+    if (!payload || !payload.empCode) return null;
+    if (!MMTB_AUTOLOGIN_ADMIN_EMP_CODES.has(String(payload.empCode))) return null;
+
+    const employeeCode = env.MMTB_AUTO_LOGIN_EMP_CODE || "AMDKG";
+    const password = env.MMTB_AUTO_LOGIN_PASSWORD || "123456";
+    const loginRes = await fetch(`${env.TBSMAYMOC_API_URL}/api/mobile/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ employeeCode, password }),
+    });
+    const loginData = await loginRes.json().catch(() => ({}));
+    if (!loginRes.ok || !loginData.user || loginData.user.role !== "ADMIN" || !loginData.token) return null;
+
+    const cookie = `${MMTB_COOKIE}=${encodeURIComponent(loginData.token)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${30 * 24 * 60 * 60}`;
+    return { token: loginData.token, cookie };
+  } catch {
+    return null;
+  }
+}
+
 async function handleMmtbKG(request, env, pathname, searchParams) {
   const mmtbPath = pathname.slice("/api/mmtb-kg".length) || "/";
 
@@ -548,16 +613,21 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
     return mmtbJson({ success: true }, 200, { "Set-Cookie": `${MMTB_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0` });
   }
 
+  // ---- /me: kiểm tra đăng nhập MMTB — cũng là nơi duy nhất thử tự động đăng nhập cho admin ----
+  // (đặt TRƯỚC gate "bắt buộc đã đăng nhập" bên dưới, vì lúc gọi /me thường CHƯA có mmtb_token).
+  if (mmtbPath === "/me" && request.method === "GET") {
+    if (mmtbGetToken(request)) return mmtbJson({ success: true }, 200);
+    const auto = await mmtbTryAutoLoginAsAdmin(request, env);
+    if (auto) return mmtbJson({ success: true, autoLogin: true }, 200, { "Set-Cookie": auto.cookie });
+    return mmtbJson({ success: false, error: "Chưa đăng nhập MMTB" }, 401);
+  }
+
   // ---- Mọi route còn lại bắt buộc đã đăng nhập ----
   const token = mmtbGetToken(request);
   if (!token) return mmtbJson({ success: false, error: "Chưa đăng nhập MMTB" }, 401);
 
   // Nút "Làm mới dữ liệu" ở mỗi trang gửi ?fresh=1 để bỏ qua cache đọc, luôn lấy mới nhất.
   const forceRefresh = searchParams.get("fresh") === "1";
-
-  if (mmtbPath === "/me" && request.method === "GET") {
-    return mmtbJson({ success: true }, 200);
-  }
 
   // ---- Máy móc (Danh Sách MMTB) ----
   // Tách "danh sách máy" (nặng, ~2500 máy Tổ hợp KG, JSON verbose từ tbsMayMoc) khỏi "6 danh mục
