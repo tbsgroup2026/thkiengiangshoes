@@ -1083,9 +1083,11 @@ export default {
         "201809012",
         "PGĐ-005",
         "PGD-005",
+        "202608002",
         "anhy.work.2004@gmail.com",
         "huypna@tbsgroup.vn",
-        "vukt@tbsgroup.vn"
+        "vukt@tbsgroup.vn",
+        "tranhuy110421@gmail.com"
       ]);
 
       let isAllowed = false;
