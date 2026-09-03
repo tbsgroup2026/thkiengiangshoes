@@ -103,7 +103,7 @@ export default function EmployeesPage() {
         fetch(`/api/mmtb-kg/categories?type=AREA${fresh}`).then((r) => r.json()),
       ]);
       if (empRes.success) setEmployees(empRes.data || []);
-      else setError(empRes.error || 'Không lấy được dữ liệu');
+      else { console.warn('Failed to load employees from tbsMayMoc:', empRes.error); setError(empRes.error || 'Không lấy được dữ liệu'); }
       if (facRes.success) setFactories(facRes.data || []);
       if (areaRes.success) setAreas(areaRes.data || []);
     } catch (err) {
@@ -372,7 +372,7 @@ export default function EmployeesPage() {
           </div>
         </div>
 
-        {error && <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">⚠️ {error}</div>}
+        {/* Lỗi kết nối tbsMayMoc chỉ log console (F12), không hiện banner ngoài trang */}
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-wrap items-center gap-2.5">
           <input

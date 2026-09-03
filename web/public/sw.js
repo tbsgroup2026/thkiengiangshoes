@@ -5,9 +5,11 @@
 // điều hướng mà không cần tải lại cả trang. Cache-First trên URL cố định đó khiến trình duyệt giữ
 // mãi bản .txt của lần deploy CŨ — mỗi lần bấm nav sau đó Next nhận dữ liệu cũ/không khớp mã đang
 // chạy, âm thầm thất bại, người dùng phải bấm nhiều lần mới có 1 lần rơi vào full reload thật.
-// Đổi tên CACHE_NAME lên v19 để buộc xoá sạch cache cũ (đang chứa các .txt lỗi thời) ở mọi trình
-// duyệt đã ghé site trước đây.
-const CACHE_NAME = "skechers-tbs-v19-no-stale-rsc";
+// v20: fetch() cho static asset (nhánh Cache-First) trước đây KHÔNG có .catch() — mạng lỗi/chập
+// chờn khiến promise reject không ai bắt ("Uncaught (in promise) TypeError: Failed to fetch"),
+// request coi như thất bại trắng tay. Thêm .catch() để không còn lỗi chưa xử lý này.
+// Đổi tên CACHE_NAME mỗi lần sửa sw.js để buộc xoá sạch cache cũ ở mọi trình duyệt đã ghé trước.
+const CACHE_NAME = "skechers-tbs-v20-sw-catch-fix";
 const ASSETS_TO_CACHE = [
   "/",
   "/favicon.ico",
@@ -160,6 +162,18 @@ self.addEventListener("fetch", (event) => {
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy).catch(() => {}));
           }
           return networkResponse;
+        })
+        .catch((err) => {
+          // Trước đây KHÔNG có .catch() ở đây — mạng chập chờn (VD sự cố Cloudflare) khiến
+          // fetch() reject thẳng ra ngoài, trở thành "Uncaught (in promise) TypeError: Failed to
+          // fetch" và request coi như thất bại hoàn toàn, không có gì trả về cho trình duyệt.
+          // Bắt lỗi, thử lại cache 1 lần cuối (phòng trường hợp asset đã có ở cache dưới tên khác/
+          // biến thể), nếu vẫn không có gì thì trả lỗi mạng rõ ràng thay vì để reject không bắt.
+          console.warn("[SW] Static asset fetch failed:", event.request.url, err);
+          return caches.match(event.request).then((cached) => {
+            if (cached) return cached;
+            return new Response("", { status: 504, statusText: "Network error (SW static asset fetch failed)" });
+          });
         });
     })
   );

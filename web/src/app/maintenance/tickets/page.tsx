@@ -64,6 +64,7 @@ export default function MaintenanceTicketsPage() {
         setTickets(ticketsRes.data);
       } else {
         setTickets([]);
+        console.warn('Failed to load tickets from tbsMayMoc:', ticketsRes.error);
         setError(ticketsRes.error || 'Không lấy được dữ liệu');
       }
       if (facRes.success) setFactories(facRes.data || []);
@@ -110,9 +111,8 @@ export default function MaintenanceTicketsPage() {
           <RefreshButton onClick={() => load(true)} loading={refreshing} />
         </div>
 
-        {error && (
-          <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">⚠️ {error}</div>
-        )}
+        {/* Lỗi kết nối tbsMayMoc chỉ log console (F12), không hiện banner ngoài trang — `error` vẫn
+            giữ lại để chặn thông báo "Không có ticket nào" hiện nhầm khi thật ra là do lỗi tải. */}
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[

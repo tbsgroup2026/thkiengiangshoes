@@ -197,6 +197,7 @@ export default function MachinesPage() {
         setMachines(machinesRes.data);
       } else {
         setMachines([]);
+        console.warn('Failed to load machines from tbsMayMoc:', machinesRes.error);
         setError(machinesRes.error || 'Không lấy được dữ liệu');
       }
       setFilterOptions({
@@ -571,11 +572,8 @@ export default function MachinesPage() {
         </div>
       </div>
 
-      {error && (
-        <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">
-          ⚠️ {error}
-        </div>
-      )}
+      {/* Lỗi kết nối tbsMayMoc chỉ log console (F12), không hiện banner ngoài trang — `error` vẫn
+          giữ lại để chặn thông báo "Không có máy nào" hiện nhầm khi thật ra là do lỗi tải. */}
 
       {/* 5 Ô TỔNG QUAN — giống hàng đầu trang Tổng quan bên tbsMayMoc */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">

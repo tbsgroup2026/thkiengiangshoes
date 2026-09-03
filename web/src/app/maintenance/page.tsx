@@ -134,6 +134,7 @@ export default function OverviewPage() {
         setIncidents(result.incidents || []);
         setLogs(result.logs || []);
       } else {
+        console.warn('Failed to load overview-report from tbsMayMoc:', result.error);
         setError(result.error || 'Không lấy được dữ liệu phân tích');
       }
     } catch (err) {
@@ -310,7 +311,12 @@ export default function OverviewPage() {
       }
     }
     return Array.from(map, ([label, value]) => ({ label, value }));
-  }, [logs]);
+    // Trước đây phụ thuộc [logs] (mảng thật từ API, luôn rỗng khi chưa có sự cố) thay vì
+    // [effectiveLogs] (mảng THỰC SỰ được duyệt ở trên, tự chuyển sang dữ liệu mẫu khi bật "Dữ
+    // liệu mẫu") — useMemo không thấy effectiveLogs đổi nên KHÔNG tính lại, biểu đồ này luôn kẹt ở
+    // kết quả rỗng của lần tính đầu tiên dù 3 biểu đồ Pareto còn lại (phụ thuộc `enriched`, vốn
+    // đã đúng theo effectiveIncidents) vẫn cập nhật bình thường.
+  }, [effectiveLogs]);
 
   const monthlyReport = useMemo(() => {
     type MBucket = { mttaSum: number; mttaN: number; mttrSum: number; mttrN: number; mttdSum: number; mttdN: number; sortKey: number };
@@ -395,7 +401,8 @@ export default function OverviewPage() {
           <h1 className="text-2xl font-extrabold text-tbs-dark">Tổng Quan</h1>
         </div>
 
-        {error && <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">⚠️ {error}</div>}
+        {/* Lỗi kết nối tbsMayMoc chỉ log ra console (F12), không hiện banner ngoài trang — xem
+            console.warn ở loadOverview(). Trang tự rơi về "Dữ liệu mẫu" khi không có sự cố thật. */}
 
         {/* Bộ lọc phân tích */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5">
@@ -492,7 +499,7 @@ export default function OverviewPage() {
           {loading ? <div className="p-8 text-center text-xs text-gray-400">Đang tải...</div> : <TrendChart data={trendData} />}
         </div>
 
-        {/* Pareto x3 */}
+        {/* Pareto x4 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5">
             <h2 className="text-sm font-extrabold text-tbs-dark mb-3">Pareto — Downtime Theo Line / Khu Vực</h2>

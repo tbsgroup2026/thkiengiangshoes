@@ -113,6 +113,7 @@ export default function FloorPlanPage() {
         setTeams(result.teams || []);
         setFloorId((prev) => (result.floors?.some((f: Floor) => f.id === prev) ? prev : (result.floors || [])[0]?.id ?? ''));
       } else {
+        console.warn('Failed to load floor-plan from tbsMayMoc:', result.error);
         setError(result.error || 'Không lấy được dữ liệu');
       }
     } catch (err) {
@@ -393,7 +394,7 @@ export default function FloorPlanPage() {
           )}
         </div>
 
-        {error && <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">⚠️ {error}</div>}
+        {/* Lỗi kết nối tbsMayMoc chỉ log console (F12), không hiện banner ngoài trang */}
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-wrap items-center gap-2.5">
           <span className="text-[11px] font-bold text-gray-400 uppercase mr-0.5">Nhà máy:</span>

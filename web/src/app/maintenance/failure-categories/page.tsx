@@ -32,7 +32,7 @@ export default function FailureCategoriesPage() {
       const res = await fetch(`/api/mmtb-kg/failure-categories${force ? '?fresh=1' : ''}`);
       const result = await res.json();
       if (result.success) setCategories(result.data || []);
-      else setError(result.error || 'Không lấy được dữ liệu');
+      else { console.warn('Failed to load failure-categories from tbsMayMoc:', result.error); setError(result.error || 'Không lấy được dữ liệu'); }
     } catch (err) {
       console.warn('Failed to fetch failure-categories from tbsMayMoc:', err);
     } finally {
@@ -127,7 +127,7 @@ export default function FailureCategoriesPage() {
           </div>
         </div>
 
-        {error && <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">⚠️ {error}</div>}
+        {/* Lỗi kết nối tbsMayMoc chỉ log console (F12), không hiện banner ngoài trang */}
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-xl overflow-hidden">
           <div className="divide-y divide-gray-100">

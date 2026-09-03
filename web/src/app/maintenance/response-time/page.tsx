@@ -64,6 +64,7 @@ export default function ResponseTimePage() {
         setIncidents(resRes.incidents || []);
         setLogs(resRes.logs || []);
       } else {
+        console.warn('Failed to load response-time from tbsMayMoc:', resRes.error);
         setError(resRes.error || 'Không lấy được dữ liệu');
       }
       if (facRes.success) setFactories(facRes.data || []);
@@ -147,7 +148,7 @@ export default function ResponseTimePage() {
           <RefreshButton onClick={() => load(true)} loading={refreshing} />
         </div>
 
-        {error && <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">⚠️ {error}</div>}
+        {/* Lỗi kết nối tbsMayMoc chỉ log console (F12), không hiện banner ngoài trang */}
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-wrap items-center gap-2.5">
           <FilterSelect value={factoryName} onChange={setFactoryName} options={factories.map((f) => ({ id: f.name, name: f.name }))} placeholder="Tất cả nhà máy" />

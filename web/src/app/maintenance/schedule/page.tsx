@@ -109,6 +109,7 @@ export default function MaintenanceSchedulePage() {
         setPeriods(scheduleRes.periods || []);
         setCompletedThisMonth(scheduleRes.completedThisMonth || 0);
       } else {
+        console.warn('Failed to load schedule from tbsMayMoc:', scheduleRes.error);
         setError(scheduleRes.error || 'Không lấy được dữ liệu lịch bảo trì');
       }
       if (logsRes.success) setLogs(logsRes.data || []);
@@ -148,9 +149,7 @@ export default function MaintenanceSchedulePage() {
           <RefreshButton onClick={() => load(true)} loading={refreshing} />
         </div>
 
-        {error && (
-          <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">⚠️ {error}</div>
-        )}
+        {/* Lỗi kết nối tbsMayMoc chỉ log console (F12), không hiện banner ngoài trang */}
 
         {/* 4 Ô TỔNG QUAN */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

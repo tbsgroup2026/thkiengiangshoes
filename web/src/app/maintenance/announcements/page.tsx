@@ -59,7 +59,7 @@ export default function AnnouncementsPage() {
         fetch(`/api/mmtb-kg/categories?type=FACTORY${force ? '&fresh=1' : ''}`).then((r) => r.json()),
       ]);
       if (annRes.success) setAnnouncements(annRes.data || []);
-      else setError(annRes.error || 'Không lấy được dữ liệu');
+      else { console.warn('Failed to load announcements from tbsMayMoc:', annRes.error); setError(annRes.error || 'Không lấy được dữ liệu'); }
       if (facRes.success) setFactories(facRes.data || []);
     } catch (err) {
       console.warn('Failed to fetch announcements from tbsMayMoc:', err);
@@ -166,7 +166,7 @@ export default function AnnouncementsPage() {
           </div>
         </div>
 
-        {error && <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">⚠️ {error}</div>}
+        {/* Lỗi kết nối tbsMayMoc chỉ log console (F12), không hiện banner ngoài trang */}
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-wrap items-center gap-2.5">
           <DateRangeFilter from={dateFrom} to={dateTo} onFromChange={setDateFrom} onToChange={setDateTo} />

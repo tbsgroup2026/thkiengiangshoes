@@ -65,7 +65,7 @@ export default function ProposalsPage() {
         fetch(`/api/mmtb-kg/categories?type=FACTORY${force ? '&fresh=1' : ''}`).then((r) => r.json()),
       ]);
       if (propRes.success) setProposals(propRes.data || []);
-      else setError(propRes.error || 'Không lấy được dữ liệu');
+      else { console.warn('Failed to load proposals from tbsMayMoc:', propRes.error); setError(propRes.error || 'Không lấy được dữ liệu'); }
       if (facRes.success) setFactories(facRes.data || []);
     } catch (err) {
       console.warn('Failed to fetch proposals from tbsMayMoc:', err);
@@ -140,7 +140,7 @@ export default function ProposalsPage() {
           <RefreshButton onClick={() => load(true)} loading={refreshing} />
         </div>
 
-        {error && <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">⚠️ {error}</div>}
+        {/* Lỗi kết nối tbsMayMoc chỉ log console (F12), không hiện banner ngoài trang */}
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {[

@@ -229,7 +229,7 @@ export default function CategoriesManager({
           <RefreshButton onClick={() => load(true)} loading={refreshing} />
         </div>
 
-        {error && <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">⚠️ {error}</div>}
+        {/* Lỗi kết nối tbsMayMoc chỉ log console (F12), không hiện banner ngoài trang */}
 
         {tabKeys.length > 1 && (
           <div className="flex flex-wrap gap-2">
