@@ -30,8 +30,14 @@ export default function SafeImage({
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [retryCount, setRetryCount] = useState(0);
 
-  // Format URL with Cloudinary cache-busting version parameter
-  const formattedUrl = formatCloudinaryUrl(src);
+  // Format URL with Cloudinary cache-busting version parameter — memoized theo `src` (KHÔNG phải
+  // useEffect nữa). formatCloudinaryUrl() gắn `?v=Date.now()`, nhưng ảnh Cloudinary thật lại đánh
+  // version qua segment đường dẫn "/v1787832565/..." chứ không phải query "?v=" nên hàm không bao
+  // giờ nhận ra URL đã có version, và trước đây cứ mỗi lần component re-render (CMS poll 60s,
+  // window focus...) lại tính ra 1 URL "?v=" MỚI dù `src` không đổi — key của <img> bên dưới đổi
+  // theo, React unmount/mount lại ảnh, tạo hiệu ứng ảnh chớp tắt ẩn/hiện liên tục. Memo hoá theo
+  // `src` đảm bảo URL (và key) chỉ đổi khi ảnh thật sự đổi.
+  const formattedUrl = React.useMemo(() => formatCloudinaryUrl(src), [src]);
 
   // Reset loading state whenever src or productId changes (prevents React DOM recycling race conditions)
   useEffect(() => {

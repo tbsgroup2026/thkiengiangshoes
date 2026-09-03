@@ -49,9 +49,18 @@ export function formatCloudinaryUrl(url: string | undefined | null, versionTag?:
     return trimmed;
   }
 
-  // Check if URL already has query parameters
+  // Check if URL already has query parameters, or already carries Cloudinary's own version
+  // segment (VD "/upload/v1787832565/...") — đây là cách Cloudinary tự đánh cache-buster thật
+  // sự, khác "?v=" (query string). Không nhận ra dạng này khiến hàm cứ gắn thêm "?v=Date.now()"
+  // MỚI mỗi lần gọi dù URL không đổi, dù đã memo hoá ở nơi gọi.
   const tag = versionTag ? String(versionTag) : String(Date.now());
-  if (trimmed.includes("?v=") || trimmed.includes("&v=") || trimmed.includes("?t=") || trimmed.includes("&t=")) {
+  if (
+    trimmed.includes("?v=") ||
+    trimmed.includes("&v=") ||
+    trimmed.includes("?t=") ||
+    trimmed.includes("&t=") ||
+    /\/v\d+\//.test(trimmed)
+  ) {
     return trimmed;
   }
 
