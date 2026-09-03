@@ -13,6 +13,10 @@ interface SafeImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   fallbackSubtitle?: string;
   objectFit?: "contain" | "cover" | "fill" | "none" | "scale-down";
   containerClassName?: string;
+  /** Chiều rộng thực tế cần hiển thị (px) — Cloudinary sẽ resize ảnh gốc xuống đúng kích thước
+   * này thay vì tải nguyên bản (nhiều ảnh admin upload nặng 1MB+ dù chỉ hiển thị trong khung nhỏ).
+   * Bỏ trống vẫn được tự nén qua "q_auto,f_auto", chỉ là không resize theo chiều rộng cụ thể. */
+  cloudinaryWidth?: number;
 }
 
 export default function SafeImage({
@@ -25,6 +29,7 @@ export default function SafeImage({
   objectFit = "contain",
   containerClassName = "",
   style,
+  cloudinaryWidth,
   ...restProps
 }: SafeImageProps) {
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
@@ -37,7 +42,10 @@ export default function SafeImage({
   // window focus...) lại tính ra 1 URL "?v=" MỚI dù `src` không đổi — key của <img> bên dưới đổi
   // theo, React unmount/mount lại ảnh, tạo hiệu ứng ảnh chớp tắt ẩn/hiện liên tục. Memo hoá theo
   // `src` đảm bảo URL (và key) chỉ đổi khi ảnh thật sự đổi.
-  const formattedUrl = React.useMemo(() => formatCloudinaryUrl(src), [src]);
+  const formattedUrl = React.useMemo(
+    () => formatCloudinaryUrl(src, undefined, cloudinaryWidth),
+    [src, cloudinaryWidth]
+  );
 
   // Reset loading state whenever src or productId changes (prevents React DOM recycling race conditions)
   useEffect(() => {

@@ -40,13 +40,39 @@ export function generateUniquePublicId(category: string = "img", fileName: strin
 }
 
 /**
- * Helper to append cache-busting version query string (?v=<timestamp>) to image URLs
+ * Helper to append cache-busting version query string (?v=<timestamp>) to image URLs, and to
+ * auto-optimize real Cloudinary delivery URLs (resize + auto quality/format) so pages don't ship
+ * multi-MB originals for thumbnail-sized slots.
+ *
+ * `width` (optional): nếu truyền vào, chèn thêm "w_<width>,c_limit" — Cloudinary tự resize ảnh
+ * xuống đúng chiều rộng cần hiển thị (c_limit = chỉ thu nhỏ, không phóng to nếu ảnh gốc nhỏ hơn).
+ * Luôn chèn "q_auto,f_auto" (tự chọn chất lượng + định dạng WebP/AVIF theo trình duyệt) cho MỌI
+ * ảnh Cloudinary, kể cả khi không truyền width — ảnh admin upload thường là file gốc chưa nén
+ * (~1MB+) dù chỉ hiển thị trong khung nhỏ, riêng bước q_auto,f_auto này thường đã giảm được phần
+ * lớn dung lượng mà không cần biết trước kích thước hiển thị.
  */
-export function formatCloudinaryUrl(url: string | undefined | null, versionTag?: string | number): string {
+export function formatCloudinaryUrl(
+  url: string | undefined | null,
+  versionTag?: string | number,
+  width?: number
+): string {
   if (!url) return "";
-  const trimmed = url.trim();
+  let trimmed = url.trim();
   if (trimmed.startsWith("data:") || trimmed.startsWith("blob:") || trimmed.startsWith("/")) {
     return trimmed;
+  }
+
+  // Chèn transformation string ngay sau "/upload/" — bỏ qua nếu URL đã có transform sẵn (tránh
+  // chèn lặp khi hàm được gọi nhiều lần hoặc trên URL đã tối ưu từ trước).
+  const uploadMarker = "/upload/";
+  const uploadIdx = trimmed.indexOf(uploadMarker);
+  if (uploadIdx !== -1 && trimmed.includes("res.cloudinary.com")) {
+    const afterUpload = trimmed.slice(uploadIdx + uploadMarker.length);
+    const alreadyTransformed = /^[a-z]_[^/]+(,[a-z]_[^/]+)*\//.test(afterUpload);
+    if (!alreadyTransformed) {
+      const transformParts = width ? [`w_${width}`, "c_limit", "q_auto", "f_auto"] : ["q_auto", "f_auto"];
+      trimmed = trimmed.slice(0, uploadIdx + uploadMarker.length) + transformParts.join(",") + "/" + afterUpload;
+    }
   }
 
   // Check if URL already has query parameters, or already carries Cloudinary's own version

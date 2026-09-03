@@ -28,6 +28,7 @@ import {
   WorkspaceImageItem,
 } from "@/lib/landingCMS";
 import SafeImage from "@/components/SafeImage";
+import { formatCloudinaryUrl } from "@/lib/cloudinary";
 
 const DEPARTMENT_ICON_MAP: Record<string, any> = {
   building: IconBuilding,
@@ -455,6 +456,7 @@ export default function WorkspaceGallery() {
                         <SafeImage
                           productId={imgItem.id || idx}
                           src={imgItem.src}
+                          cloudinaryWidth={500}
                           alt={imgItem.caption || `${dep.name} ${idx + 1}`}
                           fallbackTitle={imgItem.caption || dep.name}
                           objectFit="cover"
@@ -507,7 +509,7 @@ export default function WorkspaceGallery() {
           <div className="max-w-5xl w-full max-h-[90vh] flex flex-col bg-slate-900 rounded-3xl overflow-hidden border border-slate-800 shadow-2xl">
             <div className="relative flex-1 bg-black flex items-center justify-center min-h-[300px] max-h-[68vh] overflow-hidden p-4">
               <img
-                src={lightboxImages[lightboxIndex].src}
+                src={formatCloudinaryUrl(lightboxImages[lightboxIndex].src, undefined, 1600)}
                 alt={lightboxImages[lightboxIndex].caption || lightboxDepartment.name}
                 className="max-h-[65vh] w-auto max-w-full object-contain select-none"
               />

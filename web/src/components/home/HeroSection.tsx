@@ -6,6 +6,7 @@ import { IconArrowRight, IconArrowDown } from "@tabler/icons-react";
 import { useTranslation } from "@/hooks/useTranslation";
 import { getLandingCMS, fetchLandingCMSFromServer, DEFAULT_LANDING_CMS } from "@/lib/landingCMS";
 import SafeImage from "@/components/SafeImage";
+import { formatCloudinaryUrl } from "@/lib/cloudinary";
 export default function HeroSection() {
   const { t, lang } = useTranslation();
   const [cmsHero, setCmsHero] = useState(DEFAULT_LANDING_CMS.hero);
@@ -147,7 +148,11 @@ export default function HeroSection() {
         {/* Background Image: Gate photo full visibility */}
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat pointer-events-none"
-          style={{ backgroundImage: `url('${cmsHero.bgImage || "/images/tbs-gate.jpg"}')` }}
+          style={{
+            backgroundImage: `url('${
+              cmsHero.bgImage ? formatCloudinaryUrl(cmsHero.bgImage, undefined, 1600) : "/images/tbs-gate.jpg"
+            }')`,
+          }}
         >
           {/* Softened Dark Green Gradient Overlay for Clear Background Photo Visibility */}
           <div className="absolute inset-0 bg-gradient-to-r from-[#08221a]/75 via-[#08221a]/55 to-[#08221a]/30" />
@@ -243,7 +248,7 @@ export default function HeroSection() {
               {/* 1. Main Card (Top-Right): Hands Circle Image */}
               <div className="absolute top-0 right-0 w-[80%] h-[68%] rounded-[26px] overflow-hidden border border-[#2fd39a]/35 shadow-2xl z-10 group bg-[#0d2419]">
                 <img
-                  src={cmsHero.handsImage || "/images/tbs-hands.png"}
+                  src={cmsHero.handsImage ? formatCloudinaryUrl(cmsHero.handsImage, undefined, 900) : "/images/tbs-hands.png"}
                   alt="TBS Group - Hands Commitment"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                 />
@@ -254,6 +259,7 @@ export default function HeroSection() {
                 <SafeImage
                   productId="hero-team-banner"
                   src={cmsHero.teamImage || "/images/tbs-team-banner.png"}
+                  cloudinaryWidth={600}
                   alt="Phát Huy Sức Mạnh Kiến Tạo Tương Lai"
                   fallbackTitle="Phát Huy Sức Mạnh Kiến Tạo Tương Lai"
                   objectFit="cover"
@@ -318,8 +324,9 @@ export default function HeroSection() {
                         title={shoe.name || group.title}
                       >
                         <img
-                          src={shoe.url}
+                          src={formatCloudinaryUrl(shoe.url, undefined, 400)}
                           alt={shoe.name || group.title}
+                          loading="lazy"
                           className="max-h-[70px] max-w-[155px] w-auto h-auto object-contain transition-transform duration-300 group-hover:scale-105"
                           onError={(e) => {
                             (e.target as HTMLImageElement).src = "/images/brands/256000.png";
