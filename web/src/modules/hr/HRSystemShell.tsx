@@ -56,6 +56,22 @@ export default function HRSystemShell() {
   };
 
   const router = useRouter();
+  const isNavigatingRef = React.useRef(false);
+
+  const handleNavClick = (item: any) => {
+    if (isNavigatingRef.current) return;
+    isNavigatingRef.current = true;
+    setTimeout(() => {
+      isNavigatingRef.current = false;
+    }, 300);
+
+    if (item.directUrl) {
+      router.push(item.directUrl);
+    } else {
+      setActiveTab(item.id as any);
+      if (item.id === "overview") setOverviewMode("hub");
+    }
+  };
 
   const navItems = [
     {
@@ -231,14 +247,8 @@ export default function HRSystemShell() {
                     return (
                       <button
                         key={item.id}
-                        onClick={() => {
-                          if ((item as any).directUrl) {
-                            router.push((item as any).directUrl);
-                          } else {
-                            setActiveTab(item.id as any);
-                            if (item.id === "overview") setOverviewMode("hub");
-                          }
-                        }}
+                        type="button"
+                        onClick={() => handleNavClick(item)}
                         className={`w-full px-3 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2.5 cursor-pointer ${
                           isActive
                             ? "bg-[#006838] text-white shadow-2xs"

@@ -20,12 +20,19 @@ export async function GET(request: Request) {
       const query = `SELECT * FROM ci_kaizen_proposals WHERE factory IN ${KG_FACTORIES_SQL} ORDER BY created_at DESC LIMIT 500`;
       const { results } = await db.prepare(query).all();
 
-      return NextResponse.json({
-        success: true,
-        data: results || [],
-        proposals: results || [],
-        scoped: 'Kiên Giang 1, 2, 3',
-      });
+      return NextResponse.json(
+        {
+          success: true,
+          data: results || [],
+          proposals: results || [],
+          scoped: 'Kiên Giang 1, 2, 3',
+        },
+        {
+          headers: {
+            'Cache-Control': 'public, max-age=15, stale-while-revalidate=60',
+          },
+        }
+      );
     }
 
     return NextResponse.json({

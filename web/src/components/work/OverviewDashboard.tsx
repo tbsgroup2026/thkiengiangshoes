@@ -200,7 +200,7 @@ export default function OverviewDashboard({
 
             if (item.href) {
               return (
-                <Link key={item.id} href={item.href} className="block h-full">
+                <Link key={item.id} href={item.href} prefetch={false} className="block h-full">
                   {content}
                 </Link>
               );
@@ -230,6 +230,7 @@ export default function OverviewDashboard({
             </div>
             <Link
               href="/finance"
+              prefetch={false}
               className="text-[11px] font-extrabold text-[#006838] hover:underline flex items-center gap-1"
             >
               <span>Tất cả</span>
@@ -249,6 +250,7 @@ export default function OverviewDashboard({
                 <Link
                   key={idx}
                   href={q.href}
+                  prefetch={false}
                   className="flex flex-col items-center text-center p-2 rounded-xl border border-slate-200/80 hover:border-[#006838] hover:shadow-2xs transition-all duration-200 group bg-slate-50/50"
                 >
                   <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-transform duration-200 group-hover:scale-105 border ${q.bg} ${q.color}`}>

@@ -2,7 +2,18 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifyToken } from './lib/auth';
 
-const PUBLIC_ROUTES = ['/', '/about', '/careers', '/contact', '/login', '/mobile-guide', '/news'];
+const PUBLIC_ROUTES = [
+  '/',
+  '/about',
+  '/careers',
+  '/contact',
+  '/login',
+  '/mobile-guide',
+  '/news',
+  '/ve-tbs',
+  '/faq',
+  '/structure',
+];
 
 /**
  * Public routes that do NOT require authentication
@@ -17,7 +28,13 @@ const PUBLIC_PATHS = [
  * Format: { path: string pattern, redirect?: boolean (default true for UI routes) }
  */
 const PROTECTED_PATHS = [
-  { path: '/work/kaizen', redirect: true }, // Protect /work/kaizen & all sub-routes
+  { path: '/work', redirect: true },
+  { path: '/finance', redirect: true },
+  { path: '/admin', redirect: true },
+  { path: '/rooms', redirect: true },
+  { path: '/business-trip', redirect: true },
+  { path: '/documents', redirect: true },
+  { path: '/maintenance', redirect: true },
 ];
 
 /**

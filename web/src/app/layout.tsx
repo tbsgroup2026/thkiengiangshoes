@@ -52,6 +52,7 @@ export default function RootLayout({
     <html
       lang="vi"
       className="h-full antialiased font-sans"
+      suppressHydrationWarning
     >
       <head>
         <link rel="icon" href="/favicon.ico" type="image/x-icon" />
@@ -77,24 +78,14 @@ export default function RootLayout({
               window.addEventListener('error', function(e) {
                 var msg = e && (e.message || (e.error && e.error.message)) || '';
                 if (msg.includes('Unexpected token') || msg.includes('Loading chunk') || msg.includes('Failed to fetch dynamically imported module')) {
-                  if (!sessionStorage.getItem('tbs_chunk_retry')) {
-                    sessionStorage.setItem('tbs_chunk_retry', 'true');
-                    if ('serviceWorker' in navigator) {
-                      navigator.serviceWorker.getRegistrations().then(function(regs) {
-                        for (var i = 0; i < regs.length; i++) regs[i].unregister();
-                        window.location.reload();
-                      });
-                    } else {
-                      window.location.reload();
-                    }
-                  }
+                  console.warn('[TBS App] Dynamic asset load attempt warning:', msg);
                 }
               }, true);
             `,
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col font-sans bg-canvas text-ink">
+      <body className="min-h-full flex flex-col font-sans bg-canvas text-ink" suppressHydrationWarning>
         <DevToolsShield />
         <NotificationInitializer />
         <StatusCountsProvider>

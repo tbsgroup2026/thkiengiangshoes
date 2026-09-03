@@ -58,6 +58,12 @@ export default function FeasibilityApprovalModal({
   const [directSavingsVnd, setDirectSavingsVnd] = useState<number | string>(
     proposal?.total_savings_vnd || (proposal as any)?.tong_tien_tiet_kiem || ""
   );
+  const [costBefore, setCostBefore] = useState<number | string>(
+    (proposal as any)?.cost_before || (proposal as any)?.chi_phi_truoc || ""
+  );
+  const [costAfter, setCostAfter] = useState<number | string>(
+    (proposal as any)?.cost_after || (proposal as any)?.chi_phi_sau || ""
+  );
   const [afterMediaList, setAfterMediaList] = useState<{ id: string; type: "image" | "video"; url: string; name?: string }[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -105,6 +111,8 @@ export default function FeasibilityApprovalModal({
       setErrorMsg(null);
       setPairQtyError(null);
       setDirectSavingsVnd(proposal.total_savings_vnd || (proposal as any).tong_tien_tiet_kiem || "");
+      setCostBefore((proposal as any).cost_before || (proposal as any).chi_phi_truoc || "");
+      setCostAfter((proposal as any).cost_after || (proposal as any).chi_phi_sau || "");
       
       const pBefore = Number(proposal.time_before_seconds || 0);
       const pAfter = Number(proposal.time_after_seconds || 0);
@@ -178,27 +186,45 @@ export default function FeasibilityApprovalModal({
   const handleRemoveMedia = (id: string) => {
     setAfterMediaList((prev) => prev.filter((m) => m.id !== id));
   };
+  const { beforeVal, afterVal, savedVal, pairQtyVal, efficiencyVndVal, totalSavingsVndVal, autoCostBefore, autoCostAfter, autoTotalSavings } = React.useMemo(() => {
+    const rawBefore = Number(timeBefore) || 0;
+    const rawAfter = Number(timeAfter) || 0;
+    const rawPairQty = Number(pairQuantity) || 0;
+    const pSaved = Number(proposal?.saved_seconds || 0);
+
+    let bVal = Math.max(0, rawBefore);
+    let aVal = Math.max(0, rawAfter);
+    let sVal = Math.max(0, bVal - aVal);
+
+    if (bVal === 0 && aVal === 0 && pSaved > 0) {
+      sVal = pSaved;
+      bVal = pSaved;
+    }
+
+    const pQtyVal = Math.max(0, Math.floor(rawPairQty));
+    const effVndVal = Math.round(sVal * 12.5);
+    const totSavingsVndVal = pQtyVal > 0 ? effVndVal * pQtyVal : effVndVal;
+
+    // Tự động tính Chi phí trước & Chi phí sau theo định mức 12.5đ / giây
+    const multiplier = pQtyVal > 0 ? pQtyVal : 1;
+    const calcCostBefore = Math.round(bVal * 12.5 * multiplier);
+    const calcCostAfter = Math.round(aVal * 12.5 * multiplier);
+    const calcTotalSavings = Math.max(0, calcCostBefore - calcCostAfter);
+
+    return {
+      beforeVal: bVal,
+      afterVal: aVal,
+      savedVal: sVal,
+      pairQtyVal: pQtyVal,
+      efficiencyVndVal: effVndVal,
+      totalSavingsVndVal: totSavingsVndVal,
+      autoCostBefore: calcCostBefore,
+      autoCostAfter: calcCostAfter,
+      autoTotalSavings: calcTotalSavings,
+    };
+  }, [timeBefore, timeAfter, pairQuantity, proposal?.saved_seconds]);
 
   if (!isOpen || !proposal) return null;
-
-  const rawBefore = Number(timeBefore) || 0;
-  const rawAfter = Number(timeAfter) || 0;
-  const rawPairQty = Number(pairQuantity) || 0;
-  const pSaved = Number(proposal?.saved_seconds || 0);
-
-  let beforeVal = Math.max(0, rawBefore);
-  let afterVal = Math.max(0, rawAfter);
-  let savedVal = Math.max(0, beforeVal - afterVal);
-
-  // Preserve existing proposal.saved_seconds if input was not manually modified to a custom difference
-  if (beforeVal === 0 && afterVal === 0 && pSaved > 0) {
-    savedVal = pSaved;
-    beforeVal = pSaved;
-  }
-
-  const pairQtyVal = Math.max(0, Math.floor(rawPairQty));
-  const efficiencyVndVal = Math.round(savedVal * 12.5);
-  const totalSavingsVndVal = efficiencyVndVal * pairQtyVal;
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "20/05/2024";
@@ -251,42 +277,64 @@ export default function FeasibilityApprovalModal({
 
       const isProdTime = categoryMode === "PRODUCTIVITY_TIME";
       const isDirectCost = categoryMode === "MATERIAL_SAVINGS" || categoryMode === "COST_SAVINGS";
-      const finalTotalSavings = isProdTime
-        ? totalSavingsVndVal
-        : isDirectCost
+      const finalCostBefore = costBefore !== "" ? Number(costBefore) || 0 : autoCostBefore;
+      const finalCostAfter = costAfter !== "" ? Number(costAfter) || 0 : autoCostAfter;
+      const finalTotalSavings = directSavingsVnd !== ""
         ? Number(directSavingsVnd) || 0
-        : 0;
+        : (costBefore !== "" || costAfter !== "")
+        ? Math.max(0, finalCostBefore - finalCostAfter)
+        : autoTotalSavings > 0
+        ? autoTotalSavings
+        : totalSavingsVndVal;
       const savingsInWords = convertNumberToWords(finalTotalSavings);
 
       const mediaUrls = afterMediaList.map((m) => m.url);
       const afterImgUrlStr = mediaUrls.length > 0 ? mediaUrls[0] : "";
       const attachmentsJsonStr = JSON.stringify(mediaUrls);
 
+      const tokenCookie = typeof document !== "undefined"
+        ? document.cookie.split("; ").find((row) => row.startsWith("tbs_token="))
+        : null;
+      const token = tokenCookie ? tokenCookie.split("=")[1] : "";
+
       const res = await fetch("/api/ci-kaizen/approve", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           proposalId: proposal.id,
           decision,
           category: editedCategory,
           note: note.trim() || (decision === "APPROVE" ? "Đã phê duyệt tính khả thi (Bước 3)" : "Không đạt tính khả thi"),
-          timeBeforeSeconds: isProdTime && decision === "APPROVE" ? beforeVal : 0,
-          timeAfterSeconds: isProdTime && decision === "APPROVE" ? afterVal : 0,
-          savedSeconds: isProdTime && decision === "APPROVE" ? savedVal : 0,
-          efficiencyValueVND: isProdTime && decision === "APPROVE" ? efficiencyVndVal : 0,
-          pairQuantity: isProdTime && decision === "APPROVE" ? pairQtyVal : (isDirectCost ? 1 : 0),
-          so_luong_giay: isProdTime && decision === "APPROVE" ? pairQtyVal : (isDirectCost ? 1 : 0),
+          timeBeforeSeconds: categoryMode === "PRODUCTIVITY_TIME" && decision === "APPROVE" ? beforeVal : 0,
+          timeAfterSeconds: categoryMode === "PRODUCTIVITY_TIME" && decision === "APPROVE" ? afterVal : 0,
+          savedSeconds: categoryMode === "PRODUCTIVITY_TIME" && decision === "APPROVE" ? savedVal : 0,
+          efficiencyValueVND: categoryMode === "PRODUCTIVITY_TIME" && decision === "APPROVE" ? efficiencyVndVal : 0,
+          pairQuantity: categoryMode === "PRODUCTIVITY_TIME" && decision === "APPROVE" ? pairQtyVal : 1,
+          so_luong_giay: categoryMode === "PRODUCTIVITY_TIME" && decision === "APPROVE" ? pairQtyVal : 1,
           totalSavingsVND: decision === "APPROVE" ? finalTotalSavings : 0,
           tong_tien_tiet_kiem: decision === "APPROVE" ? finalTotalSavings : 0,
           totalSavingsWords: decision === "APPROVE" ? savingsInWords : "",
           tong_tien_bang_chu: decision === "APPROVE" ? savingsInWords : "",
+          costBefore: finalCostBefore,
+          costAfter: finalCostAfter,
+          cost_before: finalCostBefore,
+          cost_after: finalCostAfter,
           after_image_url: afterImgUrlStr,
           attachments_json: attachmentsJsonStr,
         }),
       });
 
-      const json = await res.json();
-      if (json.success) {
+      let json: any = {};
+      try {
+        json = await res.json();
+      } catch (e) {
+        json = { success: false, message: `Lỗi kết nối máy chủ (HTTP ${res.status})` };
+      }
+
+      if (res.ok && json.success) {
         onSuccess({
           status: json.status || (decision === "APPROVE" ? "UNDER_REVIEW" : "REJECTED"),
           sub_status: json.sub_status || (decision === "APPROVE" ? "CHO_DANH_GIA" : "TU_CHOI_TRIEN_KHAI"),
@@ -303,7 +351,7 @@ export default function FeasibilityApprovalModal({
         });
         onClose();
       } else {
-        setErrorMsg(`❌ ${json.message || "Không thể thực hiện phê duyệt!"}`);
+        setErrorMsg(`❌ ${json.message || json.error || "Không thể thực hiện phê duyệt!"}`);
       }
     } catch (err: any) {
       setErrorMsg("❌ Lỗi kết nối máy chủ hoặc mạng!");
@@ -311,6 +359,8 @@ export default function FeasibilityApprovalModal({
       setSubmitting(false);
     }
   };
+
+  if (!isOpen || !proposal) return null;
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
@@ -682,6 +732,71 @@ export default function FeasibilityApprovalModal({
                     </div>
                   </div>
 
+                  {/* HÀNG 2 Ô INPUT BỔ SUNG CHI PHÍ: CHI PHÍ TRƯỚC (VNĐ) & CHI PHÍ SAU (VNĐ) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-emerald-200/60">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700 block">
+                        💵 CHI PHÍ TRƯỚC (VNĐ)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        step="1000"
+                        value={costBefore}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCostBefore(val);
+                          const cb = Number(val) || 0;
+                          const ca = Number(costAfter) || 0;
+                          if (cb > 0 || ca > 0) {
+                            setDirectSavingsVnd(Math.max(0, cb - ca));
+                          }
+                        }}
+                        placeholder="VD: 10,000,000"
+                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-black text-slate-900 bg-white outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 shadow-2xs"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700 block">
+                        💵 CHI PHÍ SAU (VNĐ)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        step="1000"
+                        value={costAfter}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCostAfter(val);
+                          const cb = Number(costBefore) || 0;
+                          const ca = Number(val) || 0;
+                          if (cb > 0 || ca > 0) {
+                            setDirectSavingsVnd(Math.max(0, cb - ca));
+                          }
+                        }}
+                        placeholder="VD: 5,000,000"
+                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-black text-slate-900 bg-white outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 shadow-2xs"
+                      />
+                    </div>
+                  </div>
+
+                  {/* TỔNG SỐ TIỀN TIẾT KIỆM ĐƯỢC (VNĐ) */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-slate-700 block">
+                      💰 TỔNG SỐ TIỀN TIẾT KIỆM ĐƯỢC (VNĐ)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      step="1000"
+                      value={directSavingsVnd !== "" ? directSavingsVnd : (totalSavingsVndVal > 0 ? totalSavingsVndVal : "")}
+                      onChange={(e) => setDirectSavingsVnd(e.target.value)}
+                      placeholder="Nhập hoặc tính tự động từ thời gian & đôi..."
+                      className="w-full p-2.5 rounded-xl border border-emerald-400 text-sm font-black text-emerald-950 bg-white outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 shadow-2xs"
+                    />
+                  </div>
+
                   {/* CARDS PREVIEW CỦA HIỆU QUẢ */}
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1">
                     <div className="p-2 rounded-xl bg-white border border-slate-200 space-y-0.5 shadow-2xs">
@@ -714,8 +829,8 @@ export default function FeasibilityApprovalModal({
 
                     <div className="p-2 rounded-xl bg-[#00522c] text-white space-y-0.5 shadow-sm border border-emerald-500/30 col-span-2 sm:col-span-1">
                       <span className="text-[9px] font-extrabold uppercase text-amber-300 block">TỔNG TIẾT KIỆM</span>
-                      <span className="text-xs font-black text-white block truncate" title={`${totalSavingsVndVal.toLocaleString("vi-VN")} VNĐ`}>
-                        {totalSavingsVndVal.toLocaleString("vi-VN")}
+                      <span className="text-xs font-black text-white block truncate" title={`${(Number(directSavingsVnd) || totalSavingsVndVal).toLocaleString("vi-VN")} VNĐ`}>
+                        {(Number(directSavingsVnd) || totalSavingsVndVal).toLocaleString("vi-VN")}
                       </span>
                       <span className="text-[8.5px] font-bold text-emerald-200 block">VNĐ</span>
                     </div>
@@ -726,7 +841,7 @@ export default function FeasibilityApprovalModal({
                     <div className="text-[11.5px] font-bold text-slate-700 flex items-start sm:items-center gap-1.5 flex-wrap">
                       <span className="font-extrabold text-slate-900 not-italic shrink-0">Bằng chữ:</span>
                       <span className="italic text-emerald-950 font-semibold bg-white/90 px-2.5 py-0.5 rounded-lg border border-emerald-300/80 shadow-2xs leading-relaxed text-xs">
-                        "{convertNumberToWords(totalSavingsVndVal)}"
+                        "{convertNumberToWords(Number(directSavingsVnd) || totalSavingsVndVal)}"
                       </span>
                     </div>
                   </div>
@@ -740,7 +855,7 @@ export default function FeasibilityApprovalModal({
                     <span className="font-extrabold text-xs text-amber-950 flex items-center gap-1.5">
                       <span>💰</span>
                       <span>
-                        Nhập số tiền tiết kiệm ({categoryMode === "MATERIAL_SAVINGS" ? "1. Tiết kiệm Vật tư" : "2. Tiết kiệm Chi phí"})
+                        Nhập chi phí &amp; đánh giá tiết kiệm ({categoryMode === "MATERIAL_SAVINGS" ? "1. Tiết kiệm Vật tư" : "2. Tiết kiệm Chi phí"})
                       </span>
                     </span>
                     <span className="text-[10px] font-bold text-amber-900 bg-amber-100 border border-amber-300 px-2.5 py-0.5 rounded-full">
@@ -748,9 +863,58 @@ export default function FeasibilityApprovalModal({
                     </span>
                   </div>
 
+                  {/* HÀNG 2 Ô INPUT: CHI PHÍ TRƯỚC (VNĐ) & CHI PHÍ SAU (VNĐ) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700 block">
+                        CHI PHÍ TRƯỚC (VNĐ)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        step="1000"
+                        value={costBefore}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCostBefore(val);
+                          const cb = Number(val) || 0;
+                          const ca = Number(costAfter) || 0;
+                          if (cb > 0 || ca > 0) {
+                            setDirectSavingsVnd(Math.max(0, cb - ca));
+                          }
+                        }}
+                        placeholder="VD: 10,000,000"
+                        className="w-full p-2.5 rounded-xl border border-amber-300 text-xs font-black text-slate-900 bg-white outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600 shadow-2xs"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700 block">
+                        CHI PHÍ SAU (VNĐ)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        step="1000"
+                        value={costAfter}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCostAfter(val);
+                          const cb = Number(costBefore) || 0;
+                          const ca = Number(val) || 0;
+                          if (cb > 0 || ca > 0) {
+                            setDirectSavingsVnd(Math.max(0, cb - ca));
+                          }
+                        }}
+                        placeholder="VD: 5,000,000"
+                        className="w-full p-2.5 rounded-xl border border-amber-300 text-xs font-black text-slate-900 bg-white outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600 shadow-2xs"
+                      />
+                    </div>
+                  </div>
+
                   <div className="space-y-1">
                     <label className="text-[11px] font-bold text-slate-700 block">
-                      TỔNG SỐ TIỀN TIẾT KIỆM (VNĐ) <span className="text-rose-600 font-bold">*</span>
+                      TỔNG SỐ TIỀN TIẾT KIỆM ĐƯỢC (VNĐ) <span className="text-rose-600 font-bold">*</span>
                     </label>
                     <input
                       type="number"
@@ -759,7 +923,7 @@ export default function FeasibilityApprovalModal({
                       value={directSavingsVnd}
                       onChange={(e) => setDirectSavingsVnd(e.target.value)}
                       placeholder="Nhập số tiền tiết kiệm... VD: 5000000"
-                      className="w-full p-2.5 rounded-xl border border-amber-300 text-sm font-black text-slate-900 bg-white outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600 shadow-2xs"
+                      className="w-full p-2.5 rounded-xl border border-amber-400 text-sm font-black text-amber-950 bg-white outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600 shadow-2xs"
                     />
                   </div>
 
@@ -774,9 +938,9 @@ export default function FeasibilityApprovalModal({
                 </div>
               )}
 
-              {/* MODE 3: Categories 4, 5, 6, 7 - An toàn lao động, 5S, Tự động hoá, MMTB CCDC (Không có thời gian/số tiền) */}
+              {/* MODE 3: Categories 4, 5, 6, 7 - An toàn lao động, 5S, Tự động hoá, MMTB CCDC (Không bắt buộc có thời gian/số tiền) */}
               {categoryMode === "NON_FINANCIAL" && (
-                <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-200 space-y-2">
+                <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-200 space-y-3">
                   <div className="flex items-center gap-2 text-blue-900 font-extrabold text-xs">
                     <span className="text-sm">🛡️</span>
                     <span>
@@ -784,8 +948,83 @@ export default function FeasibilityApprovalModal({
                     </span>
                   </div>
                   <p className="text-[11px] text-blue-800 font-medium leading-relaxed bg-white/80 p-2.5 rounded-xl border border-blue-200">
-                    💡 Cải tiến thuộc nhóm <strong>{(proposal as any).product_group || proposal.category_label || proposal.category}</strong> (tập trung cải thiện môi trường làm việc, an toàn lao động, chuẩn hóa 5S, tự động hóa hoặc thiết bị MMTB CCDC). Sáng kiến này <strong>không phát sinh chỉ số thời gian hay số tiền tiết kiệm trực tiếp</strong>.
+                    💡 Cải tiến thuộc nhóm <strong>{(proposal as any).product_group || proposal.category_label || proposal.category}</strong> (tập trung cải thiện môi trường làm việc, an toàn lao động, chuẩn hóa 5S, tự động hóa hoặc thiết bị MMTB CCDC).
                   </p>
+
+                  {/* HÀNG 2 Ô INPUT: CHI PHÍ TRƯỚC (VNĐ) & CHI PHÍ SAU (VNĐ) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-blue-200/60">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700 block">
+                        💵 CHI PHÍ TRƯỚC (VNĐ)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        step="1000"
+                        value={costBefore}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCostBefore(val);
+                          const cb = Number(val) || 0;
+                          const ca = Number(costAfter) || 0;
+                          if (cb > 0 || ca > 0) {
+                            setDirectSavingsVnd(Math.max(0, cb - ca));
+                          }
+                        }}
+                        placeholder="VD: 10,000,000"
+                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-black text-slate-900 bg-white outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-2xs"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-slate-700 block">
+                        💵 CHI PHÍ SAU (VNĐ)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        step="1000"
+                        value={costAfter}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCostAfter(val);
+                          const cb = Number(costBefore) || 0;
+                          const ca = Number(val) || 0;
+                          if (cb > 0 || ca > 0) {
+                            setDirectSavingsVnd(Math.max(0, cb - ca));
+                          }
+                        }}
+                        placeholder="VD: 5,000,000"
+                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-black text-slate-900 bg-white outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-2xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-slate-700 block">
+                      💰 TỔNG SỐ TIỀN TIẾT KIỆM ĐƯỢC (VNĐ)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      step="1000"
+                      value={directSavingsVnd}
+                      onChange={(e) => setDirectSavingsVnd(e.target.value)}
+                      placeholder="Nhập số tiền tiết kiệm (nếu có)..."
+                      className="w-full p-2.5 rounded-xl border border-blue-300 text-sm font-black text-blue-950 bg-white outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-2xs"
+                    />
+                  </div>
+
+                  {directSavingsVnd !== "" && Number(directSavingsVnd) > 0 && (
+                    <div className="pt-2 border-t border-blue-200/80 text-left">
+                      <div className="text-[11.5px] font-bold text-slate-700 flex items-start sm:items-center gap-1.5 flex-wrap">
+                        <span className="font-extrabold text-slate-900 not-italic shrink-0">Bằng chữ:</span>
+                        <span className="italic text-blue-950 font-semibold bg-white/90 px-2.5 py-0.5 rounded-lg border border-blue-300 shadow-2xs leading-relaxed text-xs">
+                          "{convertNumberToWords(Number(directSavingsVnd) || 0)}"
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </>

@@ -775,7 +775,7 @@ export function loginUserProfile(empCodeOrRole: string, password?: string): User
 
   // Thiết lập cookie token
   const token = `tbs_token_${baseProfile.empCode}_${Date.now()}`;
-  document.cookie = `tbs_token=${token}; path=/; max-age=86400`;
+  document.cookie = `tbs_token=${token}; path=/; max-age=86400; SameSite=Lax`;
 
   // Bắn event cập nhật toàn bộ components
   window.dispatchEvent(new Event("tbs_profile_updated"));

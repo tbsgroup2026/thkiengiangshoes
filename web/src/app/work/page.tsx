@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import NotificationCenter from "@/components/NotificationCenter";
 import DonutChartModal from "@/components/DonutChartModal";
 import UserAvatar from "@/components/UserAvatar";
@@ -123,6 +124,7 @@ interface DepartmentItem {
 }
 
 function HRModuleView() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<string>("hub");
 
   return (
@@ -132,6 +134,7 @@ function HRModuleView() {
         <div className="flex items-center justify-between bg-white border border-slate-200/90 rounded-2xl p-3 shadow-2xs">
           <div className="flex items-center gap-3">
             <button
+              type="button"
               onClick={() => setActiveTab("hub")}
               className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-[#006838] text-slate-700 hover:text-white text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs group"
             >
@@ -148,6 +151,7 @@ function HRModuleView() {
           </div>
 
           <button
+            type="button"
             onClick={() => setActiveTab("hub")}
             className="px-3.5 py-1.5 rounded-xl bg-[#006838] text-white text-xs font-extrabold shadow-2xs hover:bg-[#004d29] transition-all flex items-center gap-1.5 cursor-pointer"
           >
@@ -162,9 +166,9 @@ function HRModuleView() {
         <HRHanhChanhHubView
           onNavigateTab={(tab) => {
             if (tab === "rooms") {
-              window.location.href = "/rooms";
+              router.push("/rooms");
             } else if (tab === "business-trip") {
-              window.location.href = "/business-trip";
+              router.push("/business-trip");
             } else {
               setActiveTab(tab);
             }
@@ -186,71 +190,63 @@ function HRModuleView() {
   );
 }
 
-function parseModuleFromUrl(): string | null {
-  if (typeof window === "undefined") return null;
-  const urlParams = new URLSearchParams(window.location.search);
-  const rawMod = (urlParams.get("module") || urlParams.get("dept") || "").toLowerCase().trim();
+function parseModuleFromParam(rawMod: string): string | null {
+  const mod = rawMod.toLowerCase().trim();
 
-  if (!rawMod || rawMod === "overview" || rawMod === "sanh" || rawMod === "00") {
+  if (!mod || mod === "overview" || mod === "sanh" || mod === "00") {
     return null;
   }
-  if (rawMod === "hr" || rawMod === "nhansu" || rawMod === "vanphong" || rawMod === "vpdieuhanh" || rawMod === "01") {
+  if (mod === "hr" || mod === "nhansu" || mod === "vanphong" || mod === "vpdieuhanh" || mod === "01") {
     return "hr";
   }
-  if (rawMod === "finance" || rawMod === "ketoan" || rawMod === "taichinh" || rawMod === "02") {
+  if (mod === "finance" || mod === "ketoan" || mod === "taichinh" || mod === "02") {
     return "finance";
   }
-  if (rawMod === "rd" || rawMod === "03") {
+  if (mod === "rd" || mod === "03") {
     return "rd";
   }
-  if (rawMod === "ci" || rawMod === "kaizen" || rawMod === "it" || rawMod === "04") {
+  if (mod === "ci" || mod === "kaizen" || mod === "it" || mod === "04") {
     return "ci";
   }
-  if (rawMod === "qc" || rawMod === "quality" || rawMod === "05") {
+  if (mod === "qc" || mod === "quality" || mod === "05") {
     return "qc";
   }
-  if (rawMod === "logistics" || rawMod === "kho" || rawMod === "06") {
+  if (mod === "logistics" || mod === "kho" || mod === "06") {
     return "logistics";
   }
-  if (rawMod === "production" || rawMod === "factory" || rawMod === "nhamay" || rawMod === "07") {
+  if (mod === "production" || mod === "factory" || mod === "nhamay" || mod === "07") {
     return "production";
   }
 
   return null;
 }
 
-export default function WorkDashboardPage() {
+function WorkDashboardContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [selectedDept, setSelectedDept] = useState<string | null>(null);
 
   const changeDepartment = (deptId: string | null, pushHistory: boolean = true) => {
     const targetDept = deptId === "overview" ? null : deptId;
     setSelectedDept(targetDept);
 
-    if (typeof window !== "undefined" && pushHistory) {
+    if (pushHistory) {
       const targetModule = targetDept || "overview";
-      const currentQuery = new URLSearchParams(window.location.search).get("module");
+      const currentQuery = searchParams.get("module") || searchParams.get("dept");
       if (currentQuery !== targetModule) {
-        const newUrl = `/work?module=${targetModule}`;
-        window.history.pushState({ module: targetModule }, "", newUrl);
+        const newUrl = targetModule === "overview" ? "/work" : `/work?module=${targetModule}`;
+        setTimeout(() => {
+          router.replace(newUrl, { scroll: false });
+        }, 0);
       }
     }
   };
 
-  // Synchronize state with URL parameters on mount and browser back/forward (popstate)
+  // Synchronize state with URL parameters on mount and searchParams change
   useEffect(() => {
-    const initialMod = parseModuleFromUrl();
-    setSelectedDept(initialMod);
-
-    const handlePopState = () => {
-      const mod = parseModuleFromUrl();
-      setSelectedDept(mod);
-    };
-
-    if (typeof window !== "undefined") {
-      window.addEventListener("popstate", handlePopState);
-      return () => window.removeEventListener("popstate", handlePopState);
-    }
-  }, []);
+    const rawMod = searchParams.get("module") || searchParams.get("dept") || "";
+    setSelectedDept(parseModuleFromParam(rawMod));
+  }, [searchParams]);
 
   const [plantFilter, setPlantFilter] = useState("Toàn nhà máy");
   const [timeFilter, setTimeFilter] = useState("Tháng này");
@@ -2569,7 +2565,7 @@ export default function WorkDashboardPage() {
           if (typeof window !== "undefined") {
             sessionStorage.clear();
             localStorage.clear();
-            window.location.href = "/login";
+            router.push("/login");
           }
         }}
       />
@@ -2615,5 +2611,13 @@ export default function WorkDashboardPage() {
         onClose={() => setIsThemeModalOpen(false)}
       />
     </div>
+  );
+}
+
+export default function WorkDashboardPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-900 flex items-center justify-center text-white font-bold text-sm">Đang tải bảng điều khiển...</div>}>
+      <WorkDashboardContent />
+    </Suspense>
   );
 }

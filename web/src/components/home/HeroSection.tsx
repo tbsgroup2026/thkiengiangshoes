@@ -175,6 +175,7 @@ export default function HeroSection() {
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
                 <Link
                   href="/work"
+                  prefetch={false}
                   className="px-7 py-3.5 rounded-2xl bg-gradient-to-r from-[#2fd39a] to-emerald-500 text-[#08221a] font-extrabold text-sm shadow-xl shadow-[#2fd39a]/20 hover:shadow-2xl hover:shadow-[#2fd39a]/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center gap-2 group"
                 >
                   <span>{t("hero.access_system")}</span>

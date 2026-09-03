@@ -67,13 +67,20 @@ export async function GET() {
         luu_tru: Number(countsRes?.luu_tru || 0),
       };
 
-      return NextResponse.json({
-        success: true,
-        counts,
-        regions: regionMap,
-        category_counts: categoryMap,
-        timestamp: new Date().toISOString(),
-      });
+      return NextResponse.json(
+        {
+          success: true,
+          counts,
+          regions: regionMap,
+          category_counts: categoryMap,
+          timestamp: new Date().toISOString(),
+        },
+        {
+          headers: {
+            'Cache-Control': 'public, max-age=15, stale-while-revalidate=60',
+          },
+        }
+      );
     }
 
     return NextResponse.json({

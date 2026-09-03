@@ -1,5 +1,9 @@
-export async function ensureKaizenSchema(db: any) {
+let isSchemaMigrated = false;
+
+export async function ensureKaizenSchema(db: any, force = false) {
   if (!db) return;
+  if (isSchemaMigrated && !force) return;
+
   try {
     // Add missing columns if they don't exist
     const columns = [
@@ -31,6 +35,16 @@ export async function ensureKaizenSchema(db: any) {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `).run().catch(() => {});
+
+    // Create High-Performance SQL Indexes for Cloudflare D1
+    const indexes = [
+      'CREATE INDEX IF NOT EXISTS idx_kaizen_factory_created ON ci_kaizen_proposals(factory, created_at DESC)',
+      'CREATE INDEX IF NOT EXISTS idx_kaizen_status ON ci_kaizen_proposals(status, sub_status, registration_type)',
+    ];
+
+    for (const idxSql of indexes) {
+      await db.prepare(idxSql).run().catch(() => {});
+    }
 
     // Sync saved_seconds to so_giay_tiet_kiem if 0
     await db.prepare(`
@@ -73,7 +87,10 @@ export async function ensureKaizenSchema(db: any) {
       WHERE is_archived IS NULL
     `).run().catch(() => {});
 
+    // Mark as migrated for current isolate lifetime
+    isSchemaMigrated = true;
   } catch (err) {
     console.error("[ensureKaizenSchema] Migration error:", err);
   }
 }
+

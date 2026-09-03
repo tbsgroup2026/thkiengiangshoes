@@ -402,6 +402,7 @@ export default function Header() {
             {/* 1. Trang chủ / Home */}
             <Link
               href="/"
+              prefetch={false}
               className={`transition-colors py-1 ${
                 pathname === '/' ? 'text-[#2fd39a]' : 'hover:text-[#2fd39a]'
               }`}
@@ -412,6 +413,7 @@ export default function Header() {
             {/* 2. TBS Group */}
             <Link
               href="/ve-tbs"
+              prefetch={false}
               className={`transition-colors py-1 ${
                 pathname === '/ve-tbs' || pathname === '/about' ? 'text-[#2fd39a]' : 'hover:text-[#2fd39a]'
               }`}
@@ -422,6 +424,7 @@ export default function Header() {
             {/* 3. Tuyển dụng / Recruitment */}
             <Link
               href="/careers"
+              prefetch={false}
               className={`transition-colors py-1 ${
                 pathname?.startsWith('/careers') ? 'text-[#2fd39a]' : 'hover:text-[#2fd39a]'
               }`}
@@ -432,6 +435,7 @@ export default function Header() {
             {/* 4. Thư viện mẫu / Template Library */}
             <Link
               href="/documents/templates"
+              prefetch={false}
               className={`transition-colors py-1 ${
                 pathname?.startsWith('/documents/templates') ? 'text-[#2fd39a]' : 'hover:text-[#2fd39a]'
               }`}
@@ -442,6 +446,7 @@ export default function Header() {
             {/* 5. Hệ thống quản trị / Management System */}
             <Link
               href={isLoggedIn ? "/work" : "/login"}
+              prefetch={false}
               className={`transition-colors py-1 ${
                 pathname === '/work' || pathname?.startsWith('/work') ? 'text-[#2fd39a]' : 'hover:text-[#2fd39a]'
               }`}
@@ -452,6 +457,7 @@ export default function Header() {
             {/* 6. Tin tức / News */}
             <Link
               href="/news"
+              prefetch={false}
               className={`transition-colors py-1 ${
                 pathname?.startsWith('/news') ? 'text-[#2fd39a]' : 'hover:text-[#2fd39a]'
               }`}
@@ -465,7 +471,11 @@ export default function Header() {
               onMouseEnter={handleOtherMouseEnter}
               onMouseLeave={handleOtherMouseLeave}
             >
-              <button className="flex items-center gap-1 hover:text-[#2fd39a] transition-colors py-1 uppercase font-extrabold cursor-pointer">
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); setOtherDropdownOpen(!otherDropdownOpen); }}
+                className="flex items-center gap-1 hover:text-[#2fd39a] transition-colors py-1 uppercase font-extrabold cursor-pointer"
+              >
                 <span>{lang === "VN" ? "Khác" : "Other"}</span>
                 <IconChevronDown
                   size={13}
@@ -486,6 +496,7 @@ export default function Header() {
                 <div className="rounded-2xl bg-[#041a13]/98 border border-[#2fd39a]/40 p-2 shadow-2xl backdrop-blur-2xl text-left">
                   <Link
                     href="/contact"
+                    prefetch={false}
                     className="flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-extrabold text-gray-100 hover:text-[#2fd39a] hover:bg-white/10 rounded-xl transition"
                   >
                     <IconPhoneCall size={16} className="text-[#2fd39a]" />
@@ -493,6 +504,7 @@ export default function Header() {
                   </Link>
                   <Link
                     href="/faq"
+                    prefetch={false}
                     className="flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-extrabold text-gray-100 hover:text-[#2fd39a] hover:bg-white/10 rounded-xl transition"
                   >
                     <IconHelpCircle size={16} className="text-[#2fd39a]" />
@@ -500,6 +512,7 @@ export default function Header() {
                   </Link>
                   <Link
                     href="/structure"
+                    prefetch={false}
                     className="flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-extrabold text-gray-100 hover:text-[#2fd39a] hover:bg-white/10 rounded-xl transition"
                   >
                     <IconHierarchy size={16} className="text-[#2fd39a]" />
@@ -529,7 +542,8 @@ export default function Header() {
             {isLoggedIn && (
               <div className="relative">
                 <button
-                  onClick={() => setNotifOpen(!notifOpen)}
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); setNotifOpen(!notifOpen); }}
                   className="relative p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all duration-200"
                   aria-label={lang === "VN" ? "Thông báo" : "Notifications"}
                 >
@@ -551,7 +565,8 @@ export default function Header() {
                       </div>
                       {unreadCount > 0 && (
                         <button
-                          onClick={markAllAsRead}
+                          type="button"
+                          onClick={(e) => { e.preventDefault(); markAllAsRead(); }}
                           className="text-[11px] font-semibold text-[#2fd39a] hover:underline"
                         >
                           {lang === "VN" ? "Đọc tất cả" : "Mark all as read"}
@@ -593,7 +608,8 @@ export default function Header() {
                 onMouseLeave={handleUserMouseLeave}
               >
                 <button
-                  onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); setUserDropdownOpen(!userDropdownOpen); }}
                   className="flex items-center gap-2 bg-[#0f4133]/90 hover:bg-[#0f4133] px-3.5 py-1.5 rounded-full border border-[#2fd39a]/40 shadow-md text-white transition-all cursor-pointer group"
                 >
                   <div className="relative">
@@ -653,6 +669,7 @@ export default function Header() {
                     <div className="space-y-1">
                       {/* Option 1: Thông tin cá nhân / Personal Information */}
                       <button
+                        type="button"
                         onClick={() => {
                           setUserDropdownOpen(false);
                           setProfileModalOpen(true);
@@ -670,6 +687,7 @@ export default function Header() {
 
                       {/* Option 2: Đổi mật khẩu / Change Password */}
                       <button
+                        type="button"
                         onClick={() => {
                           setUserDropdownOpen(false);
                           setChangePasswordModalOpen(true);
@@ -710,6 +728,7 @@ export default function Header() {
 
                       {/* Option 4: Đăng xuất / Logout */}
                       <button
+                        type="button"
                         onClick={() => {
                           setUserDropdownOpen(false);
                           handleLogout();
@@ -743,6 +762,7 @@ export default function Header() {
 
           {/* Mobile Hamburger Button */}
           <button
+            type="button"
             onClick={() => setMobileOpen(!mobileOpen)}
             className="xl:hidden w-10 h-10 rounded-full bg-white/10 border border-white/20 text-white flex items-center justify-center hover:bg-white/20 transition active:scale-95"
             aria-label="Toggle Mobile Navigation"

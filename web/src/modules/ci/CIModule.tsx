@@ -2,17 +2,40 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useStatusCounts } from "@/context/StatusCountsContext";
-import KaizenDashboard from "./KaizenDashboard";
-import KaizenEarlyWarning from "./KaizenEarlyWarning";
-import KaizenFiveStepSubmitForm from "./KaizenFiveStepSubmitForm";
-import KaizenPublicSubmitForm from "./KaizenPublicSubmitForm";
-import KaizenDetailModal from "./KaizenDetailModal";
-import EvaluationModal from "./EvaluationModal";
-import FeasibilityApprovalModal from "./FeasibilityApprovalModal";
-import PreliminaryReviewModal from "./PreliminaryReviewModal";
-import KaizenDuplicateCompareModal from "./KaizenDuplicateCompareModal";
-import KaizenLeaderboard from "./KaizenLeaderboard";
+
+// Dynamic Imports for Modals & Sub-views to shrink initial JS bundle & accelerate 3G/4G loading
+const KaizenDashboard = dynamic(() => import("./KaizenDashboard"), { ssr: false });
+const KaizenEarlyWarning = dynamic(() => import("./KaizenEarlyWarning"), { ssr: false });
+const KaizenFiveStepSubmitForm = dynamic(() => import("./KaizenFiveStepSubmitForm"), { ssr: false });
+const KaizenPublicSubmitForm = dynamic(() => import("./KaizenPublicSubmitForm"), { ssr: false });
+const KaizenDetailModal = dynamic(() => import("./KaizenDetailModal"), { ssr: false });
+const EvaluationModal = dynamic(() => import("./EvaluationModal"), { ssr: false });
+const FeasibilityApprovalModal = dynamic(() => import("./FeasibilityApprovalModal"), { ssr: false });
+const PreliminaryReviewModal = dynamic(() => import("./PreliminaryReviewModal"), { ssr: false });
+const KaizenDuplicateCompareModal = dynamic(() => import("./KaizenDuplicateCompareModal"), { ssr: false });
+const KaizenLeaderboard = dynamic(() => import("./KaizenLeaderboard"), { ssr: false });
+
+const PROPOSALS_CACHE_KEY = "tbs_kaizen_proposals_cache_v1";
+
+// Resilient Fetch with AbortController Timeout & Exponential Backoff Retry for Weak 3G/4G Networks
+async function fetchWithRetryAndTimeout(url: string, options: RequestInit = {}, retries = 2, timeoutMs = 8000): Promise<Response> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(timer);
+      if (res.ok || attempt === retries) return res;
+    } catch (err: any) {
+      clearTimeout(timer);
+      if (attempt === retries) throw err;
+      await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+    }
+  }
+  throw new Error("Network request failed after retries");
+}
 import {
   IconLayoutGrid,
   IconList,
@@ -470,8 +493,19 @@ export function renderCardTopRightBadge(prop: KaizenProposal, rankInfo?: any) {
 
 export default function CIModule() {
   const { isExecutiveOrAdmin } = usePermission();
-  const [proposals, setProposals] = useState<KaizenProposal[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [proposals, setProposals] = useState<KaizenProposal[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = localStorage.getItem(PROPOSALS_CACHE_KEY);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch (e) {}
+    }
+    return [];
+  });
+  const [loading, setLoading] = useState(proposals.length === 0);
   const [viewMode, setViewMode] = useState<"GRID" | "LIST">("GRID");
   const [activeTab, setActiveTab] = useState<"LIBRARY" | "DASHBOARD" | "EARLY_WARNING">("LIBRARY");
   const [isFiveStepModalOpen, setIsFiveStepModalOpen] = useState(false);
@@ -736,27 +770,34 @@ export default function CIModule() {
   // Fetch ALL Proposals from D1 Database — NO server-side filters.
   // Filtering is done entirely client-side so sidebar counts always reflect
   // the true totals for the full dataset, not just the current filtered view.
-  const fetchProposals = async () => {
+  const fetchProposals = async (silent = false) => {
     try {
-      setLoading(true);
-      const res = await fetch(`/api/ci-kaizen`);
+      if (!silent && proposals.length === 0) setLoading(true);
+      const res = await fetchWithRetryAndTimeout(`/api/ci-kaizen`, {}, 2, 8000);
       if (!res.ok) {
-        setLoading(false);
+        if (!silent && proposals.length === 0) setLoading(false);
         return;
       }
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
         setProposals(json.data);
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.setItem(PROPOSALS_CACHE_KEY, JSON.stringify(json.data));
+          } catch (e) {}
+        }
       }
     } catch (err) {
-      showToast("❌ Lỗi khi tải danh sách cải tiến Kaizen");
+      if (!silent && proposals.length === 0) {
+        showToast("⚠️ Kết nối mạng yếu: Đang hiển thị bản ghi đã lưu gần nhất");
+      }
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchProposals();
+    fetchProposals(proposals.length > 0);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1589,6 +1630,7 @@ export default function CIModule() {
                           setSelectedCategory(nextCat);
                           setSelectedRegType("ALL");
                           setSelectedRegion("ALL");
+                          setActiveTab("LIBRARY");
                         }}
                         className={`w-full text-left px-2 py-0.5 rounded-lg flex items-center justify-between transition-colors ${
                           selectedCategory === c.id ? "bg-[#006838] text-white font-extrabold" : "text-slate-300 hover:bg-slate-800/80 hover:text-white"
@@ -1654,7 +1696,7 @@ export default function CIModule() {
 
       {activeTab === "DASHBOARD" ? (
         <KaizenDashboard
-          proposals={filteredProposals}
+          proposals={normalizedProposals}
           onBackToLibrary={() => setActiveTab("LIBRARY")}
           onSelectProposal={(p) => {
             setActiveProposal(p);
@@ -1745,7 +1787,7 @@ export default function CIModule() {
 
           {/* Refresh Button */}
           <button
-            onClick={fetchProposals}
+            onClick={() => fetchProposals(false)}
             className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer border border-slate-300 shadow-2xs"
             title="Tải lại dữ liệu"
           >
@@ -1785,7 +1827,14 @@ export default function CIModule() {
           {/* Registration Type Filter (Loại đăng ký) */}
           <select
             value={selectedRegType}
-            onChange={(e) => setSelectedRegType(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              setSelectedRegType(val);
+              if (val !== "ALL") {
+                setSelectedRegion("ALL");
+                setSelectedCategory("ALL");
+              }
+            }}
             className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 text-[11px] font-bold text-slate-700 outline-none focus:border-[#006838]"
           >
             <option value="ALL">🏆 Tất cả loại</option>
@@ -1810,7 +1859,14 @@ export default function CIModule() {
           {/* Danh mục */}
           <select
             value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              setSelectedCategory(val);
+              if (val !== "ALL") {
+                setSelectedRegType("ALL");
+                setSelectedRegion("ALL");
+              }
+            }}
             className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 text-[11px] font-bold text-slate-700 outline-none focus:border-[#006838]"
           >
             <option value="ALL">📁 Danh mục</option>
@@ -1824,7 +1880,14 @@ export default function CIModule() {
           {/* Khu vực */}
           <select
             value={selectedRegion}
-            onChange={(e) => setSelectedRegion(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              setSelectedRegion(val);
+              if (val !== "ALL") {
+                setSelectedRegType("ALL");
+                setSelectedCategory("ALL");
+              }
+            }}
             className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 text-[11px] font-bold text-slate-700 outline-none focus:border-[#006838]"
           >
             <option value="ALL">🏢 Khu vực</option>

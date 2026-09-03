@@ -55,7 +55,6 @@ export const StatusCountsProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const fetchStatusCounts = useCallback(async () => {
     try {
-      if (counts === null) setLoading(true);
       const res = await fetch("/api/ci-kaizen/status-counts");
       if (res.ok) {
         const json = await res.json();
@@ -80,7 +79,7 @@ export const StatusCountsProvider: React.FC<{ children: React.ReactNode }> = ({ 
     } finally {
       setLoading(false);
     }
-  }, [counts]);
+  }, []);
 
   useEffect(() => {
     fetchStatusCounts();

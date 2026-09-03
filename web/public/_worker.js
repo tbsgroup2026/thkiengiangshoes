@@ -3510,13 +3510,23 @@ export default {
       if (url.pathname.endsWith("/status-counts") && request.method === "GET") {
         try {
           await ensureProposalSchemaAndMigration();
-          // ── Status counts (Loại đăng ký) ─────────────────────────────
-          const { results: allRows } = await env.DB.prepare(
-            "SELECT * FROM ci_kaizen_proposals"
-          ).all().catch(() => ({ results: [] }));
-          const rawItems = allRows || [];
+          // ── SQL Aggregated Status Counts (Fast D1 Execution) ─────────────────────────
+          const countsQuery = `
+            SELECT 
+              COUNT(CASE WHEN (COALESCE(is_archived, 0) = 1 OR sub_status = 'LUU_TRU' OR registration_type = 'LUU_TRU' OR status = 'ARCHIVED' OR approval_status = 'TU_CHOI' OR sub_status = 'TU_CHOI_TRIEN_KHAI' OR status = 'REJECTED') THEN 1 END) as luu_tru,
+              COUNT(CASE WHEN NOT (COALESCE(is_archived, 0) = 1 OR sub_status = 'LUU_TRU' OR registration_type = 'LUU_TRU' OR status = 'ARCHIVED' OR approval_status = 'TU_CHOI' OR sub_status = 'TU_CHOI_TRIEN_KHAI' OR status = 'REJECTED') AND COALESCE(review_status, 'CHO_PHE_DUYET') = 'CHO_PHE_DUYET' THEN 1 END) as cho_phe_duyet,
+              COUNT(CASE WHEN NOT (COALESCE(is_archived, 0) = 1 OR sub_status = 'LUU_TRU' OR registration_type = 'LUU_TRU' OR status = 'ARCHIVED' OR approval_status = 'TU_CHOI' OR sub_status = 'TU_CHOI_TRIEN_KHAI' OR status = 'REJECTED') AND COALESCE(review_status, '') = 'CHO_DANH_GIA' THEN 1 END) as cho_danh_gia,
+              COUNT(CASE WHEN NOT (COALESCE(is_archived, 0) = 1 OR sub_status = 'LUU_TRU' OR registration_type = 'LUU_TRU' OR status = 'ARCHIVED' OR approval_status = 'TU_CHOI' OR sub_status = 'TU_CHOI_TRIEN_KHAI' OR status = 'REJECTED') AND COALESCE(review_status, '') = 'DA_DANH_GIA' THEN 1 END) as da_danh_gia,
+              COUNT(CASE WHEN NOT (COALESCE(is_archived, 0) = 1 OR sub_status = 'LUU_TRU' OR registration_type = 'LUU_TRU' OR status = 'ARCHIVED' OR approval_status = 'TU_CHOI' OR sub_status = 'TU_CHOI_TRIEN_KHAI' OR status = 'REJECTED') AND COALESCE(review_status, '') IN ('CHO_DANH_GIA', 'DA_DANH_GIA') THEN 1 END) as thi_dua
+            FROM ci_kaizen_proposals
+          `;
+          const countsRes = await env.DB.prepare(countsQuery).first().catch(() => null);
 
-          let thiDua = 0, choReview = 0, choDanhGia = 0, daDanhGia = 0, luuTru = 0;
+          // Lightweight column-only query for region & category grouping (skips heavy images & descriptions)
+          const { results: lightRows } = await env.DB.prepare(
+            "SELECT factory, category FROM ci_kaizen_proposals"
+          ).all().catch(() => ({ results: [] }));
+          const rawItems = lightRows || [];
 
           // Region counts using factory field
           const regionCounts = {
@@ -3528,24 +3538,7 @@ export default {
           // Category counts (Phân loại)
           const categoryCounts = {};
 
-          for (const rawP of rawItems) {
-            const p = normalizeProposalBackend(rawP);
-            const isArchived = Number(p.is_archived) === 1;
-
-            // ⚡ Exact counting formulas per specification
-            if (isArchived) {
-              luuTru++;
-            } else {
-              if (p.review_status === "CHO_PHE_DUYET") choReview++;
-              else if (p.review_status === "CHO_DANH_GIA") choDanhGia++;
-              else if (p.review_status === "DA_DANH_GIA") daDanhGia++;
-
-              if (p.review_status === "CHO_DANH_GIA" || p.review_status === "DA_DANH_GIA") {
-                thiDua++;
-              }
-            }
-
-            // Region counts by factory field
+          for (const p of rawItems) {
             const fac = String(p.factory || "").toUpperCase();
             if (fac.includes("KIÊN GIANG 1") || fac.includes("KIEN GIANG 1") || fac === "KG1" || fac === "KG 1") regionCounts["Kiên Giang 1"]++;
             else if (fac.includes("KIÊN GIANG 2") || fac.includes("KIEN GIANG 2") || fac === "KG2" || fac === "KG 2") regionCounts["Kiên Giang 2"]++;
@@ -3556,7 +3549,6 @@ export default {
             else if (fac.includes("CHẤT LƯỢNG") || fac.includes("CHAT LUONG") || fac.includes("QA") || fac.includes("QC")) regionCounts["Phòng chất lượng"]++;
             else if (fac.includes("NHÂN SỰ") || fac.includes("NHAN SU") || fac.includes("HR") || fac.includes("HÀNH CHÍNH")) regionCounts["Phòng nhân sự"]++;
 
-            // Category counts by category field
             if (p.category) {
               const cat = String(p.category);
               categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
@@ -3565,7 +3557,13 @@ export default {
 
           return new Response(JSON.stringify({
             success: true,
-            counts: { thi_dua: thiDua, cho_phe_duyet: choReview, cho_danh_gia: choDanhGia, da_danh_gia: daDanhGia, luu_tru: luuTru },
+            counts: {
+              thi_dua: Number(countsRes?.thi_dua || 0),
+              cho_phe_duyet: Number(countsRes?.cho_phe_duyet || 0),
+              cho_danh_gia: Number(countsRes?.cho_danh_gia || 0),
+              da_danh_gia: Number(countsRes?.da_danh_gia || 0),
+              luu_tru: Number(countsRes?.luu_tru || 0)
+            },
             regions: regionCounts,
             category_counts: categoryCounts,
             timestamp: new Date().toISOString(),
@@ -4216,6 +4214,137 @@ export default {
             status: "ARCHIVED",
             sub_status: "LUU_TRU",
             registration_type: "LUU_TRU"
+          }), { headers: SECURE_JSON_HEADERS });
+
+        } catch(err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: SECURE_JSON_HEADERS });
+        }
+      }
+
+      // 3.6 POST /api/ci-kaizen/approve (Phê duyệt tính khả thi sáng kiến - Bước 3 QĐ-TBKG)
+      if (url.pathname.endsWith("/approve") && request.method === "POST") {
+        try {
+          const user = await verifyServerAuth(request, env);
+          if (!user || !user.authenticated) {
+            return new Response(JSON.stringify({ success: false, error: "UNAUTHORIZED", message: "Yêu cầu đăng nhập để thực hiện phê duyệt!" }), { status: 401, headers: SECURE_JSON_HEADERS });
+          }
+
+          const body = await request.json();
+          const {
+            proposalId, decision, note,
+            timeBeforeSeconds, timeAfterSeconds, savedSeconds,
+            efficiencyValueVND, pairQuantity, so_luong_giay,
+            totalSavingsVND, tong_tien_tiet_kiem, totalSavingsWords, tong_tien_bang_chu
+          } = body;
+
+          if (!proposalId) {
+            return new Response(JSON.stringify({ success: false, error: "INVALID_PARAM", message: "Mã đề xuất không hợp lệ" }), { status: 400, headers: SECURE_JSON_HEADERS });
+          }
+
+          const isApproved = decision === "APPROVE";
+          const status = isApproved ? "UNDER_REVIEW" : "REJECTED";
+          const subStatus = isApproved ? "CHO_DANH_GIA" : "TU_CHOI_TRIEN_KHAI";
+          const approvalStatus = isApproved ? "PHE_DUYET" : "TU_CHOI";
+
+          const pairQty = Number(pairQuantity || so_luong_giay || 0);
+          const totalSavings = Number(totalSavingsVND || tong_tien_tiet_kiem || 0);
+          const totalSavingsWordsVal = String(totalSavingsWords || tong_tien_bang_chu || "");
+          const timeBefore = Number(timeBeforeSeconds || 0);
+          const timeAfter = Number(timeAfterSeconds || 0);
+          const savedSecs = Number(savedSeconds || Math.max(0, timeBefore - timeAfter));
+          const efficiencyVnd = Number(efficiencyValueVND || Math.round(savedSecs * 12.5));
+
+          const afterImageUrl = body.after_image_url || body.afterImageUrl || null;
+          const attachmentsJson = body.attachments_json || body.attachmentsJson || null;
+          const categoryVal = body.category || null;
+
+          const costBeforeVal = Number(body.costBefore || body.cost_before || 0);
+          const costAfterVal = Number(body.costAfter || body.cost_after || 0);
+
+          // Auto-migrate columns
+          try { await env.DB.prepare("ALTER TABLE ci_kaizen_proposals ADD COLUMN pair_quantity INTEGER DEFAULT 0").run(); } catch(e) {}
+          try { await env.DB.prepare("ALTER TABLE ci_kaizen_proposals ADD COLUMN total_savings_vnd REAL DEFAULT 0").run(); } catch(e) {}
+          try { await env.DB.prepare("ALTER TABLE ci_kaizen_proposals ADD COLUMN total_savings_words TEXT").run(); } catch(e) {}
+          try { await env.DB.prepare("ALTER TABLE ci_kaizen_proposals ADD COLUMN cost_before REAL DEFAULT 0").run(); } catch(e) {}
+          try { await env.DB.prepare("ALTER TABLE ci_kaizen_proposals ADD COLUMN cost_after REAL DEFAULT 0").run(); } catch(e) {}
+          try { await env.DB.prepare("ALTER TABLE ci_kaizen_proposals ADD COLUMN after_image_url TEXT").run(); } catch(e) {}
+          try { await env.DB.prepare("ALTER TABLE ci_kaizen_proposals ADD COLUMN attachments_json TEXT").run(); } catch(e) {}
+          try { await env.DB.prepare("ALTER TABLE ci_kaizen_proposals ADD COLUMN category TEXT").run(); } catch(e) {}
+          try { await env.DB.prepare("ALTER TABLE ci_kaizen_proposals ADD COLUMN review_status TEXT").run(); } catch(e) {}
+
+          const query = `
+            UPDATE ci_kaizen_proposals
+            SET approval_status = ?,
+                sub_status = ?,
+                status = ?,
+                review_status = ?,
+                category = COALESCE(?, category),
+                time_before_seconds = ?,
+                time_after_seconds = ?,
+                saved_seconds = ?,
+                efficiency_value_vnd = ?,
+                pair_quantity = ?,
+                total_savings_vnd = ?,
+                total_savings_words = ?,
+                cost_before = ?,
+                cost_after = ?,
+                after_image_url = COALESCE(?, after_image_url),
+                attachments_json = COALESCE(?, attachments_json),
+                review_comment = COALESCE(?, review_comment),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+          `;
+
+          await env.DB.prepare(query).bind(
+            approvalStatus,
+            subStatus,
+            status,
+            subStatus,
+            categoryVal,
+            timeBefore,
+            timeAfter,
+            savedSecs,
+            efficiencyVnd,
+            pairQty,
+            totalSavings,
+            totalSavingsWordsVal,
+            costBeforeVal,
+            costAfterVal,
+            afterImageUrl,
+            attachmentsJson,
+            note || null,
+            proposalId
+          ).run();
+
+          // Log audit history
+          await env.DB.prepare(`
+            INSERT INTO ci_kaizen_status_history (
+              proposal_id, from_status, to_status, action, actor_id, actor_name, note, created_at
+            ) VALUES (?, 'SUBMITTED', ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+          `).bind(
+            proposalId,
+            subStatus,
+            isApproved ? "APPROVE" : "REJECT",
+            user.empCode || "ADMIN-2026",
+            user.name || "Người Phê Duyệt",
+            note || (isApproved ? "Đã phê duyệt tính khả thi (Bước 3)" : "Từ chối triển khai")
+          ).run().catch(() => {});
+
+          invalidateKaizenStatsCache();
+
+          return new Response(JSON.stringify({
+            success: true,
+            message: isApproved ? "🎉 Đã phê duyệt sáng kiến thành công!" : "❌ Đã từ chối triển khai sáng kiến.",
+            status,
+            sub_status: subStatus,
+            approval_status: approvalStatus,
+            time_before_seconds: timeBefore,
+            time_after_seconds: timeAfter,
+            saved_seconds: savedSecs,
+            efficiency_value_vnd: efficiencyVnd,
+            pair_quantity: pairQty,
+            total_savings_vnd: totalSavings,
+            total_savings_words: totalSavingsWordsVal
           }), { headers: SECURE_JSON_HEADERS });
 
         } catch(err) {

@@ -17,17 +17,10 @@ export default function NotificationInitializer() {
   const didReloadRef = useRef(false);
 
   useEffect(() => {
-    // ── SW UPDATE AUTO-PROPAGATION (controllerchange) ──────────────────────
-    // Fires when a new SW takes control (skipWaiting + clients.claim).
-    // We reload once per session so the tab is fully migrated to the new SW.
+    // Safe Service Worker listener without automatic page reloads
     if ("serviceWorker" in navigator) {
       const handleControllerChange = () => {
-        if (didReloadRef.current) return;   // Guard: reload once per session only
-        didReloadRef.current = true;
-        // Small delay so the SW can finish activation before reload
-        setTimeout(() => {
-          window.location.reload();
-        }, 300);
+        console.log("Service Worker controller updated silently");
       };
       navigator.serviceWorker.addEventListener("controllerchange", handleControllerChange);
       return () => {

@@ -24,7 +24,6 @@ self.addEventListener("activate", (event) => {
       );
     })
   );
-  self.clients.claim();
 });
 
 // Handling Mobile Push Notifications (Android & iOS 16.4+ Web Push)
@@ -102,11 +101,10 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // CRITICAL RULE 2: NEVER intercept or cache API requests or Next.js data requests. Pass directly to browser network!
+  // CRITICAL RULE 2: NEVER intercept or cache API requests. Pass directly to browser network!
   if (
     event.request.method !== "GET" ||
-    event.request.url.includes("/api/") ||
-    event.request.url.includes("/_next/")
+    event.request.url.includes("/api/")
   ) {
     return;
   }
@@ -116,7 +114,6 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
-          // NEVER cache 404, 500, or error responses! Only cache 200 OK for http/https
           if (response.status === 200 && (event.request.url.startsWith("http://") || event.request.url.startsWith("https://"))) {
             const copy = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy).catch(() => {}));
@@ -133,7 +130,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Fallback cache handler for static assets (images, icons, fonts)
+  // Static assets (JS, CSS, images, fonts) - Cache First with Network Fallback. NEVER return index HTML on failure!
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
@@ -146,10 +143,8 @@ self.addEventListener("fetch", (event) => {
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy).catch(() => {}));
           }
           return networkResponse;
-        })
-        .catch(() => {
-          return caches.match("/");
         });
     })
   );
 });
+
