@@ -48,6 +48,7 @@ export default function ProposalsPage() {
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'PENDING' | 'RESOLVED'>('PENDING');
   const [filterFactoryId, setFilterFactoryId] = useState('');
+  const [filterAreaId, setFilterAreaId] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -78,14 +79,26 @@ export default function ProposalsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Xưởng lọc theo Nhà máy đã chọn — dựng thẳng từ chính dữ liệu đề xuất (mỗi đề xuất đã có sẵn
+  // incident.machine.area đầy đủ id/name/parent), không cần gọi thêm API riêng cho AREA.
+  const areaOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    proposals.forEach((p) => {
+      const area = p.incident.machine.area;
+      if (area && (!filterFactoryId || area.parent?.id === filterFactoryId)) map.set(area.id, area.name);
+    });
+    return Array.from(map, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+  }, [proposals, filterFactoryId]);
+
   const filtered = useMemo(() => {
     return proposals.filter((p) => {
       const matchesStatus = filterStatus === 'ALL' || (filterStatus === 'PENDING' ? !p.resolved : p.resolved);
       const matchesFactory = !filterFactoryId || p.incident.machine.area?.parent?.id === filterFactoryId;
+      const matchesArea = !filterAreaId || p.incident.machine.area?.id === filterAreaId;
       const matchesDate = inDateRange(p.createdAt, dateFrom, dateTo);
-      return matchesStatus && matchesFactory && matchesDate;
+      return matchesStatus && matchesFactory && matchesArea && matchesDate;
     });
-  }, [proposals, filterStatus, filterFactoryId, dateFrom, dateTo]);
+  }, [proposals, filterStatus, filterFactoryId, filterAreaId, dateFrom, dateTo]);
 
   const stats = useMemo(() => {
     let unresolved = 0, resolved = 0, parts = 0, retrain = 0, hold = 0;
@@ -165,7 +178,19 @@ export default function ProposalsPage() {
               {s.label}
             </button>
           ))}
-          <FilterSelect value={filterFactoryId} onChange={setFilterFactoryId} options={factories.map((f) => ({ id: f.id, name: f.name }))} placeholder="Tất cả nhà máy" />
+          <FilterSelect
+            value={filterFactoryId}
+            onChange={(v) => { setFilterFactoryId(v); setFilterAreaId(''); }}
+            options={factories.map((f) => ({ id: f.id, name: f.name }))}
+            placeholder="Tất cả nhà máy"
+          />
+          <FilterSelect
+            value={filterAreaId}
+            onChange={setFilterAreaId}
+            options={areaOptions}
+            placeholder={filterFactoryId ? 'Tất cả khu vực' : 'Chọn nhà máy trước'}
+            disabled={!filterFactoryId}
+          />
           <DateRangeFilter from={dateFrom} to={dateTo} onFromChange={setDateFrom} onToChange={setDateTo} />
         </div>
 

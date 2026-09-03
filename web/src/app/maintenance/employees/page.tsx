@@ -72,6 +72,7 @@ export default function EmployeesPage() {
 
   const [search, setSearch] = useState('');
   const [filterFactoryId, setFilterFactoryId] = useState('');
+  const [filterAreaId, setFilterAreaId] = useState('');
   const [filterRole, setFilterRole] = useState('');
 
   const [showForm, setShowForm] = useState(false);
@@ -119,15 +120,20 @@ export default function EmployeesPage() {
 
   const areasUnderFormFactory = areas.filter((a) => !formData.factoryId || a.parentId === formData.factoryId);
 
+  // Xưởng lọc theo Nhà máy đang chọn ở BỘ LỌC DANH SÁCH (khác areasUnderFormFactory — cái đó cho
+  // form Thêm/Sửa) — dùng chung nguồn `areas` đã tải sẵn, chỉ lọc theo parentId.
+  const areasUnderFilterFactory = areas.filter((a) => !filterFactoryId || a.parentId === filterFactoryId);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return employees.filter((e) => {
       const matchesQ = !q || e.employeeCode.toLowerCase().includes(q) || e.name.toLowerCase().includes(q);
       const matchesFactory = !filterFactoryId || e.factoryId === filterFactoryId;
+      const matchesArea = !filterAreaId || e.areaId === filterAreaId;
       const matchesRole = !filterRole || e.role === filterRole;
-      return matchesQ && matchesFactory && matchesRole;
+      return matchesQ && matchesFactory && matchesArea && matchesRole;
     });
-  }, [employees, search, filterFactoryId, filterRole]);
+  }, [employees, search, filterFactoryId, filterAreaId, filterRole]);
 
   function openCreateForm() {
     setEditingId(null);
@@ -375,7 +381,19 @@ export default function EmployeesPage() {
             placeholder="Tìm theo mã NV, tên..."
             className="min-w-[220px] flex-1 px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs"
           />
-          <FilterSelect value={filterFactoryId} onChange={setFilterFactoryId} options={factories} placeholder="Tất cả nhà máy" />
+          <FilterSelect
+            value={filterFactoryId}
+            onChange={(v) => { setFilterFactoryId(v); setFilterAreaId(''); }}
+            options={factories}
+            placeholder="Tất cả nhà máy"
+          />
+          <FilterSelect
+            value={filterAreaId}
+            onChange={setFilterAreaId}
+            options={areasUnderFilterFactory}
+            placeholder={filterFactoryId ? 'Tất cả khu vực' : 'Chọn nhà máy trước'}
+            disabled={!filterFactoryId}
+          />
           <FilterSelect
             value={filterRole}
             onChange={setFilterRole}

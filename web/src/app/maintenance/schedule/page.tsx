@@ -431,21 +431,56 @@ function TrackTab({
   factoryOptions: { id: string; name: string }[];
 }) {
   const [factoryId, setFactoryId] = useState('');
+  const [areaId, setAreaId] = useState('');
+
+  // Xưởng lọc theo Nhà máy đã chọn — giống hệt pattern ở Tab 1 (UnscheduledMachinesXxx) và Tab 3
+  // (CalendarTab), dựng từ chính danh sách máy (machines đã có sẵn areaId/areaName/factoryId).
+  const areaOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    machines.forEach((m) => {
+      if (m.areaId && m.areaName && (!factoryId || m.factoryId === factoryId)) map.set(m.areaId, m.areaName);
+    });
+    return Array.from(map, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+  }, [machines, factoryId]);
 
   const needsAction = useMemo(() => {
     return machines
-      .filter((m) => (m.status === 'overdue' || m.status === 'upcoming') && (!factoryId || m.factoryId === factoryId))
+      .filter(
+        (m) =>
+          (m.status === 'overdue' || m.status === 'upcoming') &&
+          (!factoryId || m.factoryId === factoryId) &&
+          (!areaId || m.areaId === areaId),
+      )
       .sort((a, b) => (a.daysLeft ?? 0) - (b.daysLeft ?? 0));
-  }, [machines, factoryId]);
+  }, [machines, factoryId, areaId]);
 
+  // LogEntry (lịch sử bảo trì) chỉ có tên Xưởng dạng chữ, không có ID riêng — so tên qua
+  // areaOptions (đã lọc đúng Nhà máy) giống cách factoryName đang được so tên bên dưới.
   const filteredLogs = useMemo(() => {
-    return logs.filter((l) => !factoryId || factoryOptions.find((f) => f.id === factoryId)?.name === l.factoryName);
-  }, [logs, factoryId, factoryOptions]);
+    const areaName = areaId ? areaOptions.find((a) => a.id === areaId)?.name : null;
+    return logs.filter(
+      (l) =>
+        (!factoryId || factoryOptions.find((f) => f.id === factoryId)?.name === l.factoryName) &&
+        (!areaName || l.areaName === areaName),
+    );
+  }, [logs, factoryId, factoryOptions, areaId, areaOptions]);
 
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-wrap items-center gap-2.5">
-        <FilterSelect value={factoryId} onChange={setFactoryId} options={factoryOptions} placeholder="Tất cả nhà máy" />
+        <FilterSelect
+          value={factoryId}
+          onChange={(v) => { setFactoryId(v); setAreaId(''); }}
+          options={factoryOptions}
+          placeholder="Tất cả nhà máy"
+        />
+        <FilterSelect
+          value={areaId}
+          onChange={setAreaId}
+          options={areaOptions}
+          placeholder={factoryId ? 'Tất cả khu vực' : 'Chọn nhà máy trước'}
+          disabled={!factoryId}
+        />
       </div>
 
       <div>
