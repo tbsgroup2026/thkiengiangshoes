@@ -8,8 +8,12 @@
 // v20: fetch() cho static asset (nhánh Cache-First) trước đây KHÔNG có .catch() — mạng lỗi/chập
 // chờn khiến promise reject không ai bắt ("Uncaught (in promise) TypeError: Failed to fetch"),
 // request coi như thất bại trắng tay. Thêm .catch() để không còn lỗi chưa xử lý này.
+// v21: /images/cong.jpg bị đúng lỗi Cache-First y hệt các file .txt ở v19 — trong lúc đang chỉnh
+// sửa, URL này đã được deploy nhiều lần với NỘI DUNG khác nhau (ảnh cũ không đúng, rồi ảnh đúng)
+// nhưng tên file không đổi — trình duyệt đã cache-first bản NÀO đó ở giữa quá trình, giữ mãi
+// không chịu lấy bản mới nhất dù server đã có ảnh đúng từ lâu.
 // Đổi tên CACHE_NAME mỗi lần sửa sw.js để buộc xoá sạch cache cũ ở mọi trình duyệt đã ghé trước.
-const CACHE_NAME = "skechers-tbs-v20-sw-catch-fix";
+const CACHE_NAME = "skechers-tbs-v21-fresh-images";
 const ASSETS_TO_CACHE = [
   "/",
   "/favicon.ico",
