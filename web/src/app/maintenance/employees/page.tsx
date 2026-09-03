@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx';
 import { IconPlus, IconPencil, IconTrash, IconUsers, IconFileSpreadsheet } from '@tabler/icons-react';
 import MaintenanceShell from '@/components/MaintenanceShell';
 import FilterSelect from '@/components/FilterSelect';
+import RefreshButton from '@/components/RefreshButton';
 
 type CategoryOption = { id: string; name: string; parentId: string | null };
 
@@ -88,14 +89,17 @@ export default function EmployeesPage() {
   const [importSubmitting, setImportSubmitting] = useState(false);
   const [importResult, setImportResult] = useState<{ success: number; failed: string[] } | null>(null);
 
-  const load = async () => {
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = async (force = false) => {
     try {
-      setLoading(true);
+      force ? setRefreshing(true) : setLoading(true);
       setError(null);
+      const fresh = force ? '&fresh=1' : '';
       const [empRes, facRes, areaRes] = await Promise.all([
-        fetch('/api/mmtb-kg/employees').then((r) => r.json()),
-        fetch('/api/mmtb-kg/categories?type=FACTORY').then((r) => r.json()),
-        fetch('/api/mmtb-kg/categories?type=AREA').then((r) => r.json()),
+        fetch(`/api/mmtb-kg/employees${force ? '?fresh=1' : ''}`).then((r) => r.json()),
+        fetch(`/api/mmtb-kg/categories?type=FACTORY${fresh}`).then((r) => r.json()),
+        fetch(`/api/mmtb-kg/categories?type=AREA${fresh}`).then((r) => r.json()),
       ]);
       if (empRes.success) setEmployees(empRes.data || []);
       else setError(empRes.error || 'Không lấy được dữ liệu');
@@ -104,7 +108,7 @@ export default function EmployeesPage() {
     } catch (err) {
       console.warn('Failed to fetch employees from tbsMayMoc:', err);
     } finally {
-      setLoading(false);
+      force ? setRefreshing(false) : setLoading(false);
     }
   };
 
@@ -338,6 +342,7 @@ export default function EmployeesPage() {
             <h1 className="text-2xl font-extrabold text-tbs-dark">Nhân Sự</h1>
           </div>
           <div className="flex items-center gap-2">
+            <RefreshButton onClick={() => load(true)} loading={refreshing} />
             <button onClick={openCreateForm} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-tbs-dark text-white text-xs font-bold hover:opacity-90">
               <IconPlus size={15} /> Thêm Nhân Viên
             </button>

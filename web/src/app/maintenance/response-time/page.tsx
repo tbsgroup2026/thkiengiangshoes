@@ -5,6 +5,7 @@ import { IconClockHour4, IconStopwatch, IconStar, IconTrophy } from '@tabler/ico
 import MaintenanceShell from '@/components/MaintenanceShell';
 import FilterSelect from '@/components/FilterSelect';
 import DateRangeFilter, { inDateRange } from '@/components/DateRangeFilter';
+import RefreshButton from '@/components/RefreshButton';
 
 type ResponseTimeIncident = {
   id: string;
@@ -48,28 +49,34 @@ export default function ResponseTimePage() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
-  useEffect(() => {
-    (async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const [resRes, facRes] = await Promise.all([
-          fetch('/api/mmtb-kg/response-time').then((r) => r.json()),
-          fetch('/api/mmtb-kg/categories?type=FACTORY').then((r) => r.json()),
-        ]);
-        if (resRes.success) {
-          setIncidents(resRes.incidents || []);
-          setLogs(resRes.logs || []);
-        } else {
-          setError(resRes.error || 'Không lấy được dữ liệu');
-        }
-        if (facRes.success) setFactories(facRes.data || []);
-      } catch (err) {
-        console.warn('Failed to fetch response-time from tbsMayMoc:', err);
-      } finally {
-        setLoading(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  async function load(force = false) {
+    try {
+      force ? setRefreshing(true) : setLoading(true);
+      setError(null);
+      const fresh = force ? '?fresh=1' : '';
+      const [resRes, facRes] = await Promise.all([
+        fetch(`/api/mmtb-kg/response-time${fresh}`).then((r) => r.json()),
+        fetch(`/api/mmtb-kg/categories?type=FACTORY${force ? '&fresh=1' : ''}`).then((r) => r.json()),
+      ]);
+      if (resRes.success) {
+        setIncidents(resRes.incidents || []);
+        setLogs(resRes.logs || []);
+      } else {
+        setError(resRes.error || 'Không lấy được dữ liệu');
       }
-    })();
+      if (facRes.success) setFactories(facRes.data || []);
+    } catch (err) {
+      console.warn('Failed to fetch response-time from tbsMayMoc:', err);
+    } finally {
+      force ? setRefreshing(false) : setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filteredIncidents = useMemo(
@@ -135,8 +142,9 @@ export default function ResponseTimePage() {
   return (
     <MaintenanceShell title="Thời Gian Phản Hồi" subtitle="Thống kê xử lý sự cố + đánh giá nhân viên bảo trì — Tổ hợp Kiên Giang">
       <div className="p-4 sm:p-6 space-y-4">
-        <div>
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <h1 className="text-2xl font-extrabold text-tbs-dark">Thời Gian Phản Hồi</h1>
+          <RefreshButton onClick={() => load(true)} loading={refreshing} />
         </div>
 
         {error && <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">⚠️ {error}</div>}

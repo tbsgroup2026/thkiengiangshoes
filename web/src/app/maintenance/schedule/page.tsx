@@ -12,6 +12,7 @@ import {
 } from '@tabler/icons-react';
 import MaintenanceShell from '@/components/MaintenanceShell';
 import FilterSelect from '@/components/FilterSelect';
+import RefreshButton from '@/components/RefreshButton';
 import {
   buildMaintenanceCalendarMap,
   buildCalendarWeeks,
@@ -92,13 +93,16 @@ export default function MaintenanceSchedulePage() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('assign');
 
-  const load = async () => {
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = async (force = false) => {
     try {
-      setLoading(true);
+      force ? setRefreshing(true) : setLoading(true);
       setError(null);
+      const fresh = force ? '?fresh=1' : '';
       const [scheduleRes, logsRes] = await Promise.all([
-        fetch('/api/mmtb-kg/schedule').then((r) => r.json()),
-        fetch('/api/mmtb-kg/logs').then((r) => r.json()),
+        fetch(`/api/mmtb-kg/schedule${fresh}`).then((r) => r.json()),
+        fetch(`/api/mmtb-kg/logs${fresh}`).then((r) => r.json()),
       ]);
       if (scheduleRes.success) {
         setMachines(scheduleRes.machines || []);
@@ -111,7 +115,7 @@ export default function MaintenanceSchedulePage() {
     } catch (err) {
       console.warn('Failed to fetch schedule from tbsMayMoc:', err);
     } finally {
-      setLoading(false);
+      force ? setRefreshing(false) : setLoading(false);
     }
   };
 
@@ -139,8 +143,9 @@ export default function MaintenanceSchedulePage() {
   return (
     <MaintenanceShell title="Bảo Dưỡng MMTB" subtitle="Lên lịch — Theo dõi — Xem lịch bảo trì định kỳ — Tổ hợp Kiên Giang">
       <div className="p-4 sm:p-6 space-y-4">
-        <div>
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <h1 className="text-2xl font-extrabold text-tbs-dark">Bảo Dưỡng MMTB</h1>
+          <RefreshButton onClick={() => load(true)} loading={refreshing} />
         </div>
 
         {error && (

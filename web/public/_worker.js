@@ -436,6 +436,78 @@ function mmtbAreaLabel(area) {
   return area.parent ? `${area.parent.name} > ${area.name}` : area.name;
 }
 
+// ---- Cache đọc cho MMTB — lưu tạm kết quả các lệnh GET (danh sách máy/danh mục/sự cố...) vào D1
+// RIÊNG của thkiengiangshoes (bảng mmtb_cache, không đụng gì tới D1 tbsMayMoc) trong vài phút, để
+// không phải gọi sang tbsMayMoc lại mỗi lần tải trang (nguồn gốc chậm/chập chờn trước đây — xem
+// commit "Fix machines/filters 500"). Nút "Làm mới dữ liệu" ở mỗi trang gửi kèm ?fresh=1 để bỏ
+// qua cache, luôn lấy dữ liệu mới nhất khi cần. KHÔNG dùng cho lệnh ghi (POST/PUT/DELETE) — tbsMayMoc
+// vẫn là nơi lưu dữ liệu thật DUY NHẤT, đây chỉ là cache đọc tạm thời phía thkiengiangshoes.
+const MMTB_CACHE_TTL_SECONDS = 300; // 5 phút — khớp mức "chậm vài phút là ổn" đã thống nhất
+
+async function mmtbCacheEnsureTable(env) {
+  await env.DB.prepare(
+    "CREATE TABLE IF NOT EXISTS mmtb_cache (cache_key TEXT PRIMARY KEY, value TEXT NOT NULL, expires_at INTEGER NOT NULL)",
+  )
+    .run()
+    .catch(() => {});
+}
+
+async function mmtbCacheGet(env, key) {
+  if (!env.DB) return null;
+  try {
+    await mmtbCacheEnsureTable(env);
+    const row = await env.DB.prepare("SELECT value, expires_at FROM mmtb_cache WHERE cache_key = ?").bind(key).first();
+    if (!row || Date.now() > row.expires_at) return null;
+    return JSON.parse(row.value);
+  } catch {
+    return null;
+  }
+}
+
+// Xoá cache sau khi ghi thành công (thêm/sửa/xoá) — để người vừa thao tác thấy kết quả ngay ở lần
+// đọc tiếp theo, không phải đợi hết 5 phút TTL. `keyPrefix` xoá TẤT CẢ cache_key bắt đầu bằng
+// chuỗi đó (dùng cho /categories vì cache theo từng loại type riêng, VD "categories:AREA:").
+async function mmtbCacheInvalidate(env, keyOrPrefix) {
+  if (!env.DB) return;
+  try {
+    await mmtbCacheEnsureTable(env);
+    await env.DB.prepare("DELETE FROM mmtb_cache WHERE cache_key = ? OR cache_key LIKE ?")
+      .bind(keyOrPrefix, `${keyOrPrefix}%`)
+      .run();
+  } catch {
+    // Không xoá được cache thì chấp nhận đợi hết TTL tự nhiên — không chặn thao tác ghi.
+  }
+}
+
+async function mmtbCacheSet(env, key, value, ttlSeconds) {
+  if (!env.DB) return;
+  try {
+    await mmtbCacheEnsureTable(env);
+    const expiresAt = Date.now() + (ttlSeconds || MMTB_CACHE_TTL_SECONDS) * 1000;
+    await env.DB.prepare(
+      "INSERT INTO mmtb_cache (cache_key, value, expires_at) VALUES (?, ?, ?) ON CONFLICT(cache_key) DO UPDATE SET value = excluded.value, expires_at = excluded.expires_at",
+    )
+      .bind(key, JSON.stringify(value), expiresAt)
+      .run();
+  } catch {
+    // Cache lỗi thì bỏ qua — vẫn trả dữ liệu thật cho người dùng bình thường, không chặn gì cả.
+  }
+}
+
+// Bọc 1 payload JSON (đã build xong, dạng { success, data, ... }) qua cache đọc — dùng thay cho
+// mmtbJson() ở các route GET danh sách. `forceRefresh` (từ ?fresh=1) bỏ qua cache đang có, luôn
+// tính lại mới rồi ghi đè cache.
+async function mmtbCachedJson(env, cacheKey, forceRefresh, buildFn) {
+  if (!forceRefresh) {
+    const cached = await mmtbCacheGet(env, cacheKey);
+    if (cached) return mmtbJson({ ...cached, cached: true });
+  }
+  // buildFn trả { success, data/..., status? } — status chỉ dùng để set mã HTTP, không lưu vào cache.
+  const { status, ...result } = await buildFn();
+  if (result && result.success) await mmtbCacheSet(env, cacheKey, result, MMTB_CACHE_TTL_SECONDS);
+  return mmtbJson(result, result.success ? 200 : status || 502);
+}
+
 async function handleMmtbKG(request, env, pathname, searchParams) {
   const mmtbPath = pathname.slice("/api/mmtb-kg".length) || "/";
 
@@ -469,6 +541,9 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
   const token = mmtbGetToken(request);
   if (!token) return mmtbJson({ success: false, error: "Chưa đăng nhập MMTB" }, 401);
 
+  // Nút "Làm mới dữ liệu" ở mỗi trang gửi ?fresh=1 để bỏ qua cache đọc, luôn lấy mới nhất.
+  const forceRefresh = searchParams.get("fresh") === "1";
+
   if (mmtbPath === "/me" && request.method === "GET") {
     return mmtbJson({ success: true }, 200);
   }
@@ -480,27 +555,29 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
   // trong CÙNG 1 lượt xử lý — không tái hiện được khi chạy "wrangler dev" cục bộ vì máy tính
   // không bị giới hạn CPU time kiểu edge). Tách request giúp mỗi lượt gọi có ngân sách CPU riêng.
   if (mmtbPath === "/machines" && request.method === "GET") {
-    try {
-      const machinesRes = await mmtbCall(env, token, "/api/machines");
-      if (!machinesRes.ok) return mmtbJson({ success: false, error: machinesRes.data.error || "Không lấy được dữ liệu máy móc từ tbsMayMoc" }, machinesRes.status);
-      if (!Array.isArray(machinesRes.data)) return mmtbJson({ success: false, error: "Dữ liệu máy móc trả về không hợp lệ từ tbsMayMoc, thử lại sau" }, 502);
-      const data = machinesRes.data.map((m) => ({
-        id: m.id, code: m.code, name: m.name, serial: m.serialNumber,
-        factoryId: m.area && m.area.parent ? m.area.parent.id : null,
-        factoryName: m.area && m.area.parent ? m.area.parent.name : null,
-        areaId: m.area ? m.area.id : null, areaName: m.area ? m.area.name : null,
-        zone: mmtbAreaLabel(m.area),
-        teamId: m.team ? m.team.id : null, teamName: m.team ? m.team.name : null,
-        lineId: m.productionLine ? m.productionLine.id : null, lineName: m.productionLine ? m.productionLine.name : null,
-        machineTypeId: m.machineType ? m.machineType.id : null, machineTypeName: m.machineType ? m.machineType.name : null,
-        statusId: m.status.id, statusName: m.status.name, statusColorHex: m.status.colorHex,
-        originalCost: m.originalCost, depreciationPercent: m.depreciationPercent, remainingValue: m.remainingValue,
-        qrData: m.code,
-      }));
-      return mmtbJson({ success: true, data });
-    } catch (err) {
-      return mmtbJson({ success: false, error: err.message || "Không lấy được dữ liệu máy móc từ tbsMayMoc" }, 502);
-    }
+    return mmtbCachedJson(env, "machines", forceRefresh, async () => {
+      try {
+        const machinesRes = await mmtbCall(env, token, "/api/machines");
+        if (!machinesRes.ok) return { success: false, error: machinesRes.data.error || "Không lấy được dữ liệu máy móc từ tbsMayMoc", status: machinesRes.status };
+        if (!Array.isArray(machinesRes.data)) return { success: false, error: "Dữ liệu máy móc trả về không hợp lệ từ tbsMayMoc, thử lại sau" };
+        const data = machinesRes.data.map((m) => ({
+          id: m.id, code: m.code, name: m.name, serial: m.serialNumber,
+          factoryId: m.area && m.area.parent ? m.area.parent.id : null,
+          factoryName: m.area && m.area.parent ? m.area.parent.name : null,
+          areaId: m.area ? m.area.id : null, areaName: m.area ? m.area.name : null,
+          zone: mmtbAreaLabel(m.area),
+          teamId: m.team ? m.team.id : null, teamName: m.team ? m.team.name : null,
+          lineId: m.productionLine ? m.productionLine.id : null, lineName: m.productionLine ? m.productionLine.name : null,
+          machineTypeId: m.machineType ? m.machineType.id : null, machineTypeName: m.machineType ? m.machineType.name : null,
+          statusId: m.status.id, statusName: m.status.name, statusColorHex: m.status.colorHex,
+          originalCost: m.originalCost, depreciationPercent: m.depreciationPercent, remainingValue: m.remainingValue,
+          qrData: m.code,
+        }));
+        return { success: true, data };
+      } catch (err) {
+        return { success: false, error: err.message || "Không lấy được dữ liệu máy móc từ tbsMayMoc" };
+      }
+    });
   }
   // (Từng có /machines/filters gộp 6 lệnh song song ở đây — bỏ hẳn vì gộp nhiều fetch song song
   // trong CÙNG 1 lượt xử lý của Worker từng lỗi ngẫu nhiên trên Cloudflare thật dù từng loại gọi
@@ -513,6 +590,7 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
         return mmtbJson({ success: false, error: "Thiếu Mã tài sản / Tên máy / Vị trí / Khu vực" }, 400);
       }
       const r = await mmtbCall(env, token, "/api/machines", "POST", body);
+      if (r.ok) await mmtbCacheInvalidate(env, "machines");
       return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không tạo được máy mới" }, r.ok ? 201 : r.status || 400);
     } catch (err) {
       return mmtbJson({ success: false, error: err.message || "Không tạo được máy mới" }, 400);
@@ -523,6 +601,7 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
     try {
       const { mapX, mapY } = await request.json();
       const r = await mmtbCall(env, token, `/api/machines/${m2[1]}/position`, "PUT", { mapX, mapY });
+      if (r.ok) await mmtbCacheInvalidate(env, "machines");
       return mmtbJson(r.ok ? { success: true } : { success: false, error: r.data.error || "Không ghim được vị trí máy" }, r.ok ? 200 : r.status || 400);
     } catch (err) {
       return mmtbJson({ success: false, error: err.message || "Không ghim được vị trí máy" }, 400);
@@ -538,37 +617,41 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
           return mmtbJson({ success: false, error: "Thiếu Mã tài sản / Tên máy / Vị trí / Khu vực / Trạng thái" }, 400);
         }
         const r = await mmtbCall(env, token, `/api/machines/${id}`, "PUT", body);
+        if (r.ok) await mmtbCacheInvalidate(env, "machines");
         return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không sửa được máy" }, r.ok ? 200 : r.status || 400);
       } catch (err) {
         return mmtbJson({ success: false, error: err.message || "Không sửa được máy" }, 400);
       }
     } else {
       const r = await mmtbCall(env, token, `/api/machines/${id}`, "DELETE");
+      if (r.ok) await mmtbCacheInvalidate(env, "machines");
       return mmtbJson(r.ok ? { success: true } : { success: false, error: r.data.error || "Không xoá được máy" }, r.ok ? 200 : r.status || 400);
     }
   }
 
   // ---- Sự cố (Nhu Cầu Sửa Chữa) ----
   if (mmtbPath === "/tickets" && request.method === "GET") {
-    try {
-      const r = await mmtbCall(env, token, "/api/incidents?limit=200");
-      if (!r.ok) return mmtbJson({ success: false, error: r.data.error || "Không lấy được dữ liệu sự cố từ tbsMayMoc" }, r.status);
-      if (!Array.isArray(r.data)) return mmtbJson({ success: false, error: "Dữ liệu sự cố trả về không hợp lệ từ tbsMayMoc, thử lại sau" }, 502);
-      const data = r.data.map((i) => ({
-        id: i.id,
-        ticketCode: `SC-${String(i.id).slice(-6).toUpperCase()}`,
-        machineCode: i.machine.code, machineName: i.machine.name,
-        zone: i.machine.areaName, factoryName: i.machine.factoryName,
-        reporter: i.isMaintenanceDue ? "Hệ thống (nhắc bảo trì định kỳ)" : (i.reporter ? i.reporter.name : "—"),
-        mechanic: i.assignedTo ? i.assignedTo.name : null,
-        errorType: i.categoryName || i.description, description: i.description,
-        status: i.status, statusLabel: MMTB_INCIDENT_STATUS_LABEL[i.status],
-        reportedAt: i.createdAt, acceptedAt: i.acceptedAt, completedAt: i.completedAt,
-      }));
-      return mmtbJson({ success: true, data });
-    } catch (err) {
-      return mmtbJson({ success: false, error: err.message || "Không lấy được dữ liệu sự cố từ tbsMayMoc" }, 502);
-    }
+    return mmtbCachedJson(env, "tickets", forceRefresh, async () => {
+      try {
+        const r = await mmtbCall(env, token, "/api/incidents?limit=200");
+        if (!r.ok) return { success: false, error: r.data.error || "Không lấy được dữ liệu sự cố từ tbsMayMoc", status: r.status };
+        if (!Array.isArray(r.data)) return { success: false, error: "Dữ liệu sự cố trả về không hợp lệ từ tbsMayMoc, thử lại sau" };
+        const data = r.data.map((i) => ({
+          id: i.id,
+          ticketCode: `SC-${String(i.id).slice(-6).toUpperCase()}`,
+          machineCode: i.machine.code, machineName: i.machine.name,
+          zone: i.machine.areaName, factoryName: i.machine.factoryName,
+          reporter: i.isMaintenanceDue ? "Hệ thống (nhắc bảo trì định kỳ)" : (i.reporter ? i.reporter.name : "—"),
+          mechanic: i.assignedTo ? i.assignedTo.name : null,
+          errorType: i.categoryName || i.description, description: i.description,
+          status: i.status, statusLabel: MMTB_INCIDENT_STATUS_LABEL[i.status],
+          reportedAt: i.createdAt, acceptedAt: i.acceptedAt, completedAt: i.completedAt,
+        }));
+        return { success: true, data };
+      } catch (err) {
+        return { success: false, error: err.message || "Không lấy được dữ liệu sự cố từ tbsMayMoc" };
+      }
+    });
   }
 
   // ---- Danh mục (Khu vực/Chuyền/Tổ/Phân loại máy/Phụ tùng/Chu kỳ bảo trì/Trạng thái máy) ----
@@ -578,8 +661,10 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
     if (!type || READABLE.indexOf(type) === -1) return mmtbJson({ success: false, error: "Loại danh mục không hợp lệ" }, 400);
     const parentId = searchParams.get("parentId");
     const qs = `?type=${type}${parentId ? `&parentId=${encodeURIComponent(parentId)}` : ""}`;
-    const r = await mmtbCall(env, token, `/api/categories${qs}`);
-    return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không lấy được danh mục từ tbsMayMoc" }, r.ok ? 200 : r.status || 502);
+    return mmtbCachedJson(env, `categories:${type}:${parentId || ""}`, forceRefresh, async () => {
+      const r = await mmtbCall(env, token, `/api/categories${qs}`);
+      return r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không lấy được danh mục từ tbsMayMoc", status: r.status };
+    });
   }
   if (mmtbPath === "/categories" && request.method === "POST") {
     try {
@@ -594,6 +679,7 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
         return mmtbJson({ success: false, error: "Vui lòng nhập số lượng tồn kho hợp lệ" }, 400);
       }
       const r = await mmtbCall(env, token, "/api/categories", "POST", body);
+      if (r.ok) await mmtbCacheInvalidate(env, "categories:");
       return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không tạo được danh mục mới" }, r.ok ? 201 : r.status || 400);
     } catch (err) {
       return mmtbJson({ success: false, error: err.message || "Không tạo được danh mục mới" }, 400);
@@ -607,26 +693,31 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
         const body = await request.json();
         if (body.name !== undefined && !String(body.name).trim()) return mmtbJson({ success: false, error: "Tên danh mục không được để trống" }, 400);
         const r = await mmtbCall(env, token, `/api/categories/${id}`, "PUT", body);
+        if (r.ok) await mmtbCacheInvalidate(env, "categories:");
         return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không sửa được danh mục" }, r.ok ? 200 : r.status || 400);
       } catch (err) {
         return mmtbJson({ success: false, error: err.message || "Không sửa được danh mục" }, 400);
       }
     } else {
       const r = await mmtbCall(env, token, `/api/categories/${id}`, "DELETE");
+      if (r.ok) await mmtbCacheInvalidate(env, "categories:");
       return mmtbJson(r.ok ? { success: true } : { success: false, error: r.data.error || "Không xoá được danh mục" }, r.ok ? 200 : r.status || 400);
     }
   }
 
   // ---- Danh mục hư ----
   if (mmtbPath === "/failure-categories" && request.method === "GET") {
-    const r = await mmtbCall(env, token, "/api/failure-categories");
-    return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không lấy được danh mục hư từ tbsMayMoc" }, r.ok ? 200 : r.status || 502);
+    return mmtbCachedJson(env, "failure-categories", forceRefresh, async () => {
+      const r = await mmtbCall(env, token, "/api/failure-categories");
+      return r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không lấy được danh mục hư từ tbsMayMoc", status: r.status };
+    });
   }
   if (mmtbPath === "/failure-categories" && request.method === "POST") {
     try {
       const body = await request.json();
       if (!body.name || !String(body.name).trim()) return mmtbJson({ success: false, error: "Thiếu tên danh mục" }, 400);
       const r = await mmtbCall(env, token, "/api/failure-categories", "POST", body);
+      if (r.ok) await mmtbCacheInvalidate(env, "failure-categories");
       return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không tạo được danh mục hư mới" }, r.ok ? 201 : r.status || 400);
     } catch (err) {
       return mmtbJson({ success: false, error: err.message || "Không tạo được danh mục hư mới" }, 400);
@@ -640,20 +731,24 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
         const body = await request.json();
         if (!body.name || !String(body.name).trim()) return mmtbJson({ success: false, error: "Thiếu tên danh mục" }, 400);
         const r = await mmtbCall(env, token, `/api/failure-categories/${id}`, "PUT", body);
+        if (r.ok) await mmtbCacheInvalidate(env, "failure-categories");
         return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không sửa được danh mục hư" }, r.ok ? 200 : r.status || 400);
       } catch (err) {
         return mmtbJson({ success: false, error: err.message || "Không sửa được danh mục hư" }, 400);
       }
     } else {
       const r = await mmtbCall(env, token, `/api/failure-categories/${id}`, "DELETE");
+      if (r.ok) await mmtbCacheInvalidate(env, "failure-categories");
       return mmtbJson(r.ok ? { success: true } : { success: false, error: r.data.error || "Không xoá được danh mục hư" }, r.ok ? 200 : r.status || 400);
     }
   }
 
   // ---- Lịch bảo trì (Bảo Dưỡng MMTB) ----
   if (mmtbPath === "/schedule" && request.method === "GET") {
-    const r = await mmtbCall(env, token, "/api/maintenance-schedule");
-    return mmtbJson(r.ok ? { success: true, ...r.data } : { success: false, error: r.data.error || "Không lấy được lịch bảo trì từ tbsMayMoc" }, r.ok ? 200 : r.status || 502);
+    return mmtbCachedJson(env, "schedule", forceRefresh, async () => {
+      const r = await mmtbCall(env, token, "/api/maintenance-schedule");
+      return r.ok ? { success: true, ...r.data } : { success: false, error: r.data.error || "Không lấy được lịch bảo trì từ tbsMayMoc", status: r.status };
+    });
   }
   if (mmtbPath === "/schedule" && request.method === "POST") {
     try {
@@ -662,6 +757,7 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
       if (!body.maintenancePeriodId) return mmtbJson({ success: false, error: "Vui lòng chọn Chu kỳ bảo trì" }, 400);
       if (!body.anchorDate) return mmtbJson({ success: false, error: "Vui lòng chọn Ngày bắt đầu tính" }, 400);
       const r = await mmtbCall(env, token, "/api/machines/bulk-maintenance", "POST", body);
+      if (r.ok) await mmtbCacheInvalidate(env, "schedule");
       return mmtbJson(r.ok ? { success: true, ...r.data } : { success: false, error: r.data.error || "Không gán được lịch bảo trì" }, r.ok ? 200 : r.status || 400);
     } catch (err) {
       return mmtbJson({ success: false, error: err.message || "Không gán được lịch bảo trì" }, 400);
@@ -669,20 +765,25 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
   }
   if (mmtbPath === "/logs" && request.method === "GET") {
     const limit = searchParams.get("limit") || "150";
-    const r = await mmtbCall(env, token, `/api/maintenance-logs?limit=${limit}`);
-    return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không lấy được lịch sử bảo trì từ tbsMayMoc" }, r.ok ? 200 : r.status || 502);
+    return mmtbCachedJson(env, `logs:${limit}`, forceRefresh, async () => {
+      const r = await mmtbCall(env, token, `/api/maintenance-logs?limit=${limit}`);
+      return r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không lấy được lịch sử bảo trì từ tbsMayMoc", status: r.status };
+    });
   }
 
   // ---- Đề xuất ----
   if (mmtbPath === "/proposals" && request.method === "GET") {
-    const r = await mmtbCall(env, token, "/api/admin/proposals");
-    return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không lấy được đề xuất từ tbsMayMoc" }, r.ok ? 200 : r.status || 502);
+    return mmtbCachedJson(env, "proposals", forceRefresh, async () => {
+      const r = await mmtbCall(env, token, "/api/admin/proposals");
+      return r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không lấy được đề xuất từ tbsMayMoc", status: r.status };
+    });
   }
   m2 = mmtbPath.match(/^\/proposals\/([^/]+)$/);
   if (m2 && request.method === "PUT") {
     try {
       const body = await request.json();
       const r = await mmtbCall(env, token, `/api/admin/proposals/${m2[1]}`, "PUT", { resolved: !!body.resolved });
+      if (r.ok) await mmtbCacheInvalidate(env, "proposals");
       return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không cập nhật được đề xuất" }, r.ok ? 200 : r.status || 400);
     } catch (err) {
       return mmtbJson({ success: false, error: err.message || "Không cập nhật được đề xuất" }, 400);
@@ -691,8 +792,10 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
 
   // ---- Thời gian phản hồi ----
   if (mmtbPath === "/response-time" && request.method === "GET") {
-    const r = await mmtbCall(env, token, "/api/response-time");
-    return mmtbJson(r.ok ? { success: true, ...r.data } : { success: false, error: r.data.error || "Không lấy được dữ liệu từ tbsMayMoc" }, r.ok ? 200 : r.status || 502);
+    return mmtbCachedJson(env, "response-time", forceRefresh, async () => {
+      const r = await mmtbCall(env, token, "/api/response-time");
+      return r.ok ? { success: true, ...r.data } : { success: false, error: r.data.error || "Không lấy được dữ liệu từ tbsMayMoc", status: r.status };
+    });
   }
 
   // ---- Tổng Quan (KPI MTTA/MTTR/MTTD, Trend, Pareto, độ tin cậy từng máy) ----
@@ -703,14 +806,18 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
       if (v) qs.set(k, v);
     });
     const suffix = qs.toString() ? `?${qs.toString()}` : "";
-    const r = await mmtbCall(env, token, `/api/overview-report${suffix}`);
-    return mmtbJson(r.ok ? { success: true, ...r.data } : { success: false, error: r.data.error || "Không lấy được dữ liệu từ tbsMayMoc" }, r.ok ? 200 : r.status || 502);
+    return mmtbCachedJson(env, `overview-report:${qs.toString()}`, forceRefresh, async () => {
+      const r = await mmtbCall(env, token, `/api/overview-report${suffix}`);
+      return r.ok ? { success: true, ...r.data } : { success: false, error: r.data.error || "Không lấy được dữ liệu từ tbsMayMoc", status: r.status };
+    });
   }
 
   // ---- Nhân sự ----
   if (mmtbPath === "/employees" && request.method === "GET") {
-    const r = await mmtbCall(env, token, "/api/employees");
-    return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không lấy được nhân sự từ tbsMayMoc" }, r.ok ? 200 : r.status || 502);
+    return mmtbCachedJson(env, "employees", forceRefresh, async () => {
+      const r = await mmtbCall(env, token, "/api/employees");
+      return r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không lấy được nhân sự từ tbsMayMoc", status: r.status };
+    });
   }
   if (mmtbPath === "/employees" && request.method === "POST") {
     try {
@@ -719,6 +826,7 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
         return mmtbJson({ success: false, error: "Thiếu Mã NV / Tên / Mật khẩu / Vai trò" }, 400);
       }
       const r = await mmtbCall(env, token, "/api/employees", "POST", body);
+      if (r.ok) await mmtbCacheInvalidate(env, "employees");
       return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không tạo được nhân sự mới" }, r.ok ? 201 : r.status || 400);
     } catch (err) {
       return mmtbJson({ success: false, error: err.message || "Không tạo được nhân sự mới" }, 400);
@@ -734,20 +842,24 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
           return mmtbJson({ success: false, error: "Thiếu Mã NV / Tên / Vai trò" }, 400);
         }
         const r = await mmtbCall(env, token, `/api/employees/${id}`, "PUT", body);
+        if (r.ok) await mmtbCacheInvalidate(env, "employees");
         return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không sửa được nhân sự" }, r.ok ? 200 : r.status || 400);
       } catch (err) {
         return mmtbJson({ success: false, error: err.message || "Không sửa được nhân sự" }, 400);
       }
     } else {
       const r = await mmtbCall(env, token, `/api/employees/${id}`, "DELETE");
+      if (r.ok) await mmtbCacheInvalidate(env, "employees");
       return mmtbJson(r.ok ? { success: true } : { success: false, error: r.data.error || "Không xoá được nhân sự" }, r.ok ? 200 : r.status || 400);
     }
   }
 
   // ---- Thông báo ----
   if (mmtbPath === "/announcements" && request.method === "GET") {
-    const r = await mmtbCall(env, token, "/api/announcements");
-    return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không lấy được thông báo từ tbsMayMoc" }, r.ok ? 200 : r.status || 502);
+    return mmtbCachedJson(env, "announcements", forceRefresh, async () => {
+      const r = await mmtbCall(env, token, "/api/announcements");
+      return r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không lấy được thông báo từ tbsMayMoc", status: r.status };
+    });
   }
   if (mmtbPath === "/announcements" && request.method === "POST") {
     try {
@@ -755,6 +867,7 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
       if (!body.title || !body.title.trim() || !body.content || !body.content.trim()) return mmtbJson({ success: false, error: "Thiếu tiêu đề hoặc nội dung" }, 400);
       if (!body.targetFactoryId) return mmtbJson({ success: false, error: "Vui lòng chọn Nhà máy nhận thông báo" }, 400);
       const r = await mmtbCall(env, token, "/api/announcements", "POST", body);
+      if (r.ok) await mmtbCacheInvalidate(env, "announcements");
       return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không gửi được thông báo" }, r.ok ? 201 : r.status || 400);
     } catch (err) {
       return mmtbJson({ success: false, error: err.message || "Không gửi được thông báo" }, 400);
@@ -768,12 +881,14 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
         const body = await request.json();
         if (!body.title || !body.title.trim() || !body.content || !body.content.trim()) return mmtbJson({ success: false, error: "Thiếu tiêu đề hoặc nội dung" }, 400);
         const r = await mmtbCall(env, token, `/api/announcements/${id}`, "PUT", body);
+        if (r.ok) await mmtbCacheInvalidate(env, "announcements");
         return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không sửa được thông báo" }, r.ok ? 200 : r.status || 400);
       } catch (err) {
         return mmtbJson({ success: false, error: err.message || "Không sửa được thông báo" }, 400);
       }
     } else {
       const r = await mmtbCall(env, token, `/api/announcements/${id}`, "DELETE");
+      if (r.ok) await mmtbCacheInvalidate(env, "announcements");
       return mmtbJson(r.ok ? { success: true } : { success: false, error: r.data.error || "Không xoá được thông báo" }, r.ok ? 200 : r.status || 400);
     }
   }
