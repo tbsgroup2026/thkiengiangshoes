@@ -56,10 +56,11 @@ export default function MaintenanceTicketsPage() {
       force ? setRefreshing(true) : setLoading(true);
       setError(null);
       const fresh = force ? '&fresh=1' : '';
-      const [ticketsRes, facRes] = await Promise.all([
+      const settled = await Promise.allSettled([
         fetch(`/api/mmtb-kg/tickets${force ? '?fresh=1' : ''}`).then((r) => r.json()),
         fetch(`/api/mmtb-kg/categories?type=FACTORY${fresh}`).then((r) => r.json()),
       ]);
+      const [ticketsRes, facRes] = settled.map((s) => (s.status === 'fulfilled' ? s.value : { success: false, error: String(s.reason) }));
       if (ticketsRes.success && Array.isArray(ticketsRes.data)) {
         setTickets(ticketsRes.data);
       } else {

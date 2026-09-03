@@ -86,12 +86,15 @@ export default function CategoriesManager({
     try {
       force ? setRefreshing(true) : setLoading(true);
       setError(null);
-      const results = await Promise.all(
+      // Promise.allSettled — 1 loại danh mục lỗi không còn xoá sạch các loại khác đã tải xong.
+      const settled = await Promise.allSettled(
         fetchTypes.map((t) => fetch(`/api/mmtb-kg/categories?type=${t}${force ? '&fresh=1' : ''}`).then((r) => r.json())),
       );
       const next = { ...EMPTY };
-      results.forEach((r, i) => {
-        next[fetchTypes[i]] = r.success && Array.isArray(r.data) ? r.data : [];
+      settled.forEach((s, i) => {
+        const r = s.status === 'fulfilled' ? s.value : null;
+        if (s.status === 'rejected') console.warn(`Failed to load categories type=${fetchTypes[i]}:`, s.reason);
+        next[fetchTypes[i]] = r && r.success && Array.isArray(r.data) ? r.data : [];
       });
       setData(next);
     } catch (err) {

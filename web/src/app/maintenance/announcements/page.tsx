@@ -54,10 +54,11 @@ export default function AnnouncementsPage() {
       force ? setRefreshing(true) : setLoading(true);
       setError(null);
       const fresh = force ? '?fresh=1' : '';
-      const [annRes, facRes] = await Promise.all([
+      const settled = await Promise.allSettled([
         fetch(`/api/mmtb-kg/announcements${fresh}`).then((r) => r.json()),
         fetch(`/api/mmtb-kg/categories?type=FACTORY${force ? '&fresh=1' : ''}`).then((r) => r.json()),
       ]);
+      const [annRes, facRes] = settled.map((s) => (s.status === 'fulfilled' ? s.value : { success: false, error: String(s.reason) }));
       if (annRes.success) setAnnouncements(annRes.data || []);
       else { console.warn('Failed to load announcements from tbsMayMoc:', annRes.error); setError(annRes.error || 'Không lấy được dữ liệu'); }
       if (facRes.success) setFactories(facRes.data || []);

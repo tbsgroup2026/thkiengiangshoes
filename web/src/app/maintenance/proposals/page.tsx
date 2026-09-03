@@ -60,10 +60,11 @@ export default function ProposalsPage() {
       force ? setRefreshing(true) : setLoading(true);
       setError(null);
       const fresh = force ? '?fresh=1' : '';
-      const [propRes, facRes] = await Promise.all([
+      const settled = await Promise.allSettled([
         fetch(`/api/mmtb-kg/proposals${fresh}`).then((r) => r.json()),
         fetch(`/api/mmtb-kg/categories?type=FACTORY${force ? '&fresh=1' : ''}`).then((r) => r.json()),
       ]);
+      const [propRes, facRes] = settled.map((s) => (s.status === 'fulfilled' ? s.value : { success: false, error: String(s.reason) }));
       if (propRes.success) setProposals(propRes.data || []);
       else { console.warn('Failed to load proposals from tbsMayMoc:', propRes.error); setError(propRes.error || 'Không lấy được dữ liệu'); }
       if (facRes.success) setFactories(facRes.data || []);

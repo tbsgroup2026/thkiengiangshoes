@@ -148,7 +148,7 @@ export default function OverviewPage() {
     (async () => {
       try {
         setQuickLoading(true);
-        const [machinesRes, scheduleRes, proposalsRes, facRes, areaRes, lineRes] = await Promise.all([
+        const settled = await Promise.allSettled([
           fetch('/api/mmtb-kg/machines').then((r) => r.json()),
           fetch('/api/mmtb-kg/schedule').then((r) => r.json()),
           fetch('/api/mmtb-kg/proposals').then((r) => r.json()),
@@ -156,6 +156,9 @@ export default function OverviewPage() {
           fetch('/api/mmtb-kg/categories?type=AREA').then((r) => r.json()),
           fetch('/api/mmtb-kg/categories?type=PRODUCTION_LINE').then((r) => r.json()),
         ]);
+        const [machinesRes, scheduleRes, proposalsRes, facRes, areaRes, lineRes] = settled.map((s) =>
+          s.status === 'fulfilled' ? s.value : { success: false },
+        );
         if (machinesRes.success) setMachines(machinesRes.data || []);
         if (scheduleRes.success) setScheduleMachines(scheduleRes.machines || []);
         if (proposalsRes.success) setProposals(proposalsRes.data || []);

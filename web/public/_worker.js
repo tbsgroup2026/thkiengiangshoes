@@ -514,7 +514,25 @@ async function mmtbCachedJson(env, cacheKey, forceRefresh, buildFn) {
     if (cached) return mmtbJson({ ...cached, cached: true });
   }
   // buildFn trả { success, data/..., status? } — status chỉ dùng để set mã HTTP, không lưu vào cache.
-  const { status, ...result } = await buildFn();
+  // try/catch Ở ĐÂY (không phải bên trong từng buildFn riêng lẻ) — trước đây chỉ 2/11 route GET
+  // (machines, tickets) tự bọc try/catch bên trong; 9 route còn lại (categories, failure-
+  // categories, schedule, logs, proposals, response-time, overview-report, employees,
+  // announcements) không có, nên hễ mmtbCall() ném lỗi (VD tbsMayMoc quá chậm trong lúc mạng
+  // Cloudflare chập chờn, vượt giới hạn CPU/thời gian chạy của Worker) là lỗi bay thẳng lên tới
+  // fetch() ở cuối file, trả về "System Error: ..." dạng CHỮ THƯỜNG (không phải JSON) với mã 500.
+  // Frontend gọi .json() trên response đó ném SyntaxError — Promise.all() ở các trang gọi nhiều
+  // API song song (VD machines/page.tsx gọi máy + 6 loại danh mục cùng lúc) sẽ REJECT TOÀN BỘ chỉ
+  // vì 1 API lỗi, xoá sạch luôn dữ liệu của các API khác đã tải thành công (đúng hiện tượng "0
+  // tổng số MMTB" dù chỉ 1 vài API bị 500). Bọc try/catch chung ở đây đảm bảo MỌI route GET luôn
+  // trả JSON hợp lệ dù tbsMayMoc lỗi/timeout, không còn kiểu 500 dạng chữ thường nữa.
+  let status, result;
+  try {
+    ({ status, ...result } = await buildFn());
+  } catch (err) {
+    console.error(`mmtbCachedJson(${cacheKey}) buildFn threw:`, err);
+    result = { success: false, error: (err && err.message) || "Không lấy được dữ liệu từ tbsMayMoc" };
+    status = 502;
+  }
   if (result && result.success) await mmtbCacheSet(env, cacheKey, result, MMTB_CACHE_TTL_SECONDS);
   return mmtbJson(result, result.success ? 200 : status || 502);
 }

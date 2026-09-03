@@ -97,11 +97,12 @@ export default function EmployeesPage() {
       force ? setRefreshing(true) : setLoading(true);
       setError(null);
       const fresh = force ? '&fresh=1' : '';
-      const [empRes, facRes, areaRes] = await Promise.all([
+      const settled = await Promise.allSettled([
         fetch(`/api/mmtb-kg/employees${force ? '?fresh=1' : ''}`).then((r) => r.json()),
         fetch(`/api/mmtb-kg/categories?type=FACTORY${fresh}`).then((r) => r.json()),
         fetch(`/api/mmtb-kg/categories?type=AREA${fresh}`).then((r) => r.json()),
       ]);
+      const [empRes, facRes, areaRes] = settled.map((s) => (s.status === 'fulfilled' ? s.value : { success: false, error: String(s.reason) }));
       if (empRes.success) setEmployees(empRes.data || []);
       else { console.warn('Failed to load employees from tbsMayMoc:', empRes.error); setError(empRes.error || 'Không lấy được dữ liệu'); }
       if (facRes.success) setFactories(facRes.data || []);

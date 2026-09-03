@@ -100,10 +100,11 @@ export default function MaintenanceSchedulePage() {
       force ? setRefreshing(true) : setLoading(true);
       setError(null);
       const fresh = force ? '?fresh=1' : '';
-      const [scheduleRes, logsRes] = await Promise.all([
+      const settled = await Promise.allSettled([
         fetch(`/api/mmtb-kg/schedule${fresh}`).then((r) => r.json()),
         fetch(`/api/mmtb-kg/logs${fresh}`).then((r) => r.json()),
       ]);
+      const [scheduleRes, logsRes] = settled.map((s) => (s.status === 'fulfilled' ? s.value : { success: false, error: String(s.reason) }));
       if (scheduleRes.success) {
         setMachines(scheduleRes.machines || []);
         setPeriods(scheduleRes.periods || []);

@@ -184,7 +184,11 @@ export default function MachinesPage() {
       // DUYỆT tự gọi song song (không proxy gộp qua Worker) vì gộp 6 lệnh chạy song song trong
       // CÙNG 1 lượt xử lý của Cloudflare Worker từng vượt giới hạn tài nguyên khi chạy thật (dù
       // từng loại gọi riêng lẻ vẫn ổn) — trình duyệt không bị giới hạn này.
-      const [machinesRes, factoriesRes, areasRes, linesRes, teamsRes, typesRes, statusesRes] = await Promise.all([
+      // Promise.allSettled (KHÔNG phải Promise.all) — trước đây 1 trong 7 lệnh lỗi (network hỏng
+      // hẳn trước khi tới .json(), hoặc từng có lúc backend trả lỗi dạng chữ thường thay vì JSON)
+      // làm CẢ 7 cùng bị coi là lỗi, xoá sạch dữ liệu máy móc lẫn toàn bộ danh mục lọc dù đa số đã
+      // tải thành công. Giờ mỗi lệnh độc lập — 1 cái lỗi không kéo sập các cái còn lại.
+      const settled = await Promise.allSettled([
         fetch(`/api/mmtb-kg/machines${force ? '?fresh=1' : ''}`).then((r) => r.json()),
         fetch(`/api/mmtb-kg/categories?type=FACTORY${fresh}`).then((r) => r.json()),
         fetch(`/api/mmtb-kg/categories?type=AREA${fresh}`).then((r) => r.json()),
@@ -193,6 +197,9 @@ export default function MachinesPage() {
         fetch(`/api/mmtb-kg/categories?type=MACHINE_TYPE${fresh}`).then((r) => r.json()),
         fetch(`/api/mmtb-kg/categories?type=MACHINE_STATUS${fresh}`).then((r) => r.json()),
       ]);
+      const asResult = (s: PromiseSettledResult<any>) =>
+        s.status === 'fulfilled' ? s.value : { success: false, error: String(s.reason) };
+      const [machinesRes, factoriesRes, areasRes, linesRes, teamsRes, typesRes, statusesRes] = settled.map(asResult);
       if (machinesRes.success && Array.isArray(machinesRes.data)) {
         setMachines(machinesRes.data);
       } else {

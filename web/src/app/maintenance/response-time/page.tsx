@@ -56,10 +56,11 @@ export default function ResponseTimePage() {
       force ? setRefreshing(true) : setLoading(true);
       setError(null);
       const fresh = force ? '?fresh=1' : '';
-      const [resRes, facRes] = await Promise.all([
+      const settled = await Promise.allSettled([
         fetch(`/api/mmtb-kg/response-time${fresh}`).then((r) => r.json()),
         fetch(`/api/mmtb-kg/categories?type=FACTORY${force ? '&fresh=1' : ''}`).then((r) => r.json()),
       ]);
+      const [resRes, facRes] = settled.map((s) => (s.status === 'fulfilled' ? s.value : { success: false, error: String(s.reason) }));
       if (resRes.success) {
         setIncidents(resRes.incidents || []);
         setLogs(resRes.logs || []);
