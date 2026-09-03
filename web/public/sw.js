@@ -1,5 +1,13 @@
 // PWA Service Worker for Văn Phòng Chuỗi SKECHERS - TBS Group
-const CACHE_NAME = "skechers-tbs-v18-no-api-fix";
+// v19: never cache Next.js App Router's static-export RSC payload files (out/**/index.txt,
+// __next._full.txt, __next._tree.txt, __PAGE__.txt...). Với output:'export', mỗi lần bấm <Link>
+// chuyển trang, Next fetch 1 file .txt CỐ ĐỊNH tên (không đổi giữa các lần deploy) để lấy dữ liệu
+// điều hướng mà không cần tải lại cả trang. Cache-First trên URL cố định đó khiến trình duyệt giữ
+// mãi bản .txt của lần deploy CŨ — mỗi lần bấm nav sau đó Next nhận dữ liệu cũ/không khớp mã đang
+// chạy, âm thầm thất bại, người dùng phải bấm nhiều lần mới có 1 lần rơi vào full reload thật.
+// Đổi tên CACHE_NAME lên v19 để buộc xoá sạch cache cũ (đang chứa các .txt lỗi thời) ở mọi trình
+// duyệt đã ghé site trước đây.
+const CACHE_NAME = "skechers-tbs-v19-no-stale-rsc";
 const ASSETS_TO_CACHE = [
   "/",
   "/favicon.ico",
@@ -106,6 +114,15 @@ self.addEventListener("fetch", (event) => {
     event.request.method !== "GET" ||
     event.request.url.includes("/api/")
   ) {
+    return;
+  }
+
+  // CRITICAL RULE 3: NEVER cache Next.js App Router's static-export RSC/navigation payload files
+  // (mọi file .txt trong out/**, VD /work/index.txt, __next._full.txt, __PAGE__.txt...). Tên file
+  // này CỐ ĐỊNH, không đổi giữa các lần deploy — Cache-First trên nó sẽ giữ mãi dữ liệu điều
+  // hướng của bản build cũ, khiến click chuyển trang (client-side navigation) âm thầm thất bại.
+  // Luôn lấy trực tiếp từ mạng, không lưu cache.
+  if (event.request.url.split("?")[0].endsWith(".txt")) {
     return;
   }
 

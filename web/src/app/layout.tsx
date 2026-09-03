@@ -64,7 +64,7 @@ export default function RootLayout({
               if ('serviceWorker' in navigator && 'caches' in window) {
                 caches.keys().then(function(keys) {
                   keys.forEach(function(key) {
-                    if (key !== 'skechers-tbs-v18-no-api-fix') {
+                    if (key !== 'skechers-tbs-v19-no-stale-rsc') {
                       caches.delete(key);
                     }
                   });
