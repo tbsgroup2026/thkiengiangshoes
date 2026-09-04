@@ -79,6 +79,23 @@ export default function PphScanClient() {
   const [countdownLabel, setCountdownLabel] = useState<string | null>(null);
   const [loadingTooLong, setLoadingTooLong] = useState(false);
 
+  // Trang này CÔNG KHAI, quét bởi rất nhiều điện thoại khác nhau, không cần chức năng offline/PWA
+  // gì (luôn cần mạng thật để nộp số liệu) — nên KHÔNG có lý do gì để Service Worker can thiệp vào
+  // đây cả, và SW từng là nguồn gốc hàng loạt sự cố "kẹt/chập chờn" khó dò khác nhau suốt phiên làm
+  // việc hôm nay (bản cache cũ trên điện thoại đã ghé từ trước khi có các bản sửa mới nhất). Chủ
+  // động HUỶ ĐĂNG KÝ mọi Service Worker của domain này ngay khi vào trang — đảm bảo từ lần vào
+  // trang NÀY trở đi, không còn tầng SW nào chen vào giữa nữa, chỉ còn HTTP thuần (đã ép no-store
+  // cho HTML + browser tự cache đúng chuẩn cho file JS content-hash).
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.getRegistrations()
+      .then((regs) => Promise.all(regs.map((r) => r.unregister())))
+      .catch(() => {});
+    if ('caches' in window) {
+      caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))).catch(() => {});
+    }
+  }, []);
+
   // Nhớ tên người báo cáo TRÊN CHÍNH ĐIỆN THOẠI này — chỉ lần đầu tiên (bất kỳ Tổ nào) mới phải
   // gõ tên, các lần quét sau tự điền sẵn, vẫn cho bấm "Đổi tên" nếu điện thoại đổi người dùng.
   useEffect(() => {

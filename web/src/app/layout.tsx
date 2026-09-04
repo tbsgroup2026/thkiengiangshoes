@@ -69,7 +69,10 @@ export default function RootLayout({
               if ('serviceWorker' in navigator && 'caches' in window) {
                 caches.keys().then(function(keys) {
                   keys.forEach(function(key) {
-                    if (!key.includes('v22') && !key.includes('cloudinary') && !key.includes('static-assets')) {
+                    // Chỉ chừa lại đúng cache của phiên bản HIỆN TẠI (v23) — 'static-assets-*' của
+                    // các bản cũ (v19-v22) không còn được SW tạo lại nữa (đã bỏ hẳn cache JS/CSS ở
+                    // tầng Service Worker, xem sw.js) nên phải xoá luôn, không còn miễn trừ nữa.
+                    if (!key.includes('v23')) {
                       caches.delete(key);
                     }
                   });
