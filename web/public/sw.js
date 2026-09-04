@@ -1,6 +1,6 @@
 /**
  * Service Worker — KG-KAIZEN (thkiengiangshoes.tbsgroup2026.workers.dev)
- * Version: v21-fresh
+ * Version: v22-nostore-html
  *
  * Strategies:
  *  1. Cloudinary images  → Cache-First (opaque response support)
@@ -11,9 +11,9 @@
  */
 
 const CACHE_NAMES = {
-  IMAGES: "cloudinary-images-v21",
-  STATIC: "static-assets-v21",
-  PAGES:  "pages-v21",
+  IMAGES: "cloudinary-images-v22",
+  STATIC: "static-assets-v22",
+  PAGES:  "pages-v22",
 };
 
 self.addEventListener("install", (event) => {

@@ -8668,9 +8668,20 @@ export default {
     if (assetResponse.ok) {
       const responseHeaders = new Headers(assetResponse.headers);
       if (pathname.startsWith("/_next/static/") || pathname.endsWith(".woff2")) {
+        // File có tên gắn content-hash (đổi tên mỗi lần build) — cache CỨNG vĩnh viễn an toàn.
         responseHeaders.set("Cache-Control", "public, max-age=31536000, immutable");
       } else if (pathname.startsWith("/images/") || pathname.endsWith(".png") || pathname.endsWith(".jpg") || pathname.endsWith(".svg") || pathname.endsWith(".ico")) {
         responseHeaders.set("Cache-Control", "public, max-age=86400, s-maxage=604800");
+      } else {
+        // TRANG HTML (VD /pph-scan, /work, /...) — KHÔNG được cache ở biên Cloudflare. HTML tham
+        // chiếu tới đúng file JS đã content-hash của LẦN BUILD ĐÓ; nếu Cloudflare lỡ giữ 1 bản HTML
+        // cũ (bug đã gặp nhiều lần — CF-Cache-Status: HIT dù đã deploy bản mới), trình duyệt sẽ cố
+        // tải các file JS CŨ đã bị xoá khỏi lần deploy mới nhất → 404 → JS không chạy được → trang
+        // kẹt mãi ở màn hình "Đang tải..." tĩnh (server-rendered lúc build), không bao giờ hoạt
+        // động được vì React không hydrate nổi. Ép no-store để mọi lượt tải trang HTML luôn lấy
+        // bản mới nhất trực tiếp từ Worker, không qua cache biên nào cả.
+        responseHeaders.set("Cache-Control", "no-store, must-revalidate");
+        responseHeaders.set("CDN-Cache-Control", "no-store");
       }
       return new Response(assetResponse.body, {
         status: assetResponse.status,

@@ -67,6 +67,7 @@ export default function PphScanClient() {
   const [success, setSuccess] = useState<{ slot: string } | null>(null);
   const [showSlotPanel, setShowSlotPanel] = useState(false);
   const [countdownLabel, setCountdownLabel] = useState<string | null>(null);
+  const [loadingTooLong, setLoadingTooLong] = useState(false);
 
   // Nhớ tên người báo cáo TRÊN CHÍNH ĐIỆN THOẠI này — chỉ lần đầu tiên (bất kỳ Tổ nào) mới phải
   // gõ tên, các lần quét sau tự điền sẵn, vẫn cho bấm "Đổi tên" nếu điện thoại đổi người dùng.
@@ -101,6 +102,17 @@ export default function PphScanClient() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamId]);
+
+  // Nếu tải lâu bất thường (mạng yếu, hoặc trình duyệt đang giữ 1 bản trang cũ không tải nổi file
+  // mới) — sau 8s hiện thêm nút "Tải lại trang" thay vì để màn hình quay vòng vô tận không rõ lý do.
+  useEffect(() => {
+    if (!loading) {
+      setLoadingTooLong(false);
+      return;
+    }
+    const t = setTimeout(() => setLoadingTooLong(true), 8000);
+    return () => clearTimeout(t);
+  }, [loading]);
 
   // Sau khi ghi nhận thành công, tự quay lại FORM (không phải quét lại QR) sau vài giây — tải lại
   // thông tin để biết ngay khung kế tiếp đã tới giờ hay chưa, thay vì dừng hẳn ở màn hình cảm ơn.
@@ -220,6 +232,18 @@ export default function PphScanClient() {
         <div className="flex flex-col items-center justify-center py-16 gap-3">
           <div className="w-8 h-8 rounded-full border-4 border-[#006838] border-t-transparent animate-spin" />
           <p className="text-xs text-slate-400 font-semibold">Đang tải...</p>
+          {loadingTooLong && (
+            <div className="text-center pt-2 space-y-2">
+              <p className="text-[11px] text-slate-400">Tải hơi lâu — mạng yếu hoặc trình duyệt đang giữ bản trang cũ.</p>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 rounded-xl bg-[#006838] text-white text-xs font-bold hover:opacity-90"
+              >
+                Tải lại trang
+              </button>
+            </div>
+          )}
         </div>
       </ScanShell>
     );
