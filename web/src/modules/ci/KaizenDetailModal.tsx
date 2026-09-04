@@ -622,9 +622,25 @@ export default function KaizenDetailModal({
           proposal.approval_status = updated.approval_status;
           proposal.sub_status = updated.sub_status;
           proposal.status = updated.status;
+          if (updated.category) proposal.category = updated.category;
           if (updated.time_before_seconds !== undefined) proposal.time_before_seconds = updated.time_before_seconds;
           if (updated.time_after_seconds !== undefined) proposal.time_after_seconds = updated.time_after_seconds;
           if (updated.saved_seconds !== undefined) proposal.saved_seconds = updated.saved_seconds;
+          if (updated.efficiency_value_vnd !== undefined) proposal.efficiency_value_vnd = updated.efficiency_value_vnd;
+          if (updated.pair_quantity !== undefined) {
+            proposal.pair_quantity = updated.pair_quantity;
+            (proposal as any).pairQuantity = updated.pair_quantity;
+            (proposal as any).so_luong_giay = updated.pair_quantity;
+            (proposal as any).quantity = updated.pair_quantity;
+          }
+          if (updated.total_savings_vnd !== undefined) {
+            proposal.total_savings_vnd = updated.total_savings_vnd;
+            (proposal as any).totalSavingsVND = updated.total_savings_vnd;
+            (proposal as any).tong_tien_tiet_kiem = updated.total_savings_vnd;
+          }
+          if (updated.total_savings_words !== undefined) proposal.total_savings_words = updated.total_savings_words;
+          if (updated.after_image_url) proposal.after_image_url = updated.after_image_url;
+
           setStep3Msg(
             updated.approval_status === "PHE_DUYET"
               ? "✅ Đã phê duyệt tính khả thi (Bước 3) thành công!"
