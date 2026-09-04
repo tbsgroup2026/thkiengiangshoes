@@ -8678,10 +8678,19 @@ export default {
         // cũ (bug đã gặp nhiều lần — CF-Cache-Status: HIT dù đã deploy bản mới), trình duyệt sẽ cố
         // tải các file JS CŨ đã bị xoá khỏi lần deploy mới nhất → 404 → JS không chạy được → trang
         // kẹt mãi ở màn hình "Đang tải..." tĩnh (server-rendered lúc build), không bao giờ hoạt
-        // động được vì React không hydrate nổi. Ép no-store để mọi lượt tải trang HTML luôn lấy
-        // bản mới nhất trực tiếp từ Worker, không qua cache biên nào cả.
+        // động được vì React không hydrate nổi. Ép no-store trên CẢ 3 header liên quan (Cache-
+        // Control chuẩn + CDN-Cache-Control chung + Cloudflare-CDN-Cache-Control riêng của CF, ưu
+        // tiên cao nhất) để mọi lượt tải trang HTML luôn lấy bản mới nhất trực tiếp từ Worker.
         responseHeaders.set("Cache-Control", "no-store, must-revalidate");
         responseHeaders.set("CDN-Cache-Control", "no-store");
+        responseHeaders.set("Cloudflare-CDN-Cache-Control", "no-store");
+        // Chủ động xoá luôn bản cache biên (nếu có) của ĐÚNG URL này — phòng trường hợp 1 request
+        // trước đó đã lỡ bị cache trước khi có no-store. Chạy nền (waitUntil), không chặn response.
+        if (ctx && typeof ctx.waitUntil === "function" && typeof caches !== "undefined" && caches.default) {
+          try {
+            ctx.waitUntil(caches.default.delete(request).catch(() => {}));
+          } catch (e) {}
+        }
       }
       return new Response(assetResponse.body, {
         status: assetResponse.status,

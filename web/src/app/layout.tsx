@@ -80,12 +80,60 @@ export default function RootLayout({
                   event.preventDefault();
                 }
               });
-              window.addEventListener('error', function(e) {
-                var msg = e && (e.message || (e.error && e.error.message)) || '';
-                if (msg.includes('Unexpected token') || msg.includes('Loading chunk') || msg.includes('Failed to fetch dynamically imported module')) {
-                  console.warn('[TBS App] Dynamic asset load attempt warning:', msg);
+              // TỰ HỒI PHỤC khi trình duyệt đang giữ 1 bản HTML CŨ trỏ tới file JS đã bị xoá ở lần
+              // deploy mới (tên file đổi theo content-hash mỗi build) — trước đây chỉ console.warn
+              // rồi ĐỨNG YÊN, khiến trang kẹt mãi ở màn hình tĩnh lúc build (React không hydrate
+              // được vì thiếu JS) — đúng lỗi "quét lại vẫn bị" người dùng báo cáo (có thể do 1 số
+              // điểm Cloudflare edge chưa kịp cập nhật cache dù server đã có bản mới). Cho phép tự
+              // reload TỐI ĐA 3 lần (mỗi lần cách nhau 1 chút để cache biên có cơ hội revalidate),
+              // và nếu vẫn hỏng sau 3 lần, tự vẽ 1 màn hình báo lỗi + nút tải lại bằng JS THUẦN
+              // (KHÔNG cần React) — vì lúc này React chắc chắn KHÔNG chạy được, mọi UI dựa vào React
+              // (kể cả nút "Tải lại trang" trong PphScanClient) đều vô dụng.
+              (function () {
+                var MAX_ATTEMPTS = 3;
+                var COUNT_KEY = 'tbs_chunk_recover_count';
+                function isAssetLoadFailure(e) {
+                  var target = e && e.target;
+                  if (target && target.tagName === 'SCRIPT' && target.src) return true;
+                  if (target && target.tagName === 'LINK' && target.href) return true;
+                  var msg = (e && (e.message || (e.error && e.error.message))) || '';
+                  return msg.includes('Unexpected token') || msg.includes('Loading chunk') || msg.includes('Failed to fetch dynamically imported module') || msg.includes('ChunkLoadError');
                 }
-              }, true);
+                function showManualFallback() {
+                  try {
+                    var root = document.body;
+                    if (!root || document.getElementById('tbs-recover-fallback')) return;
+                    var box = document.createElement('div');
+                    box.id = 'tbs-recover-fallback';
+                    box.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#f4f7f5;display:flex;align-items:center;justify-content:center;padding:24px;font-family:sans-serif;';
+                    box.innerHTML =
+                      '<div style="background:#fff;border-radius:24px;padding:32px 24px;max-width:320px;width:100%;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.1);">' +
+                      '<div style="font-weight:900;font-size:16px;color:#0f172a;margin-bottom:8px;">Không tải được trang</div>' +
+                      '<div style="font-size:13px;color:#64748b;margin-bottom:20px;line-height:1.5;">Trình duyệt đang giữ 1 bản trang cũ. Vui lòng xoá bộ nhớ đệm hoặc thử lại.</div>' +
+                      '<button id="tbs-recover-btn" style="width:100%;padding:12px;border-radius:12px;background:#006838;color:#fff;font-weight:800;font-size:14px;border:none;">Thử tải lại</button>' +
+                      '</div>';
+                    root.appendChild(box);
+                    var btn = document.getElementById('tbs-recover-btn');
+                    if (btn) btn.addEventListener('click', function () {
+                      try { sessionStorage.removeItem(COUNT_KEY); } catch (_) {}
+                      window.location.reload();
+                    });
+                  } catch (_) {}
+                }
+                window.addEventListener('error', function (e) {
+                  if (!isAssetLoadFailure(e)) return;
+                  console.warn('[TBS App] Static asset load failed — likely stale cached page, attempting recovery:', e);
+                  var attempt = 0;
+                  try { attempt = parseInt(sessionStorage.getItem(COUNT_KEY) || '0', 10) || 0; } catch (_) {}
+                  if (attempt >= MAX_ATTEMPTS) {
+                    console.warn('[TBS App] Already retried ' + MAX_ATTEMPTS + ' times — showing manual fallback instead of looping.');
+                    showManualFallback();
+                    return;
+                  }
+                  try { sessionStorage.setItem(COUNT_KEY, String(attempt + 1)); } catch (_) {}
+                  setTimeout(function () { window.location.reload(); }, 600 + attempt * 700);
+                }, true);
+              })();
             `,
           }}
         />
