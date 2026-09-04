@@ -37,6 +37,15 @@ async function fetchWithRetryAndTimeout(url: string, options: RequestInit = {}, 
   }
   throw new Error("Network request failed after retries");
 }
+
+function getFirstImageUrl(urlStr?: string | null): string {
+  if (!urlStr) return "";
+  const trimmed = urlStr.trim();
+  if (!trimmed) return "";
+  const first = trimmed.split(",")[0].trim();
+  return first;
+}
+
 import {
   IconLayoutGrid,
   IconList,

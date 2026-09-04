@@ -54,6 +54,14 @@ const CATEGORIES = [
   { id: "OTHER", label: "8.Khác", color: "bg-slate-600 text-white" },
 ];
 
+function getFirstImageUrl(urlStr?: string | null): string {
+  if (!urlStr) return "";
+  const trimmed = urlStr.trim();
+  if (!trimmed) return "";
+  const first = trimmed.split(",")[0].trim();
+  return first;
+}
+
 export default function KaizenDetailModal({
   proposal,
   isOpen,
