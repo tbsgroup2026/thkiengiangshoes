@@ -455,7 +455,11 @@ function mmtbAreaLabel(area) {
 // vẫn là nơi lưu dữ liệu thật DUY NHẤT, đây chỉ là cache đọc tạm thời phía thkiengiangshoes.
 const MMTB_CACHE_TTL_SECONDS = 300; // 5 phút — khớp mức "chậm vài phút là ổn" đã thống nhất
 
+let __mmtbCacheSchemaMigratedOnce = false;
+
 async function mmtbCacheEnsureTable(env) {
+  if (__mmtbCacheSchemaMigratedOnce) return;
+  __mmtbCacheSchemaMigratedOnce = true;
   await env.DB.prepare(
     "CREATE TABLE IF NOT EXISTS mmtb_cache (cache_key TEXT PRIMARY KEY, value TEXT NOT NULL, expires_at INTEGER NOT NULL)",
   )
@@ -623,7 +627,16 @@ async function mmtbTryAutoLoginAsAdmin(request, env) {
 // bước này, chỉ dùng nội bộ để tra cứu tên.
 const PPH_SLOTS = ["08:00", "08:30", "09:30", "10:30", "11:30", "13:30", "14:30", "15:30", "16:30"];
 
+// Chạy CREATE TABLE/ALTER TABLE 1 LẦN DUY NHẤT cho mỗi Worker isolate (không phải mỗi request!) —
+// giống hệt lý do & cách làm của __schemaMigratedOnce ở ensureDatabaseColumnsAndLegacyCode() phía
+// trên. Hàm này TRƯỚC ĐÂY chạy lại trên MỌI request PPH (scan-info, scan, dashboard, tree...),
+// tốn 1 round-trip D1 thừa mỗi lần, gây độ trễ chập chờn khó lường — đúng hiện tượng "quét lại vẫn
+// xoay load chập chờn" người dùng báo cáo.
+let __pphSchemaMigratedOnce = false;
+
 async function pphEnsureTable(env) {
+  if (__pphSchemaMigratedOnce) return;
+  __pphSchemaMigratedOnce = true;
   await env.DB.prepare(`
     CREATE TABLE IF NOT EXISTS pph_entries (
       id TEXT PRIMARY KEY,
@@ -694,7 +707,11 @@ function pphResolveStatus(setupDone, filledSlots) {
 const PPH_ORG_TYPES = ["FACTORY", "AREA", "LINE", "TEAM"];
 const PPH_ORG_ALLOWED_PARENT_TYPES = { AREA: ["FACTORY"], LINE: ["AREA"], TEAM: ["AREA", "LINE"] };
 
+let __pphOrgSchemaMigratedOnce = false;
+
 async function pphOrgEnsureTable(env) {
+  if (__pphOrgSchemaMigratedOnce) return;
+  __pphOrgSchemaMigratedOnce = true;
   await env.DB.prepare(`
     CREATE TABLE IF NOT EXISTS pph_org (
       id TEXT PRIMARY KEY,

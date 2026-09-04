@@ -52,6 +52,16 @@ export default function PphScanClient() {
   const searchParams = useSearchParams();
   const teamId = searchParams.get('team') || '';
 
+  // Trang build tĩnh (output:'export') — lúc build KHÔNG có URL thật nên teamId luôn rỗng trong
+  // bản HTML tĩnh ban đầu; chỉ sau khi hydrate xong ở trình duyệt, useSearchParams() mới đọc được
+  // đúng ?team=... từ URL thật. Nếu kiểm tra "!teamId" TRƯỚC khi biết chắc đã hydrate xong, màn
+  // hình sẽ chớp qua "Thiếu mã Tổ" (sai) rồi mới chuyển sang "Đang tải..." rồi mới ra form đúng —
+  // đúng hiện tượng "xoay load chập chờn" người dùng báo cáo (thấy rõ hơn khi JS đã có sẵn trong
+  // cache trình duyệt nên hydrate rất nhanh, các bước chớp nối tiếp nhau rõ rệt). `mounted` chỉ
+  // true SAU khi đã chắc chắn chạy xong ở client — trước đó luôn hiện "Đang tải..." trung tính.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const [info, setInfo] = useState<ScanInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [submittedBy, setSubmittedBy] = useState('');
@@ -206,15 +216,7 @@ export default function PphScanClient() {
     }
   }
 
-  if (!teamId) {
-    return (
-      <ScanShell>
-        <StateCard icon={IconAlertTriangle} tone="rose" title="Thiếu mã Tổ" desc="Đường dẫn QR không hợp lệ — vui lòng quét lại mã đã dán tại Tổ." />
-      </ScanShell>
-    );
-  }
-
-  if (loading) {
+  if (!mounted || loading) {
     return (
       <ScanShell>
         <div className="flex flex-col items-center justify-center py-16 gap-3">
@@ -233,6 +235,14 @@ export default function PphScanClient() {
             </div>
           )}
         </div>
+      </ScanShell>
+    );
+  }
+
+  if (!teamId) {
+    return (
+      <ScanShell>
+        <StateCard icon={IconAlertTriangle} tone="rose" title="Thiếu mã Tổ" desc="Đường dẫn QR không hợp lệ — vui lòng quét lại mã đã dán tại Tổ." />
       </ScanShell>
     );
   }
