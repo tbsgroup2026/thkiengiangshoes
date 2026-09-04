@@ -521,6 +521,7 @@ export default function CIModule() {
   const [isFiveStepModalOpen, setIsFiveStepModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const createLockRef = React.useRef(false);
+  const dupActionLockRef = React.useRef(false);
 
   // Filters State
   const [searchQuery, setSearchQuery] = useState("");
@@ -2696,10 +2697,16 @@ export default function CIModule() {
           newSubmission={duplicateNewSubmission}
           matchedMatches={duplicateMatches}
           onConfirmMerge={async (orig) => {
+            if (dupActionLockRef.current) return;
+            dupActionLockRef.current = true;
             try {
+              const idempotencyKey = `kz_merge_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
               const res = await fetch("/api/ci-kaizen/merge", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                  "Content-Type": "application/json",
+                  "x-idempotency-key": idempotencyKey,
+                },
                 body: JSON.stringify({
                   originalProposalId: orig.id,
                   newAttachments: duplicateNewSubmission.attachments || [],
@@ -2718,13 +2725,21 @@ export default function CIModule() {
               }
             } catch (e) {
               showToast("❌ Lỗi khi thực hiện gộp!");
+            } finally {
+              dupActionLockRef.current = false;
             }
           }}
           onProceedAsNew={async () => {
+            if (dupActionLockRef.current) return;
+            dupActionLockRef.current = true;
             try {
+              const idempotencyKey = `kz_proceed_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
               const res = await fetch("/api/ci-kaizen", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                  "Content-Type": "application/json",
+                  "x-idempotency-key": idempotencyKey,
+                },
                 body: JSON.stringify({
                   ...duplicateNewSubmission,
                   registrationType: "THI_DUA",
@@ -2742,6 +2757,8 @@ export default function CIModule() {
               }
             } catch (e) {
               showToast("❌ Lỗi kết nối!");
+            } finally {
+              dupActionLockRef.current = false;
             }
           }}
           onClose={() => setIsDuplicateModalOpen(false)}

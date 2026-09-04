@@ -148,6 +148,7 @@ export default function KaizenPublicSubmitForm({
   const [submittedCode, setSubmittedCode] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const submitLockRef = React.useRef(false);
+  const dupActionLockRef = React.useRef(false);
   const [uploading, setUploading] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [unitTitle, setUnitTitle] = useState<string>("THNM Kiên Giang");
@@ -1205,10 +1206,16 @@ export default function KaizenPublicSubmitForm({
           newSubmission={duplicatePayload}
           matchedMatches={duplicateMatches}
           onConfirmMerge={async (orig) => {
+            if (dupActionLockRef.current) return;
+            dupActionLockRef.current = true;
             try {
+              const idempotencyKey = `kz_merge_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
               const res = await fetch("/api/ci-kaizen/merge", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                  "Content-Type": "application/json",
+                  "x-idempotency-key": idempotencyKey,
+                },
                 body: JSON.stringify({
                   originalProposalId: orig.id,
                   newAttachments: duplicatePayload.attachments || [],
@@ -1226,13 +1233,21 @@ export default function KaizenPublicSubmitForm({
               }
             } catch (e) {
               showToast("❌ Lỗi mạng khi thực hiện gộp!");
+            } finally {
+              dupActionLockRef.current = false;
             }
           }}
           onProceedAsNew={async () => {
+            if (dupActionLockRef.current) return;
+            dupActionLockRef.current = true;
+            const idempotencyKey = `kz_proceed_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
             try {
               const res = await fetch("/api/ci-kaizen", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                  "Content-Type": "application/json",
+                  "x-idempotency-key": idempotencyKey,
+                },
                 body: JSON.stringify(duplicatePayload),
               });
               const json = await res.json();
@@ -1245,6 +1260,8 @@ export default function KaizenPublicSubmitForm({
               }
             } catch (e) {
               showToast("❌ Lỗi mạng!");
+            } finally {
+              dupActionLockRef.current = false;
             }
           }}
           onClose={() => setShowDuplicateModal(false)}
