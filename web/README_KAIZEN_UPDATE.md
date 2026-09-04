@@ -1,8 +1,8 @@
-# 📦 Kaizen Modal Update - README
+# 📦 Kaizen Platform Updates - README
 
-**Version**: 2.0  
-**Date**: 21/08/2026  
-**Status**: ✅ Production Ready
+**Version**: 2.5  
+**Date**: 04/09/2026  
+**Status**: ✅ Deployed to Production (Cloudflare Workers)
 
 ---
 
