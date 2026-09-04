@@ -639,6 +639,9 @@ async function pphEnsureTable(env) {
       UNIQUE(team_id, entry_date, slot)
     )
   `).run().catch(() => {});
+  // Mục tiêu RFT (%) — nhập 1 lần cùng lúc cập nhật đầu ca (dòng slot='08:00'), giống worker_count/
+  // model/planned_qty. ALTER riêng vì bảng có thể đã tồn tại từ trước lúc thêm cột này.
+  await env.DB.prepare("ALTER TABLE pph_entries ADD COLUMN target_rft REAL").run().catch(() => {});
 }
 
 // Giờ Việt Nam (UTC+7, không lệch DST) — Worker chạy theo UTC, cộng thủ công 7 tiếng rồi ĐỌC BẰNG
@@ -837,7 +840,7 @@ async function handlePph(request, env, pathname, searchParams) {
     let results = [];
     try {
       const r = await env.DB.prepare(
-        "SELECT slot, worker_count, model, planned_qty, actual_qty FROM pph_entries WHERE team_id = ? AND entry_date = ?"
+        "SELECT slot, worker_count, model, planned_qty, target_rft, actual_qty FROM pph_entries WHERE team_id = ? AND entry_date = ?"
       ).bind(teamId, date).all();
       results = r.results || [];
     } catch {}
@@ -846,6 +849,22 @@ async function handlePph(request, env, pathname, searchParams) {
     const filledSlots = new Set([...bySlot.keys()].filter((s) => s !== "08:00"));
     const resolved = pphResolveStatus(setupDone, filledSlots);
     const setupRow = bySlot.get("08:00");
+
+    // Dữ liệu ĐẦY ĐỦ từng khung giờ trong ngày (kể cả khung đầu ca) — cho FE dựng bảng "xem lại các
+    // khung đã quét" (chỉ xem, không sửa được) khi bấm vào ô giờ hiện tại.
+    const entries = PPH_SLOTS.map((s) => {
+      const row = bySlot.get(s);
+      if (!row) return { slot: s, filled: false };
+      return {
+        slot: s,
+        filled: true,
+        workerCount: row.worker_count ?? null,
+        model: row.model ?? null,
+        plannedQty: row.planned_qty ?? null,
+        targetRft: row.target_rft ?? null,
+        actualQty: row.actual_qty ?? null,
+      };
+    });
 
     return mmtbJson({
       success: true,
@@ -859,7 +878,10 @@ async function handlePph(request, env, pathname, searchParams) {
       date,
       slots: PPH_SLOTS,
       filledSlots: [...bySlot.keys()],
-      setup: setupRow ? { workerCount: setupRow.worker_count, model: setupRow.model, plannedQty: setupRow.planned_qty } : null,
+      entries,
+      setup: setupRow
+        ? { workerCount: setupRow.worker_count, model: setupRow.model, plannedQty: setupRow.planned_qty, targetRft: setupRow.target_rft }
+        : null,
       ...resolved,
     });
   }
@@ -901,13 +923,15 @@ async function handlePph(request, env, pathname, searchParams) {
         const workerCount = Number(body.workerCount);
         const model = String(body.model || "").trim();
         const plannedQty = Number(body.plannedQty);
+        const targetRft = Number(body.targetRft);
         if (!Number.isFinite(workerCount) || workerCount <= 0) return mmtbJson({ success: false, error: "Vui lòng nhập đúng Số lượng công nhân" }, 400);
         if (!model) return mmtbJson({ success: false, error: "Vui lòng nhập Model sản xuất" }, 400);
         if (!Number.isFinite(plannedQty) || plannedQty <= 0) return mmtbJson({ success: false, error: "Vui lòng nhập đúng Số lượng kế hoạch" }, 400);
+        if (!Number.isFinite(targetRft) || targetRft < 0 || targetRft > 100) return mmtbJson({ success: false, error: "Vui lòng nhập đúng Mục tiêu RFT (0-100%)" }, 400);
         try {
           await env.DB.prepare(
-            "INSERT INTO pph_entries (id, team_id, entry_date, slot, worker_count, model, planned_qty, submitted_by, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-          ).bind(id, teamId, date, slot, workerCount, model, plannedQty, submittedBy, nowIso).run();
+            "INSERT INTO pph_entries (id, team_id, entry_date, slot, worker_count, model, planned_qty, target_rft, submitted_by, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          ).bind(id, teamId, date, slot, workerCount, model, plannedQty, targetRft, submittedBy, nowIso).run();
         } catch {
           return mmtbJson({ success: false, error: "Đã có người cập nhật đầu giờ hôm nay rồi" }, 409);
         }
