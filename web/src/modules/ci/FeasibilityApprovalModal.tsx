@@ -16,6 +16,7 @@ import {
 } from "@tabler/icons-react";
 import { convertNumberToWords } from "@/lib/numberToWords";
 import { KaizenProposal, CATEGORIES } from "./CIModule";
+import { normalizeCategoryId } from "./KaizenPublicSubmitForm";
 
 interface FeasibilityApprovalModalProps {
   isOpen: boolean;
@@ -51,7 +52,7 @@ export default function FeasibilityApprovalModal({
   const [decision, setDecision] = useState<"APPROVE" | "REJECT">(initialDecision);
   const [note, setNote] = useState<string>("");
   const [editedCategory, setEditedCategory] = useState<string>(
-    proposal?.category || proposal?.category_label || (proposal as any)?.product_group || "INCREASE_PRODUCTIVITY"
+    normalizeCategoryId(proposal?.category || proposal?.category_label || (proposal as any)?.product_group)
   );
   const [timeBefore, setTimeBefore] = useState<number | string>(proposal?.time_before_seconds || 0);
   const [timeAfter, setTimeAfter] = useState<number | string>(proposal?.time_after_seconds || 0);
@@ -114,7 +115,7 @@ export default function FeasibilityApprovalModal({
       setErrorMsg(null);
       setPairQtyError(null);
       setEditedCategory(
-        proposal.category || proposal.category_label || (proposal as any).product_group || "INCREASE_PRODUCTIVITY"
+        normalizeCategoryId(proposal.category || proposal.category_label || (proposal as any).product_group || proposal.title)
       );
       setNote("");
       setErrorMsg(null);

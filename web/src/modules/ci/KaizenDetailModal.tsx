@@ -28,10 +28,11 @@ import {
   IconTrendingUp,
 } from "@tabler/icons-react";
 import { convertNumberToWords } from "@/lib/numberToWords";
-import { KaizenProposal } from "./CIModule";
+import { KaizenProposal, isApprovedProposal, isRejectedProposal } from "./CIModule";
 import { usePermission } from "@/hooks/usePermission";
 import FeasibilityApprovalModal from "./FeasibilityApprovalModal";
 import { splitImageUrls } from "./kaizenImageUtils";
+import { normalizeCategoryId } from "./KaizenPublicSubmitForm";
 
 interface KaizenDetailModalProps {
   proposal: KaizenProposal;
@@ -230,16 +231,12 @@ export default function KaizenDetailModal({
 
   if (!isOpen || !proposal) return null;
 
-  const catObj = CATEGORIES.find((c) => c.id === proposal.category) || CATEGORIES[0];
+  const catObj = CATEGORIES.find((c) => c.id === normalizeCategoryId(proposal.category || proposal.category_label)) || CATEGORIES[0];
 
-  const isApprovedProposal =
-    proposal.approval_status === "PHE_DUYET" ||
-    (proposal as any).approvalStatus === "PHE_DUYET" ||
-    proposal.sub_status === "CHO_DANH_GIA" ||
-    proposal.sub_status === "DA_DANH_GIA" ||
-    proposal.sub_status === "LUU_TRU";
+  const isApproved = isApprovedProposal(proposal);
+  const isRejected = isRejectedProposal(proposal);
 
-  const effectiveDateStr = isApprovedProposal
+  const effectiveDateStr = isApproved
     ? ((proposal as any).approved_at || (proposal as any).approvedAt || (proposal as any).updated_at || proposal.created_at)
     : (proposal.created_at || (proposal as any).updated_at);
 
@@ -480,29 +477,29 @@ export default function KaizenDetailModal({
                 <span>{proposal.registration_type === "THI_DUA" ? "Thi đua" : "Lưu trữ"}</span>
               </span>
 
-              {/* Pill 3: Trạng thái quy trình (Chờ phê duyệt vs Chờ đánh giá vs Đã đánh giá) */}
+              {/* Pill 3: Trạng thái quy trình (Đã duyệt vs Từ chối vs Chờ duyệt) */}
               <span
                 className={`px-3 py-1 rounded-full border text-xs font-black flex items-center gap-1.5 ${
-                  proposal.sub_status === "CHO_REVIEW" || proposal.approval_status === "PENDING" || proposal.status === "SUBMITTED"
-                    ? "bg-blue-50 text-blue-800 border-blue-300"
-                    : proposal.sub_status === "CHO_DANH_GIA" || proposal.approval_status === "PHE_DUYET"
-                    ? "bg-amber-50 text-amber-800 border-amber-300"
-                    : "bg-emerald-50 text-emerald-800 border-emerald-300"
+                  isRejected
+                    ? "bg-rose-50 text-rose-800 border-rose-300"
+                    : isApproved
+                    ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                    : "bg-blue-50 text-blue-800 border-blue-300"
                 }`}
               >
                 <span>
-                  {proposal.sub_status === "CHO_REVIEW" || proposal.approval_status === "PENDING" || proposal.status === "SUBMITTED"
-                    ? "👤"
-                    : proposal.sub_status === "CHO_DANH_GIA" || proposal.approval_status === "PHE_DUYET"
-                    ? "⏳"
-                    : "✅"}
+                  {isRejected
+                    ? "❌"
+                    : isApproved
+                    ? "✅"
+                    : "👤"}
                 </span>
                 <span>
-                  {proposal.sub_status === "CHO_REVIEW" || proposal.approval_status === "PENDING" || proposal.status === "SUBMITTED"
-                    ? "Chờ phê duyệt"
-                    : proposal.sub_status === "CHO_DANH_GIA" || proposal.approval_status === "PHE_DUYET"
-                    ? "Chờ duyệt"
-                    : "Đã duyệt"}
+                  {isRejected
+                    ? "Từ chối"
+                    : isApproved
+                    ? "Đã duyệt"
+                    : "Chờ duyệt"}
                 </span>
               </span>
             </div>
@@ -774,6 +771,10 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
 
       {/* SECTION 3 — 📈 HIỆU QUẢ CẢI TIẾN */}
       {(() => {
+        const normCat = normalizeCategoryId(proposal.category || proposal.category_label);
+        const isMaterialOrCost = normCat === "MATERIAL_SAVING" || normCat === "COST_SAVING";
+        const catObj = CATEGORIES.find((c) => c.id === normCat) || CATEGORIES[0];
+
         const timeBefore = Number(proposal.time_before_seconds || (proposal as any).timeBeforeSeconds || 0);
         const timeAfter = Number(proposal.time_after_seconds || (proposal as any).timeAfterSeconds || 0);
         const savedSecs = Number(proposal.saved_seconds || (proposal as any).savedSeconds || Math.max(0, timeBefore - timeAfter));
@@ -787,7 +788,7 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
           proposal.total_savings_vnd ||
           (proposal as any).totalSavingsVND ||
           (proposal as any).tong_tien_tiet_kiem ||
-          (pairQty > 0 ? efficiencyVnd * pairQty : 0)
+          (pairQty > 0 ? efficiencyVnd * pairQty : efficiencyVnd)
         );
         const totalSavingsWordsText =
           proposal.total_savings_words ||
@@ -795,14 +796,46 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
           (proposal as any).tong_tien_bang_chu ||
           (totalSavingsVnd > 0 ? convertNumberToWords(totalSavingsVnd) : "");
 
+        const costBeforeVal = Number((proposal as any).cost_before || (proposal as any).chi_phi_truoc || 0);
+        const costAfterVal = Number((proposal as any).cost_after || (proposal as any).chi_phi_sau || 0);
+
         return (
           <div className="space-y-3">
             <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
               <span>📈</span>
-              <span>HIỆU QUẢ CẢI TIẾN</span>
+              <span>HIỆU QUẢ CẢI TIẾN ({catObj.label})</span>
             </h4>
 
-            {pricingDir === "TRI_GIA" || pricingDir === "Trị giá" ? (
+            {isMaterialOrCost ? (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Thẻ 1: CHI PHÍ TRƯỚC */}
+                <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
+                  <span className="text-[10px] font-extrabold uppercase text-slate-400 block">CHI PHÍ TRƯỚC</span>
+                  <span className="text-lg sm:text-xl font-black text-slate-900 block truncate">
+                    {costBeforeVal > 0 ? `${costBeforeVal.toLocaleString("vi-VN")} VNĐ` : "Chưa đo lường"}
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-500 block">chi phí ban đầu</span>
+                </div>
+
+                {/* Thẻ 2: CHI PHÍ SAU */}
+                <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
+                  <span className="text-[10px] font-extrabold uppercase text-slate-400 block">CHI PHÍ SAU</span>
+                  <span className="text-lg sm:text-xl font-black text-slate-900 block truncate">
+                    {costAfterVal > 0 ? `${costAfterVal.toLocaleString("vi-VN")} VNĐ` : "0 VNĐ"}
+                  </span>
+                  <span className="text-[10px] font-bold text-emerald-600 block">sau cải tiến</span>
+                </div>
+
+                {/* Thẻ 3: TỔNG SỐ TIỀN TIẾT KIỆM */}
+                <div className="p-3.5 rounded-2xl bg-[#006838] text-white space-y-1 shadow-md border border-emerald-400/30">
+                  <span className="text-[10px] font-extrabold uppercase text-amber-300 block">TỔNG TIẾT KIỆM</span>
+                  <span className="text-lg sm:text-xl font-black text-white block truncate">
+                    {totalSavingsVnd > 0 ? `${totalSavingsVnd.toLocaleString("vi-VN")} VNĐ` : "0 VNĐ"}
+                  </span>
+                  <span className="text-[10px] font-bold text-emerald-200 block truncate">tiết kiệm trực tiếp</span>
+                </div>
+              </div>
+            ) : pricingDir === "TRI_GIA" || pricingDir === "Trị giá" ? (
               <div className="p-4 rounded-2xl bg-[#006838] text-white shadow-sm flex items-center justify-between">
                 <div>
                   <span className="text-[10px] font-extrabold uppercase text-emerald-200 block">
@@ -1005,7 +1038,7 @@ function TabExpertReviewContent({
 
   // Server state data
   const [evalData, setEvalData] = useState<any>(initialEvalData || null);
-  const catObj = CATEGORIES.find((c) => c.id === proposal.category) || CATEGORIES[0];
+  const catObj = CATEGORIES.find((c) => c.id === normalizeCategoryId(proposal.category || proposal.category_label)) || CATEGORIES[0];
 
   // Form states for assigned judge scoring
   const [req1, setReq1] = useState(true);

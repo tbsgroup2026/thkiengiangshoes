@@ -81,6 +81,19 @@ export async function POST(request: Request) {
     const afterImageUrl = body.after_image_url || body.afterImageUrl || null;
     const attachmentsJson = body.attachments_json || body.attachmentsJson || null;
     const categoryVal = body.category || null;
+    const CATEGORY_LABEL_MAP: Record<string, string> = {
+      MATERIAL_SAVING: "1.Tiết kiệm Vật tư",
+      COST_SAVING: "2.Tiết kiệm Chi phí",
+      PRODUCTIVITY: "3.Tăng Năng suất",
+      SAFETY: "4.An toàn lao động",
+      "5S": "5.5S",
+      AUTOMATION: "6.Tự động hoá",
+      EQUIPMENT: "7.MMTB CCDC",
+    };
+    const categoryLabelVal = categoryVal ? (CATEGORY_LABEL_MAP[categoryVal] || categoryVal) : null;
+
+    const costBeforeVal = Number(body.costBefore || body.cost_before || 0);
+    const costAfterVal = Number(body.costAfter || body.cost_after || 0);
 
     const db = getDbBinding();
 
@@ -93,6 +106,9 @@ export async function POST(request: Request) {
         await db.prepare('ALTER TABLE ci_kaizen_proposals ADD COLUMN after_image_url TEXT').run().catch(() => {});
         await db.prepare('ALTER TABLE ci_kaizen_proposals ADD COLUMN attachments_json TEXT').run().catch(() => {});
         await db.prepare('ALTER TABLE ci_kaizen_proposals ADD COLUMN category TEXT').run().catch(() => {});
+        await db.prepare('ALTER TABLE ci_kaizen_proposals ADD COLUMN category_label TEXT').run().catch(() => {});
+        await db.prepare('ALTER TABLE ci_kaizen_proposals ADD COLUMN cost_before REAL DEFAULT 0').run().catch(() => {});
+        await db.prepare('ALTER TABLE ci_kaizen_proposals ADD COLUMN cost_after REAL DEFAULT 0').run().catch(() => {});
 
         const query = `
           UPDATE ci_kaizen_proposals
@@ -100,6 +116,7 @@ export async function POST(request: Request) {
               sub_status = ?,
               status = ?,
               category = COALESCE(?, category),
+              category_label = COALESCE(?, category_label),
               time_before_seconds = ?,
               time_after_seconds = ?,
               saved_seconds = ?,
@@ -108,6 +125,8 @@ export async function POST(request: Request) {
               quantity = ?,
               total_savings_vnd = ?,
               total_savings_words = ?,
+              cost_before = ?,
+              cost_after = ?,
               after_image_url = COALESCE(?, after_image_url),
               attachments_json = COALESCE(?, attachments_json),
               review_comment = COALESCE(?, review_comment),
@@ -126,6 +145,7 @@ export async function POST(request: Request) {
             subStatus,
             status,
             categoryVal,
+            categoryLabelVal,
             timeBefore,
             timeAfter,
             savedSecs,
@@ -134,6 +154,8 @@ export async function POST(request: Request) {
             pairQty,
             totalSavings,
             totalSavingsWordsVal,
+            costBeforeVal,
+            costAfterVal,
             afterImageUrl,
             attachmentsJson,
             note || null,

@@ -658,16 +658,26 @@ npx wrangler deploy --name thkiengiangshoes
 
 ---
 
-## ⚠️ 7. GIỚI HẠN HIỆN TẠI & NHỮNG ĐIỂM CHƯA XÁC ĐỊNH
+## 🚀 8. BẢN CẬP NHẬT MỚI NHẤT (RELEASE NOTES - 04/09/2026)
 
-### 7.1 Giới Hạn Hiện Tại (Known Limitations)
-- **Đồng bộ đa tab (Multi-tab Sync)**: Trường hợp mở cùng lúc 2 tab trình duyệt, việc nộp bài ở Tab 1 sẽ cập nhật lập tức badge ở Tab 1; Tab 2 sẽ thấy badge mới sau lượt tương tác tiếp theo hoặc khi bấm refresh.
+### 8.1 Nâng Cấp Hệ Thống Bộ Lọc Đa Tiêu Chí (Library & Dashboard Multi-Filter)
+- **Kết hợp bộ lọc đồng thời (Multi-Filtering)**: Loại bỏ cơ chế xóa bộ lọc khi chọn 1 tiêu chí mới. Cho phép lọc kết hợp 6 tiêu chí cùng lúc: *Tháng/Năm*, *Xưởng Sản Xuất*, *Danh Mục*, *Khu Vực*, *Loại Đăng Ký* và *Tìm Kiếm Từ Khóa*.
+- **Tối ưu trải nghiệm bấm (Click Suppression Fix)**: Thay thế các thẻ `<label>` hủy sự kiện bằng `<button type="button">` chuẩn trong `CascadingOrgFilter.tsx`, đảm bảo menu sổ xuống phản hồi tức thì trên mọi thiết bị.
+- **Thuật toán Khớp Từ Khóa Mờ (Fuzzy Org Matching)**: Tự động đối soát linh hoạt tên các xưởng/phòng ban (`KG1`, `KG2`, `KG3`, `HTĐ`, `May`, `Gò`, `CN-CI`, `PPC`, `QA/QC`, `HR`) thay vì kiểm tra chuỗi cứng.
+- **Thanh hiển thị Filter Active & Reset 1-Click**: Tự động hiển thị danh sách các filter đang chọn và nút Reset xóa nhanh toàn bộ bộ lọc chỉ trong 1 cú click.
 
-### 7.2 Những Phần Chưa Xác Định — Cần Bổ Sung (Undefined Areas)
-- **Phân hệ Kho & Logistics (`06. Kho & Logistics`)**: Hiện tại đang hiển thị giao diện chờ phát triển ("Coming Soon"), chưa có schema bảng CSDL D1 chính thức.
-- **Tích hợp IoT PLC Máy Móc Trực Tiếp**: Mới chỉ hỗ trợ quản lý Ticket bảo trì MMTB; chưa có cổng websocket nhận dữ liệu cảm biến trực tiếp theo thời gian thực từ dây chuyền nhà máy.
+### 8.2 Tự Động Tra Cứu & Điền Thông Tin Đăng Ký Bằng MSNV
+- Tích hợp API tra cứu dữ liệu nhân sự tự động (`/api/employees/lookup`). Khi điền Mã số nhân viên (MSNV), hệ thống tự động điền các trường: *Họ và tên*, *Xưởng / Phòng ban*, *Khu vực nhà máy* và *Chức danh*.
+
+### 8.3 Chuẩn Hóa Luồng Phê Duyệt & Form Theo Danh Mục Sáng Kiến
+- **Giữ nguyên danh mục sau duyệt**: Khắc phục dứt điểm sự cố đề xuất thuộc mục *1. Tiết kiệm vật tư* sau khi duyệt bị đẩy sang mục *3. Tăng năng suất* hoặc bị mất số tiền tiết kiệm.
+- **Form duyệt động theo danh mục**: Khi duyệt đề xuất mục *Tiết kiệm vật tư*, hệ thống mở đúng Form tính toán hiệu quả VNĐ thực tế và lưu vết chính xác vào CSDL D1.
+- **Chuẩn hóa Ngày phê duyệt (`approved_at`)**: Đồng bộ thời gian phê duyệt chính xác theo ngày duyệt thực tế thay vì lấy ngày nộp ban đầu.
+
+### 8.4 Chuẩn Hóa Badge Trạng Thái Thẻ (Status Badges Sync)
+- Loại bỏ hoàn toàn thẻ nhãn màu vàng "Chờ duyệt" thừa trên các bài đã phê duyệt. Các đề xuất đã duyệt chỉ hiển thị duy nhất nhãn xanh lá **✅ Đã duyệt**.
 
 ---
 
-> **Tài liệu Kỹ thuật Tổng thể Ban Hành Ngày**: `28/08/2026`  
-> **Tác giả**: AI Agent Pair Programming & Ban Công Nghệ TBS Group
+> **Tài liệu Kỹ thuật Tổng thể Ban Hành Ngày**: `04/09/2026` (Phiên bản v2.5)  
+> **Tác giả**: Ban Công Nghệ & Kaizen TBS Group — AI Agent Pair Programming

@@ -301,9 +301,10 @@ export default function CascadingOrgFilter({
             </div>
 
             <div className="space-y-0.5 max-h-60 overflow-y-auto pr-1">
-              <label
+              <button
+                type="button"
                 onClick={selectAllFactories}
-                className={`flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors ${
+                className={`w-full text-left flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors ${
                   state.factories.length === 0 ? "bg-emerald-50 text-[#006838]" : "hover:bg-slate-50 text-slate-700"
                 }`}
               >
@@ -315,20 +316,18 @@ export default function CascadingOrgFilter({
                   {state.factories.length === 0 && <IconCheck size={12} strokeWidth={3} />}
                 </div>
                 <span>Tất cả nhà máy</span>
-              </label>
+              </button>
 
               <div className="my-1 border-t border-slate-100" />
 
               {availableFactories.map((fac) => {
                 const isChecked = state.factories.includes(fac);
                 return (
-                  <label
+                  <button
+                    type="button"
                     key={fac}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      toggleFactory(fac);
-                    }}
-                    className={`flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
+                    onClick={() => toggleFactory(fac)}
+                    className={`w-full text-left flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
                       isChecked ? "bg-emerald-50 text-[#006838] font-bold" : "hover:bg-slate-50 text-slate-700"
                     }`}
                   >
@@ -340,7 +339,7 @@ export default function CascadingOrgFilter({
                       {isChecked && <IconCheck size={12} strokeWidth={3} />}
                     </div>
                     <span className="truncate">{fac}</span>
-                  </label>
+                  </button>
                 );
               })}
             </div>
@@ -388,9 +387,10 @@ export default function CascadingOrgFilter({
               </div>
 
               <div className="space-y-1 max-h-60 overflow-y-auto pr-1">
-                <label
+                <button
+                  type="button"
                   onClick={selectAllWorkshops}
-                  className={`flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors ${
+                  className={`w-full text-left flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors ${
                     state.workshops.length === 0 ? "bg-blue-50 text-blue-700" : "hover:bg-slate-50 text-slate-700"
                   }`}
                 >
@@ -402,7 +402,7 @@ export default function CascadingOrgFilter({
                     {state.workshops.length === 0 && <IconCheck size={12} strokeWidth={3} />}
                   </div>
                   <span>Tất cả xưởng</span>
-                </label>
+                </button>
 
                 {groupedWorkshops.map((group) => (
                   <div key={group.factory} className="pt-1">
@@ -414,13 +414,11 @@ export default function CascadingOrgFilter({
                     {group.workshops.map((ws) => {
                       const isChecked = state.workshops.includes(ws);
                       return (
-                        <label
+                        <button
+                          type="button"
                           key={ws}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            toggleWorkshop(ws);
-                          }}
-                          className={`flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
+                          onClick={() => toggleWorkshop(ws)}
+                          className={`w-full text-left flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
                             isChecked ? "bg-blue-50 text-blue-700 font-bold" : "hover:bg-slate-50 text-slate-700"
                           }`}
                         >
@@ -432,7 +430,7 @@ export default function CascadingOrgFilter({
                             {isChecked && <IconCheck size={12} strokeWidth={3} />}
                           </div>
                           <span className="truncate">{ws}</span>
-                        </label>
+                        </button>
                       );
                     })}
                   </div>
@@ -483,9 +481,10 @@ export default function CascadingOrgFilter({
               </div>
 
               <div className="space-y-1 max-h-60 overflow-y-auto pr-1">
-                <label
+                <button
+                  type="button"
                   onClick={selectAllLines}
-                  className={`flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors ${
+                  className={`w-full text-left flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors ${
                     state.lines.length === 0 ? "bg-purple-50 text-purple-700" : "hover:bg-slate-50 text-slate-700"
                   }`}
                 >
@@ -497,7 +496,7 @@ export default function CascadingOrgFilter({
                     {state.lines.length === 0 && <IconCheck size={12} strokeWidth={3} />}
                   </div>
                   <span>Tất cả line</span>
-                </label>
+                </button>
 
                 {groupedLines.map((group) => (
                   <div key={group.workshop} className="pt-1">
@@ -509,13 +508,11 @@ export default function CascadingOrgFilter({
                     {group.lines.map((ln) => {
                       const isChecked = state.lines.includes(ln);
                       return (
-                        <label
+                        <button
+                          type="button"
                           key={ln}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            toggleLine(ln);
-                          }}
-                          className={`flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
+                          onClick={() => toggleLine(ln)}
+                          className={`w-full text-left flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
                             isChecked ? "bg-purple-50 text-purple-700 font-bold" : "hover:bg-slate-50 text-slate-700"
                           }`}
                         >
@@ -527,7 +524,7 @@ export default function CascadingOrgFilter({
                             {isChecked && <IconCheck size={12} strokeWidth={3} />}
                           </div>
                           <span className="truncate">{ln}</span>
-                        </label>
+                        </button>
                       );
                     })}
                   </div>
@@ -578,9 +575,10 @@ export default function CascadingOrgFilter({
               </div>
 
               <div className="space-y-1 max-h-60 overflow-y-auto pr-1">
-                <label
+                <button
+                  type="button"
                   onClick={selectAllChuyens}
-                  className={`flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors ${
+                  className={`w-full text-left flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors ${
                     state.chuyens.length === 0 ? "bg-amber-50 text-amber-800" : "hover:bg-slate-50 text-slate-700"
                   }`}
                 >
@@ -592,7 +590,7 @@ export default function CascadingOrgFilter({
                     {state.chuyens.length === 0 && <IconCheck size={12} strokeWidth={3} />}
                   </div>
                   <span>Tất cả chuyền</span>
-                </label>
+                </button>
 
                 {groupedChuyens.map((group) => (
                   <div key={group.line} className="pt-1">
@@ -604,13 +602,11 @@ export default function CascadingOrgFilter({
                     {group.chuyens.map((ch) => {
                       const isChecked = state.chuyens.includes(ch);
                       return (
-                        <label
+                        <button
+                          type="button"
                           key={ch}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            toggleChuyen(ch);
-                          }}
-                          className={`flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
+                          onClick={() => toggleChuyen(ch)}
+                          className={`w-full text-left flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
                             isChecked ? "bg-amber-50 text-amber-800 font-bold" : "hover:bg-slate-50 text-slate-700"
                           }`}
                         >
@@ -622,7 +618,7 @@ export default function CascadingOrgFilter({
                             {isChecked && <IconCheck size={12} strokeWidth={3} />}
                           </div>
                           <span className="truncate">{ch}</span>
-                        </label>
+                        </button>
                       );
                     })}
                   </div>
@@ -673,9 +669,10 @@ export default function CascadingOrgFilter({
               </div>
 
               <div className="space-y-1 max-h-60 overflow-y-auto pr-1">
-                <label
+                <button
+                  type="button"
                   onClick={selectAllTos}
-                  className={`flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors ${
+                  className={`w-full text-left flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors ${
                     state.tos.length === 0 ? "bg-sky-50 text-sky-800" : "hover:bg-slate-50 text-slate-700"
                   }`}
                 >
@@ -687,7 +684,7 @@ export default function CascadingOrgFilter({
                     {state.tos.length === 0 && <IconCheck size={12} strokeWidth={3} />}
                   </div>
                   <span>Tất cả tổ</span>
-                </label>
+                </button>
 
                 {groupedTos.map((group) => (
                   <div key={group.chuyen} className="pt-1">
@@ -699,13 +696,11 @@ export default function CascadingOrgFilter({
                     {group.tos.map((toItem) => {
                       const isChecked = state.tos.includes(toItem);
                       return (
-                        <label
+                        <button
+                          type="button"
                           key={toItem}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            toggleTo(toItem);
-                          }}
-                          className={`flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
+                          onClick={() => toggleTo(toItem)}
+                          className={`w-full text-left flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
                             isChecked ? "bg-sky-50 text-sky-800 font-bold" : "hover:bg-slate-50 text-slate-700"
                           }`}
                         >
@@ -717,7 +712,7 @@ export default function CascadingOrgFilter({
                             {isChecked && <IconCheck size={12} strokeWidth={3} />}
                           </div>
                           <span className="truncate">{toItem}</span>
-                        </label>
+                        </button>
                       );
                     })}
                   </div>
