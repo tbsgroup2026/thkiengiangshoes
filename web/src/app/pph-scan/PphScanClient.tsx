@@ -155,6 +155,19 @@ export default function PphScanClient() {
   // Đồng hồ đếm ngược realtime — đếm tới lúc khung giờ ĐANG nhập hết hạn (= mốc bắt đầu của khung
   // kế tiếp, trừ hao 10 phút, khớp đúng luật pphResolveStatus() phía backend). Chỉ chạy khi đang ở
   // chế độ nhập số lượng (không áp dụng cho đầu ca / chờ / đã xong).
+  //
+  // BUG ĐÃ TÌM RA VÀ SỬA (nguyên nhân thật của "quét lần 2 xoay/giật liên tục"): pphResolveStatus()
+  // phía backend cố tình trả về khung SỚM NHẤT còn thiếu — kể cả khung đó đã trễ rất lâu (VD cập
+  // nhật đầu ca lúc 14h thì targetSlot vẫn là "08:30" để "bắt kịp"). Với 1 khung đã trễ như vậy,
+  // mốc hết hạn (= khung kế tiếp - 10 phút) CŨNG đã trôi qua từ lâu — tick() đầu tiên lập tức thấy
+  // "đã hết giờ" và tự gọi load(); load() trả về info MỚI (mảng/object JSON parse lại — LUÔN khác
+  // reference dù giá trị giống hệt), khiến effect này (phụ thuộc info?.slots) bị coi là "đổi" và
+  // CHẠY LẠI ngay — rồi lại lập tức thấy hết giờ, lại load()... lặp vô hạn, mỗi vòng nhấp nháy
+  // loading=true/false liên tục → đúng cảm giác "xoay lag lag giật giật". Chỉ xảy ra khi khung đang
+  // chờ là khung "bắt kịp" đã trễ (rất dễ gặp nếu không cập nhật đúng lúc đầu giờ) — đúng lý do
+  // "lần đầu ok, lần 2 mới dính" vì lần đầu vừa nộp xong thường đúng/gần giờ, lần 2 vào sau thường
+  // đã rớt vào khung trễ. Fix: CHỈ đếm ngược + tự tải lại khi mốc hết hạn còn ở TƯƠNG LAI ngay từ
+  // đầu; nếu đã trễ sẵn thì không đếm gì cả (không lặp), người dùng vẫn nhập số liệu bình thường.
   useEffect(() => {
     if (!info?.slots || !info.targetSlot || info.nextAction !== 'quantity') {
       setCountdownLabel(null);
@@ -167,18 +180,23 @@ export default function PphScanClient() {
       return;
     }
     const deadlineVNMs = slotLabelToDeadlineVNMs(nextBoundarySlot);
-    let expired = false;
+    if (deadlineVNMs - vnNowMs() <= 0) {
+      // Khung "bắt kịp" đã trễ sẵn — không đếm ngược, không tự tải lại (tránh lặp vô hạn).
+      setCountdownLabel(null);
+      return;
+    }
 
     const tick = () => {
       const diffMs = deadlineVNMs - vnNowMs();
       if (diffMs <= 0) {
         setCountdownLabel('00:00');
         // Hết giờ khung hiện tại — tự tải lại để chuyển sang khung kế tiếp, không bắt người dùng
-        // phải tự bấm làm mới hay quét lại QR mới thấy khung mới.
-        if (!expired) {
-          expired = true;
-          load();
-        }
+        // phải tự bấm làm mới hay quét lại QR mới thấy khung mới. An toàn không lặp vô hạn vì effect
+        // này chỉ khởi động khi deadline còn ở tương lai (xem kiểm tra ngay phía trên) — sau khi
+        // load() xong, nếu khung mới trả về LẠI đã trễ sẵn thì lần chạy tiếp theo sẽ dừng ở nhánh
+        // trên, không tick() nữa.
+        clearInterval(timer);
+        load();
         return;
       }
       const totalSec = Math.floor(diffMs / 1000);
@@ -187,8 +205,8 @@ export default function PphScanClient() {
       const s = totalSec % 60;
       setCountdownLabel(h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`);
     };
-    tick();
     const timer = setInterval(tick, 1000);
+    tick();
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [info?.slots, info?.targetSlot, info?.nextAction]);
