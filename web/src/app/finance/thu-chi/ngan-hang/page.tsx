@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import FinanceShell from "@/components/FinanceShell";
 import {
   IconBuildingBank,
@@ -83,13 +83,13 @@ export default function NganHangPage() {
             <IconRefresh size={15} />
             <span>Đồng bộ số dư</span>
           </button>
-          <Link
+          <NavLink
             href="/finance/thu-chi/phieu-chi"
             className="px-5 py-2 rounded-xl bg-[#006838] hover:bg-[#00522c] text-white text-xs font-black transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
           >
             <IconPlus size={16} />
             <span>Lập lệnh chuyển tiền (UNC)</span>
-          </Link>
+          </NavLink>
         </div>
       </div>
 

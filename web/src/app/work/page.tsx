@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from "react";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import { useRouter, useSearchParams } from "next/navigation";
 import NotificationCenter from "@/components/NotificationCenter";
 import DonutChartModal from "@/components/DonutChartModal";
@@ -614,20 +614,39 @@ function WorkDashboardContent() {
         const res = await fetch(ownEmpCode ? `/api/profile?empCode=${encodeURIComponent(ownEmpCode)}` : "/api/profile");
         if (res.ok) {
           const json = await res.json();
-          if (json.success && json.data) {
-            const d1Avatar = json.data.avatar || json.data.avatar_url;
+          const serverUser = json.user || json.data;
+          if (json.success && serverUser) {
+            const serverEmpCode = (serverUser.emp_code || serverUser.empCode || "").trim();
+
+            // Read current local/session user to prevent cross-user profile overwrite
+            const storedUserStr = sessionStorage.getItem("tbs_current_user") || localStorage.getItem("tbs_current_user");
+            let localEmpCode = "";
+            if (storedUserStr) {
+              try {
+                const parsed = JSON.parse(storedUserStr);
+                localEmpCode = (parsed.empCode || "").trim();
+              } catch {}
+            }
+
+            // DO NOT overwrite session if server returned profile for a DIFFERENT user than currently logged in
+            if (localEmpCode && serverEmpCode && localEmpCode.toUpperCase() !== serverEmpCode.toUpperCase()) {
+              console.warn(`[PROFILE SYNC SKIPPED] Local user is ${localEmpCode} but server returned ${serverEmpCode}`);
+              return;
+            }
+
+            const d1Avatar = serverUser.avatar || serverUser.avatar_url;
             const finalAvatar = isValidAvatar(localCustomAvatar)
               ? localCustomAvatar
               : (isValidAvatar(d1Avatar) ? d1Avatar : "/images/tbs-logo.png");
 
             const loaded = {
-              empCode: json.data.emp_code || json.data.empCode || "202608001",
-              name: json.data.name || "Phạm Nguyễn Anh Huy",
-              phone: json.data.phone || "0522511245",
-              email: json.data.email || "anhy.work.2004@gmail.com",
+              empCode: serverEmpCode || localEmpCode || "202608001",
+              name: serverUser.name || "Cán Bộ Công Nhân Viên",
+              phone: serverUser.phone || "",
+              email: serverUser.email || `${serverEmpCode || localEmpCode}@tbsgroup.vn`,
               avatar: finalAvatar,
-              title: json.data.title || "IT - Team chuyển đổi số",
-              department: json.data.department || "NHÂN SỰ-HC",
+              title: serverUser.title || "Cán Bộ Công Nhân Viên",
+              department: serverUser.department || "NHÂN SỰ-HC",
             };
             setUserInfo(loaded);
             setEditProfileForm(loaded);
@@ -858,7 +877,7 @@ function WorkDashboardContent() {
         {/* Executive Brand Lockup & Header Toggle Button (Fixed Top) */}
         {!isSidebarCollapsed ? (
           <div className="flex items-center justify-between pb-3.5 border-b border-slate-200/80 flex-shrink-0 min-h-[56px]">
-            <Link href="/" title="Về Trang Chủ TBS Group (https://thkiengiangshoes.tbsgroup2026.workers.dev)" className="flex items-center gap-2.5 group overflow-hidden cursor-pointer">
+            <NavLink href="/" title="Về Trang Chủ TBS Group (https://thkiengiangshoes.tbsgroup2026.workers.dev)" className="flex items-center gap-2.5 group overflow-hidden cursor-pointer">
               <img
                 src="/images/tbs-logo.png"
                 alt="TBS Group Logo"
@@ -870,7 +889,7 @@ function WorkDashboardContent() {
                 alt="Skechers Logo"
                 className="h-6 sm:h-7 w-auto object-contain group-hover:scale-105 transition-transform flex-shrink-0"
               />
-            </Link>
+            </NavLink>
 
             {/* Clean Inline Toggle Button (Expanded State) */}
             <button
@@ -883,7 +902,7 @@ function WorkDashboardContent() {
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2.5 pb-3 border-b border-slate-200/80 flex-shrink-0 w-full">
-            <Link href="/" title="Về Trang Chủ TBS Group & SKECHERS" className="flex flex-col items-center gap-1.5 py-0.5 group cursor-pointer">
+            <NavLink href="/" title="Về Trang Chủ TBS Group & SKECHERS" className="flex flex-col items-center gap-1.5 py-0.5 group cursor-pointer">
               <img
                 src="/images/tbs-logo.png"
                 alt="TBS Group"
@@ -895,7 +914,7 @@ function WorkDashboardContent() {
                 alt="SKECHERS"
                 className="h-4.5 w-auto object-contain group-hover:scale-105 transition-transform"
               />
-            </Link>
+            </NavLink>
 
             {/* Clean Inline Toggle Button (Collapsed State) */}
             <button
@@ -1012,7 +1031,7 @@ function WorkDashboardContent() {
           <div className="flex items-center justify-between text-xs text-slate-500">
             {!isSidebarCollapsed ? (
               <>
-                <Link href="/" title="Về Trang Chủ TBS Group" className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
+                <NavLink href="/" title="Về Trang Chủ TBS Group" className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
                   <img
                     src="/images/tbs-logo.png"
                     alt="TBS Logo"
@@ -1021,19 +1040,19 @@ function WorkDashboardContent() {
                   <span className="font-semibold text-slate-700 text-[10px]">
                     TBS Group System
                   </span>
-                </Link>
+                </NavLink>
                 <span className="text-[9px] font-mono text-slate-400">
                   © 2026
                 </span>
               </>
             ) : (
-              <Link href="/" className="mx-auto hover:opacity-80 transition-opacity" title="Về Trang Chủ TBS Group">
+              <NavLink href="/" className="mx-auto hover:opacity-80 transition-opacity" title="Về Trang Chủ TBS Group">
                 <img
                   src="/images/tbs-logo.png"
                   alt="TBS Logo"
                   className="h-3.5 w-auto object-contain"
                 />
-              </Link>
+              </NavLink>
             )}
           </div>
         </div>
@@ -1057,11 +1076,11 @@ function WorkDashboardContent() {
             </button>
 
             {/* Mobile Brand Logo Lockup */}
-            <Link href="/" title="Về Trang Chủ TBS Group" className="lg:hidden flex items-center gap-1.5 flex-shrink-0 cursor-pointer">
+            <NavLink href="/" title="Về Trang Chủ TBS Group" className="lg:hidden flex items-center gap-1.5 flex-shrink-0 cursor-pointer">
               <img src="/images/tbs-logo.png" alt="TBS Group" className="h-6 sm:h-7 w-auto object-contain" />
               <div className="h-4 w-[1px] bg-slate-200 flex-shrink-0" />
               <img src="/images/skechers-logo.png" alt="SKECHERS" className="h-5 sm:h-6 w-auto object-contain flex-shrink-0" />
-            </Link>
+            </NavLink>
 
             {/* Desktop System Title */}
             <div className="hidden lg:block min-w-0 flex-1">
@@ -1081,13 +1100,13 @@ function WorkDashboardContent() {
             <NotificationCenter />
 
             {/* Grid 9-dots icon launcher (Hidden on Mobile < 768px, available in menu/cards) */}
-            <Link
+            <NavLink
               href="/"
               className="hidden md:flex min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors shadow-2xs items-center justify-center"
               title="Danh mục ứng dụng & Trang chủ"
             >
               <IconGridDots size={20} />
-            </Link>
+            </NavLink>
 
             {/* Fullscreen Toggle (Hidden on Mobile < 768px) */}
             <button
@@ -1196,7 +1215,7 @@ function WorkDashboardContent() {
 
                       {/* Option 3: Trang Quản Trị (Admin Mode) - Only rendered for Whitelisted Admins */}
                       {isUserInAdminWhitelist(userInfo) && (
-                        <Link
+                        <NavLink
                           href="/admin"
                           onClick={() => setIsUserDropdownOpen(false)}
                           className="w-full p-2.5 rounded-xl text-left flex items-center gap-3 text-xs font-bold text-[#006838] bg-emerald-50 hover:bg-[#006838] hover:text-white border border-emerald-200/80 transition-all cursor-pointer group my-1 shadow-2xs"
@@ -1212,13 +1231,13 @@ function WorkDashboardContent() {
                               Truy cập hệ thống quản trị /admin
                             </div>
                           </div>
-                        </Link>
+                        </NavLink>
                       )}
 
                       <div className="h-[1px] bg-slate-100 my-1" />
 
                       {/* Option 3: Đăng xuất */}
-                      <Link
+                      <NavLink
                         href="/login"
                         onClick={() => setIsUserDropdownOpen(false)}
                         className="w-full p-2.5 rounded-xl text-left flex items-center gap-3 text-xs font-bold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer group"
@@ -1230,7 +1249,7 @@ function WorkDashboardContent() {
                           <div className="font-extrabold">Đăng xuất</div>
                           <div className="text-[10px] text-rose-400 font-normal">Thoát tài khoản an toàn</div>
                         </div>
-                      </Link>
+                      </NavLink>
                     </div>
                   </div>
                 </>
@@ -1526,7 +1545,7 @@ function WorkDashboardContent() {
 
                   <div className="space-y-2.5 my-auto py-1">
                     {/* Item 1 */}
-                    <Link href="/finance/bao-cao" className="p-2.5 rounded-xl bg-slate-50/70 border border-slate-200/60 hover:bg-emerald-50/40 hover:border-emerald-200 transition-all flex items-center justify-between gap-3 group">
+                    <NavLink href="/finance/bao-cao" className="p-2.5 rounded-xl bg-slate-50/70 border border-slate-200/60 hover:bg-emerald-50/40 hover:border-emerald-200 transition-all flex items-center justify-between gap-3 group">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-9 h-9 rounded-xl bg-emerald-50 text-[#006838] flex items-center justify-center flex-shrink-0 border border-emerald-100">
                           <IconFileInvoice size={18} />
@@ -1543,10 +1562,10 @@ function WorkDashboardContent() {
                       <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md flex-shrink-0">
                         Hoàn thành
                       </span>
-                    </Link>
+                    </NavLink>
 
                     {/* Item 2 */}
-                    <Link href="/finance/cong-no" className="p-2.5 rounded-xl bg-slate-50/70 border border-slate-200/60 hover:bg-amber-50/40 hover:border-amber-200 transition-all flex items-center justify-between gap-3 group">
+                    <NavLink href="/finance/cong-no" className="p-2.5 rounded-xl bg-slate-50/70 border border-slate-200/60 hover:bg-amber-50/40 hover:border-amber-200 transition-all flex items-center justify-between gap-3 group">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-9 h-9 rounded-xl bg-emerald-50 text-[#006838] flex items-center justify-center flex-shrink-0 border border-emerald-100">
                           <IconShoppingCart size={18} />
@@ -1563,10 +1582,10 @@ function WorkDashboardContent() {
                       <span className="text-[10px] font-bold text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-md flex-shrink-0">
                         Đang xử lý
                       </span>
-                    </Link>
+                    </NavLink>
 
                     {/* Item 3 */}
-                    <Link href="/finance/chi-phi" className="p-2.5 rounded-xl bg-slate-50/70 border border-slate-200/60 hover:bg-emerald-50/40 hover:border-emerald-200 transition-all flex items-center justify-between gap-3 group">
+                    <NavLink href="/finance/chi-phi" className="p-2.5 rounded-xl bg-slate-50/70 border border-slate-200/60 hover:bg-emerald-50/40 hover:border-emerald-200 transition-all flex items-center justify-between gap-3 group">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-9 h-9 rounded-xl bg-emerald-50 text-[#006838] flex items-center justify-center flex-shrink-0 border border-emerald-100">
                           <IconChartPie size={18} />
@@ -1583,12 +1602,12 @@ function WorkDashboardContent() {
                       <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md flex-shrink-0">
                         Hoàn thành
                       </span>
-                    </Link>
+                    </NavLink>
                   </div>
 
-                  <Link href="/finance/bao-cao" className="text-center text-xs font-bold text-[#006838] hover:underline pt-2 block">
+                  <NavLink href="/finance/bao-cao" className="text-center text-xs font-bold text-[#006838] hover:underline pt-2 block">
                     Xem tất cả hoạt động →
-                  </Link>
+                  </NavLink>
                 </div>
 
                 {/* 3. TRUY CẬP NHANH - KẾ TOÁN & QT (Col 4/12) */}
@@ -1611,7 +1630,7 @@ function WorkDashboardContent() {
                     ].map((btn, idx) => {
                       const BtnIcon = btn.icon;
                       return (
-                        <Link
+                        <NavLink
                           key={idx}
                           href={btn.href}
                           className="p-2 rounded-xl bg-slate-50/70 border border-slate-200/60 hover:bg-[#e6f4ed] hover:border-[#006838]/60 transition-all flex flex-col items-center text-center gap-1 group cursor-pointer"
@@ -1622,17 +1641,17 @@ function WorkDashboardContent() {
                           <span className="text-[10px] font-bold text-slate-700 leading-tight group-hover:text-[#006838] transition-colors line-clamp-2">
                             {btn.name}
                           </span>
-                        </Link>
+                        </NavLink>
                       );
                     })}
                   </div>
 
-                  <Link
+                  <NavLink
                     href="/finance"
                     className="w-full py-2 px-3 rounded-xl bg-emerald-50/80 hover:bg-[#006838] text-[#006838] hover:text-white border border-emerald-200/80 text-xs font-extrabold text-center transition-all shadow-2xs mt-2 block"
                   >
                     Xem tất cả chức năng →
-                  </Link>
+                  </NavLink>
                 </div>
               </div>
 
@@ -1652,13 +1671,13 @@ function WorkDashboardContent() {
                       </p>
                     </div>
                   </div>
-                  <Link
+                  <NavLink
                     href="/finance"
                     className="text-xs font-bold text-[#006838] hover:underline flex items-center gap-1"
                   >
                     <span>Mở Hub Kế toán</span>
                     <IconArrowRight size={13} />
-                  </Link>
+                  </NavLink>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
@@ -1734,7 +1753,7 @@ function WorkDashboardContent() {
                       desc: ["BC Thu-Chi & Chi phí", "BC Ngân sách & Công nợ", "BC Tài sản, Kho & Dòng tiền", "Xuất file Excel/PDF định kỳ"],
                     },
                   ].map((mod, idx) => (
-                    <Link
+                    <NavLink
                       key={idx}
                       href={mod.href}
                       className="p-3 rounded-xl bg-slate-50/70 border border-slate-200/70 hover:bg-white hover:border-[#006838]/60 hover:shadow-sm transition-all flex flex-col justify-between gap-2.5 group cursor-pointer"
@@ -1763,7 +1782,7 @@ function WorkDashboardContent() {
                         <span>Truy cập module</span>
                         <IconArrowRight size={12} />
                       </div>
-                    </Link>
+                    </NavLink>
                   ))}
                 </div>
               </div>

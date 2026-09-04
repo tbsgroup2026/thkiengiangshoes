@@ -147,6 +147,7 @@ export default function KaizenPublicSubmitForm({
 }: KaizenPublicSubmitFormProps) {
   const [submittedCode, setSubmittedCode] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const submitLockRef = React.useRef(false);
   const [uploading, setUploading] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [unitTitle, setUnitTitle] = useState<string>("THNM Kiên Giang");
@@ -487,6 +488,9 @@ export default function KaizenPublicSubmitForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (submitting || submitLockRef.current) return;
+    submitLockRef.current = true;
+
     const targetDept = selectedFormWorkshop
       ? `${selectedFormWorkshop}${selectedFormLine ? ` - ${selectedFormLine}` : ""}`
       : form.department || "Xưởng Sản Xuất";
@@ -502,6 +506,7 @@ export default function KaizenPublicSubmitForm({
       !form.beforeDescription.trim()
     ) {
       showToast("⚠️ Vui lòng điền mã số nhân viên, họ tên, đơn vị và mô tả hiện trạng trước cải tiến!");
+      submitLockRef.current = false;
       return;
     }
 
@@ -517,6 +522,8 @@ export default function KaizenPublicSubmitForm({
       const finalTitle = form.title.trim() || "Ý tưởng đề xuất cải tiến Kaizen";
 
       const method = isEdit ? "PUT" : "POST";
+      const idempotencyKey = `kz_pub_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
       const payload = {
         ...form,
         id: isEdit ? proposalId : undefined,
@@ -568,6 +575,7 @@ export default function KaizenPublicSubmitForm({
             });
             setShowDuplicateModal(true);
             setSubmitting(false);
+            submitLockRef.current = false;
             return;
           }
         } catch (e) {}
@@ -577,6 +585,7 @@ export default function KaizenPublicSubmitForm({
         method,
         headers: {
           "Content-Type": "application/json",
+          "x-idempotency-key": idempotencyKey,
         },
         body: JSON.stringify(payload),
       });
@@ -599,6 +608,7 @@ export default function KaizenPublicSubmitForm({
       showToast("❌ Lỗi mạng hoặc kết nối máy chủ!");
     } finally {
       setSubmitting(false);
+      submitLockRef.current = false;
     }
   };
 

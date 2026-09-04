@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect, Suspense } from "react";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import { useSearchParams, useRouter } from "next/navigation";
 import FinanceShell from "@/components/FinanceShell";
 import { usePermission } from "@/hooks/usePermission";
@@ -334,13 +334,13 @@ function FinanceHubContent() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Link
+          <NavLink
             href="/finance/thu-chi?tab=chi"
             className="px-3.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-[#006838] border border-emerald-200 text-xs font-black transition-all flex items-center gap-1.5"
           >
             <IconPlus size={15} />
             <span>Form Phiếu Chi Chuẩn Mẫu ERP</span>
-          </Link>
+          </NavLink>
         </div>
       </div>
 
@@ -386,27 +386,27 @@ function FinanceHubContent() {
 
               {/* Top quick links */}
               <div className="flex items-center gap-2">
-                <Link
+                <NavLink
                   href="/finance/thu-chi"
                   className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-[#006838] border border-slate-200 text-xs font-bold transition-colors flex items-center gap-1.5"
                 >
                   <IconWallet size={14} />
                   <span>Sổ Quỹ</span>
-                </Link>
-                <Link
+                </NavLink>
+                <NavLink
                   href="/finance/hoa-don"
                   className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-[#006838] border border-slate-200 text-xs font-bold transition-colors flex items-center gap-1.5"
                 >
                   <IconFileInvoice size={14} />
                   <span>Hóa Đơn</span>
-                </Link>
-                <Link
+                </NavLink>
+                <NavLink
                   href="/finance/cong-no"
                   className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-[#006838] border border-slate-200 text-xs font-bold transition-colors flex items-center gap-1.5"
                 >
                   <IconUsers size={14} />
                   <span>Công Nợ</span>
-                </Link>
+                </NavLink>
               </div>
             </div>
 
@@ -960,7 +960,7 @@ function FinanceHubContent() {
               {MODULES.map((mod, idx) => {
                 const ModIcon = mod.icon;
                 return (
-                  <Link
+                  <NavLink
                     key={idx}
                     href={mod.href}
                     className="p-3.5 rounded-xl bg-slate-50/70 border border-slate-200/70 hover:bg-white hover:border-[#006838]/60 hover:shadow-sm transition-all flex flex-col justify-between gap-3 group cursor-pointer"
@@ -990,7 +990,7 @@ function FinanceHubContent() {
                       <span>Mở phân hệ</span>
                       <IconArrowRight size={12} />
                     </div>
-                  </Link>
+                  </NavLink>
                 );
               })}
             </div>

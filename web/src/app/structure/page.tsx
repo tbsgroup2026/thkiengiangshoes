@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import {
@@ -118,13 +118,13 @@ export default function StructurePage() {
               </div>
 
               <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                <Link
+                <NavLink
                   href="/work"
                   className="text-xs font-black text-[#006838] hover:underline flex items-center gap-1"
                 >
                   <span>Truy cập phân hệ làm việc</span>
                   <IconArrowRight size={14} />
-                </Link>
+                </NavLink>
               </div>
             </div>
           ))}

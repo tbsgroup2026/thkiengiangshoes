@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import FinanceShell from "@/components/FinanceShell";
 import {
   IconChartPie,
@@ -70,12 +70,12 @@ export default function ChiPhiCongTacPage() {
         </div>
 
         <div className="flex items-center gap-2.5">
-          <Link
+          <NavLink
             href="/business-trip"
             className="px-4 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-bold transition-all shadow-2xs"
           >
             Xem lịch công tác
-          </Link>
+          </NavLink>
           <button
             type="button"
             onClick={() => showToast("🖨️ Đang xuất báo cáo tổng hợp chi phí công tác...")}

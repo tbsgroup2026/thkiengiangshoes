@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import {
   IconMenu2, IconX, IconLogin, IconNews, IconBuildingFactory,
   IconTimeline, IconBriefcase, IconPhone, IconInfoCircle
@@ -42,7 +42,7 @@ export default function Navbar() {
       <div className="max-w-[1440px] mx-auto px-5 sm:px-8 lg:px-12">
         <div className="flex justify-between items-center h-[72px]">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-3 group">
+          <NavLink href="/" className="flex items-center gap-3 group">
             <div className="relative w-11 h-11 rounded-xl bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center overflow-hidden group-hover:border-emerald-400/40 transition-all duration-300">
               <img
                 src="/images/crawled/logo.png"
@@ -58,7 +58,7 @@ export default function Navbar() {
                 Digital Factory II
               </span>
             </div>
-          </Link>
+          </NavLink>
 
           {/* Desktop Nav */}
           <nav className="hidden lg:flex items-center gap-1">
@@ -78,13 +78,13 @@ export default function Navbar() {
 
           {/* CTA + Mobile toggle */}
           <div className="flex items-center gap-3">
-            <Link
+            <NavLink
               href="/login"
               className="hidden sm:inline-flex items-center gap-2 bg-gradient-to-r from-emerald-400 to-emerald-300 hover:from-emerald-300 hover:to-emerald-400 text-tbs-dark font-bold px-5 py-2.5 rounded-full text-xs tracking-wider uppercase shadow-lg shadow-emerald-400/20 hover:shadow-emerald-400/30 hover:scale-[1.03] active:scale-95 transition-all duration-300"
             >
               <IconLogin size={15} />
               Đăng Nhập
-            </Link>
+            </NavLink>
 
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
@@ -115,14 +115,14 @@ export default function Navbar() {
               {item.label}
             </a>
           ))}
-          <Link
+          <NavLink
             href="/login"
             onClick={() => setMobileOpen(false)}
             className="mt-4 w-full flex justify-center items-center gap-2 bg-gradient-to-r from-emerald-400 to-emerald-300 text-tbs-dark font-bold py-4 rounded-2xl text-sm tracking-wider uppercase"
           >
             <IconLogin size={18} />
             Đăng Nhập Nhân Viên
-          </Link>
+          </NavLink>
         </nav>
       </div>
     </header>

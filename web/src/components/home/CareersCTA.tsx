@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import React from "react";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import { IconArrowRight, IconUsers, IconAward, IconHeart } from "@tabler/icons-react";
 
 const BENEFITS = [
@@ -57,13 +57,13 @@ export default function CareersCTA() {
 
             {/* CTA */}
             <div className="flex flex-wrap gap-4 pt-2">
-              <Link
+              <NavLink
                 href="/careers"
                 className="group inline-flex items-center gap-2.5 bg-gradient-to-r from-amber-400 to-amber-300 hover:from-amber-300 hover:to-amber-400 text-tbs-dark font-bold px-8 py-4 rounded-full text-sm tracking-wider uppercase shadow-xl shadow-amber-400/20 hover:scale-[1.03] transition-all duration-300"
               >
                 Xem Vị Trí Tuyển Dụng
                 <IconArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-              </Link>
+              </NavLink>
               <a
                 href="#contact"
                 className="inline-flex items-center gap-2.5 bg-white/10 border border-white/20 hover:bg-white/15 text-white font-semibold px-8 py-4 rounded-full text-sm tracking-wider uppercase transition-all"

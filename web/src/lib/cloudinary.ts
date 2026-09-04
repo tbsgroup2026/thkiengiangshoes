@@ -1,9 +1,9 @@
 /**
  * Cloudinary Utility Module - TH Kiên Giang Shoes & VP Chuỗi Skechers
- * Handles site-isolated folders, unique public_id generation, and cache-busting versioning.
+ * Xử lý tải ảnh, tối ưu URL transformation, phân lập thư mục và cache-busting.
  */
 
-export const CLOUDINARY_CLOUD_NAME = "dwl2xtbqa";
+export const CLOUDINARY_CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "dwl2xtbqa";
 export const CLOUDINARY_PRESET = "vpchuoisk";
 
 export interface CloudinaryUploadOptions {
@@ -12,9 +12,16 @@ export interface CloudinaryUploadOptions {
   folder?: string;
 }
 
-/**
- * Automatically determine the isolated Cloudinary folder & prefix based on the current site/hostname
- */
+export interface CloudinaryTransformOptions {
+  width?: number;
+  height?: number;
+  quality?: string;
+  format?: string;
+  crop?: "fill" | "limit" | "fit" | "thumb" | "scale" | "pad" | string;
+  dpr?: string;
+  blur?: number;
+}
+
 export function getSiteFolder(): { folder: string; prefix: string } {
   if (typeof window !== "undefined") {
     const host = window.location.hostname.toLowerCase();
@@ -25,9 +32,6 @@ export function getSiteFolder(): { folder: string; prefix: string } {
   return { folder: "thkiengiangshoes", prefix: "kg" };
 }
 
-/**
- * Generate a 100% unique public_id with site prefix to prevent Cloudinary CDN & browser overwrite caching
- */
 export function generateUniquePublicId(category: string = "img", fileName: string = "file", sitePrefix?: string): string {
   const { prefix } = sitePrefix ? { prefix: sitePrefix } : getSiteFolder();
   const timeTag = Date.now();
@@ -39,18 +43,6 @@ export function generateUniquePublicId(category: string = "img", fileName: strin
   return `${prefix}_${category}_${timeTag}_${randTag}_${cleanName}`;
 }
 
-/**
- * Helper to append cache-busting version query string (?v=<timestamp>) to image URLs, and to
- * auto-optimize real Cloudinary delivery URLs (resize + auto quality/format) so pages don't ship
- * multi-MB originals for thumbnail-sized slots.
- *
- * `width` (optional): nếu truyền vào, chèn thêm "w_<width>,c_limit" — Cloudinary tự resize ảnh
- * xuống đúng chiều rộng cần hiển thị (c_limit = chỉ thu nhỏ, không phóng to nếu ảnh gốc nhỏ hơn).
- * Luôn chèn "q_auto,f_auto" (tự chọn chất lượng + định dạng WebP/AVIF theo trình duyệt) cho MỌI
- * ảnh Cloudinary, kể cả khi không truyền width — ảnh admin upload thường là file gốc chưa nén
- * (~1MB+) dù chỉ hiển thị trong khung nhỏ, riêng bước q_auto,f_auto này thường đã giảm được phần
- * lớn dung lượng mà không cần biết trước kích thước hiển thị.
- */
 export function formatCloudinaryUrl(
   url: string | undefined | null,
   versionTag?: string | number,
@@ -62,8 +54,6 @@ export function formatCloudinaryUrl(
     return trimmed;
   }
 
-  // Chèn transformation string ngay sau "/upload/" — bỏ qua nếu URL đã có transform sẵn (tránh
-  // chèn lặp khi hàm được gọi nhiều lần hoặc trên URL đã tối ưu từ trước).
   const uploadMarker = "/upload/";
   const uploadIdx = trimmed.indexOf(uploadMarker);
   if (uploadIdx !== -1 && trimmed.includes("res.cloudinary.com")) {
@@ -75,10 +65,6 @@ export function formatCloudinaryUrl(
     }
   }
 
-  // Check if URL already has query parameters, or already carries Cloudinary's own version
-  // segment (VD "/upload/v1787832565/...") — đây là cách Cloudinary tự đánh cache-buster thật
-  // sự, khác "?v=" (query string). Không nhận ra dạng này khiến hàm cứ gắn thêm "?v=Date.now()"
-  // MỚI mỗi lần gọi dù URL không đổi, dù đã memo hoá ở nơi gọi.
   const tag = versionTag ? String(versionTag) : String(Date.now());
   if (
     trimmed.includes("?v=") ||
@@ -94,9 +80,136 @@ export function formatCloudinaryUrl(
   return `${trimmed}${separator}v=${tag}`;
 }
 
-/**
- * Upload a file directly to Cloudinary with unique public_id and folder isolation per site
- */
+export function getRawCloudinaryUrl(url: string): string {
+  if (!url) return "";
+  const trimmed = url.trim();
+  if (!trimmed.includes("res.cloudinary.com")) return trimmed;
+
+  const uploadIndex = trimmed.indexOf("/upload/");
+  if (uploadIndex === -1) return trimmed;
+
+  const prefix = trimmed.substring(0, uploadIndex + 8);
+  let rest = trimmed.substring(uploadIndex + 8);
+
+  const pathParts = rest.split("/");
+  if (
+    pathParts.length > 1 &&
+    !pathParts[0].match(/^v\d+$/) &&
+    (pathParts[0].includes(",") || pathParts[0].includes("_"))
+  ) {
+    pathParts.shift();
+    rest = pathParts.join("/");
+  }
+
+  return `${prefix}${rest}`;
+}
+
+export function getCloudinaryUrl(
+  publicIdOrUrl: string,
+  options: CloudinaryTransformOptions = {}
+): string {
+  if (!publicIdOrUrl || typeof publicIdOrUrl !== "string") return "";
+  const trimmed = publicIdOrUrl.trim();
+  if (!trimmed) return "";
+
+  if (trimmed.startsWith("data:") || trimmed.startsWith("blob:") || (trimmed.startsWith("/") && !trimmed.startsWith("//"))) {
+    return trimmed;
+  }
+
+  const cloudName = CLOUDINARY_CLOUD_NAME;
+  const {
+    width,
+    height,
+    quality = "q_auto",
+    format = "f_auto",
+    crop,
+    dpr,
+    blur,
+  } = options;
+
+  const selectedCrop = crop ? (crop.startsWith("c_") ? crop : `c_${crop}`) : (width && height ? "c_fill" : "c_limit");
+  const transformParts: string[] = [];
+
+  if (format) {
+    transformParts.push(format.startsWith("f_") ? format : `f_${format}`);
+  }
+  if (quality) {
+    transformParts.push(quality.startsWith("q_") ? quality : `q_${quality}`);
+  }
+  if (selectedCrop) transformParts.push(selectedCrop);
+  if (width && width > 0) transformParts.push(`w_${Math.round(width)}`);
+  if (height && height > 0) transformParts.push(`h_${Math.round(height)}`);
+  if (dpr) transformParts.push(`dpr_${dpr}`);
+  if (blur && blur > 0) transformParts.push(`e_blur:${blur}`);
+
+  const transformStr = transformParts.join(",");
+
+  if (trimmed.includes("res.cloudinary.com")) {
+    const uploadIndex = trimmed.indexOf("/upload/");
+    if (uploadIndex === -1) return trimmed;
+
+    const prefix = trimmed.substring(0, uploadIndex + 8);
+    let rest = trimmed.substring(uploadIndex + 8);
+
+    const pathParts = rest.split("/");
+    if (
+      pathParts.length > 1 &&
+      !pathParts[0].match(/^v\d+$/) &&
+      (pathParts[0].includes(",") || pathParts[0].includes("_"))
+    ) {
+      pathParts.shift();
+      rest = pathParts.join("/");
+    }
+
+    return `${prefix}${transformStr}/${rest}`;
+  }
+
+  const cleanPublicId = trimmed.startsWith("/") ? trimmed.slice(1) : trimmed;
+  return `https://res.cloudinary.com/${cloudName}/image/upload/${transformStr}/${cleanPublicId}`;
+}
+
+export function getCloudinarySrcSet(
+  publicIdOrUrl: string,
+  options: Omit<CloudinaryTransformOptions, "width"> = {},
+  widths: number[] = [320, 640, 1024, 1920]
+): string {
+  if (!publicIdOrUrl || typeof publicIdOrUrl !== "string") return "";
+
+  return widths
+    .map((w) => {
+      const url = getCloudinaryUrl(publicIdOrUrl, { ...options, width: w });
+      return `${url} ${w}w`;
+    })
+    .join(", ");
+}
+
+export function getCloudinaryLQIP(
+  publicIdOrUrl: string,
+  options: Omit<CloudinaryTransformOptions, "width" | "quality" | "blur"> = {}
+): string {
+  return getCloudinaryUrl(publicIdOrUrl, {
+    ...options,
+    width: 50,
+    quality: "q_auto:low",
+    blur: 1000,
+  });
+}
+
+export function preloadCloudinaryImage(url: string, srcSet?: string, sizes?: string): void {
+  if (typeof window === "undefined" || !url) return;
+
+  const existing = document.querySelector(`link[rel="preload"][href="${url}"]`);
+  if (existing) return;
+
+  const link = document.createElement("link");
+  link.rel = "preload";
+  link.as = "image";
+  link.href = url;
+  if (srcSet) link.setAttribute("imagesrcset", srcSet);
+  if (sizes) link.setAttribute("imagesizes", sizes);
+  document.head.appendChild(link);
+}
+
 export async function uploadCloudinaryFile(
   file: File | string,
   options: CloudinaryUploadOptions = {}
@@ -127,7 +240,6 @@ export async function uploadCloudinaryFile(
     throw new Error(data.error?.message || "Không thể tải tệp lên Cloudinary!");
   }
 
-  // Return secure URL with versioning cache-buster
   const versionedUrl = formatCloudinaryUrl(data.secure_url, data.version || Date.now());
 
   return {

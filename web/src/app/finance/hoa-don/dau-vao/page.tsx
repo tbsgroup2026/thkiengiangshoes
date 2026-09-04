@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import FinanceShell from "@/components/FinanceShell";
 import {
   IconFileInvoice,
@@ -86,13 +86,13 @@ export default function HoaDonDauVaoPage() {
             <IconDownload size={15} />
             <span>Đồng bộ TCT</span>
           </button>
-          <Link
+          <NavLink
             href="/finance/hoa-don"
             className="px-5 py-2 rounded-xl bg-[#006838] hover:bg-[#00522c] text-white text-xs font-black transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
           >
             <IconPlus size={16} />
             <span>Nhập hóa đơn mới</span>
-          </Link>
+          </NavLink>
         </div>
       </div>
 

@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { IconPhotoOff, IconPhoto, IconShoe, IconRefresh } from "@tabler/icons-react";
 import { formatCloudinaryUrl } from "@/lib/cloudinary";
+import { IconPhoto, IconPhotoOff, IconRefresh } from "@tabler/icons-react";
 
-interface SafeImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+export interface SafeImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   src: string;
   alt: string;
   className?: string;
@@ -13,9 +13,6 @@ interface SafeImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   fallbackSubtitle?: string;
   objectFit?: "contain" | "cover" | "fill" | "none" | "scale-down";
   containerClassName?: string;
-  /** Chiều rộng thực tế cần hiển thị (px) — Cloudinary sẽ resize ảnh gốc xuống đúng kích thước
-   * này thay vì tải nguyên bản (nhiều ảnh admin upload nặng 1MB+ dù chỉ hiển thị trong khung nhỏ).
-   * Bỏ trống vẫn được tự nén qua "q_auto,f_auto", chỉ là không resize theo chiều rộng cụ thể. */
   cloudinaryWidth?: number;
 }
 
@@ -35,19 +32,11 @@ export default function SafeImage({
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [retryCount, setRetryCount] = useState(0);
 
-  // Format URL with Cloudinary cache-busting version parameter — memoized theo `src` (KHÔNG phải
-  // useEffect nữa). formatCloudinaryUrl() gắn `?v=Date.now()`, nhưng ảnh Cloudinary thật lại đánh
-  // version qua segment đường dẫn "/v1787832565/..." chứ không phải query "?v=" nên hàm không bao
-  // giờ nhận ra URL đã có version, và trước đây cứ mỗi lần component re-render (CMS poll 60s,
-  // window focus...) lại tính ra 1 URL "?v=" MỚI dù `src` không đổi — key của <img> bên dưới đổi
-  // theo, React unmount/mount lại ảnh, tạo hiệu ứng ảnh chớp tắt ẩn/hiện liên tục. Memo hoá theo
-  // `src` đảm bảo URL (và key) chỉ đổi khi ảnh thật sự đổi.
   const formattedUrl = React.useMemo(
     () => formatCloudinaryUrl(src, undefined, cloudinaryWidth),
     [src, cloudinaryWidth]
   );
 
-  // Reset loading state whenever src or productId changes (prevents React DOM recycling race conditions)
   useEffect(() => {
     setStatus("loading");
     setRetryCount(0);
@@ -60,7 +49,6 @@ export default function SafeImage({
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     if (retryCount < 2) {
-      // Auto-retry up to 2 times with cache buster query
       const nextRetry = retryCount + 1;
       setRetryCount(nextRetry);
       setStatus("loading");
@@ -74,7 +62,6 @@ export default function SafeImage({
 
   return (
     <div className={`relative overflow-hidden flex items-center justify-center ${containerClassName}`}>
-      {/* Loading Skeleton */}
       {status === "loading" && (
         <div className="absolute inset-0 bg-slate-100 animate-pulse flex items-center justify-center z-10 rounded-inherit">
           <div className="flex flex-col items-center gap-1.5 text-slate-400">
@@ -86,7 +73,6 @@ export default function SafeImage({
         </div>
       )}
 
-      {/* Error Fallback Badge (NEVER displays wrong product images) */}
       {status === "error" ? (
         <div className="w-full h-full min-h-[70px] bg-slate-50 border border-slate-200/90 rounded-2xl p-3 flex flex-col items-center justify-center text-center space-y-1 z-10">
           <div className="w-8 h-8 rounded-full bg-slate-200/80 text-slate-500 flex items-center justify-center">
@@ -111,7 +97,6 @@ export default function SafeImage({
           </button>
         </div>
       ) : (
-        /* Real Image Element with strict key binding */
         <img
           key={`${currentSrc}_${productId || ""}`}
           src={currentSrc}

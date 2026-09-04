@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import { useRouter } from "next/navigation";
 import {
   IconCpu,
@@ -85,13 +85,13 @@ export default function CNCIWrapper() {
          ════════════════════════════════════════════════════════════════ */}
       {subView && (
         <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs">
-          <Link
+          <NavLink
             href="/work/cn-ci"
             className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-black transition-all flex items-center gap-2 cursor-pointer border border-slate-200"
           >
             <IconArrowLeft size={16} />
             <span>Quay lại Phân Hệ CN-CI</span>
-          </Link>
+          </NavLink>
 
           <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
             <span>CN-CI (Cải Tiến Liên Tục)</span>
@@ -176,7 +176,7 @@ export default function CNCIWrapper() {
                   {/* Card Sub-Items List */}
                   <div className="space-y-2.5 pt-1">
                     {fullWidthItems.map((item: CNCIItem) => (
-                      <Link
+                      <NavLink
                         key={item.id}
                         href={item.href}
                         className="p-3.5 rounded-2xl bg-slate-50/60 hover:bg-white border border-slate-200/80 hover:border-[#006838]/60 shadow-2xs hover:shadow-md transition-all flex items-center justify-between gap-3 group cursor-pointer"
@@ -193,14 +193,14 @@ export default function CNCIWrapper() {
                           size={15}
                           className="text-slate-400 group-hover:text-[#006838] group-hover:translate-x-0.5 transition-all flex-shrink-0"
                         />
-                      </Link>
+                      </NavLink>
                     ))}
 
                     {/* Half-width items rendered side-by-side in a 2-column sub-grid */}
                     {halfWidthItems.length > 0 && (
                       <div className="grid grid-cols-2 gap-2.5">
                         {halfWidthItems.map((item: CNCIItem) => (
-                          <Link
+                          <NavLink
                             key={item.id}
                             href={item.href}
                             className="p-3 rounded-2xl bg-slate-50/60 hover:bg-white border border-slate-200/80 hover:border-[#006838]/60 shadow-2xs hover:shadow-md transition-all flex items-center justify-between gap-2 group cursor-pointer"
@@ -217,7 +217,7 @@ export default function CNCIWrapper() {
                               size={14}
                               className="text-slate-400 group-hover:text-[#006838] group-hover:translate-x-0.5 transition-all flex-shrink-0"
                             />
-                          </Link>
+                          </NavLink>
                         ))}
                       </div>
                     )}

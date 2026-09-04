@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import React from "react";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import {
   IconMapPin,
   IconPhone,
@@ -157,12 +157,12 @@ export default function Footer() {
                 <ul className="space-y-0.5">
                   {links.map((link) => (
                     <li key={link.label}>
-                      <Link
+                      <NavLink
                         href={link.href}
                         className="text-white/60 hover:text-white transition-colors duration-150 block truncate"
                       >
                         {link.label}
-                      </Link>
+                      </NavLink>
                     </li>
                   ))}
                 </ul>

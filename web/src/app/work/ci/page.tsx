@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import React from "react";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import { IconArrowLeft, IconTrendingUp, IconClock } from "@tabler/icons-react";
 
 export default function CIDedicatedPage() {
@@ -10,22 +10,22 @@ export default function CIDedicatedPage() {
       {/* Top Breadcrumb Header Bar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs">
         <div className="flex items-center gap-3">
-          <Link
+          <NavLink
             href="/work/cn-ci"
             className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-black transition-all flex items-center gap-2 cursor-pointer border border-slate-200 shadow-2xs"
           >
             <IconArrowLeft size={16} />
             <span>Quay lại CN-CI</span>
-          </Link>
+          </NavLink>
 
           <div className="flex items-center gap-2 text-xs font-bold text-slate-500 flex-wrap">
-            <Link href="/work" className="hover:text-[#006838] transition-colors">
+            <NavLink href="/work" className="hover:text-[#006838] transition-colors">
               Văn phòng SKECHERS
-            </Link>
+            </NavLink>
             <span>/</span>
-            <Link href="/work/cn-ci" className="hover:text-[#006838] transition-colors">
+            <NavLink href="/work/cn-ci" className="hover:text-[#006838] transition-colors">
               CN-CI (Cải Tiến Liên Tục)
-            </Link>
+            </NavLink>
             <span>/</span>
             <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-black uppercase text-[10px] border border-blue-200">
               📈 CI (Điểm nghẽn)

@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import AIChatBubble from "@/components/recruitment/AIChatBubble";
@@ -130,10 +130,10 @@ export default function TrackerPage() {
 
       <main className="flex-1 max-w-3xl mx-auto px-6 py-12 w-full">
         <div className="mb-8">
-          <Link href="/careers" className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-accent transition-colors mb-4">
+          <NavLink href="/careers" className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-accent transition-colors mb-4">
             <IconArrowLeft size={14} />
             Quay lại trang tuyển dụng
-          </Link>
+          </NavLink>
           <h1 className="text-3xl font-black text-tbs-dark">Tra Cứu Hồ Sơ Ứng Tuyển</h1>
           <p className="text-sm text-gray-500 mt-1">Kiểm tra trạng thái hồ sơ và lịch phỏng vấn của bạn</p>
         </div>

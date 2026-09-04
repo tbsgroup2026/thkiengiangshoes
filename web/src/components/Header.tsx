@@ -731,7 +731,7 @@ export default function Header() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="font-extrabold text-red-400 group-hover:text-red-300">{lang === "VN" ? "Đăng xuất" : "Logout"}</div>
-                          <div className="text-[10px] text-red-400/70 font-normal truncate">Thoát tài khoản an toàn</div>
+                          <div className="text-[10px] text-red-400/70 font-normal truncate">{lang === "VN" ? "Thoát tài khoản an toàn" : "Securely sign out"}</div>
                         </div>
                       </button>
                     </div>
@@ -770,7 +770,7 @@ export default function Header() {
               onClick={() => setMobileOpen(false)}
               className="block py-2.5 text-sm font-bold text-white hover:text-[#2fd39a] border-b border-white/10"
             >
-              Trang Chủ
+              {lang === "VN" ? "Trang Chủ" : "Home"}
             </Link>
             <Link
               href="/ve-tbs"
@@ -791,7 +791,7 @@ export default function Header() {
               onClick={() => setMobileOpen(false)}
               className="block py-2.5 text-sm font-bold text-white hover:text-[#2fd39a] border-b border-white/10"
             >
-              Thư Viện Mẫu
+              {lang === "VN" ? "Thư Viện Mẫu" : "Template Library"}
             </Link>
 
             <Link
@@ -799,7 +799,7 @@ export default function Header() {
               onClick={() => setMobileOpen(false)}
               className="block py-2.5 text-sm font-extrabold text-[#2fd39a] border-b border-white/10 bg-[#2fd39a]/10 rounded-xl"
             >
-              Hệ Thống Quản Trị
+              {lang === "VN" ? "Hệ Thống Quản Trị" : "Management System"}
             </Link>
 
             {isLoggedIn && isUserInAdminWhitelist(userInfo) && (
@@ -808,7 +808,7 @@ export default function Header() {
                 onClick={() => setMobileOpen(false)}
                 className="block py-2.5 text-sm font-extrabold text-[#f2dc9a] border-b border-white/10 bg-emerald-900/40 rounded-xl"
               >
-                🛡️ Cổng Quản Trị (Admin)
+                {lang === "VN" ? "🛡️ Cổng Quản Trị (Admin)" : "🛡️ Admin Panel"}
               </Link>
             )}
 
@@ -817,19 +817,21 @@ export default function Header() {
               onClick={() => setMobileOpen(false)}
               className="block py-2.5 text-sm font-bold text-white hover:text-[#2fd39a] border-b border-white/10"
             >
-              Tin Tức
+              {lang === "VN" ? "Tin Tức" : "News"}
             </Link>
 
             <div className="space-y-1.5 py-2 text-left bg-white/[0.03] p-3 rounded-2xl border border-white/10">
-              <span className="text-[10px] font-bold text-[#f2dc9a] uppercase tracking-widest block mb-1">Mục Khác</span>
+              <span className="text-[10px] font-bold text-[#f2dc9a] uppercase tracking-widest block mb-1">
+                {lang === "VN" ? "Mục Khác" : "Other"}
+              </span>
               <Link href="/contact" onClick={() => setMobileOpen(false)} className="block text-xs font-semibold text-gray-200 py-1 hover:text-[#2fd39a]">
-                1. Liên hệ
+                {lang === "VN" ? "1. Liên hệ" : "1. Contact"}
               </Link>
               <Link href="/faq" onClick={() => setMobileOpen(false)} className="block text-xs font-semibold text-gray-200 py-1 hover:text-[#2fd39a]">
-                2. Câu hỏi thường gặp (FAQ)
+                {lang === "VN" ? "2. Câu hỏi thường gặp (FAQ)" : "2. Frequently Asked Questions (FAQ)"}
               </Link>
               <Link href="/structure" onClick={() => setMobileOpen(false)} className="block text-xs font-semibold text-gray-200 py-1 hover:text-[#2fd39a]">
-                3. Sơ đồ tổ chức / Chi nhánh
+                {lang === "VN" ? "3. Sơ đồ tổ chức / Chi nhánh" : "3. Organization / Branches"}
               </Link>
             </div>
 
@@ -844,7 +846,7 @@ export default function Header() {
                     className="w-full py-2.5 rounded-xl bg-emerald-900/60 text-[#2fd39a] font-bold text-xs border border-[#2fd39a]/30 flex items-center justify-center gap-2"
                   >
                     <IconUser size={15} />
-                    <span>Thông Tin Cá Nhân</span>
+                    <span>{lang === "VN" ? "Thông Tin Cá Nhân" : "Personal Information"}</span>
                   </button>
                   <button
                     onClick={() => {
@@ -854,14 +856,14 @@ export default function Header() {
                     className="w-full py-2.5 rounded-xl bg-slate-800 text-slate-200 font-bold text-xs border border-slate-700 flex items-center justify-center gap-2"
                   >
                     <IconKey size={15} />
-                    <span>Đổi Mật Khẩu</span>
+                    <span>{lang === "VN" ? "Đổi Mật Khẩu" : "Change Password"}</span>
                   </button>
                   <button
                     onClick={handleLogout}
                     className="inline-flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-red-500/20 text-red-300 border border-red-500/30 font-bold text-xs"
                   >
                     <IconLogout size={16} />
-                    Đăng Xuất ({userInfo?.empCode || 'CBCNV'})
+                    {lang === "VN" ? `Đăng Xuất (${userInfo?.empCode || 'CBCNV'})` : `Logout (${userInfo?.empCode || 'CBCNV'})`}
                   </button>
                 </div>
               ) : (
@@ -870,7 +872,7 @@ export default function Header() {
                   onClick={() => setMobileOpen(false)}
                   className="inline-flex items-center justify-center gap-2 w-full py-3 rounded-full bg-gradient-to-r from-[#2fd39a] to-[#f2dc9a] text-[#08221a] font-extrabold text-sm uppercase shadow-xl"
                 >
-                  Đăng Nhập Hệ Thống
+                  {lang === "VN" ? "Đăng Nhập Hệ Thống" : "Login to System"}
                   <IconArrowRight size={16} />
                 </Link>
               )}

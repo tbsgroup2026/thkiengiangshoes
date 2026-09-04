@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import FinanceShell from "@/components/FinanceShell";
 import {
   IconUsers,
@@ -79,13 +79,13 @@ export default function CongNoPhaiThuPage() {
             <IconSend size={15} />
             <span>Gửi đối soát EDI</span>
           </button>
-          <Link
+          <NavLink
             href="/finance/thu-chi/phieu-thu"
             className="px-5 py-2 rounded-xl bg-[#006838] hover:bg-[#00522c] text-white text-xs font-black transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
           >
             <IconPlus size={16} />
             <span>Lập phiếu thu tiền</span>
-          </Link>
+          </NavLink>
         </div>
       </div>
 
@@ -145,12 +145,12 @@ export default function CongNoPhaiThuPage() {
                     </span>
                   </td>
                   <td className="py-2.5 px-3 text-center">
-                    <Link
+                    <NavLink
                       href="/finance/thu-chi/phieu-thu"
                       className="px-2 py-1 rounded bg-[#e6f4ed] hover:bg-emerald-100 text-[#006838] font-bold text-[10px] inline-block"
                     >
                       Lập phiếu thu
-                    </Link>
+                    </NavLink>
                   </td>
                 </tr>
               ))}

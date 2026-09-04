@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import {
@@ -122,12 +122,12 @@ export default function FAQPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Link
+            <NavLink
               href="/contact"
               className="px-5 py-2.5 rounded-xl bg-white text-[#006838] font-black text-xs hover:bg-emerald-50 transition-all shadow-xs"
             >
               Liên hệ Hotline
-            </Link>
+            </NavLink>
           </div>
         </div>
       </main>

@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import {
   IconBuildingFactory2,
   IconTruckDelivery,
@@ -123,20 +123,20 @@ export default function VeTBSPage() {
               </p>
 
               <div className="pt-4 flex flex-wrap items-center justify-center gap-4">
-                <Link
+                <NavLink
                   href="/careers"
                   className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-full bg-gradient-to-r from-[#2fd39a] to-[#f2dc9a] text-[#08221a] font-extrabold text-sm uppercase tracking-wider shadow-lg shadow-emerald-500/20 hover:brightness-110 active:scale-95 transition-all duration-200 cursor-pointer"
                 >
                   <span>Gia Nhập TBS Group</span>
                   <IconArrowRight size={16} />
-                </Link>
+                </NavLink>
 
-                <Link
+                <NavLink
                   href="/work"
                   className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white font-extrabold text-sm uppercase tracking-wider backdrop-blur-xs transition-all duration-200 active:scale-95 cursor-pointer"
                 >
                   <span>Hệ Thống Quản Trị</span>
-                </Link>
+                </NavLink>
               </div>
             </div>
 

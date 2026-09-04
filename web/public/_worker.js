@@ -2442,12 +2442,7 @@ export default {
       }
     }
 
-    // API Route: User Profile (/api/profile)
-    // (Đã xoá handler /api/profile trùng lặp từng nằm ở đây — nó chặn TẤT CẢ method (GET/POST/PUT)
-    // và luôn trả về `SELECT * FROM users WHERE status='ACTIVE' LIMIT 1` — tức "người active đầu
-    // tiên trong bảng", HOÀN TOÀN không phân biệt ai đang gọi API, đồng thời khiến handler
-    // /api/profile CHUẨN (định danh đúng theo JWT, phần dưới file) không bao giờ được chạy tới.
-    // Đây chính là nguyên nhân "đăng nhập tài khoản nào cũng hiện ra thành 1 người" (202608001).
+
 
     // 0.0 API Route: Employee Auto-Fill Lookup by MSNV (/api/employee/lookup?code=...)
     if (url.pathname === "/api/employee/lookup" && request.method === "GET") {
@@ -2568,6 +2563,11 @@ export default {
           "202608001": "202608001",
           "2026080002": "202608002",
           "202608002": "202608002",
+          "201809012": "201809012",
+          "pgđ-005": "201809012",
+          "pgd-005": "201809012",
+          "vukt@tbsgroup.vn": "201809012",
+          "vukieuthanh": "201809012",
           "tgđ-001": "TGĐ-001",
           "ptgđ-002": "PTGĐ-002",
           "gđ-003": "GĐ-003",
@@ -2677,16 +2677,40 @@ export default {
             avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80",
             redirectUrl: "/work",
           },
+          "PGĐ-005": {
+            userId: 212,
+            empCode: "201809012",
+            name: "Kiều Thanh Vũ",
+            title: "Phó Giám Đốc Phân Hệ CN CI PPH",
+            department: "CN-CI & PPH",
+            email: "vukt@tbsgroup.vn",
+            phone: "0988000000",
+            roleCode: "PHO_GIAM_DOC",
+            avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+            redirectUrl: "/work",
+          },
+          "201809012": {
+            userId: 212,
+            empCode: "201809012",
+            name: "Kiều Thanh Vũ",
+            title: "Phó Giám Đốc Phân Hệ CN CI PPH",
+            department: "CN-CI & PPH",
+            email: "vukt@tbsgroup.vn",
+            phone: "0988000000",
+            roleCode: "PHO_GIAM_DOC",
+            avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+            redirectUrl: "/work",
+          },
           "ADMIN-2026": {
             userId: 200,
             empCode: "ADMIN-2026",
-            name: "Trần Văn Quản Trị",
-            title: "Quản Trị Viên Hệ Thống TBS Group",
-            department: "Khối Quản Trị Hệ Thống",
-            email: "admin@tbsgroup.vn",
-            phone: "0903800000",
+            name: "Kiều Thanh Vũ",
+            title: "Phó Giám Đốc Phân Hệ CN CI PPH",
+            department: "CN-CI & PPH",
+            email: "vukt@tbsgroup.vn",
+            phone: "0988000000",
             roleCode: "SUPER_ADMIN",
-            avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
+            avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
             redirectUrl: "/admin",
           },
           "202608001": {
@@ -2761,6 +2785,54 @@ export default {
             avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80",
             redirectUrl: "/finance",
           },
+          "QC-001": {
+            userId: 214,
+            empCode: "QC-001",
+            name: "Bùi Thị Hằng",
+            title: "Quản Lý QC & Kiểm Soát Chất Lượng",
+            department: "Khối Quản Lý Chất Lượng (QC)",
+            email: "hangbt@tbsgroup.vn",
+            phone: "0988400001",
+            roleCode: "QC_MANAGER",
+            avatar: "https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=150&auto=format&fit=crop&q=80",
+            redirectUrl: "/work",
+          },
+          "BT-001": {
+            userId: 216,
+            empCode: "BT-001",
+            name: "Phạm Văn Bảo",
+            title: "Kỹ Thuật Viên Bảo Trì Trưởng",
+            department: "Tổ Hợp Nhà Máy & Sản Xuất",
+            email: "baopv@tbsgroup.vn",
+            phone: "0988500001",
+            roleCode: "KY_THUAT_VIEN",
+            avatar: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=150&auto=format&fit=crop&q=80",
+            redirectUrl: "/work",
+          },
+          "LG-001": {
+            userId: 219,
+            empCode: "LG-001",
+            name: "Nguyễn Văn Minh",
+            title: "Trưởng Phòng Logistics",
+            department: "Logistics - KH Chuẩn Bị TTPP",
+            email: "minhnv@tbsgroup.vn",
+            phone: "0988600001",
+            roleCode: "TRUONG_PHONG",
+            avatar: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&auto=format&fit=crop&q=80",
+            redirectUrl: "/work",
+          },
+          "RD-001": {
+            userId: 212,
+            empCode: "RD-001",
+            name: "Võ Thị Kim Loan",
+            title: "Trưởng Phòng R&D",
+            department: "R&D - Phát Triển Sản Phẩm",
+            email: "loanvtk@tbsgroup.vn",
+            phone: "0988300001",
+            roleCode: "TRUONG_PHONG",
+            avatar: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=150&auto=format&fit=crop&q=80",
+            redirectUrl: "/work",
+          },
         };
 
         let userAccount = null;
@@ -2773,19 +2845,19 @@ export default {
 
             if (results && results.length > 0) {
               const dbUser = results[0];
-              const sysFallback = WORKER_SYSTEM_USERS[targetCode] || WORKER_SYSTEM_USERS["202608001"];
+              const sysFallback = WORKER_SYSTEM_USERS[targetCode];
               userAccount = {
                 empCode: dbUser.emp_code || targetCode,
-                name: dbUser.name || sysFallback.name,
-                title: dbUser.title || dbUser.vtcv_hien_tai || sysFallback.title,
-                department: dbUser.department || dbUser.phong_ban_hien_tai || sysFallback.department,
-                avatar: dbUser.avatar_url || sysFallback.avatar,
-                email: dbUser.email || sysFallback.email,
-                phone: dbUser.phone || sysFallback.phone || "",
-                roleCode: dbUser.role_code || sysFallback.roleCode,
+                name: dbUser.name || (sysFallback ? sysFallback.name : `Cán Bộ Nhân Viên (${targetCode})`),
+                title: dbUser.title || dbUser.vtcv_hien_tai || (sysFallback ? sysFallback.title : "Cán Bộ Công Nhân Viên"),
+                department: dbUser.department || dbUser.phong_ban_hien_tai || (sysFallback ? sysFallback.department : "TBS Group"),
+                avatar: dbUser.avatar_url || (sysFallback ? sysFallback.avatar : "/images/tbs-logo.png"),
+                email: dbUser.email || (sysFallback ? sysFallback.email : `${targetCode.toLowerCase()}@tbsgroup.vn`),
+                phone: dbUser.phone || (sysFallback ? sysFallback.phone : ""),
+                roleCode: dbUser.role_code || (sysFallback ? sysFallback.roleCode : "CBCNV"),
                 redirectUrl: (dbUser.role_code === "SUPER_ADMIN" || dbUser.role_code === "admin" || dbUser.role_code === "TONG_GIAM_DOC")
                   ? "/admin"
-                  : (sysFallback.redirectUrl || "/work"),
+                  : (sysFallback ? sysFallback.redirectUrl : "/work"),
               };
             }
           } catch (e) {
@@ -2794,7 +2866,18 @@ export default {
         }
 
         if (!userAccount) {
-          userAccount = WORKER_SYSTEM_USERS[targetCode] || WORKER_SYSTEM_USERS["202608001"];
+          userAccount = WORKER_SYSTEM_USERS[targetCode] || {
+            userId: 888,
+            empCode: targetCode,
+            name: `Cán Bộ Nhân Viên (${targetCode})`,
+            title: "Cán Bộ Công Nhân Viên",
+            department: "Tổ hợp Kiên Giang - TBS Group",
+            email: `${targetCode.toLowerCase()}@tbsgroup.vn`,
+            phone: "",
+            roleCode: "CBCNV",
+            avatar: "/images/tbs-logo.png",
+            redirectUrl: "/work",
+          };
         }
 
         if (env.DB) {
@@ -5857,6 +5940,38 @@ export default {
           const finalCategory = category || "PRODUCTIVITY";
           const finalCategoryLabel = categoryLabel || "3.Tăng Năng suất";
 
+          // 🛡️ Backend Anti-Duplicate Window Check (prevent duplicate posts with same title within 60s)
+          try {
+            const recentDuplicate = await env.DB.prepare(`
+              SELECT id, code FROM ci_kaizen_proposals 
+              WHERE title = ?
+                AND (proposer_emp_code = ? OR proposer_name = ? OR department = ?)
+                AND datetime(created_at) >= datetime('now', '-60 seconds')
+              ORDER BY created_at DESC
+              LIMIT 1
+            `).bind(finalTitle, finalProposerEmpCode, finalProposerName, finalDept).first();
+
+            if (recentDuplicate) {
+              const resObj = {
+                success: true,
+                message: "Đề xuất đã được ghi nhận trước đó (chống trùng)",
+                code: recentDuplicate.code,
+                id: recentDuplicate.id,
+                duplicateBlocked: true
+              };
+              if (idempotencyKey) {
+                try {
+                  await env.DB.prepare(
+                    "INSERT OR REPLACE INTO idempotency_keys (key, status_code, response_body, created_at) VALUES (?, 200, ?, CURRENT_TIMESTAMP)"
+                  ).bind(idempotencyKey, JSON.stringify(resObj)).run();
+                } catch (e) {}
+              }
+              return new Response(JSON.stringify(resObj), { status: 200, headers: SECURE_JSON_HEADERS });
+            }
+          } catch (dupErr) {
+            console.warn("Anti-duplicate check error:", dupErr);
+          }
+
           await env.DB.prepare(`
             INSERT INTO ci_kaizen_proposals (
               id, code, legacy_code, title, category, category_label, registration_type, sub_status, approval_status, evaluation_result, region, department, factory, proposer_name, proposer_emp_code, proposer_position, proposer_month, proposer_year, hr_suggestor, customer, dept_code, before_description, after_solution, saved_seconds, product_group, product_code, quantity, pricing_direction, time_before_seconds, time_after_seconds, efficiency_value_vnd, before_image_url, after_image_url, attachments_json, required_reviewer_ids_json, status, version
@@ -8387,8 +8502,22 @@ export default {
       });
     }
 
-    // Default Fallback: Serve Next.js Static Export Assets
-    return env.ASSETS.fetch(request);
+    // Default Fallback: Serve Next.js Static Export Assets with Edge Caching Headers
+    const assetResponse = await env.ASSETS.fetch(request);
+    if (assetResponse.ok) {
+      const responseHeaders = new Headers(assetResponse.headers);
+      if (pathname.startsWith("/_next/static/") || pathname.endsWith(".woff2")) {
+        responseHeaders.set("Cache-Control", "public, max-age=31536000, immutable");
+      } else if (pathname.startsWith("/images/") || pathname.endsWith(".png") || pathname.endsWith(".jpg") || pathname.endsWith(".svg") || pathname.endsWith(".ico")) {
+        responseHeaders.set("Cache-Control", "public, max-age=86400, s-maxage=604800");
+      }
+      return new Response(assetResponse.body, {
+        status: assetResponse.status,
+        statusText: assetResponse.statusText,
+        headers: responseHeaders,
+      });
+    }
+    return assetResponse;
   },
 
   // ⏰ Cloudflare Worker Cron Trigger Handler (Automated Weekly Execution)

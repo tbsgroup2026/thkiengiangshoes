@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import NavLink from "@/components/NavLink";
 
 export default function DocumentTemplatesPage() {
   const [templates, setTemplates] = useState([
@@ -80,12 +80,12 @@ export default function DocumentTemplatesPage() {
         </div>
 
         <div className="flex gap-3">
-          <Link
+          <NavLink
             href="/documents/create"
             className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#d9b96a] to-gold-light text-tbs-dark text-xs font-bold shadow-md"
           >
             Điền giấy tờ mới
-          </Link>
+          </NavLink>
           <button
             onClick={() => setShowUploadModal(true)}
             className="px-4 py-2.5 rounded-xl bg-accent text-white text-xs font-bold hover:bg-accent-light transition shadow-md"
@@ -118,9 +118,9 @@ export default function DocumentTemplatesPage() {
             </div>
             <div className="pt-3 border-t border-gray-100 flex justify-between items-center text-xs">
               <span className="text-gray-400">Ngày tạo: {tpl.createdAt}</span>
-              <Link href={`/documents/create?templateId=${tpl.id}`} className="text-accent font-bold hover:underline">
+              <NavLink href={`/documents/create?templateId=${tpl.id}`} className="text-accent font-bold hover:underline">
                 Điền Mẫu →
-              </Link>
+              </NavLink>
             </div>
           </div>
         ))}

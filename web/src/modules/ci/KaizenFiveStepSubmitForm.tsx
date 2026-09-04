@@ -56,6 +56,7 @@ export default function KaizenFiveStepSubmitForm({ onSuccessClose, onCancel }: K
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [submittedCode, setSubmittedCode] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const submitLockRef = React.useRef(false);
   const [uploading, setUploading] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
@@ -310,13 +311,20 @@ export default function KaizenFiveStepSubmitForm({ onSuccessClose, onCancel }: K
 
   // Final Submission
   const handleSubmit = async () => {
+    if (submitting || submitLockRef.current) return;
     if (!validateStep(1) || !validateStep(2) || !validateStep(3) || !validateStep(4)) return;
+
+    submitLockRef.current = true;
+    const idempotencyKey = `kz_5step_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
     try {
       setSubmitting(true);
       const res = await fetch("/api/ci-kaizen", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-idempotency-key": idempotencyKey,
+        },
         body: JSON.stringify({
           ...form,
           sub_status: form.registrationType === "THI_DUA" ? "CHO_DANH_GIA" : "LUU_TRU",
@@ -335,6 +343,7 @@ export default function KaizenFiveStepSubmitForm({ onSuccessClose, onCancel }: K
       showToast("❌ Lỗi kết nối máy chủ D1 Database!");
     } finally {
       setSubmitting(false);
+      submitLockRef.current = false;
     }
   };
 

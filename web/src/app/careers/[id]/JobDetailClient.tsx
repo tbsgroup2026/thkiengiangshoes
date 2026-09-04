@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ApplyModal from "@/components/recruitment/ApplyModal";
@@ -89,7 +89,7 @@ export default function JobDetailClient({ id }: { id: string }) {
             <IconBriefcase size={56} className="mx-auto text-gray-300 mb-4" />
             <h2 className="text-xl font-bold text-tbs-dark mb-2">Không Tìm Thấy</h2>
             <p className="text-sm text-gray-500 mb-6">{error || "Tin tuyển dụng không tồn tại hoặc đã hết hạn."}</p>
-            <Link href="/careers" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-accent text-white text-sm font-semibold hover:bg-accent-light transition-colors"><IconArrowLeft size={18} />Xem Tất Cả Vị Trí</Link>
+            <NavLink href="/careers" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-accent text-white text-sm font-semibold hover:bg-accent-light transition-colors"><IconArrowLeft size={18} />Xem Tất Cả Vị Trí</NavLink>
           </div>
         </main>
         <Footer />
@@ -104,8 +104,8 @@ export default function JobDetailClient({ id }: { id: string }) {
         <div className="max-w-7xl mx-auto px-6 py-8">
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-xs text-gray-400 mb-6">
-            <Link href="/" className="hover:text-accent">Trang chủ</Link><span>/</span>
-            <Link href="/careers" className="hover:text-accent">Tuyển dụng</Link><span>/</span>
+            <NavLink href="/" className="hover:text-accent">Trang chủ</NavLink><span>/</span>
+            <NavLink href="/careers" className="hover:text-accent">Tuyển dụng</NavLink><span>/</span>
             <span className="text-tbs-dark font-medium truncate max-w-[200px]">{job.title}</span>
           </div>
 
@@ -180,13 +180,13 @@ export default function JobDetailClient({ id }: { id: string }) {
                   <h2 className="text-lg font-bold text-tbs-dark mb-4">Vị Trí Tương Tự</h2>
                   <div className="space-y-3">
                     {similarJobs.map((sj) => (
-                      <Link key={sj.id} href={`/careers/${sj.id}`} className="flex items-center justify-between p-4 rounded-xl bg-gray-50 hover:bg-emerald-50 transition-colors group">
+                      <NavLink key={sj.id} href={`/careers/${sj.id}`} className="flex items-center justify-between p-4 rounded-xl bg-gray-50 hover:bg-emerald-50 transition-colors group">
                         <div>
                           <h3 className="text-sm font-semibold text-tbs-dark group-hover:text-accent transition-colors">{sj.title}</h3>
                           <div className="flex gap-3 text-[11px] text-gray-500 mt-1"><span>{sj.salary}</span><span>{sj.location}</span></div>
                         </div>
                         <span className="text-xs text-accent font-semibold bg-white px-3 py-1 rounded-full border border-emerald-200 group-hover:bg-accent group-hover:text-white transition-colors">Xem →</span>
-                      </Link>
+                      </NavLink>
                     ))}
                   </div>
                 </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import dynamic from "next/dynamic";
 import { useStatusCounts } from "@/context/StatusCountsContext";
 import { primaryImageUrl } from "./kaizenImageUtils";
@@ -511,6 +511,7 @@ export default function CIModule() {
   const [activeTab, setActiveTab] = useState<"LIBRARY" | "DASHBOARD" | "EARLY_WARNING">("LIBRARY");
   const [isFiveStepModalOpen, setIsFiveStepModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const createLockRef = React.useRef(false);
 
   // Filters State
   const [searchQuery, setSearchQuery] = useState("");
@@ -845,6 +846,8 @@ export default function CIModule() {
   // Handle Create Submit
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (createLockRef.current) return;
+
     if (
       !createForm.proposerName.trim() ||
       !createForm.proposerEmpCode.trim() ||
@@ -862,10 +865,16 @@ export default function CIModule() {
       return;
     }
 
+    createLockRef.current = true;
+    const idempotencyKey = `kz_create_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
     try {
       const res = await fetch("/api/ci-kaizen", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-idempotency-key": idempotencyKey,
+        },
         body: JSON.stringify({
           ...createForm,
           registrationType: createForm.registrationType || "CHO_DANH_GIA",
@@ -882,6 +891,8 @@ export default function CIModule() {
       }
     } catch (err) {
       showToast("❌ Lỗi mạng hoặc máy chủ!");
+    } finally {
+      createLockRef.current = false;
     }
   };
 
@@ -1333,7 +1344,7 @@ export default function CIModule() {
             )}
             <div className="space-y-1">
               {/* Nút Quay lại /work */}
-              <Link
+              <NavLink
                 href="/work"
                 className={`w-full text-left rounded-xl transition-all cursor-pointer flex items-center gap-2.5 ${
                   isSidebarCollapsed ? "p-2.5 justify-center" : "px-3.5 py-2"
@@ -1342,7 +1353,7 @@ export default function CIModule() {
               >
                 <IconArrowLeft size={18} className="shrink-0 text-emerald-400" />
                 {!isSidebarCollapsed && <span className="truncate">Về Trang Chủ</span>}
-              </Link>
+              </NavLink>
 
 
 
