@@ -402,7 +402,6 @@ export default function Header() {
             {/* 1. Trang chủ / Home */}
             <Link
               href="/"
-              prefetch={false}
               className={`transition-colors py-1 ${
                 pathname === '/' ? 'text-[#2fd39a]' : 'hover:text-[#2fd39a]'
               }`}
@@ -413,7 +412,6 @@ export default function Header() {
             {/* 2. TBS Group */}
             <Link
               href="/ve-tbs"
-              prefetch={false}
               className={`transition-colors py-1 ${
                 pathname === '/ve-tbs' || pathname === '/about' ? 'text-[#2fd39a]' : 'hover:text-[#2fd39a]'
               }`}
@@ -424,7 +422,6 @@ export default function Header() {
             {/* 3. Tuyển dụng / Recruitment */}
             <Link
               href="/careers"
-              prefetch={false}
               className={`transition-colors py-1 ${
                 pathname?.startsWith('/careers') ? 'text-[#2fd39a]' : 'hover:text-[#2fd39a]'
               }`}
@@ -435,7 +432,6 @@ export default function Header() {
             {/* 4. Thư viện mẫu / Template Library */}
             <Link
               href="/documents/templates"
-              prefetch={false}
               className={`transition-colors py-1 ${
                 pathname?.startsWith('/documents/templates') ? 'text-[#2fd39a]' : 'hover:text-[#2fd39a]'
               }`}
@@ -446,7 +442,6 @@ export default function Header() {
             {/* 5. Hệ thống quản trị / Management System */}
             <Link
               href={isLoggedIn ? "/work" : "/login"}
-              prefetch={false}
               className={`transition-colors py-1 ${
                 pathname === '/work' || pathname?.startsWith('/work') ? 'text-[#2fd39a]' : 'hover:text-[#2fd39a]'
               }`}
@@ -457,7 +452,6 @@ export default function Header() {
             {/* 6. Tin tức / News */}
             <Link
               href="/news"
-              prefetch={false}
               className={`transition-colors py-1 ${
                 pathname?.startsWith('/news') ? 'text-[#2fd39a]' : 'hover:text-[#2fd39a]'
               }`}
@@ -496,7 +490,6 @@ export default function Header() {
                 <div className="rounded-2xl bg-[#041a13]/98 border border-[#2fd39a]/40 p-2 shadow-2xl backdrop-blur-2xl text-left">
                   <Link
                     href="/contact"
-                    prefetch={false}
                     className="flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-extrabold text-gray-100 hover:text-[#2fd39a] hover:bg-white/10 rounded-xl transition"
                   >
                     <IconPhoneCall size={16} className="text-[#2fd39a]" />
@@ -504,7 +497,6 @@ export default function Header() {
                   </Link>
                   <Link
                     href="/faq"
-                    prefetch={false}
                     className="flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-extrabold text-gray-100 hover:text-[#2fd39a] hover:bg-white/10 rounded-xl transition"
                   >
                     <IconHelpCircle size={16} className="text-[#2fd39a]" />
@@ -512,7 +504,6 @@ export default function Header() {
                   </Link>
                   <Link
                     href="/structure"
-                    prefetch={false}
                     className="flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-extrabold text-gray-100 hover:text-[#2fd39a] hover:bg-white/10 rounded-xl transition"
                   >
                     <IconHierarchy size={16} className="text-[#2fd39a]" />

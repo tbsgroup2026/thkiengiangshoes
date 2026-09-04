@@ -7,6 +7,7 @@ import HeroSection from "@/components/home/HeroSection";
 import WorkspaceGallery from "@/components/home/WorkspaceGallery";
 import { getLandingCMS, fetchLandingCMSFromServer, DEFAULT_LANDING_CMS } from "@/lib/landingCMS";
 import { useTranslation } from "@/hooks/useTranslation";
+import { formatCloudinaryUrl } from "@/lib/cloudinary";
 
 export default function HomePage() {
   const { lang } = useTranslation();
@@ -56,7 +57,7 @@ export default function HomePage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
               <div className="relative rounded-3xl overflow-hidden aspect-[4/3] shadow-xl border border-slate-200 group bg-slate-100">
                 <img
-                  src={excellence.image || "/images/tbs-factory-plant.png"}
+                  src={excellence.image ? formatCloudinaryUrl(excellence.image, undefined, 900) : "/images/tbs-factory-plant.png"}
                   alt="Brand Quality"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                 />

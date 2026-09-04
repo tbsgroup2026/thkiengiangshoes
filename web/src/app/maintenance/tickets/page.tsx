@@ -5,6 +5,7 @@ import { IconAlertTriangle, IconClockHour4, IconCircleCheck, IconTool } from '@t
 import MaintenanceShell from '@/components/MaintenanceShell';
 import FilterSelect from '@/components/FilterSelect';
 import DateRangeFilter, { inDateRange } from '@/components/DateRangeFilter';
+import RefreshButton from '@/components/RefreshButton';
 
 type CategoryOption = { id: string; name: string };
 
@@ -48,31 +49,37 @@ export default function MaintenanceTicketsPage() {
   const [filterFactoryId, setFilterFactoryId] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+
+  async function load(force = false) {
+    try {
+      force ? setRefreshing(true) : setLoading(true);
+      setError(null);
+      const fresh = force ? '&fresh=1' : '';
+      const settled = await Promise.allSettled([
+        fetch(`/api/mmtb-kg/tickets${force ? '?fresh=1' : ''}`).then((r) => r.json()),
+        fetch(`/api/mmtb-kg/categories?type=FACTORY${fresh}`).then((r) => r.json()),
+      ]);
+      const [ticketsRes, facRes] = settled.map((s) => (s.status === 'fulfilled' ? s.value : { success: false, error: String(s.reason) }));
+      if (ticketsRes.success && Array.isArray(ticketsRes.data)) {
+        setTickets(ticketsRes.data);
+      } else {
+        setTickets([]);
+        console.warn('Failed to load tickets from tbsMayMoc:', ticketsRes.error);
+        setError(ticketsRes.error || 'Không lấy được dữ liệu');
+      }
+      if (facRes.success) setFactories(facRes.data || []);
+    } catch (err) {
+      console.warn('Failed to fetch tickets from tbsMayMoc:', err);
+      setTickets([]);
+    } finally {
+      force ? setRefreshing(false) : setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    async function load() {
-      try {
-        setLoading(true);
-        setError(null);
-        const [ticketsRes, facRes] = await Promise.all([
-          fetch('/api/mmtb-kg/tickets').then((r) => r.json()),
-          fetch('/api/mmtb-kg/categories?type=FACTORY').then((r) => r.json()),
-        ]);
-        if (ticketsRes.success && Array.isArray(ticketsRes.data)) {
-          setTickets(ticketsRes.data);
-        } else {
-          setTickets([]);
-          setError(ticketsRes.error || 'Không lấy được dữ liệu');
-        }
-        if (facRes.success) setFactories(facRes.data || []);
-      } catch (err) {
-        console.warn('Failed to fetch tickets from tbsMayMoc:', err);
-        setTickets([]);
-      } finally {
-        setLoading(false);
-      }
-    }
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filtered = useMemo(() => {
@@ -100,13 +107,13 @@ export default function MaintenanceTicketsPage() {
   return (
     <MaintenanceShell title="Nhu Cầu Sửa Chữa" subtitle="Danh sách sự cố / ticket bảo trì — Tổ hợp Kiên Giang">
       <div className="p-4 sm:p-6 space-y-4">
-        <div>
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <h1 className="text-2xl font-extrabold text-tbs-dark">Nhu Cầu Sửa Chữa</h1>
+          <RefreshButton onClick={() => load(true)} loading={refreshing} />
         </div>
 
-        {error && (
-          <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">⚠️ {error}</div>
-        )}
+        {/* Lỗi kết nối tbsMayMoc chỉ log console (F12), không hiện banner ngoài trang — `error` vẫn
+            giữ lại để chặn thông báo "Không có ticket nào" hiện nhầm khi thật ra là do lỗi tải. */}
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[

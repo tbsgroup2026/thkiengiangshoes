@@ -3,6 +3,7 @@
  * Strictly limits access to /admin and /api/admin/* to:
  * 1. Phạm Nguyễn Anh Huy (Admin - IT Team Chuyển Đổi Số)
  * 2. Kiều Thanh Vũ (Phó Giám Đốc Phân Hệ CN CI PPH)
+ * 3. Trần Ngọc Huy (Kỹ Sư IT - Team Chuyển Đổi Số)
  */
 
 export interface WhitelistAdminUser {
@@ -28,6 +29,13 @@ export const ADMIN_WHITELIST: WhitelistAdminUser[] = [
     email: "vukt@tbsgroup.vn",
     userId: 212,
   },
+  {
+    empCode: "202608002",
+    name: "Trần Ngọc Huy",
+    roleTitle: "Kỹ Sư IT - Team Chuyển Đổi Số",
+    email: "tranhuy110421@gmail.com",
+    userId: 206,
+  },
 ];
 
 const ALLOWED_ADMIN_CODES = new Set<string>([
@@ -36,15 +44,17 @@ const ALLOWED_ADMIN_CODES = new Set<string>([
   "201809012",
   "PGĐ-005",
   "PGD-005",
+  "202608002",
 ]);
 
 const ALLOWED_ADMIN_EMAILS = new Set<string>([
   "anhy.work.2004@gmail.com",
   "huypna@tbsgroup.vn",
   "vukt@tbsgroup.vn",
+  "tranhuy110421@gmail.com",
 ]);
 
-const ALLOWED_ADMIN_USER_IDS = new Set<number>([205, 212]);
+const ALLOWED_ADMIN_USER_IDS = new Set<number>([205, 212, 206]);
 
 /**
  * Validates whether a user identity is authorized to access /admin

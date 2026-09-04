@@ -43,53 +43,11 @@ export function isKienGiangFactory(factory: string): boolean {
 }
 
 export const INITIAL_ORG_TREE: OrgNodeMap = {
-  "Kiên Giang 1": {
-    "Xưởng Đế KG1": {
-      "Line Ép 1": {
-        "Chuyền Cán Ép 1": ["Tổ Cán Ép A", "Tổ Cán Ép B"],
-        "Chuyền Ép Dán 1": ["Tổ Ép Dán 1", "Tổ Ép Dán 2"],
-      },
-      "Line Ép 2": {
-        "Chuyền Cán Ép 2": ["Tổ Cán Ép C"],
-      },
-    },
-    "Xưởng Mũi KG1": {
-      "Line May Mũi 1": {
-        "Chuyền May 1": ["Tổ Chặt Mũi", "Tổ Chuẩn Bị 1", "Tổ May 1A", "Tổ May 1B"],
-        "Chuyền May 2": ["Tổ May 2A", "Tổ May 2B"],
-      },
-      "Line May Mũi 2": {
-        "Chuyền May 3": ["Tổ May 3A", "Tổ May 3B"],
-      },
-    },
-    "Xưởng Gò KG1": {
-      "Line Gò Thành Phẩm": {
-        "Chuyền Gò 1": ["Tổ Gò 1A", "Tổ Gò 1B"],
-        "Chuyền Gò 2": ["Tổ Gò 2A", "Tổ Gò 2B"],
-      },
-    },
-  },
-
-  "Kiên Giang 2": {
-    "Xưởng Mũi KG2": {
-      "Line May 1": {
-        "Chuyền May KG2-1": ["Tổ May 1", "Tổ May 2"],
-      },
-    },
-    "Xưởng Gò KG2": {
-      "Line Gò 1": {
-        "Chuyền Gò KG2-1": ["Tổ Gò 1", "Tổ Gò 2"],
-      },
-    },
-  },
-
-  "Kiên Giang 3": {
-    "Xưởng Sản Xuất KG3": {
-      "Line Sản Xuất 1": {
-        "Chuyền Sản Xuất 1": ["Tổ Sản Xuất A"],
-      },
-    },
-  },
+  // Kiên Giang 1/2/3 — danh sách Xưởng thật theo yêu cầu (không có Line/Chuyền/Tổ con, dropdown
+  // "3. Line Sản Xuất" tự ẩn khi Xưởng là mảng phẳng như dưới đây — xem availableFormLines()).
+  "Kiên Giang 1": ["Đầu vào", "May", "Gò"],
+  "Kiên Giang 2": ["Đầu vào", "May", "Gò"],
+  "Kiên Giang 3": ["Đầu vào", "Phụ trợ in ép", "May", "Gò"],
 
   "Hoàn thiện đế": {
     "Xưởng Hoàn Thiện Đế": {

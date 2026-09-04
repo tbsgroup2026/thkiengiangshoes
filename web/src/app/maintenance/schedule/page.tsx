@@ -12,6 +12,7 @@ import {
 } from '@tabler/icons-react';
 import MaintenanceShell from '@/components/MaintenanceShell';
 import FilterSelect from '@/components/FilterSelect';
+import RefreshButton from '@/components/RefreshButton';
 import {
   buildMaintenanceCalendarMap,
   buildCalendarWeeks,
@@ -92,26 +93,31 @@ export default function MaintenanceSchedulePage() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('assign');
 
-  const load = async () => {
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = async (force = false) => {
     try {
-      setLoading(true);
+      force ? setRefreshing(true) : setLoading(true);
       setError(null);
-      const [scheduleRes, logsRes] = await Promise.all([
-        fetch('/api/mmtb-kg/schedule').then((r) => r.json()),
-        fetch('/api/mmtb-kg/logs').then((r) => r.json()),
+      const fresh = force ? '?fresh=1' : '';
+      const settled = await Promise.allSettled([
+        fetch(`/api/mmtb-kg/schedule${fresh}`).then((r) => r.json()),
+        fetch(`/api/mmtb-kg/logs${fresh}`).then((r) => r.json()),
       ]);
+      const [scheduleRes, logsRes] = settled.map((s) => (s.status === 'fulfilled' ? s.value : { success: false, error: String(s.reason) }));
       if (scheduleRes.success) {
         setMachines(scheduleRes.machines || []);
         setPeriods(scheduleRes.periods || []);
         setCompletedThisMonth(scheduleRes.completedThisMonth || 0);
       } else {
+        console.warn('Failed to load schedule from tbsMayMoc:', scheduleRes.error);
         setError(scheduleRes.error || 'Không lấy được dữ liệu lịch bảo trì');
       }
       if (logsRes.success) setLogs(logsRes.data || []);
     } catch (err) {
       console.warn('Failed to fetch schedule from tbsMayMoc:', err);
     } finally {
-      setLoading(false);
+      force ? setRefreshing(false) : setLoading(false);
     }
   };
 
@@ -139,13 +145,12 @@ export default function MaintenanceSchedulePage() {
   return (
     <MaintenanceShell title="Bảo Dưỡng MMTB" subtitle="Lên lịch — Theo dõi — Xem lịch bảo trì định kỳ — Tổ hợp Kiên Giang">
       <div className="p-4 sm:p-6 space-y-4">
-        <div>
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <h1 className="text-2xl font-extrabold text-tbs-dark">Bảo Dưỡng MMTB</h1>
+          <RefreshButton onClick={() => load(true)} loading={refreshing} />
         </div>
 
-        {error && (
-          <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">⚠️ {error}</div>
-        )}
+        {/* Lỗi kết nối tbsMayMoc chỉ log console (F12), không hiện banner ngoài trang */}
 
         {/* 4 Ô TỔNG QUAN */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -426,21 +431,56 @@ function TrackTab({
   factoryOptions: { id: string; name: string }[];
 }) {
   const [factoryId, setFactoryId] = useState('');
+  const [areaId, setAreaId] = useState('');
+
+  // Xưởng lọc theo Nhà máy đã chọn — giống hệt pattern ở Tab 1 (UnscheduledMachinesXxx) và Tab 3
+  // (CalendarTab), dựng từ chính danh sách máy (machines đã có sẵn areaId/areaName/factoryId).
+  const areaOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    machines.forEach((m) => {
+      if (m.areaId && m.areaName && (!factoryId || m.factoryId === factoryId)) map.set(m.areaId, m.areaName);
+    });
+    return Array.from(map, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+  }, [machines, factoryId]);
 
   const needsAction = useMemo(() => {
     return machines
-      .filter((m) => (m.status === 'overdue' || m.status === 'upcoming') && (!factoryId || m.factoryId === factoryId))
+      .filter(
+        (m) =>
+          (m.status === 'overdue' || m.status === 'upcoming') &&
+          (!factoryId || m.factoryId === factoryId) &&
+          (!areaId || m.areaId === areaId),
+      )
       .sort((a, b) => (a.daysLeft ?? 0) - (b.daysLeft ?? 0));
-  }, [machines, factoryId]);
+  }, [machines, factoryId, areaId]);
 
+  // LogEntry (lịch sử bảo trì) chỉ có tên Xưởng dạng chữ, không có ID riêng — so tên qua
+  // areaOptions (đã lọc đúng Nhà máy) giống cách factoryName đang được so tên bên dưới.
   const filteredLogs = useMemo(() => {
-    return logs.filter((l) => !factoryId || factoryOptions.find((f) => f.id === factoryId)?.name === l.factoryName);
-  }, [logs, factoryId, factoryOptions]);
+    const areaName = areaId ? areaOptions.find((a) => a.id === areaId)?.name : null;
+    return logs.filter(
+      (l) =>
+        (!factoryId || factoryOptions.find((f) => f.id === factoryId)?.name === l.factoryName) &&
+        (!areaName || l.areaName === areaName),
+    );
+  }, [logs, factoryId, factoryOptions, areaId, areaOptions]);
 
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-wrap items-center gap-2.5">
-        <FilterSelect value={factoryId} onChange={setFactoryId} options={factoryOptions} placeholder="Tất cả nhà máy" />
+        <FilterSelect
+          value={factoryId}
+          onChange={(v) => { setFactoryId(v); setAreaId(''); }}
+          options={factoryOptions}
+          placeholder="Tất cả nhà máy"
+        />
+        <FilterSelect
+          value={areaId}
+          onChange={setAreaId}
+          options={areaOptions}
+          placeholder={factoryId ? 'Tất cả khu vực' : 'Chọn nhà máy trước'}
+          disabled={!factoryId}
+        />
       </div>
 
       <div>

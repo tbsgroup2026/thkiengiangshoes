@@ -175,7 +175,7 @@ export default function KaizenPublicSubmitForm({
 
   // Single-select cascading org selection for submission form
   const [selectedFormFactory, setSelectedFormFactory] = useState<string>("KG 1");
-  const [selectedFormWorkshop, setSelectedFormWorkshop] = useState<string>("Xưởng Đế KG1");
+  const [selectedFormWorkshop, setSelectedFormWorkshop] = useState<string>("");
   const [selectedFormLine, setSelectedFormLine] = useState<string>("");
   const [selectedFormChuyen, setSelectedFormChuyen] = useState<string>("");
   const [selectedFormTo, setSelectedFormTo] = useState<string>("");
@@ -245,7 +245,7 @@ export default function KaizenPublicSubmitForm({
     proposerName: "",
     customer: "",
     factory: "KG 1",
-    department: "Xưởng Đế KG1",
+    department: "",
 
     // Section B: Thông tin cải tiến
     title: "",

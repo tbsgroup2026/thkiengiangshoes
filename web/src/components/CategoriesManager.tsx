@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { IconPlus, IconPencil, IconTrash, IconBuildingFactory2 } from '@tabler/icons-react';
 import MaintenanceShell from '@/components/MaintenanceShell';
 import FilterSelect from '@/components/FilterSelect';
+import RefreshButton from '@/components/RefreshButton';
 
 type Category = {
   id: string;
@@ -79,22 +80,27 @@ export default function CategoriesManager({
     return Array.from(set);
   }, [tabKeys]);
 
-  const load = async () => {
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = async (force = false) => {
     try {
-      setLoading(true);
+      force ? setRefreshing(true) : setLoading(true);
       setError(null);
-      const results = await Promise.all(
-        fetchTypes.map((t) => fetch(`/api/mmtb-kg/categories?type=${t}`).then((r) => r.json())),
+      // Promise.allSettled — 1 loại danh mục lỗi không còn xoá sạch các loại khác đã tải xong.
+      const settled = await Promise.allSettled(
+        fetchTypes.map((t) => fetch(`/api/mmtb-kg/categories?type=${t}${force ? '&fresh=1' : ''}`).then((r) => r.json())),
       );
       const next = { ...EMPTY };
-      results.forEach((r, i) => {
-        next[fetchTypes[i]] = r.success && Array.isArray(r.data) ? r.data : [];
+      settled.forEach((s, i) => {
+        const r = s.status === 'fulfilled' ? s.value : null;
+        if (s.status === 'rejected') console.warn(`Failed to load categories type=${fetchTypes[i]}:`, s.reason);
+        next[fetchTypes[i]] = r && r.success && Array.isArray(r.data) ? r.data : [];
       });
       setData(next);
     } catch (err) {
       console.warn('Failed to fetch categories from tbsMayMoc:', err);
     } finally {
-      setLoading(false);
+      force ? setRefreshing(false) : setLoading(false);
     }
   };
 
@@ -221,11 +227,12 @@ export default function CategoriesManager({
   return (
     <MaintenanceShell title={pageTitle} subtitle={pageSubtitle}>
       <div className="p-4 sm:p-6 space-y-4">
-        <div>
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <h1 className="text-2xl font-extrabold text-tbs-dark">{pageTitle}</h1>
+          <RefreshButton onClick={() => load(true)} loading={refreshing} />
         </div>
 
-        {error && <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">⚠️ {error}</div>}
+        {/* Lỗi kết nối tbsMayMoc chỉ log console (F12), không hiện banner ngoài trang */}
 
         {tabKeys.length > 1 && (
           <div className="flex flex-wrap gap-2">

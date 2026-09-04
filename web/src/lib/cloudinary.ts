@@ -15,16 +15,13 @@ export interface CloudinaryUploadOptions {
 export interface CloudinaryTransformOptions {
   width?: number;
   height?: number;
-  quality?: string; // 'q_auto', 'q_auto:eco', 'q_auto:good', 'q_auto:best', hoặc số như '80'
-  format?: string;  // 'f_auto', 'webp', 'avif' (mặc định 'f_auto')
+  quality?: string;
+  format?: string;
   crop?: "fill" | "limit" | "fit" | "thumb" | "scale" | "pad" | string;
   dpr?: string;
   blur?: number;
 }
 
-/**
- * Tự động xác định thư mục và prefix Cloudinary phân lập theo từng website/domain
- */
 export function getSiteFolder(): { folder: string; prefix: string } {
   if (typeof window !== "undefined") {
     const host = window.location.hostname.toLowerCase();
@@ -35,9 +32,6 @@ export function getSiteFolder(): { folder: string; prefix: string } {
   return { folder: "thkiengiangshoes", prefix: "kg" };
 }
 
-/**
- * Tạo public_id duy nhất với prefix trang web để tránh ghi đè CDN và cache trình duyệt
- */
 export function generateUniquePublicId(category: string = "img", fileName: string = "file", sitePrefix?: string): string {
   const { prefix } = sitePrefix ? { prefix: sitePrefix } : getSiteFolder();
   const timeTag = Date.now();
@@ -49,18 +43,36 @@ export function generateUniquePublicId(category: string = "img", fileName: strin
   return `${prefix}_${category}_${timeTag}_${randTag}_${cleanName}`;
 }
 
-/**
- * Helper thêm tham số query cache-busting (?v=<timestamp>) cho URL ảnh
- */
-export function formatCloudinaryUrl(url: string | undefined | null, versionTag?: string | number): string {
+export function formatCloudinaryUrl(
+  url: string | undefined | null,
+  versionTag?: string | number,
+  width?: number
+): string {
   if (!url) return "";
-  const trimmed = url.trim();
+  let trimmed = url.trim();
   if (trimmed.startsWith("data:") || trimmed.startsWith("blob:") || trimmed.startsWith("/")) {
     return trimmed;
   }
 
+  const uploadMarker = "/upload/";
+  const uploadIdx = trimmed.indexOf(uploadMarker);
+  if (uploadIdx !== -1 && trimmed.includes("res.cloudinary.com")) {
+    const afterUpload = trimmed.slice(uploadIdx + uploadMarker.length);
+    const alreadyTransformed = /^[a-z]_[^/]+(,[a-z]_[^/]+)*\//.test(afterUpload);
+    if (!alreadyTransformed) {
+      const transformParts = width ? [`w_${width}`, "c_limit", "q_auto", "f_auto"] : ["q_auto", "f_auto"];
+      trimmed = trimmed.slice(0, uploadIdx + uploadMarker.length) + transformParts.join(",") + "/" + afterUpload;
+    }
+  }
+
   const tag = versionTag ? String(versionTag) : String(Date.now());
-  if (trimmed.includes("?v=") || trimmed.includes("&v=") || trimmed.includes("?t=") || trimmed.includes("&t=")) {
+  if (
+    trimmed.includes("?v=") ||
+    trimmed.includes("&v=") ||
+    trimmed.includes("?t=") ||
+    trimmed.includes("&t=") ||
+    /\/v\d+\//.test(trimmed)
+  ) {
     return trimmed;
   }
 
@@ -68,9 +80,6 @@ export function formatCloudinaryUrl(url: string | undefined | null, versionTag?:
   return `${trimmed}${separator}v=${tag}`;
 }
 
-/**
- * Hàm lấy URL Cloudinary nguyên bản không chứa bộ lọc transformation
- */
 export function getRawCloudinaryUrl(url: string): string {
   if (!url) return "";
   const trimmed = url.trim();
@@ -95,10 +104,6 @@ export function getRawCloudinaryUrl(url: string): string {
   return `${prefix}${rest}`;
 }
 
-/**
- * Hàm tập trung sinh Cloudinary Transformation URL tối ưu kích thước, định dạng và chất lượng (f_auto, q_auto).
- * Nhận vào cả public_id riêng lẻ hoặc URL Cloudinary đầy đủ.
- */
 export function getCloudinaryUrl(
   publicIdOrUrl: string,
   options: CloudinaryTransformOptions = {}
@@ -107,7 +112,6 @@ export function getCloudinaryUrl(
   const trimmed = publicIdOrUrl.trim();
   if (!trimmed) return "";
 
-  // Nếu là ảnh local, data URL, blob URL hoặc không phải Cloudinary, giữ nguyên
   if (trimmed.startsWith("data:") || trimmed.startsWith("blob:") || (trimmed.startsWith("/") && !trimmed.startsWith("//"))) {
     return trimmed;
   }
@@ -123,35 +127,23 @@ export function getCloudinaryUrl(
     blur,
   } = options;
 
-  // Xác định kiểu crop mặc định: nếu có cả width + height -> fill, nếu chỉ 1 cái -> limit
   const selectedCrop = crop ? (crop.startsWith("c_") ? crop : `c_${crop}`) : (width && height ? "c_fill" : "c_limit");
-
   const transformParts: string[] = [];
 
-  // 1. Tối ưu định dạng tự động (WebP / AVIF theo trình duyệt)
   if (format) {
     transformParts.push(format.startsWith("f_") ? format : `f_${format}`);
   }
-
-  // 2. Tối ưu chất lượng tự động theo preset (q_auto, q_auto:eco, q_auto:good,...)
   if (quality) {
     transformParts.push(quality.startsWith("q_") ? quality : `q_${quality}`);
   }
-
-  // 3. Kích thước (w_, h_, c_)
   if (selectedCrop) transformParts.push(selectedCrop);
   if (width && width > 0) transformParts.push(`w_${Math.round(width)}`);
   if (height && height > 0) transformParts.push(`h_${Math.round(height)}`);
-
-  // 4. DPR
   if (dpr) transformParts.push(`dpr_${dpr}`);
-
-  // 5. Blur hiệu ứng LQIP
   if (blur && blur > 0) transformParts.push(`e_blur:${blur}`);
 
   const transformStr = transformParts.join(",");
 
-  // Trường hợp 1: Nhập vào URL Cloudinary đầy đủ (vd: https://res.cloudinary.com/dwl2xtbqa/image/upload/v1234/kg_logo.png)
   if (trimmed.includes("res.cloudinary.com")) {
     const uploadIndex = trimmed.indexOf("/upload/");
     if (uploadIndex === -1) return trimmed;
@@ -159,7 +151,6 @@ export function getCloudinaryUrl(
     const prefix = trimmed.substring(0, uploadIndex + 8);
     let rest = trimmed.substring(uploadIndex + 8);
 
-    // Xóa các thông số transform cũ nếu có
     const pathParts = rest.split("/");
     if (
       pathParts.length > 1 &&
@@ -173,15 +164,10 @@ export function getCloudinaryUrl(
     return `${prefix}${transformStr}/${rest}`;
   }
 
-  // Trường hợp 2: Nhập vào public_id đơn thuần (vd: "thkiengiangshoes/banner_1")
   const cleanPublicId = trimmed.startsWith("/") ? trimmed.slice(1) : trimmed;
   return `https://res.cloudinary.com/${cloudName}/image/upload/${transformStr}/${cleanPublicId}`;
 }
 
-/**
- * Sinh danh sách biến thể kích thước (srcset) tự động cho ảnh responsive.
- * Mặc định hỗ trợ màn hình từ di động đến desktop: 320w, 640w, 1024w, 1920w.
- */
 export function getCloudinarySrcSet(
   publicIdOrUrl: string,
   options: Omit<CloudinaryTransformOptions, "width"> = {},
@@ -197,9 +183,6 @@ export function getCloudinarySrcSet(
     .join(", ");
 }
 
-/**
- * Sinh URL placeholder chất lượng thấp (LQIP - Low Quality Image Placeholder) siêu nhẹ với e_blur:1000, q_1.
- */
 export function getCloudinaryLQIP(
   publicIdOrUrl: string,
   options: Omit<CloudinaryTransformOptions, "width" | "quality" | "blur"> = {}
@@ -212,9 +195,6 @@ export function getCloudinaryLQIP(
   });
 }
 
-/**
- * Preload ảnh quan trọng (LCP Image above the fold) trực tiếp vào DOM <head>
- */
 export function preloadCloudinaryImage(url: string, srcSet?: string, sizes?: string): void {
   if (typeof window === "undefined" || !url) return;
 
@@ -230,9 +210,6 @@ export function preloadCloudinaryImage(url: string, srcSet?: string, sizes?: str
   document.head.appendChild(link);
 }
 
-/**
- * Tải tệp trực tiếp lên Cloudinary với public_id duy nhất và thư mục phân lập
- */
 export async function uploadCloudinaryFile(
   file: File | string,
   options: CloudinaryUploadOptions = {}

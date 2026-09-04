@@ -220,8 +220,19 @@ function invalidateKaizenStatsCache() {
   KAIZEN_STATS_CACHE_TIME = 0;
 }
 
+// Chạy 1 lần duy nhất cho mỗi Worker isolate (không phải mỗi request!). Trước đây hàm này được
+// await ở ĐẦU handleRequest() cho MỌI request — kể cả từng file JS/CSS/ảnh tĩnh, vì
+// run_worker_first:true khiến _worker.js thấy request trước khi rơi về env.ASSETS.fetch(). Với
+// ~20 lệnh D1 tuần tự (ALTER/UPDATE/INSERT) chạy lại trên từng asset, một lượt tải trang (vài
+// chục request tĩnh) có thể tốn hàng trăm lệnh D1 nối tiếp — đây là nguyên nhân chính gây lag,
+// phải bấm nhiều lần mới chuyển trang. Cờ module-scope này giữ nguyên trong suốt vòng đời của
+// isolate (được Cloudflare tái sử dụng cho nhiều request) nên chỉ thực sự chạy D1 1 lần.
+let __schemaMigratedOnce = false;
+
 async function ensureDatabaseColumnsAndLegacyCode(env) {
   if (!env || !env.DB) return;
+  if (__schemaMigratedOnce) return;
+  __schemaMigratedOnce = true;
   try {
     // 1. ci_kaizen_proposals
     await env.DB.prepare("ALTER TABLE ci_kaizen_proposals ADD COLUMN legacy_code TEXT").run().catch(() => {});
@@ -436,6 +447,492 @@ function mmtbAreaLabel(area) {
   return area.parent ? `${area.parent.name} > ${area.name}` : area.name;
 }
 
+// ---- Cache đọc cho MMTB — lưu tạm kết quả các lệnh GET (danh sách máy/danh mục/sự cố...) vào D1
+// RIÊNG của thkiengiangshoes (bảng mmtb_cache, không đụng gì tới D1 tbsMayMoc) trong vài phút, để
+// không phải gọi sang tbsMayMoc lại mỗi lần tải trang (nguồn gốc chậm/chập chờn trước đây — xem
+// commit "Fix machines/filters 500"). Nút "Làm mới dữ liệu" ở mỗi trang gửi kèm ?fresh=1 để bỏ
+// qua cache, luôn lấy dữ liệu mới nhất khi cần. KHÔNG dùng cho lệnh ghi (POST/PUT/DELETE) — tbsMayMoc
+// vẫn là nơi lưu dữ liệu thật DUY NHẤT, đây chỉ là cache đọc tạm thời phía thkiengiangshoes.
+const MMTB_CACHE_TTL_SECONDS = 300; // 5 phút — khớp mức "chậm vài phút là ổn" đã thống nhất
+
+async function mmtbCacheEnsureTable(env) {
+  await env.DB.prepare(
+    "CREATE TABLE IF NOT EXISTS mmtb_cache (cache_key TEXT PRIMARY KEY, value TEXT NOT NULL, expires_at INTEGER NOT NULL)",
+  )
+    .run()
+    .catch(() => {});
+}
+
+async function mmtbCacheGet(env, key) {
+  if (!env.DB) return null;
+  try {
+    await mmtbCacheEnsureTable(env);
+    const row = await env.DB.prepare("SELECT value, expires_at FROM mmtb_cache WHERE cache_key = ?").bind(key).first();
+    if (!row || Date.now() > row.expires_at) return null;
+    return JSON.parse(row.value);
+  } catch {
+    return null;
+  }
+}
+
+// Xoá cache sau khi ghi thành công (thêm/sửa/xoá) — để người vừa thao tác thấy kết quả ngay ở lần
+// đọc tiếp theo, không phải đợi hết 5 phút TTL. `keyPrefix` xoá TẤT CẢ cache_key bắt đầu bằng
+// chuỗi đó (dùng cho /categories vì cache theo từng loại type riêng, VD "categories:AREA:").
+async function mmtbCacheInvalidate(env, keyOrPrefix) {
+  if (!env.DB) return;
+  try {
+    await mmtbCacheEnsureTable(env);
+    await env.DB.prepare("DELETE FROM mmtb_cache WHERE cache_key = ? OR cache_key LIKE ?")
+      .bind(keyOrPrefix, `${keyOrPrefix}%`)
+      .run();
+  } catch {
+    // Không xoá được cache thì chấp nhận đợi hết TTL tự nhiên — không chặn thao tác ghi.
+  }
+}
+
+async function mmtbCacheSet(env, key, value, ttlSeconds) {
+  if (!env.DB) return;
+  try {
+    await mmtbCacheEnsureTable(env);
+    const expiresAt = Date.now() + (ttlSeconds || MMTB_CACHE_TTL_SECONDS) * 1000;
+    await env.DB.prepare(
+      "INSERT INTO mmtb_cache (cache_key, value, expires_at) VALUES (?, ?, ?) ON CONFLICT(cache_key) DO UPDATE SET value = excluded.value, expires_at = excluded.expires_at",
+    )
+      .bind(key, JSON.stringify(value), expiresAt)
+      .run();
+  } catch {
+    // Cache lỗi thì bỏ qua — vẫn trả dữ liệu thật cho người dùng bình thường, không chặn gì cả.
+  }
+}
+
+// Bọc 1 payload JSON (đã build xong, dạng { success, data, ... }) qua cache đọc — dùng thay cho
+// mmtbJson() ở các route GET danh sách. `forceRefresh` (từ ?fresh=1) bỏ qua cache đang có, luôn
+// tính lại mới rồi ghi đè cache.
+async function mmtbCachedJson(env, cacheKey, forceRefresh, buildFn) {
+  if (!forceRefresh) {
+    const cached = await mmtbCacheGet(env, cacheKey);
+    if (cached) return mmtbJson({ ...cached, cached: true });
+  }
+  // buildFn trả { success, data/..., status? } — status chỉ dùng để set mã HTTP, không lưu vào cache.
+  // try/catch Ở ĐÂY (không phải bên trong từng buildFn riêng lẻ) — trước đây chỉ 2/11 route GET
+  // (machines, tickets) tự bọc try/catch bên trong; 9 route còn lại (categories, failure-
+  // categories, schedule, logs, proposals, response-time, overview-report, employees,
+  // announcements) không có, nên hễ mmtbCall() ném lỗi (VD tbsMayMoc quá chậm trong lúc mạng
+  // Cloudflare chập chờn, vượt giới hạn CPU/thời gian chạy của Worker) là lỗi bay thẳng lên tới
+  // fetch() ở cuối file, trả về "System Error: ..." dạng CHỮ THƯỜNG (không phải JSON) với mã 500.
+  // Frontend gọi .json() trên response đó ném SyntaxError — Promise.all() ở các trang gọi nhiều
+  // API song song (VD machines/page.tsx gọi máy + 6 loại danh mục cùng lúc) sẽ REJECT TOÀN BỘ chỉ
+  // vì 1 API lỗi, xoá sạch luôn dữ liệu của các API khác đã tải thành công (đúng hiện tượng "0
+  // tổng số MMTB" dù chỉ 1 vài API bị 500). Bọc try/catch chung ở đây đảm bảo MỌI route GET luôn
+  // trả JSON hợp lệ dù tbsMayMoc lỗi/timeout, không còn kiểu 500 dạng chữ thường nữa.
+  let status, result;
+  try {
+    ({ status, ...result } = await buildFn());
+  } catch (err) {
+    console.error(`mmtbCachedJson(${cacheKey}) buildFn threw:`, err);
+    result = { success: false, error: (err && err.message) || "Không lấy được dữ liệu từ tbsMayMoc" };
+    status = 502;
+  }
+  if (result && result.success) await mmtbCacheSet(env, cacheKey, result, MMTB_CACHE_TTL_SECONDS);
+  return mmtbJson(result, result.success ? 200 : status || 502);
+}
+
+// Mã nhân viên (thkiengiangshoes, KHÔNG phải mã tbsMayMoc) được coi là "admin" — khớp đúng
+// ADMIN_WHITELIST trong src/lib/adminWhitelist.ts + WORKER_ADMIN_WHITELIST ở trên. Tổ hợp KG
+// không có tài khoản tbsMayMoc riêng cho từng người trong nhóm này, nên MMTB tự đăng nhập ngầm
+// bằng 1 tài khoản dùng chung (MMTB_AUTO_LOGIN_EMP_CODE, mặc định "AMDKG") thay họ — y hệt cách
+// CI/Kaizen dùng chung phiên đăng nhập chính, chỉ khác là MMTB xác thực ở backend tbsMayMoc riêng
+// nên cần 1 bước gọi login ngầm.
+const MMTB_AUTOLOGIN_ADMIN_EMP_CODES = new Set(["202608001", "201809012", "202608002"]);
+
+// Xác minh JWT phiên đăng nhập CHÍNH của thkiengiangshoes (tbs_token, ký bằng JWT_SECRET) — bản
+// độc lập, KHÔNG dùng chung với verifyJWT() bên trong handleRequest() vì hàm đó khai báo lồng bên
+// trong handleRequest, handleMmtbKG() là hàm cấp module riêng không gọi tới được.
+async function mmtbVerifyMainSiteToken(tokenStr, secretStr) {
+  if (!tokenStr || !secretStr) return null;
+  try {
+    const parts = tokenStr.split(".");
+    if (parts.length !== 3) return null;
+    const [headB64, payB64, sigB64] = parts;
+    const enc = new TextEncoder();
+    const key = await crypto.subtle.importKey("raw", enc.encode(secretStr), { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
+    const base64 = sigB64.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+    const rawSig = typeof atob === "function" ? Uint8Array.from(atob(padded), (c) => c.charCodeAt(0)) : Buffer.from(padded, "base64");
+    const isValid = await crypto.subtle.verify("HMAC", key, rawSig, enc.encode(`${headB64}.${payB64}`));
+    if (!isValid) return null;
+    const payBase64 = payB64.replace(/-/g, "+").replace(/_/g, "/");
+    const payPadded = payBase64 + "=".repeat((4 - (payBase64.length % 4)) % 4);
+    // atob() trả "binary string" (1 ký tự/byte) — phải ghép lại thành bytes rồi TextDecoder mới ra
+    // đúng chuỗi UTF-8 gốc (tên/phòng ban tiếng Việt có dấu); coi thẳng output của atob() là chuỗi
+    // JSON cuối cùng (như code cũ) làm sai lệch mọi ký tự có dấu, JSON.parse() sẽ ném lỗi hoặc ra
+    // dữ liệu hỏng — đối xứng với cách signJWT() giờ đã mã hoá đúng UTF-8 ở base64UrlEncode().
+    const jsonStr = typeof atob === "function"
+      ? new TextDecoder().decode(Uint8Array.from(atob(payPadded), (c) => c.charCodeAt(0)))
+      : Buffer.from(payPadded, "base64").toString("utf-8");
+    const payload = JSON.parse(jsonStr);
+    if (payload.exp && Date.now() / 1000 > payload.exp) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+// Nếu request đang mang phiên đăng nhập CHÍNH (tbs_token) hợp lệ của 1 tài khoản nằm trong nhóm
+// admin whitelist, tự gọi đăng nhập MMTB ngầm bằng tài khoản dùng chung — trả về { token, cookie }
+// nếu thành công, null nếu không đủ điều kiện (im lặng rơi về màn hình đăng nhập MMTB thủ công).
+async function mmtbTryAutoLoginAsAdmin(request, env) {
+  try {
+    const cookieHeader = request.headers.get("cookie") || request.headers.get("Cookie") || "";
+    const match = cookieHeader.match(/tbs_token=([^;]+)/);
+    if (!match) return null;
+    const mainToken = decodeURIComponent(match[1]);
+    const payload = await mmtbVerifyMainSiteToken(mainToken, env.JWT_SECRET);
+    if (!payload || !payload.empCode) return null;
+    if (!MMTB_AUTOLOGIN_ADMIN_EMP_CODES.has(String(payload.empCode))) return null;
+
+    const employeeCode = env.MMTB_AUTO_LOGIN_EMP_CODE || "AMDKG";
+    const password = env.MMTB_AUTO_LOGIN_PASSWORD || "123456";
+    const loginRes = await fetch(`${env.TBSMAYMOC_API_URL}/api/mobile/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ employeeCode, password }),
+    });
+    const loginData = await loginRes.json().catch(() => ({}));
+    if (!loginRes.ok || !loginData.user || loginData.user.role !== "ADMIN" || !loginData.token) return null;
+
+    const cookie = `${MMTB_COOKIE}=${encodeURIComponent(loginData.token)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${30 * 24 * 60 * 60}`;
+    return { token: loginData.token, cookie };
+  } catch {
+    return null;
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// 🏭 PPH (Hiệu Suất Nhà Máy) — sản lượng theo giờ, quét QR tại Tổ
+// ════════════════════════════════════════════════════════════════
+// Cây Nhà máy > Xưởng > Chuyền > Tổ DÙNG CHUNG với MMTB (đọc từ tbsMayMoc, chỉ đọc tên/id, không
+// đụng gì tới dữ liệu máy móc) — nhưng dữ liệu sản lượng giờ (pph_entries) là RIÊNG của
+// thkiengiangshoes, lưu thẳng ở D1 (env.DB) của site này, KHÔNG lưu bên tbsMayMoc.
+//
+// Trang quét QR (/pph-scan?team=...) hoàn toàn CÔNG KHAI — công nhân/tổ trưởng quét bằng camera
+// Zalo, không cần đăng nhập hệ thống, chỉ tự nhập tên trong form. Vì vậy các API GET/POST bên
+// dưới không đòi hỏi tbs_token hay mmtb_token — nhưng để LẤY TÊN Nhà máy/Xưởng/Chuyền/Tổ (dữ liệu
+// nằm bên tbsMayMoc), Worker tự đăng nhập ngầm bằng tài khoản dịch vụ dùng chung
+// (MMTB_AUTO_LOGIN_EMP_CODE, mặc định "AMDKG") — người quét không hề thấy hay cần biết gì về
+// bước này, chỉ dùng nội bộ để tra cứu tên.
+const PPH_SLOTS = ["08:00", "08:30", "09:30", "10:30", "11:30", "13:30", "14:30", "15:30", "16:30"];
+
+async function pphEnsureTable(env) {
+  await env.DB.prepare(`
+    CREATE TABLE IF NOT EXISTS pph_entries (
+      id TEXT PRIMARY KEY,
+      team_id TEXT NOT NULL,
+      entry_date TEXT NOT NULL,
+      slot TEXT NOT NULL,
+      worker_count INTEGER,
+      model TEXT,
+      planned_qty INTEGER,
+      actual_qty INTEGER,
+      submitted_by TEXT,
+      submitted_at TEXT NOT NULL,
+      UNIQUE(team_id, entry_date, slot)
+    )
+  `).run().catch(() => {});
+}
+
+// Giờ Việt Nam (UTC+7, không lệch DST) — Worker chạy theo UTC, cộng thủ công 7 tiếng rồi ĐỌC BẰNG
+// các hàm getUTC* của kết quả (không phải getHours thật) để không phụ thuộc timezone của runtime.
+function pphNowVN() {
+  return new Date(Date.now() + 7 * 60 * 60 * 1000);
+}
+function pphTodayStr() {
+  return pphNowVN().toISOString().slice(0, 10);
+}
+function pphNowMinutes() {
+  const n = pphNowVN();
+  return n.getUTCHours() * 60 + n.getUTCMinutes();
+}
+function pphSlotMinutes(s) {
+  const [h, m] = s.split(":").map(Number);
+  return h * 60 + m;
+}
+
+// setupDone=false → luôn yêu cầu làm khung 08:00 trước (bất kể đang mấy giờ — "lần quét đầu tiên
+// trong ngày" theo đúng yêu cầu, không nhất thiết đúng 8:00 nếu ai đó quét trễ).
+// setupDone=true → tìm khung SỐ LƯỢNG sớm nhất đã tới giờ (trừ hao 10 phút) mà CHƯA nhập — cho
+// "bắt kịp" nếu bỏ lỡ khung trước đó. Nếu mọi khung đã tới giờ đều xong, báo khung TIẾP THEO sắp
+// tới; nếu hết cả 8 khung, báo "done".
+function pphResolveStatus(setupDone, filledSlots) {
+  if (!setupDone) return { nextAction: "setup", targetSlot: "08:00" };
+  const nowMin = pphNowMinutes();
+  const qSlots = PPH_SLOTS.slice(1);
+  for (const s of qSlots) {
+    if (nowMin >= pphSlotMinutes(s) - 10 && !filledSlots.has(s)) {
+      return { nextAction: "quantity", targetSlot: s };
+    }
+  }
+  const next = qSlots.find((s) => pphSlotMinutes(s) - 10 > nowMin);
+  if (next) return { nextAction: "wait", targetSlot: null, nextSlot: next };
+  return { nextAction: "done", targetSlot: null };
+}
+
+// Cây Nhà máy > Xưởng > Chuyền > Tổ RIÊNG cho module PPH — lúc đầu định dùng chung danh mục MMTB
+// bên tbsMayMoc, nhưng kiểm tra thực tế mới phát hiện tbsMayMoc CHƯA có dữ liệu ở cấp TEAM (Tổ) —
+// cấp "Chuyền" (PRODUCTION_LINE) bên đó đang được đặt tên kiểu "TỔ 25" nhưng vẫn chỉ dừng ở 3 cấp
+// thật sự (Nhà máy>Khu vực>Chuyền), không có cấp Tổ độc lập. Theo yêu cầu người dùng, cây tổ chức
+// cho PPH giờ hoàn toàn RIÊNG, tự quản lý (thêm/sửa/xoá) ngay trong D1 của thkiengiangshoes, không
+// gọi sang tbsMayMoc nữa.
+// Độ sâu KHÔNG cố định theo Nhà máy — mỗi Xưởng dừng ở đúng cấp sâu nhất có dữ liệu thật: có
+// Xưởng không chia gì thêm (VD "Đầu vào" — điểm quét QR ngay ở Xưởng), có Xưởng chỉ chia Chuyền
+// (VD "Gò" — điểm quét ở Chuyền, không có Tổ bên dưới), có Xưởng nhảy thẳng xuống Tổ bỏ qua
+// Chuyền (VD "May" — điểm quét ở Tổ, KHÔNG có Chuyền ở giữa). Vì vậy TEAM được phép có cha là
+// AREA (gắn thẳng dưới Xưởng) HOẶC LINE (gắn dưới Chuyền, cho nhánh nào thật sự cần đủ 4 cấp).
+const PPH_ORG_TYPES = ["FACTORY", "AREA", "LINE", "TEAM"];
+const PPH_ORG_ALLOWED_PARENT_TYPES = { AREA: ["FACTORY"], LINE: ["AREA"], TEAM: ["AREA", "LINE"] };
+
+async function pphOrgEnsureTable(env) {
+  await env.DB.prepare(`
+    CREATE TABLE IF NOT EXISTS pph_org (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL,
+      name TEXT NOT NULL,
+      parent_id TEXT,
+      order_num INTEGER DEFAULT 0,
+      created_at TEXT NOT NULL
+    )
+  `).run().catch(() => {});
+}
+
+// Dựng cây Nhà máy > Xưởng > (Chuyền > Tổ) HOẶC (Tổ thẳng) từ bảng pph_org. Mỗi Xưởng có CẢ hai
+// mảng `lines` (Chuyền, có thể chứa Tổ con) và `teams` (Tổ gắn THẲNG dưới Xưởng, bỏ qua Chuyền) —
+// FE tự quyết định hiển thị mảng nào tuỳ nhánh có dữ liệu.
+async function pphBuildTree(env) {
+  await pphOrgEnsureTable(env);
+  const { results } = await env.DB.prepare("SELECT * FROM pph_org ORDER BY order_num ASC, created_at ASC").all();
+  const rows = results || [];
+  const factories = rows.filter((r) => r.type === "FACTORY").map((f) => ({ id: f.id, name: f.name, areas: [] }));
+  const factoryById = new Map(factories.map((f) => [f.id, f]));
+  const areas = rows.filter((r) => r.type === "AREA").map((a) => ({ id: a.id, name: a.name, factoryId: a.parent_id, lines: [], teams: [] }));
+  const areaById = new Map(areas.map((a) => [a.id, a]));
+  for (const a of areas) {
+    const f = factoryById.get(a.factoryId);
+    if (f) f.areas.push(a);
+  }
+  const lines = rows.filter((r) => r.type === "LINE").map((l) => ({ id: l.id, name: l.name, areaId: l.parent_id, teams: [] }));
+  const lineById = new Map(lines.map((l) => [l.id, l]));
+  for (const l of lines) {
+    const a = areaById.get(l.areaId);
+    if (a) a.lines.push(l);
+  }
+  for (const t of rows.filter((r) => r.type === "TEAM")) {
+    const line = lineById.get(t.parent_id);
+    if (line) {
+      line.teams.push({ id: t.id, name: t.name });
+      continue;
+    }
+    const area = areaById.get(t.parent_id);
+    if (area) area.teams.push({ id: t.id, name: t.name });
+  }
+  return factories;
+}
+
+// Tra 1 nút BẤT KỲ (Xưởng/Chuyền/Tổ đều có thể là điểm quét QR — tuỳ nhánh dừng ở cấp nào) và đi
+// ngược lên tới Nhà máy — dùng cho trang quét QR (không cần tải cả cây). ancestors KHÔNG bao gồm
+// chính node đang tra, nên area/line/factory luôn là TỔ TIÊN thật, không bị trùng với chính nó.
+async function pphFindNodeChain(env, nodeId) {
+  await pphOrgEnsureTable(env);
+  const node = await env.DB.prepare("SELECT * FROM pph_org WHERE id = ?").bind(nodeId).first();
+  if (!node) return null;
+  const ancestors = [];
+  let parentId = node.parent_id;
+  while (parentId) {
+    const parent = await env.DB.prepare("SELECT * FROM pph_org WHERE id = ?").bind(parentId).first();
+    if (!parent) break;
+    ancestors.push(parent);
+    parentId = parent.parent_id;
+  }
+  const factory = ancestors.find((a) => a.type === "FACTORY") || null;
+  const area = ancestors.find((a) => a.type === "AREA") || null;
+  const line = ancestors.find((a) => a.type === "LINE") || null;
+  return {
+    node: { id: node.id, name: node.name, type: node.type },
+    factory: factory ? { id: factory.id, name: factory.name } : null,
+    area: area ? { id: area.id, name: area.name } : null,
+    line: line ? { id: line.id, name: line.name } : null,
+  };
+}
+
+async function handlePph(request, env, pathname, searchParams) {
+  const sub = pathname.slice("/api/pph".length) || "/";
+  await pphEnsureTable(env);
+  let m2;
+
+  // ---- Cây Nhà máy/Xưởng/Chuyền/Tổ — dùng cho trang Cài Đặt (trong /work, đã có RequireAuth) ----
+  if (sub === "/tree" && request.method === "GET") {
+    const tree = await pphBuildTree(env);
+    return mmtbJson({ success: true, data: tree });
+  }
+
+  // ---- Thêm mục vào cây (Nhà máy/Xưởng/Chuyền/Tổ) ----
+  if (sub === "/org" && request.method === "POST") {
+    try {
+      const body = await request.json();
+      const type = body.type;
+      const name = String(body.name || "").trim();
+      const parentId = body.parentId || null;
+      if (!PPH_ORG_TYPES.includes(type)) return mmtbJson({ success: false, error: "Loại không hợp lệ" }, 400);
+      if (!name) return mmtbJson({ success: false, error: "Thiếu tên" }, 400);
+      const allowedParentTypes = PPH_ORG_ALLOWED_PARENT_TYPES[type];
+      if (allowedParentTypes && !parentId) return mmtbJson({ success: false, error: "Thiếu mục cha" }, 400);
+      await pphOrgEnsureTable(env);
+      if (allowedParentTypes) {
+        const parent = await env.DB.prepare("SELECT type FROM pph_org WHERE id = ?").bind(parentId).first();
+        if (!parent || !allowedParentTypes.includes(parent.type)) return mmtbJson({ success: false, error: "Mục cha không hợp lệ" }, 400);
+      }
+      const id = `pphorg_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+      await env.DB.prepare(
+        "INSERT INTO pph_org (id, type, name, parent_id, order_num, created_at) VALUES (?, ?, ?, ?, 0, ?)"
+      ).bind(id, type, name, allowedParentTypes ? parentId : null, new Date().toISOString()).run();
+      return mmtbJson({ success: true, data: { id, type, name, parentId: allowedParentTypes ? parentId : null } }, 201);
+    } catch (err) {
+      return mmtbJson({ success: false, error: err.message || "Không thêm được" }, 400);
+    }
+  }
+
+  // ---- Sửa tên / Xoá 1 mục ----
+  m2 = sub.match(/^\/org\/([^/]+)$/);
+  if (m2 && request.method === "PUT") {
+    try {
+      const body = await request.json();
+      const name = String(body.name || "").trim();
+      if (!name) return mmtbJson({ success: false, error: "Thiếu tên" }, 400);
+      await pphOrgEnsureTable(env);
+      await env.DB.prepare("UPDATE pph_org SET name = ? WHERE id = ?").bind(name, m2[1]).run();
+      return mmtbJson({ success: true });
+    } catch (err) {
+      return mmtbJson({ success: false, error: err.message || "Không sửa được" }, 400);
+    }
+  }
+  if (m2 && request.method === "DELETE") {
+    try {
+      await pphOrgEnsureTable(env);
+      const childRow = await env.DB.prepare("SELECT COUNT(*) as c FROM pph_org WHERE parent_id = ?").bind(m2[1]).first();
+      if (childRow && childRow.c > 0) return mmtbJson({ success: false, error: "Còn mục con bên trong — xoá mục con trước" }, 409);
+      await env.DB.prepare("DELETE FROM pph_org WHERE id = ?").bind(m2[1]).run();
+      return mmtbJson({ success: true });
+    } catch (err) {
+      return mmtbJson({ success: false, error: err.message || "Không xoá được" }, 400);
+    }
+  }
+
+  // ---- Thông tin cho trang quét QR (công khai) — tên Tổ/Chuyền/Xưởng/Nhà máy + khung giờ cần nhập ----
+  if (sub === "/scan-info" && request.method === "GET") {
+    const teamId = searchParams.get("teamId");
+    if (!teamId) return mmtbJson({ success: false, error: "Thiếu mã điểm quét trong đường dẫn QR" }, 400);
+    const found = await pphFindNodeChain(env, teamId);
+    if (!found) return mmtbJson({ success: false, error: "Không tìm thấy điểm quét này — mã QR có thể đã cũ" }, 404);
+
+    const date = pphTodayStr();
+    let results = [];
+    try {
+      const r = await env.DB.prepare(
+        "SELECT slot, worker_count, model, planned_qty, actual_qty FROM pph_entries WHERE team_id = ? AND entry_date = ?"
+      ).bind(teamId, date).all();
+      results = r.results || [];
+    } catch {}
+    const bySlot = new Map(results.map((r) => [r.slot, r]));
+    const setupDone = bySlot.has("08:00");
+    const filledSlots = new Set([...bySlot.keys()].filter((s) => s !== "08:00"));
+    const resolved = pphResolveStatus(setupDone, filledSlots);
+    const setupRow = bySlot.get("08:00");
+
+    return mmtbJson({
+      success: true,
+      team: {
+        id: found.node.id,
+        name: found.node.name,
+        lineName: found.line ? found.line.name : "",
+        areaName: found.area ? found.area.name : "",
+        factoryName: found.factory ? found.factory.name : "",
+      },
+      date,
+      slots: PPH_SLOTS,
+      filledSlots: [...bySlot.keys()],
+      setup: setupRow ? { workerCount: setupRow.worker_count, model: setupRow.model, plannedQty: setupRow.planned_qty } : null,
+      ...resolved,
+    });
+  }
+
+  // ---- Nộp dữ liệu (công khai, không cần đăng nhập) ----
+  if (sub === "/scan" && request.method === "POST") {
+    try {
+      const body = await request.json();
+      const teamId = body.teamId;
+      const submittedBy = String(body.submittedBy || "").trim();
+      if (!teamId) return mmtbJson({ success: false, error: "Thiếu mã điểm quét" }, 400);
+      if (!submittedBy) return mmtbJson({ success: false, error: "Vui lòng nhập tên người báo cáo" }, 400);
+
+      const found = await pphFindNodeChain(env, teamId);
+      if (!found) return mmtbJson({ success: false, error: "Không tìm thấy điểm quét này — mã QR có thể đã cũ" }, 404);
+
+      const date = pphTodayStr();
+      let results = [];
+      try {
+        const r = await env.DB.prepare("SELECT slot FROM pph_entries WHERE team_id = ? AND entry_date = ?").bind(teamId, date).all();
+        results = r.results || [];
+      } catch {}
+      const filled = new Set(results.map((r) => r.slot));
+      const setupDone = filled.has("08:00");
+      const resolved = pphResolveStatus(setupDone, filled);
+
+      if (resolved.nextAction === "wait") {
+        return mmtbJson({ success: false, error: `Chưa tới giờ nhập — khung tiếp theo lúc ${resolved.nextSlot}` }, 409);
+      }
+      if (resolved.nextAction === "done") {
+        return mmtbJson({ success: false, error: "Đã cập nhật đủ các khung giờ hôm nay, cảm ơn bạn!" }, 409);
+      }
+
+      const slot = resolved.targetSlot;
+      const id = `pph_${teamId}_${date}_${slot}`.replace(/[^a-zA-Z0-9_-]/g, "_");
+      const nowIso = new Date().toISOString();
+
+      if (resolved.nextAction === "setup") {
+        const workerCount = Number(body.workerCount);
+        const model = String(body.model || "").trim();
+        const plannedQty = Number(body.plannedQty);
+        if (!Number.isFinite(workerCount) || workerCount <= 0) return mmtbJson({ success: false, error: "Vui lòng nhập đúng Số lượng công nhân" }, 400);
+        if (!model) return mmtbJson({ success: false, error: "Vui lòng nhập Model sản xuất" }, 400);
+        if (!Number.isFinite(plannedQty) || plannedQty <= 0) return mmtbJson({ success: false, error: "Vui lòng nhập đúng Số lượng kế hoạch" }, 400);
+        try {
+          await env.DB.prepare(
+            "INSERT INTO pph_entries (id, team_id, entry_date, slot, worker_count, model, planned_qty, submitted_by, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          ).bind(id, teamId, date, slot, workerCount, model, plannedQty, submittedBy, nowIso).run();
+        } catch {
+          return mmtbJson({ success: false, error: "Đã có người cập nhật đầu giờ hôm nay rồi" }, 409);
+        }
+      } else {
+        const actualQty = Number(body.actualQty);
+        if (!Number.isFinite(actualQty) || actualQty < 0) return mmtbJson({ success: false, error: "Vui lòng nhập đúng Số lượng" }, 400);
+        try {
+          await env.DB.prepare(
+            "INSERT INTO pph_entries (id, team_id, entry_date, slot, actual_qty, submitted_by, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+          ).bind(id, teamId, date, slot, actualQty, submittedBy, nowIso).run();
+        } catch {
+          return mmtbJson({ success: false, error: `Khung giờ ${slot} đã được cập nhật rồi` }, 409);
+        }
+      }
+
+      await mmtbCacheInvalidate(env, "pph:dashboard");
+      return mmtbJson({ success: true, slot, team: { name: found.node.name, lineName: found.line ? found.line.name : "" } });
+    } catch (err) {
+      return mmtbJson({ success: false, error: err.message || "Không lưu được dữ liệu" }, 500);
+    }
+  }
+
+  return mmtbJson({ success: false, error: `Không tìm thấy endpoint PPH: ${sub}` }, 404);
+}
+
 async function handleMmtbKG(request, env, pathname, searchParams) {
   const mmtbPath = pathname.slice("/api/mmtb-kg".length) || "/";
 
@@ -465,13 +962,21 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
     return mmtbJson({ success: true }, 200, { "Set-Cookie": `${MMTB_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0` });
   }
 
+  // ---- /me: kiểm tra đăng nhập MMTB — cũng là nơi duy nhất thử tự động đăng nhập cho admin ----
+  // (đặt TRƯỚC gate "bắt buộc đã đăng nhập" bên dưới, vì lúc gọi /me thường CHƯA có mmtb_token).
+  if (mmtbPath === "/me" && request.method === "GET") {
+    if (mmtbGetToken(request)) return mmtbJson({ success: true }, 200);
+    const auto = await mmtbTryAutoLoginAsAdmin(request, env);
+    if (auto) return mmtbJson({ success: true, autoLogin: true }, 200, { "Set-Cookie": auto.cookie });
+    return mmtbJson({ success: false, error: "Chưa đăng nhập MMTB" }, 401);
+  }
+
   // ---- Mọi route còn lại bắt buộc đã đăng nhập ----
   const token = mmtbGetToken(request);
   if (!token) return mmtbJson({ success: false, error: "Chưa đăng nhập MMTB" }, 401);
 
-  if (mmtbPath === "/me" && request.method === "GET") {
-    return mmtbJson({ success: true }, 200);
-  }
+  // Nút "Làm mới dữ liệu" ở mỗi trang gửi ?fresh=1 để bỏ qua cache đọc, luôn lấy mới nhất.
+  const forceRefresh = searchParams.get("fresh") === "1";
 
   // ---- Máy móc (Danh Sách MMTB) ----
   // Tách "danh sách máy" (nặng, ~2500 máy Tổ hợp KG, JSON verbose từ tbsMayMoc) khỏi "6 danh mục
@@ -480,27 +985,29 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
   // trong CÙNG 1 lượt xử lý — không tái hiện được khi chạy "wrangler dev" cục bộ vì máy tính
   // không bị giới hạn CPU time kiểu edge). Tách request giúp mỗi lượt gọi có ngân sách CPU riêng.
   if (mmtbPath === "/machines" && request.method === "GET") {
-    try {
-      const machinesRes = await mmtbCall(env, token, "/api/machines");
-      if (!machinesRes.ok) return mmtbJson({ success: false, error: machinesRes.data.error || "Không lấy được dữ liệu máy móc từ tbsMayMoc" }, machinesRes.status);
-      if (!Array.isArray(machinesRes.data)) return mmtbJson({ success: false, error: "Dữ liệu máy móc trả về không hợp lệ từ tbsMayMoc, thử lại sau" }, 502);
-      const data = machinesRes.data.map((m) => ({
-        id: m.id, code: m.code, name: m.name, serial: m.serialNumber,
-        factoryId: m.area && m.area.parent ? m.area.parent.id : null,
-        factoryName: m.area && m.area.parent ? m.area.parent.name : null,
-        areaId: m.area ? m.area.id : null, areaName: m.area ? m.area.name : null,
-        zone: mmtbAreaLabel(m.area),
-        teamId: m.team ? m.team.id : null, teamName: m.team ? m.team.name : null,
-        lineId: m.productionLine ? m.productionLine.id : null, lineName: m.productionLine ? m.productionLine.name : null,
-        machineTypeId: m.machineType ? m.machineType.id : null, machineTypeName: m.machineType ? m.machineType.name : null,
-        statusId: m.status.id, statusName: m.status.name, statusColorHex: m.status.colorHex,
-        originalCost: m.originalCost, depreciationPercent: m.depreciationPercent, remainingValue: m.remainingValue,
-        qrData: m.code,
-      }));
-      return mmtbJson({ success: true, data });
-    } catch (err) {
-      return mmtbJson({ success: false, error: err.message || "Không lấy được dữ liệu máy móc từ tbsMayMoc" }, 502);
-    }
+    return mmtbCachedJson(env, "machines", forceRefresh, async () => {
+      try {
+        const machinesRes = await mmtbCall(env, token, "/api/machines");
+        if (!machinesRes.ok) return { success: false, error: machinesRes.data.error || "Không lấy được dữ liệu máy móc từ tbsMayMoc", status: machinesRes.status };
+        if (!Array.isArray(machinesRes.data)) return { success: false, error: "Dữ liệu máy móc trả về không hợp lệ từ tbsMayMoc, thử lại sau" };
+        const data = machinesRes.data.map((m) => ({
+          id: m.id, code: m.code, name: m.name, serial: m.serialNumber,
+          factoryId: m.area && m.area.parent ? m.area.parent.id : null,
+          factoryName: m.area && m.area.parent ? m.area.parent.name : null,
+          areaId: m.area ? m.area.id : null, areaName: m.area ? m.area.name : null,
+          zone: mmtbAreaLabel(m.area),
+          teamId: m.team ? m.team.id : null, teamName: m.team ? m.team.name : null,
+          lineId: m.productionLine ? m.productionLine.id : null, lineName: m.productionLine ? m.productionLine.name : null,
+          machineTypeId: m.machineType ? m.machineType.id : null, machineTypeName: m.machineType ? m.machineType.name : null,
+          statusId: m.status.id, statusName: m.status.name, statusColorHex: m.status.colorHex,
+          originalCost: m.originalCost, depreciationPercent: m.depreciationPercent, remainingValue: m.remainingValue,
+          qrData: m.code,
+        }));
+        return { success: true, data };
+      } catch (err) {
+        return { success: false, error: err.message || "Không lấy được dữ liệu máy móc từ tbsMayMoc" };
+      }
+    });
   }
   // (Từng có /machines/filters gộp 6 lệnh song song ở đây — bỏ hẳn vì gộp nhiều fetch song song
   // trong CÙNG 1 lượt xử lý của Worker từng lỗi ngẫu nhiên trên Cloudflare thật dù từng loại gọi
@@ -513,6 +1020,7 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
         return mmtbJson({ success: false, error: "Thiếu Mã tài sản / Tên máy / Vị trí / Khu vực" }, 400);
       }
       const r = await mmtbCall(env, token, "/api/machines", "POST", body);
+      if (r.ok) await mmtbCacheInvalidate(env, "machines");
       return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không tạo được máy mới" }, r.ok ? 201 : r.status || 400);
     } catch (err) {
       return mmtbJson({ success: false, error: err.message || "Không tạo được máy mới" }, 400);
@@ -523,6 +1031,7 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
     try {
       const { mapX, mapY } = await request.json();
       const r = await mmtbCall(env, token, `/api/machines/${m2[1]}/position`, "PUT", { mapX, mapY });
+      if (r.ok) await mmtbCacheInvalidate(env, "machines");
       return mmtbJson(r.ok ? { success: true } : { success: false, error: r.data.error || "Không ghim được vị trí máy" }, r.ok ? 200 : r.status || 400);
     } catch (err) {
       return mmtbJson({ success: false, error: err.message || "Không ghim được vị trí máy" }, 400);
@@ -538,37 +1047,41 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
           return mmtbJson({ success: false, error: "Thiếu Mã tài sản / Tên máy / Vị trí / Khu vực / Trạng thái" }, 400);
         }
         const r = await mmtbCall(env, token, `/api/machines/${id}`, "PUT", body);
+        if (r.ok) await mmtbCacheInvalidate(env, "machines");
         return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không sửa được máy" }, r.ok ? 200 : r.status || 400);
       } catch (err) {
         return mmtbJson({ success: false, error: err.message || "Không sửa được máy" }, 400);
       }
     } else {
       const r = await mmtbCall(env, token, `/api/machines/${id}`, "DELETE");
+      if (r.ok) await mmtbCacheInvalidate(env, "machines");
       return mmtbJson(r.ok ? { success: true } : { success: false, error: r.data.error || "Không xoá được máy" }, r.ok ? 200 : r.status || 400);
     }
   }
 
   // ---- Sự cố (Nhu Cầu Sửa Chữa) ----
   if (mmtbPath === "/tickets" && request.method === "GET") {
-    try {
-      const r = await mmtbCall(env, token, "/api/incidents?limit=200");
-      if (!r.ok) return mmtbJson({ success: false, error: r.data.error || "Không lấy được dữ liệu sự cố từ tbsMayMoc" }, r.status);
-      if (!Array.isArray(r.data)) return mmtbJson({ success: false, error: "Dữ liệu sự cố trả về không hợp lệ từ tbsMayMoc, thử lại sau" }, 502);
-      const data = r.data.map((i) => ({
-        id: i.id,
-        ticketCode: `SC-${String(i.id).slice(-6).toUpperCase()}`,
-        machineCode: i.machine.code, machineName: i.machine.name,
-        zone: i.machine.areaName, factoryName: i.machine.factoryName,
-        reporter: i.isMaintenanceDue ? "Hệ thống (nhắc bảo trì định kỳ)" : (i.reporter ? i.reporter.name : "—"),
-        mechanic: i.assignedTo ? i.assignedTo.name : null,
-        errorType: i.categoryName || i.description, description: i.description,
-        status: i.status, statusLabel: MMTB_INCIDENT_STATUS_LABEL[i.status],
-        reportedAt: i.createdAt, acceptedAt: i.acceptedAt, completedAt: i.completedAt,
-      }));
-      return mmtbJson({ success: true, data });
-    } catch (err) {
-      return mmtbJson({ success: false, error: err.message || "Không lấy được dữ liệu sự cố từ tbsMayMoc" }, 502);
-    }
+    return mmtbCachedJson(env, "tickets", forceRefresh, async () => {
+      try {
+        const r = await mmtbCall(env, token, "/api/incidents?limit=200");
+        if (!r.ok) return { success: false, error: r.data.error || "Không lấy được dữ liệu sự cố từ tbsMayMoc", status: r.status };
+        if (!Array.isArray(r.data)) return { success: false, error: "Dữ liệu sự cố trả về không hợp lệ từ tbsMayMoc, thử lại sau" };
+        const data = r.data.map((i) => ({
+          id: i.id,
+          ticketCode: `SC-${String(i.id).slice(-6).toUpperCase()}`,
+          machineCode: i.machine.code, machineName: i.machine.name,
+          zone: i.machine.areaName, factoryName: i.machine.factoryName,
+          reporter: i.isMaintenanceDue ? "Hệ thống (nhắc bảo trì định kỳ)" : (i.reporter ? i.reporter.name : "—"),
+          mechanic: i.assignedTo ? i.assignedTo.name : null,
+          errorType: i.categoryName || i.description, description: i.description,
+          status: i.status, statusLabel: MMTB_INCIDENT_STATUS_LABEL[i.status],
+          reportedAt: i.createdAt, acceptedAt: i.acceptedAt, completedAt: i.completedAt,
+        }));
+        return { success: true, data };
+      } catch (err) {
+        return { success: false, error: err.message || "Không lấy được dữ liệu sự cố từ tbsMayMoc" };
+      }
+    });
   }
 
   // ---- Danh mục (Khu vực/Chuyền/Tổ/Phân loại máy/Phụ tùng/Chu kỳ bảo trì/Trạng thái máy) ----
@@ -578,8 +1091,10 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
     if (!type || READABLE.indexOf(type) === -1) return mmtbJson({ success: false, error: "Loại danh mục không hợp lệ" }, 400);
     const parentId = searchParams.get("parentId");
     const qs = `?type=${type}${parentId ? `&parentId=${encodeURIComponent(parentId)}` : ""}`;
-    const r = await mmtbCall(env, token, `/api/categories${qs}`);
-    return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không lấy được danh mục từ tbsMayMoc" }, r.ok ? 200 : r.status || 502);
+    return mmtbCachedJson(env, `categories:${type}:${parentId || ""}`, forceRefresh, async () => {
+      const r = await mmtbCall(env, token, `/api/categories${qs}`);
+      return r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không lấy được danh mục từ tbsMayMoc", status: r.status };
+    });
   }
   if (mmtbPath === "/categories" && request.method === "POST") {
     try {
@@ -594,6 +1109,7 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
         return mmtbJson({ success: false, error: "Vui lòng nhập số lượng tồn kho hợp lệ" }, 400);
       }
       const r = await mmtbCall(env, token, "/api/categories", "POST", body);
+      if (r.ok) await mmtbCacheInvalidate(env, "categories:");
       return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không tạo được danh mục mới" }, r.ok ? 201 : r.status || 400);
     } catch (err) {
       return mmtbJson({ success: false, error: err.message || "Không tạo được danh mục mới" }, 400);
@@ -607,26 +1123,31 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
         const body = await request.json();
         if (body.name !== undefined && !String(body.name).trim()) return mmtbJson({ success: false, error: "Tên danh mục không được để trống" }, 400);
         const r = await mmtbCall(env, token, `/api/categories/${id}`, "PUT", body);
+        if (r.ok) await mmtbCacheInvalidate(env, "categories:");
         return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không sửa được danh mục" }, r.ok ? 200 : r.status || 400);
       } catch (err) {
         return mmtbJson({ success: false, error: err.message || "Không sửa được danh mục" }, 400);
       }
     } else {
       const r = await mmtbCall(env, token, `/api/categories/${id}`, "DELETE");
+      if (r.ok) await mmtbCacheInvalidate(env, "categories:");
       return mmtbJson(r.ok ? { success: true } : { success: false, error: r.data.error || "Không xoá được danh mục" }, r.ok ? 200 : r.status || 400);
     }
   }
 
   // ---- Danh mục hư ----
   if (mmtbPath === "/failure-categories" && request.method === "GET") {
-    const r = await mmtbCall(env, token, "/api/failure-categories");
-    return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không lấy được danh mục hư từ tbsMayMoc" }, r.ok ? 200 : r.status || 502);
+    return mmtbCachedJson(env, "failure-categories", forceRefresh, async () => {
+      const r = await mmtbCall(env, token, "/api/failure-categories");
+      return r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không lấy được danh mục hư từ tbsMayMoc", status: r.status };
+    });
   }
   if (mmtbPath === "/failure-categories" && request.method === "POST") {
     try {
       const body = await request.json();
       if (!body.name || !String(body.name).trim()) return mmtbJson({ success: false, error: "Thiếu tên danh mục" }, 400);
       const r = await mmtbCall(env, token, "/api/failure-categories", "POST", body);
+      if (r.ok) await mmtbCacheInvalidate(env, "failure-categories");
       return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không tạo được danh mục hư mới" }, r.ok ? 201 : r.status || 400);
     } catch (err) {
       return mmtbJson({ success: false, error: err.message || "Không tạo được danh mục hư mới" }, 400);
@@ -640,20 +1161,24 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
         const body = await request.json();
         if (!body.name || !String(body.name).trim()) return mmtbJson({ success: false, error: "Thiếu tên danh mục" }, 400);
         const r = await mmtbCall(env, token, `/api/failure-categories/${id}`, "PUT", body);
+        if (r.ok) await mmtbCacheInvalidate(env, "failure-categories");
         return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không sửa được danh mục hư" }, r.ok ? 200 : r.status || 400);
       } catch (err) {
         return mmtbJson({ success: false, error: err.message || "Không sửa được danh mục hư" }, 400);
       }
     } else {
       const r = await mmtbCall(env, token, `/api/failure-categories/${id}`, "DELETE");
+      if (r.ok) await mmtbCacheInvalidate(env, "failure-categories");
       return mmtbJson(r.ok ? { success: true } : { success: false, error: r.data.error || "Không xoá được danh mục hư" }, r.ok ? 200 : r.status || 400);
     }
   }
 
   // ---- Lịch bảo trì (Bảo Dưỡng MMTB) ----
   if (mmtbPath === "/schedule" && request.method === "GET") {
-    const r = await mmtbCall(env, token, "/api/maintenance-schedule");
-    return mmtbJson(r.ok ? { success: true, ...r.data } : { success: false, error: r.data.error || "Không lấy được lịch bảo trì từ tbsMayMoc" }, r.ok ? 200 : r.status || 502);
+    return mmtbCachedJson(env, "schedule", forceRefresh, async () => {
+      const r = await mmtbCall(env, token, "/api/maintenance-schedule");
+      return r.ok ? { success: true, ...r.data } : { success: false, error: r.data.error || "Không lấy được lịch bảo trì từ tbsMayMoc", status: r.status };
+    });
   }
   if (mmtbPath === "/schedule" && request.method === "POST") {
     try {
@@ -662,6 +1187,7 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
       if (!body.maintenancePeriodId) return mmtbJson({ success: false, error: "Vui lòng chọn Chu kỳ bảo trì" }, 400);
       if (!body.anchorDate) return mmtbJson({ success: false, error: "Vui lòng chọn Ngày bắt đầu tính" }, 400);
       const r = await mmtbCall(env, token, "/api/machines/bulk-maintenance", "POST", body);
+      if (r.ok) await mmtbCacheInvalidate(env, "schedule");
       return mmtbJson(r.ok ? { success: true, ...r.data } : { success: false, error: r.data.error || "Không gán được lịch bảo trì" }, r.ok ? 200 : r.status || 400);
     } catch (err) {
       return mmtbJson({ success: false, error: err.message || "Không gán được lịch bảo trì" }, 400);
@@ -669,20 +1195,25 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
   }
   if (mmtbPath === "/logs" && request.method === "GET") {
     const limit = searchParams.get("limit") || "150";
-    const r = await mmtbCall(env, token, `/api/maintenance-logs?limit=${limit}`);
-    return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không lấy được lịch sử bảo trì từ tbsMayMoc" }, r.ok ? 200 : r.status || 502);
+    return mmtbCachedJson(env, `logs:${limit}`, forceRefresh, async () => {
+      const r = await mmtbCall(env, token, `/api/maintenance-logs?limit=${limit}`);
+      return r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không lấy được lịch sử bảo trì từ tbsMayMoc", status: r.status };
+    });
   }
 
   // ---- Đề xuất ----
   if (mmtbPath === "/proposals" && request.method === "GET") {
-    const r = await mmtbCall(env, token, "/api/admin/proposals");
-    return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không lấy được đề xuất từ tbsMayMoc" }, r.ok ? 200 : r.status || 502);
+    return mmtbCachedJson(env, "proposals", forceRefresh, async () => {
+      const r = await mmtbCall(env, token, "/api/admin/proposals");
+      return r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không lấy được đề xuất từ tbsMayMoc", status: r.status };
+    });
   }
   m2 = mmtbPath.match(/^\/proposals\/([^/]+)$/);
   if (m2 && request.method === "PUT") {
     try {
       const body = await request.json();
       const r = await mmtbCall(env, token, `/api/admin/proposals/${m2[1]}`, "PUT", { resolved: !!body.resolved });
+      if (r.ok) await mmtbCacheInvalidate(env, "proposals");
       return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không cập nhật được đề xuất" }, r.ok ? 200 : r.status || 400);
     } catch (err) {
       return mmtbJson({ success: false, error: err.message || "Không cập nhật được đề xuất" }, 400);
@@ -691,8 +1222,10 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
 
   // ---- Thời gian phản hồi ----
   if (mmtbPath === "/response-time" && request.method === "GET") {
-    const r = await mmtbCall(env, token, "/api/response-time");
-    return mmtbJson(r.ok ? { success: true, ...r.data } : { success: false, error: r.data.error || "Không lấy được dữ liệu từ tbsMayMoc" }, r.ok ? 200 : r.status || 502);
+    return mmtbCachedJson(env, "response-time", forceRefresh, async () => {
+      const r = await mmtbCall(env, token, "/api/response-time");
+      return r.ok ? { success: true, ...r.data } : { success: false, error: r.data.error || "Không lấy được dữ liệu từ tbsMayMoc", status: r.status };
+    });
   }
 
   // ---- Tổng Quan (KPI MTTA/MTTR/MTTD, Trend, Pareto, độ tin cậy từng máy) ----
@@ -703,14 +1236,18 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
       if (v) qs.set(k, v);
     });
     const suffix = qs.toString() ? `?${qs.toString()}` : "";
-    const r = await mmtbCall(env, token, `/api/overview-report${suffix}`);
-    return mmtbJson(r.ok ? { success: true, ...r.data } : { success: false, error: r.data.error || "Không lấy được dữ liệu từ tbsMayMoc" }, r.ok ? 200 : r.status || 502);
+    return mmtbCachedJson(env, `overview-report:${qs.toString()}`, forceRefresh, async () => {
+      const r = await mmtbCall(env, token, `/api/overview-report${suffix}`);
+      return r.ok ? { success: true, ...r.data } : { success: false, error: r.data.error || "Không lấy được dữ liệu từ tbsMayMoc", status: r.status };
+    });
   }
 
   // ---- Nhân sự ----
   if (mmtbPath === "/employees" && request.method === "GET") {
-    const r = await mmtbCall(env, token, "/api/employees");
-    return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không lấy được nhân sự từ tbsMayMoc" }, r.ok ? 200 : r.status || 502);
+    return mmtbCachedJson(env, "employees", forceRefresh, async () => {
+      const r = await mmtbCall(env, token, "/api/employees");
+      return r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không lấy được nhân sự từ tbsMayMoc", status: r.status };
+    });
   }
   if (mmtbPath === "/employees" && request.method === "POST") {
     try {
@@ -719,6 +1256,7 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
         return mmtbJson({ success: false, error: "Thiếu Mã NV / Tên / Mật khẩu / Vai trò" }, 400);
       }
       const r = await mmtbCall(env, token, "/api/employees", "POST", body);
+      if (r.ok) await mmtbCacheInvalidate(env, "employees");
       return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không tạo được nhân sự mới" }, r.ok ? 201 : r.status || 400);
     } catch (err) {
       return mmtbJson({ success: false, error: err.message || "Không tạo được nhân sự mới" }, 400);
@@ -734,20 +1272,24 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
           return mmtbJson({ success: false, error: "Thiếu Mã NV / Tên / Vai trò" }, 400);
         }
         const r = await mmtbCall(env, token, `/api/employees/${id}`, "PUT", body);
+        if (r.ok) await mmtbCacheInvalidate(env, "employees");
         return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không sửa được nhân sự" }, r.ok ? 200 : r.status || 400);
       } catch (err) {
         return mmtbJson({ success: false, error: err.message || "Không sửa được nhân sự" }, 400);
       }
     } else {
       const r = await mmtbCall(env, token, `/api/employees/${id}`, "DELETE");
+      if (r.ok) await mmtbCacheInvalidate(env, "employees");
       return mmtbJson(r.ok ? { success: true } : { success: false, error: r.data.error || "Không xoá được nhân sự" }, r.ok ? 200 : r.status || 400);
     }
   }
 
   // ---- Thông báo ----
   if (mmtbPath === "/announcements" && request.method === "GET") {
-    const r = await mmtbCall(env, token, "/api/announcements");
-    return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không lấy được thông báo từ tbsMayMoc" }, r.ok ? 200 : r.status || 502);
+    return mmtbCachedJson(env, "announcements", forceRefresh, async () => {
+      const r = await mmtbCall(env, token, "/api/announcements");
+      return r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không lấy được thông báo từ tbsMayMoc", status: r.status };
+    });
   }
   if (mmtbPath === "/announcements" && request.method === "POST") {
     try {
@@ -755,6 +1297,7 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
       if (!body.title || !body.title.trim() || !body.content || !body.content.trim()) return mmtbJson({ success: false, error: "Thiếu tiêu đề hoặc nội dung" }, 400);
       if (!body.targetFactoryId) return mmtbJson({ success: false, error: "Vui lòng chọn Nhà máy nhận thông báo" }, 400);
       const r = await mmtbCall(env, token, "/api/announcements", "POST", body);
+      if (r.ok) await mmtbCacheInvalidate(env, "announcements");
       return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không gửi được thông báo" }, r.ok ? 201 : r.status || 400);
     } catch (err) {
       return mmtbJson({ success: false, error: err.message || "Không gửi được thông báo" }, 400);
@@ -768,12 +1311,14 @@ async function handleMmtbKG(request, env, pathname, searchParams) {
         const body = await request.json();
         if (!body.title || !body.title.trim() || !body.content || !body.content.trim()) return mmtbJson({ success: false, error: "Thiếu tiêu đề hoặc nội dung" }, 400);
         const r = await mmtbCall(env, token, `/api/announcements/${id}`, "PUT", body);
+        if (r.ok) await mmtbCacheInvalidate(env, "announcements");
         return mmtbJson(r.ok ? { success: true, data: r.data } : { success: false, error: r.data.error || "Không sửa được thông báo" }, r.ok ? 200 : r.status || 400);
       } catch (err) {
         return mmtbJson({ success: false, error: err.message || "Không sửa được thông báo" }, 400);
       }
     } else {
       const r = await mmtbCall(env, token, `/api/announcements/${id}`, "DELETE");
+      if (r.ok) await mmtbCacheInvalidate(env, "announcements");
       return mmtbJson(r.ok ? { success: true } : { success: false, error: r.data.error || "Không xoá được thông báo" }, r.ok ? 200 : r.status || 400);
     }
   }
@@ -909,8 +1454,13 @@ export default {
     const url = new URL(request.url);
     const pathname = url.pathname.replace(/\/$/, "") || "/";
 
-    // Auto-migrate schema columns & legacy codes lazily
-    await ensureDatabaseColumnsAndLegacyCode(env);
+    // Auto-migrate schema columns & legacy codes lazily — chỉ 1 lần/isolate (xem cờ
+    // __schemaMigratedOnce), và không chờ nó xong mới trả response (chạy nền qua waitUntil) để
+    // không cộng dồn độ trễ D1 vào mọi request, đặc biệt là các file tĩnh (JS/CSS/ảnh) vốn không
+    // hề cần migration này.
+    if (!__schemaMigratedOnce && !pathname.startsWith("/_next/") && !/\.[a-zA-Z0-9]+$/.test(pathname)) {
+      ctx.waitUntil(ensureDatabaseColumnsAndLegacyCode(env));
+    }
 
     // 1. HTTP to HTTPS 301 Permanent Redirect — bỏ qua khi chạy cục bộ (localhost/127.0.0.1, VD
     // "wrangler dev" lúc test) vì không có TLS thật ở đó: Worker luôn thấy request là "http" dù
@@ -952,9 +1502,11 @@ export default {
         "201809012",
         "PGĐ-005",
         "PGD-005",
+        "202608002",
         "anhy.work.2004@gmail.com",
         "huypna@tbsgroup.vn",
-        "vukt@tbsgroup.vn"
+        "vukt@tbsgroup.vn",
+        "tranhuy110421@gmail.com"
       ]);
 
       let isAllowed = false;
@@ -1249,14 +1801,15 @@ export default {
         if (env.DB) {
           const targetEmp = empCode || "202608001";
           try {
+            // Ghi vào đúng dòng riêng của targetEmp (id = targetEmp), không dùng chung id='current_user'.
             await env.DB.prepare(
               `INSERT INTO user_profile (id, emp_code, avatar, updated_at)
-               VALUES ('current_user', ?, ?, CURRENT_TIMESTAMP)
+               VALUES (?, ?, ?, CURRENT_TIMESTAMP)
                ON CONFLICT(id) DO UPDATE SET
                  avatar = excluded.avatar,
                  emp_code = excluded.emp_code,
                  updated_at = CURRENT_TIMESTAMP`
-            ).bind(targetEmp, finalUrl).run();
+            ).bind(targetEmp, targetEmp, finalUrl).run();
 
             await env.DB.prepare(
               `UPDATE users SET avatar_url = ?, updated_at = CURRENT_TIMESTAMP WHERE emp_code = ?`
@@ -1551,9 +2104,22 @@ export default {
 
     async function signJWT(payload, secretStr) {
       const header = { alg: "HS256", typ: "JWT" };
+      // btoa() chỉ nhận ký tự Latin1 (0-255) — gọi thẳng trên chuỗi JSON chứa tiếng Việt có dấu
+      // (VD name:"Trần Ngọc Huy", department:"NHÂN SỰ-HC") ném lỗi "InvalidCharacterError" ngay
+      // lập tức, chặn đứng MỌI lần đăng nhập của tài khoản có tên tiếng Việt (gần như tất cả).
+      // Sửa bằng cách mã hoá UTF-8 ra bytes trước (TextEncoder) rồi mới base64 — btoa an toàn với
+      // "binary string" (1 ký tự/byte, luôn nằm trong Latin1).
       const base64UrlEncode = (strOrObj) => {
         const jsonStr = typeof strOrObj === "string" ? strOrObj : JSON.stringify(strOrObj);
-        const b64 = typeof btoa === "function" ? btoa(jsonStr) : Buffer.from(jsonStr).toString("base64");
+        const bytes = new TextEncoder().encode(jsonStr);
+        let b64;
+        if (typeof btoa === "function") {
+          let binary = "";
+          for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+          b64 = btoa(binary);
+        } else {
+          b64 = Buffer.from(bytes).toString("base64");
+        }
         return b64.replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
       };
       const headB64 = base64UrlEncode(header);
@@ -1604,7 +2170,13 @@ export default {
         const payBase64 = payB64.replace(/-/g, "+").replace(/_/g, "/");
         const payPadLen = (4 - (payBase64.length % 4)) % 4;
         const payPadded = payBase64 + "=".repeat(payPadLen);
-        const jsonStr = typeof atob === "function" ? atob(payPadded) : Buffer.from(payPadded, "base64").toString("utf-8");
+        // atob() trả "binary string" (1 ký tự/byte) — phải ghép lại thành bytes rồi TextDecoder mới ra
+    // đúng chuỗi UTF-8 gốc (tên/phòng ban tiếng Việt có dấu); coi thẳng output của atob() là chuỗi
+    // JSON cuối cùng (như code cũ) làm sai lệch mọi ký tự có dấu, JSON.parse() sẽ ném lỗi hoặc ra
+    // dữ liệu hỏng — đối xứng với cách signJWT() giờ đã mã hoá đúng UTF-8 ở base64UrlEncode().
+    const jsonStr = typeof atob === "function"
+      ? new TextDecoder().decode(Uint8Array.from(atob(payPadded), (c) => c.charCodeAt(0)))
+      : Buffer.from(payPadded, "base64").toString("utf-8");
         const payload = JSON.parse(jsonStr);
 
         if (payload.exp && Date.now() / 1000 > payload.exp) return null;
@@ -1865,102 +2437,6 @@ export default {
         });
       } catch (err) {
         return new Response(JSON.stringify({ success: true, data: [] }), {
-          headers: SECURE_JSON_HEADERS
-        });
-      }
-    }
-
-    // API Route: User Profile (/api/profile)
-    if (url.pathname === "/api/profile") {
-      if (request.method === "OPTIONS") {
-        return new Response(null, { headers: SECURE_JSON_HEADERS });
-      }
-      try {
-        const auth = await verifyServerAuth(request, env);
-        if (request.method === "GET") {
-          if (auth.authenticated && auth.empCode) {
-            const targetCode = auth.empCode.toUpperCase();
-            let userProfile = null;
-
-            if (env.DB) {
-              try {
-                const { results } = await env.DB.prepare(
-                  `SELECT emp_code, name, department, phong_ban_hien_tai, title, vtcv_hien_tai, vtcv_sap, email, phone, role_code, avatar_url FROM users WHERE UPPER(emp_code) = ? AND status = 'ACTIVE' LIMIT 1`
-                ).bind(targetCode).all();
-                if (results && results[0]) {
-                  const u = results[0];
-                  userProfile = {
-                    empCode: u.emp_code || targetCode,
-                    name: u.name,
-                    title: u.vtcv_hien_tai || u.vtcv_sap || u.title || "Cán Bộ Công Nhân Viên",
-                    department: u.phong_ban_hien_tai || u.department || "TBS Group",
-                    email: u.email,
-                    phone: u.phone || "",
-                    roleCode: u.role_code || "CBCNV",
-                    avatar: u.avatar_url || "/images/tbs-logo.png",
-                  };
-                }
-              } catch (e) {}
-            }
-
-            if (!userProfile && WORKER_SYSTEM_USERS[targetCode]) {
-              const sys = WORKER_SYSTEM_USERS[targetCode];
-              userProfile = {
-                empCode: sys.empCode || targetCode,
-                name: sys.name,
-                title: sys.title,
-                department: sys.department,
-                email: sys.email,
-                phone: sys.phone || "",
-                roleCode: sys.roleCode || "CBCNV",
-                avatar: sys.avatar || "/images/tbs-logo.png",
-              };
-            }
-
-            if (!userProfile) {
-              userProfile = {
-                empCode: targetCode,
-                name: auth.name || `Cán bộ (${targetCode})`,
-                title: auth.title || "Cán Bộ Công Nhân Viên",
-                department: auth.department || "TBS Group",
-                email: `${targetCode.toLowerCase()}@tbsgroup.vn`,
-                phone: "",
-                roleCode: auth.roleCode || "CBCNV",
-                avatar: "/images/tbs-logo.png",
-              };
-            }
-
-            return new Response(JSON.stringify({ success: true, user: userProfile, data: userProfile }), {
-              headers: SECURE_JSON_HEADERS
-            });
-          }
-
-          return new Response(JSON.stringify({ success: false, error: "UNAUTHORIZED", user: null, data: null }), {
-            status: 401,
-            headers: SECURE_JSON_HEADERS
-          });
-        }
-
-        if (request.method === "POST" || request.method === "PUT") {
-          const body = await request.json();
-          const { empCode, emp_code, name, email, phone, avatar, title, department, roleCode, role_code } = body;
-          const targetEmpCode = (empCode || emp_code || (auth.authenticated ? auth.empCode : "")).trim();
-
-          if (env.DB && targetEmpCode) {
-            try {
-              await env.DB.prepare(
-                `UPDATE users SET name = COALESCE(?, name), email = COALESCE(?, email), phone = COALESCE(?, phone), avatar_url = COALESCE(?, avatar_url), title = COALESCE(?, title), department = COALESCE(?, department), updated_at = CURRENT_TIMESTAMP WHERE UPPER(emp_code) = ?`
-              ).bind(name, email, phone, avatar, title, department, targetEmpCode.toUpperCase()).run();
-            } catch (e) {}
-          }
-
-          return new Response(JSON.stringify({ success: true, message: "Profile updated successfully" }), {
-            headers: SECURE_JSON_HEADERS
-          });
-        }
-      } catch (err) {
-        return new Response(JSON.stringify({ success: false, error: err.message }), {
-          status: 500,
           headers: SECURE_JSON_HEADERS
         });
       }
@@ -2434,21 +2910,9 @@ export default {
 
             userAccount.avatar = finalAvatar;
 
-            await env.DB.prepare(
-              `INSERT OR REPLACE INTO user_profile (id, emp_code, name, email, phone, avatar, title, department, role_code, redirect_url, updated_at)
-               VALUES ('current_user', ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
-            ).bind(
-              userAccount.empCode,
-              userAccount.name,
-              userAccount.email,
-              userAccount.phone || "",
-              finalAvatar,
-              userAccount.title,
-              userAccount.department,
-              userAccount.roleCode,
-              userAccount.redirectUrl
-            ).run();
-
+            // Chỉ ghi vào đúng dòng riêng của userAccount.empCode (id = empCode) — KHÔNG còn ghi
+            // thêm 1 bản vào id='current_user' dùng chung cho cả hệ thống nữa (xem giải thích ở
+            // handler GET/POST /api/profile phía dưới file).
             await env.DB.prepare(
               `INSERT OR REPLACE INTO user_profile (id, emp_code, name, email, phone, avatar, title, department, role_code, redirect_url, updated_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
@@ -2885,10 +3349,19 @@ export default {
       // GET: Retrieve User Profile from D1 Database
       if (request.method === "GET") {
         try {
-          if (env.DB) {
+          // QUAN TRỌNG: 'user_profile' KHÔNG được đọc qua id='current_user' (1 dòng DUY NHẤT
+          // dùng chung cho TẤT CẢ mọi người) — trước đây làm vậy khiến ai đăng nhập/lưu hồ sơ sau
+          // cùng trên TOÀN HỆ THỐNG sẽ "đè" lên hồ sơ hiển thị của MỌI tài khoản khác (đúng lỗi
+          // "đăng nhập 202608002 lại hiện thành 202608001"). Phải xác định đúng người đang gọi API
+          // qua JWT (cookie tbs_token) rồi chỉ đọc đúng dòng emp_code của riêng người đó.
+          const authInfo = await verifyServerAuth(request, env);
+          const queryEmpCode = url.searchParams.get("empCode");
+          const scopedEmpCode = (authInfo && authInfo.authenticated && authInfo.empCode) || queryEmpCode || "";
+
+          if (env.DB && scopedEmpCode) {
             const { results } = await env.DB.prepare(
-              "SELECT * FROM user_profile WHERE id = 'current_user'"
-            ).all();
+              "SELECT * FROM user_profile WHERE emp_code = ? AND id != 'current_user'"
+            ).bind(scopedEmpCode).all();
             if (results && results.length > 0) {
               const userProf = { ...results[0] };
               if (!userProf.avatar || typeof userProf.avatar !== "string" || userProf.avatar.trim() === "") {
@@ -2917,7 +3390,10 @@ export default {
         try {
           const body = await request.json();
           const { empCode, emp_code, name, email, phone, avatar, title, department, roleCode, role_code } = body;
-          const targetEmpCode = empCode || emp_code || "202608001";
+          // Ưu tiên empCode xác thực thật từ JWT (cookie tbs_token) hơn empCode client tự gửi lên,
+          // để không ai lỡ (hoặc cố tình) ghi đè hồ sơ D1 của MSNV khác qua body request.
+          const authInfo = await verifyServerAuth(request, env);
+          const targetEmpCode = (authInfo && authInfo.authenticated && authInfo.empCode) || empCode || emp_code || "202608001";
           const targetRoleCode = roleCode || role_code || "CBCNV";
 
           let finalAvatar = avatar;
@@ -2939,15 +3415,18 @@ export default {
             ).run();
 
             if (!finalAvatar || typeof finalAvatar !== "string" || finalAvatar.trim() === "") {
-              const { results: existing } = await env.DB.prepare("SELECT avatar FROM user_profile WHERE id = 'current_user'").all();
+              const { results: existing } = await env.DB.prepare("SELECT avatar FROM user_profile WHERE emp_code = ? AND id != 'current_user'").bind(targetEmpCode).all();
               finalAvatar = (existing && existing[0] && existing[0].avatar && existing[0].avatar.trim() !== "")
                 ? existing[0].avatar
                 : "/images/tbs-logo.png";
             }
 
+            // GHI VÀO ĐÚNG DÒNG RIÊNG CỦA TỪNG MSNV (id = targetEmpCode) — KHÔNG còn dùng chung
+            // id='current_user' nữa (đó chính là nguyên nhân "đăng nhập tài khoản nào cũng ra
+            // thành 1 người" vì mọi lần lưu hồ sơ đều đè lên đúng 1 dòng dùng chung cho cả hệ thống).
             await env.DB.prepare(
               `INSERT INTO user_profile (id, emp_code, name, email, phone, avatar, title, department, role_code, updated_at)
-               VALUES ('current_user', ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
                ON CONFLICT(id) DO UPDATE SET
                  emp_code = excluded.emp_code,
                  name = COALESCE(excluded.name, user_profile.name),
@@ -2961,12 +3440,13 @@ export default {
             )
               .bind(
                 targetEmpCode,
-                name || "Phạm Nguyễn Anh Huy",
-                email || "anhy.work.2004@gmail.com",
-                phone || "0522511245",
+                targetEmpCode,
+                name || `Cán Bộ Nhân Viên (${targetEmpCode})`,
+                email || `${String(targetEmpCode).toLowerCase()}@tbsgroup.vn`,
+                phone || "",
                 finalAvatar,
-                title || "IT - Team Chuyển Đổi Số",
-                department || "IT - Team Chuyển Đổi Số",
+                title || "Cán Bộ Công Nhân Viên",
+                department || "NHÂN SỰ-HC",
                 targetRoleCode
               )
               .run();
@@ -7853,6 +8333,13 @@ export default {
     // ════════════════════════════════════════════════════════════════
     if (pathname.startsWith("/api/mmtb-kg")) {
       return await handleMmtbKG(request, env, pathname, url.searchParams);
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // 🏭 PPH (Hiệu Suất Nhà Máy) — xem handlePph() phía trên
+    // ════════════════════════════════════════════════════════════════
+    if (pathname.startsWith("/api/pph")) {
+      return await handlePph(request, env, pathname, url.searchParams);
     }
 
     // ════════════════════════════════════════════════════════════════

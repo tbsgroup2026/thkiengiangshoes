@@ -6,6 +6,7 @@ import QRCode from 'qrcode';
 import { IconDeviceLaptop, IconCircleCheck, IconCircleDashed, IconAlertTriangle, IconTrash, IconPlus, IconPencil, IconFileSpreadsheet } from '@tabler/icons-react';
 import MaintenanceShell from '@/components/MaintenanceShell';
 import FilterSelect from '@/components/FilterSelect';
+import RefreshButton from '@/components/RefreshButton';
 
 type CategoryOption = { id: string; name: string; parentId: string | null };
 
@@ -170,27 +171,40 @@ export default function MachinesPage() {
   const [importSubmitting, setImportSubmitting] = useState(false);
   const [importResult, setImportResult] = useState<{ success: number; failed: string[] } | null>(null);
 
-  const load = async () => {
+  const [refreshing, setRefreshing] = useState(false);
+
+  // `force` (nút "Làm mới dữ liệu") gửi kèm ?fresh=1 — bỏ qua cache 5 phút phía Worker, luôn lấy
+  // đúng dữ liệu mới nhất từ tbsMayMoc ngay lập tức.
+  const load = async (force = false) => {
     try {
-      setLoading(true);
+      force ? setRefreshing(true) : setLoading(true);
       setError(null);
+      const fresh = force ? '&fresh=1' : '';
       // Máy móc (nặng, ~2500 máy) gọi riêng khỏi 6 danh mục lọc — và 6 danh mục lọc để TRÌNH
       // DUYỆT tự gọi song song (không proxy gộp qua Worker) vì gộp 6 lệnh chạy song song trong
       // CÙNG 1 lượt xử lý của Cloudflare Worker từng vượt giới hạn tài nguyên khi chạy thật (dù
       // từng loại gọi riêng lẻ vẫn ổn) — trình duyệt không bị giới hạn này.
-      const [machinesRes, factoriesRes, areasRes, linesRes, teamsRes, typesRes, statusesRes] = await Promise.all([
-        fetch('/api/mmtb-kg/machines').then((r) => r.json()),
-        fetch('/api/mmtb-kg/categories?type=FACTORY').then((r) => r.json()),
-        fetch('/api/mmtb-kg/categories?type=AREA').then((r) => r.json()),
-        fetch('/api/mmtb-kg/categories?type=PRODUCTION_LINE').then((r) => r.json()),
-        fetch('/api/mmtb-kg/categories?type=TEAM').then((r) => r.json()),
-        fetch('/api/mmtb-kg/categories?type=MACHINE_TYPE').then((r) => r.json()),
-        fetch('/api/mmtb-kg/categories?type=MACHINE_STATUS').then((r) => r.json()),
+      // Promise.allSettled (KHÔNG phải Promise.all) — trước đây 1 trong 7 lệnh lỗi (network hỏng
+      // hẳn trước khi tới .json(), hoặc từng có lúc backend trả lỗi dạng chữ thường thay vì JSON)
+      // làm CẢ 7 cùng bị coi là lỗi, xoá sạch dữ liệu máy móc lẫn toàn bộ danh mục lọc dù đa số đã
+      // tải thành công. Giờ mỗi lệnh độc lập — 1 cái lỗi không kéo sập các cái còn lại.
+      const settled = await Promise.allSettled([
+        fetch(`/api/mmtb-kg/machines${force ? '?fresh=1' : ''}`).then((r) => r.json()),
+        fetch(`/api/mmtb-kg/categories?type=FACTORY${fresh}`).then((r) => r.json()),
+        fetch(`/api/mmtb-kg/categories?type=AREA${fresh}`).then((r) => r.json()),
+        fetch(`/api/mmtb-kg/categories?type=PRODUCTION_LINE${fresh}`).then((r) => r.json()),
+        fetch(`/api/mmtb-kg/categories?type=TEAM${fresh}`).then((r) => r.json()),
+        fetch(`/api/mmtb-kg/categories?type=MACHINE_TYPE${fresh}`).then((r) => r.json()),
+        fetch(`/api/mmtb-kg/categories?type=MACHINE_STATUS${fresh}`).then((r) => r.json()),
       ]);
+      const asResult = (s: PromiseSettledResult<any>) =>
+        s.status === 'fulfilled' ? s.value : { success: false, error: String(s.reason) };
+      const [machinesRes, factoriesRes, areasRes, linesRes, teamsRes, typesRes, statusesRes] = settled.map(asResult);
       if (machinesRes.success && Array.isArray(machinesRes.data)) {
         setMachines(machinesRes.data);
       } else {
         setMachines([]);
+        console.warn('Failed to load machines from tbsMayMoc:', machinesRes.error);
         setError(machinesRes.error || 'Không lấy được dữ liệu');
       }
       setFilterOptions({
@@ -205,7 +219,7 @@ export default function MachinesPage() {
       console.warn('Failed to fetch machines from tbsMayMoc:', err);
       setMachines([]);
     } finally {
-      setLoading(false);
+      force ? setRefreshing(false) : setLoading(false);
     }
   };
 
@@ -529,6 +543,7 @@ export default function MachinesPage() {
           <h1 className="text-2xl font-extrabold text-tbs-dark">Danh Sách MMTB</h1>
         </div>
         <div className="flex items-center gap-2">
+          <RefreshButton onClick={() => load(true)} loading={refreshing} />
           <button
             onClick={openCreateForm}
             className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-tbs-dark text-white text-xs font-bold hover:opacity-90 transition shadow-md cursor-pointer"
@@ -564,11 +579,8 @@ export default function MachinesPage() {
         </div>
       </div>
 
-      {error && (
-        <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">
-          ⚠️ {error}
-        </div>
-      )}
+      {/* Lỗi kết nối tbsMayMoc chỉ log console (F12), không hiện banner ngoài trang — `error` vẫn
+          giữ lại để chặn thông báo "Không có máy nào" hiện nhầm khi thật ra là do lỗi tải. */}
 
       {/* 5 Ô TỔNG QUAN — giống hàng đầu trang Tổng quan bên tbsMayMoc */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">

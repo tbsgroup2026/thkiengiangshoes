@@ -604,7 +604,14 @@ function WorkDashboardContent() {
 
     async function loadD1Profile() {
       try {
-        const res = await fetch("/api/profile");
+        // Gửi kèm empCode của chính phiên đang đăng nhập trên trình duyệt này làm dự phòng — API
+        // ưu tiên xác định qua JWT cookie, param này chỉ dùng khi không có/không đọc được cookie.
+        let ownEmpCode = "";
+        try {
+          const stored = sessionStorage.getItem("tbs_current_user") || localStorage.getItem("tbs_current_user");
+          if (stored) ownEmpCode = JSON.parse(stored)?.empCode || "";
+        } catch {}
+        const res = await fetch(ownEmpCode ? `/api/profile?empCode=${encodeURIComponent(ownEmpCode)}` : "/api/profile");
         if (res.ok) {
           const json = await res.json();
           const serverUser = json.user || json.data;

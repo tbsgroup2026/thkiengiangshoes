@@ -6,11 +6,29 @@ import { IconArrowRight, IconArrowDown } from "@tabler/icons-react";
 import { useTranslation } from "@/hooks/useTranslation";
 import { getLandingCMS, fetchLandingCMSFromServer, DEFAULT_LANDING_CMS } from "@/lib/landingCMS";
 import SafeImage from "@/components/SafeImage";
+import { formatCloudinaryUrl } from "@/lib/cloudinary";
 export default function HeroSection() {
   const { t, lang } = useTranslation();
   const [cmsHero, setCmsHero] = useState(DEFAULT_LANDING_CMS.hero);
   const [shoeLines, setShoeLines] = useState(DEFAULT_LANDING_CMS.shoeLines);
   const [activeGroupIdx, setActiveGroupIdx] = useState(0);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // Nút "Truy Cập Hệ Thống" trước đây trỏ cứng "/work" bất kể đã đăng nhập hay chưa — chỉ là
+  // route "/work" bản thân nó lại không hề kiểm tra đăng nhập (xem RequireAuth ở work/layout.tsx,
+  // mới thêm), nên bấm vào là vào thẳng luôn dù chưa đăng nhập. Giờ kiểm tra cookie tbs_token
+  // giống hệt Header.tsx để trỏ đúng "/login" khi chưa đăng nhập, tránh nháy qua "/work" rồi mới
+  // bị bật ngược lại "/login".
+  useEffect(() => {
+    const checkAuth = () => {
+      const cookies = document.cookie.split("; ");
+      const tokenCookie = cookies.find((row) => row.startsWith("tbs_token="));
+      setIsLoggedIn(!!tokenCookie);
+    };
+    checkAuth();
+    window.addEventListener("tbs_profile_updated", checkAuth);
+    return () => window.removeEventListener("tbs_profile_updated", checkAuth);
+  }, []);
 
   useEffect(() => {
     const loadCMS = () => {
@@ -130,7 +148,11 @@ export default function HeroSection() {
         {/* Background Image: Gate photo full visibility */}
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat pointer-events-none"
-          style={{ backgroundImage: `url('${cmsHero.bgImage || "/images/tbs-gate.jpg"}')` }}
+          style={{
+            backgroundImage: `url('${
+              cmsHero.bgImage ? formatCloudinaryUrl(cmsHero.bgImage, undefined, 1600) : "/images/tbs-gate.jpg"
+            }')`,
+          }}
         >
           {/* Softened Dark Green Gradient Overlay for Clear Background Photo Visibility */}
           <div className="absolute inset-0 bg-gradient-to-r from-[#08221a]/75 via-[#08221a]/55 to-[#08221a]/30" />
@@ -174,8 +196,7 @@ export default function HeroSection() {
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
                 <Link
-                  href="/work"
-                  prefetch={false}
+                  href={isLoggedIn ? "/work" : "/login"}
                   className="px-7 py-3.5 rounded-2xl bg-gradient-to-r from-[#2fd39a] to-emerald-500 text-[#08221a] font-extrabold text-sm shadow-xl shadow-[#2fd39a]/20 hover:shadow-2xl hover:shadow-[#2fd39a]/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center gap-2 group"
                 >
                   <span>{t("hero.access_system")}</span>
@@ -226,7 +247,7 @@ export default function HeroSection() {
               {/* 1. Main Card (Top-Right): Hands Circle Image */}
               <div className="absolute top-0 right-0 w-[80%] h-[68%] rounded-[26px] overflow-hidden border border-[#2fd39a]/35 shadow-2xl z-10 group bg-[#0d2419]">
                 <img
-                  src={cmsHero.handsImage || "/images/tbs-hands.png"}
+                  src={cmsHero.handsImage ? formatCloudinaryUrl(cmsHero.handsImage, undefined, 900) : "/images/tbs-hands.png"}
                   alt="TBS Group - Hands Commitment"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                 />
@@ -237,6 +258,7 @@ export default function HeroSection() {
                 <SafeImage
                   productId="hero-team-banner"
                   src={cmsHero.teamImage || "/images/tbs-team-banner.png"}
+                  cloudinaryWidth={600}
                   alt="Phát Huy Sức Mạnh Kiến Tạo Tương Lai"
                   fallbackTitle="Phát Huy Sức Mạnh Kiến Tạo Tương Lai"
                   objectFit="cover"
@@ -301,8 +323,9 @@ export default function HeroSection() {
                         title={shoe.name || group.title}
                       >
                         <img
-                          src={shoe.url}
+                          src={formatCloudinaryUrl(shoe.url, undefined, 400)}
                           alt={shoe.name || group.title}
+                          loading="lazy"
                           className="max-h-[70px] max-w-[155px] w-auto h-auto object-contain transition-transform duration-300 group-hover:scale-105"
                           onError={(e) => {
                             (e.target as HTMLImageElement).src = "/images/brands/256000.png";

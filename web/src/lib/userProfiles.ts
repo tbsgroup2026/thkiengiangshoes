@@ -443,7 +443,13 @@ export const ROLE_ALIAS_MAP: Record<string, string> = {
 };
 
 export function normalizeEmpCode(input: string): string {
-  if (!input) return "202608001";
+  // Trước đây input rỗng/undefined tự trả về "202608001" (tài khoản admin thật) — an toàn với
+  // luồng đăng nhập hiện tại (form /login đã validate không rỗng trước khi gọi hàm này, và không
+  // còn nơi nào khác gọi normalizeEmpCode("") nữa), nhưng vẫn là 1 kiểu "cửa hậu" tiềm ẩn nếu sau
+  // này có thêm chỗ gọi hàm này mà quên kiểm tra rỗng trước — không nên để 1 input rỗng ngẫu nhiên
+  // lại trùng khớp ra đúng 1 tài khoản admin thật. Trả lại nguyên input rỗng, để chỗ gọi tự xử lý
+  // như "không tìm thấy" thay vì âm thầm nhận diện thành TGĐ/Admin.
+  if (!input) return input;
   const trimmed = input.trim().toLowerCase();
   if (
     trimmed === "lt-001" ||
@@ -789,7 +795,8 @@ export function loginUserProfile(empCodeOrRole: string, password?: string): User
 export async function loginWithD1Database(
   empCodeOrRole: string,
   password?: string,
-  role?: string
+  role?: string,
+  rememberMe: boolean = true
 ): Promise<UserProfile> {
   const cleanInput = (empCodeOrRole || role || "").trim();
   const normalized = normalizeEmpCode(cleanInput);
@@ -863,14 +870,26 @@ export async function loginWithD1Database(
       localStorage.setItem(`tbs_avatar_${finalProfile.empCode}`, finalProfile.avatar);
     }
     sessionStorage.setItem("tbs_current_user", JSON.stringify(finalProfile));
-    localStorage.setItem("tbs_current_user", JSON.stringify(finalProfile));
+    // "Ghi nhớ đăng nhập" trước đây chỉ là ô tick TRANG TRÍ — luôn ghi vào localStorage +
+    // cookie 24h bất kể có tick hay không, khiến ai từng đăng nhập 1 lần trên máy/trình duyệt đó
+    // là bị "tự đăng nhập" lại mãi mãi mỗi lần quay lại, kể cả khi họ tưởng mình đang ở trạng thái
+    // chưa đăng nhập — đúng nguyên nhân gây nhầm lẫn "chưa login mà tự vào được tài khoản khác".
+    // Bỏ tick (rememberMe=false) → chỉ lưu sessionStorage + cookie phiên (không set max-age, tự
+    // hết khi đóng trình duyệt) — KHÔNG còn tự đăng nhập lại ở lần ghé sau.
+    if (rememberMe) {
+      localStorage.setItem("tbs_current_user", JSON.stringify(finalProfile));
+    } else {
+      localStorage.removeItem("tbs_current_user");
+    }
     // Dùng ĐÚNG JWT thật trả về từ /api/auth/login — KHÔNG tự bịa chuỗi giả nữa (xem giải thích ở
     // trên). Chỉ khi nào API đăng nhập lỗi/không trả token (rơi vào nhánh loginUserProfile offline
     // phía trên) mới không có realToken — trường hợp đó proxy.ts vẫn sẽ đá về /login vì
     // verifyToken() không xác thực được, đúng hành vi mong muốn (không cho vào khi chưa xác thực
     // thật với server).
     if (realToken) {
-      document.cookie = `tbs_token=${realToken}; path=/; max-age=86400`;
+      document.cookie = rememberMe
+        ? `tbs_token=${realToken}; path=/; max-age=86400`
+        : `tbs_token=${realToken}; path=/`;
     }
     window.dispatchEvent(new Event("tbs_profile_updated"));
   }

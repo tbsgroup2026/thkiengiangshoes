@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx';
 import { IconPlus, IconPencil, IconTrash, IconUsers, IconFileSpreadsheet } from '@tabler/icons-react';
 import MaintenanceShell from '@/components/MaintenanceShell';
 import FilterSelect from '@/components/FilterSelect';
+import RefreshButton from '@/components/RefreshButton';
 
 type CategoryOption = { id: string; name: string; parentId: string | null };
 
@@ -71,6 +72,7 @@ export default function EmployeesPage() {
 
   const [search, setSearch] = useState('');
   const [filterFactoryId, setFilterFactoryId] = useState('');
+  const [filterAreaId, setFilterAreaId] = useState('');
   const [filterRole, setFilterRole] = useState('');
 
   const [showForm, setShowForm] = useState(false);
@@ -88,23 +90,27 @@ export default function EmployeesPage() {
   const [importSubmitting, setImportSubmitting] = useState(false);
   const [importResult, setImportResult] = useState<{ success: number; failed: string[] } | null>(null);
 
-  const load = async () => {
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = async (force = false) => {
     try {
-      setLoading(true);
+      force ? setRefreshing(true) : setLoading(true);
       setError(null);
-      const [empRes, facRes, areaRes] = await Promise.all([
-        fetch('/api/mmtb-kg/employees').then((r) => r.json()),
-        fetch('/api/mmtb-kg/categories?type=FACTORY').then((r) => r.json()),
-        fetch('/api/mmtb-kg/categories?type=AREA').then((r) => r.json()),
+      const fresh = force ? '&fresh=1' : '';
+      const settled = await Promise.allSettled([
+        fetch(`/api/mmtb-kg/employees${force ? '?fresh=1' : ''}`).then((r) => r.json()),
+        fetch(`/api/mmtb-kg/categories?type=FACTORY${fresh}`).then((r) => r.json()),
+        fetch(`/api/mmtb-kg/categories?type=AREA${fresh}`).then((r) => r.json()),
       ]);
+      const [empRes, facRes, areaRes] = settled.map((s) => (s.status === 'fulfilled' ? s.value : { success: false, error: String(s.reason) }));
       if (empRes.success) setEmployees(empRes.data || []);
-      else setError(empRes.error || 'Không lấy được dữ liệu');
+      else { console.warn('Failed to load employees from tbsMayMoc:', empRes.error); setError(empRes.error || 'Không lấy được dữ liệu'); }
       if (facRes.success) setFactories(facRes.data || []);
       if (areaRes.success) setAreas(areaRes.data || []);
     } catch (err) {
       console.warn('Failed to fetch employees from tbsMayMoc:', err);
     } finally {
-      setLoading(false);
+      force ? setRefreshing(false) : setLoading(false);
     }
   };
 
@@ -115,15 +121,20 @@ export default function EmployeesPage() {
 
   const areasUnderFormFactory = areas.filter((a) => !formData.factoryId || a.parentId === formData.factoryId);
 
+  // Xưởng lọc theo Nhà máy đang chọn ở BỘ LỌC DANH SÁCH (khác areasUnderFormFactory — cái đó cho
+  // form Thêm/Sửa) — dùng chung nguồn `areas` đã tải sẵn, chỉ lọc theo parentId.
+  const areasUnderFilterFactory = areas.filter((a) => !filterFactoryId || a.parentId === filterFactoryId);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return employees.filter((e) => {
       const matchesQ = !q || e.employeeCode.toLowerCase().includes(q) || e.name.toLowerCase().includes(q);
       const matchesFactory = !filterFactoryId || e.factoryId === filterFactoryId;
+      const matchesArea = !filterAreaId || e.areaId === filterAreaId;
       const matchesRole = !filterRole || e.role === filterRole;
-      return matchesQ && matchesFactory && matchesRole;
+      return matchesQ && matchesFactory && matchesArea && matchesRole;
     });
-  }, [employees, search, filterFactoryId, filterRole]);
+  }, [employees, search, filterFactoryId, filterAreaId, filterRole]);
 
   function openCreateForm() {
     setEditingId(null);
@@ -338,6 +349,7 @@ export default function EmployeesPage() {
             <h1 className="text-2xl font-extrabold text-tbs-dark">Nhân Sự</h1>
           </div>
           <div className="flex items-center gap-2">
+            <RefreshButton onClick={() => load(true)} loading={refreshing} />
             <button onClick={openCreateForm} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-tbs-dark text-white text-xs font-bold hover:opacity-90">
               <IconPlus size={15} /> Thêm Nhân Viên
             </button>
@@ -361,7 +373,7 @@ export default function EmployeesPage() {
           </div>
         </div>
 
-        {error && <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">⚠️ {error}</div>}
+        {/* Lỗi kết nối tbsMayMoc chỉ log console (F12), không hiện banner ngoài trang */}
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-wrap items-center gap-2.5">
           <input
@@ -370,7 +382,19 @@ export default function EmployeesPage() {
             placeholder="Tìm theo mã NV, tên..."
             className="min-w-[220px] flex-1 px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs"
           />
-          <FilterSelect value={filterFactoryId} onChange={setFilterFactoryId} options={factories} placeholder="Tất cả nhà máy" />
+          <FilterSelect
+            value={filterFactoryId}
+            onChange={(v) => { setFilterFactoryId(v); setFilterAreaId(''); }}
+            options={factories}
+            placeholder="Tất cả nhà máy"
+          />
+          <FilterSelect
+            value={filterAreaId}
+            onChange={setFilterAreaId}
+            options={areasUnderFilterFactory}
+            placeholder={filterFactoryId ? 'Tất cả khu vực' : 'Chọn nhà máy trước'}
+            disabled={!filterFactoryId}
+          />
           <FilterSelect
             value={filterRole}
             onChange={setFilterRole}

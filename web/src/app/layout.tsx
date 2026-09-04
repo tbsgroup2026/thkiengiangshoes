@@ -69,7 +69,7 @@ export default function RootLayout({
               if ('serviceWorker' in navigator && 'caches' in window) {
                 caches.keys().then(function(keys) {
                   keys.forEach(function(key) {
-                    if (key !== 'skechers-tbs-v18-no-api-fix' && !key.includes('cloudinary') && !key.includes('static-assets')) {
+                    if (!key.includes('v21') && !key.includes('cloudinary') && !key.includes('static-assets')) {
                       caches.delete(key);
                     }
                   });

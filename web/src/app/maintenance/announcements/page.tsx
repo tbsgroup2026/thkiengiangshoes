@@ -5,6 +5,7 @@ import { IconPlus, IconPencil, IconTrash, IconSpeakerphone } from '@tabler/icons
 import MaintenanceShell from '@/components/MaintenanceShell';
 import FilterSelect from '@/components/FilterSelect';
 import DateRangeFilter, { inDateRange } from '@/components/DateRangeFilter';
+import RefreshButton from '@/components/RefreshButton';
 
 type CategoryOption = { id: string; name: string };
 
@@ -46,21 +47,25 @@ export default function AnnouncementsPage() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
-  const load = async () => {
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = async (force = false) => {
     try {
-      setLoading(true);
+      force ? setRefreshing(true) : setLoading(true);
       setError(null);
-      const [annRes, facRes] = await Promise.all([
-        fetch('/api/mmtb-kg/announcements').then((r) => r.json()),
-        fetch('/api/mmtb-kg/categories?type=FACTORY').then((r) => r.json()),
+      const fresh = force ? '?fresh=1' : '';
+      const settled = await Promise.allSettled([
+        fetch(`/api/mmtb-kg/announcements${fresh}`).then((r) => r.json()),
+        fetch(`/api/mmtb-kg/categories?type=FACTORY${force ? '&fresh=1' : ''}`).then((r) => r.json()),
       ]);
+      const [annRes, facRes] = settled.map((s) => (s.status === 'fulfilled' ? s.value : { success: false, error: String(s.reason) }));
       if (annRes.success) setAnnouncements(annRes.data || []);
-      else setError(annRes.error || 'Không lấy được dữ liệu');
+      else { console.warn('Failed to load announcements from tbsMayMoc:', annRes.error); setError(annRes.error || 'Không lấy được dữ liệu'); }
       if (facRes.success) setFactories(facRes.data || []);
     } catch (err) {
       console.warn('Failed to fetch announcements from tbsMayMoc:', err);
     } finally {
-      setLoading(false);
+      force ? setRefreshing(false) : setLoading(false);
     }
   };
 
@@ -154,12 +159,15 @@ export default function AnnouncementsPage() {
             <h1 className="text-2xl font-extrabold text-tbs-dark">Thông Báo</h1>
             <p className="text-xs text-gray-500 mt-1">Gửi push thật tới nhân viên KG qua App Mobile — {announcements.length} thông báo</p>
           </div>
-          <button onClick={openCreateForm} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-tbs-dark text-white text-xs font-bold hover:opacity-90">
-            <IconPlus size={15} /> Soạn Thông Báo
-          </button>
+          <div className="flex items-center gap-2">
+            <RefreshButton onClick={() => load(true)} loading={refreshing} />
+            <button onClick={openCreateForm} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-tbs-dark text-white text-xs font-bold hover:opacity-90">
+              <IconPlus size={15} /> Soạn Thông Báo
+            </button>
+          </div>
         </div>
 
-        {error && <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">⚠️ {error}</div>}
+        {/* Lỗi kết nối tbsMayMoc chỉ log console (F12), không hiện banner ngoài trang */}
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-wrap items-center gap-2.5">
           <DateRangeFilter from={dateFrom} to={dateTo} onFromChange={setDateFrom} onToChange={setDateTo} />

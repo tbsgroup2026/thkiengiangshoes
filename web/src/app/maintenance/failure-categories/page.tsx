@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { IconPlus, IconPencil, IconTrash } from '@tabler/icons-react';
 import MaintenanceShell from '@/components/MaintenanceShell';
+import RefreshButton from '@/components/RefreshButton';
 
 type FailureCategory = { id: string; name: string; isOther: boolean; order: number; scopeCategoryId: string | null };
 
@@ -22,18 +23,20 @@ export default function FailureCategoriesPage() {
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const load = async () => {
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = async (force = false) => {
     try {
-      setLoading(true);
+      force ? setRefreshing(true) : setLoading(true);
       setError(null);
-      const res = await fetch('/api/mmtb-kg/failure-categories');
+      const res = await fetch(`/api/mmtb-kg/failure-categories${force ? '?fresh=1' : ''}`);
       const result = await res.json();
       if (result.success) setCategories(result.data || []);
-      else setError(result.error || 'Không lấy được dữ liệu');
+      else { console.warn('Failed to load failure-categories from tbsMayMoc:', result.error); setError(result.error || 'Không lấy được dữ liệu'); }
     } catch (err) {
       console.warn('Failed to fetch failure-categories from tbsMayMoc:', err);
     } finally {
-      setLoading(false);
+      force ? setRefreshing(false) : setLoading(false);
     }
   };
 
@@ -116,12 +119,15 @@ export default function FailureCategoriesPage() {
             <h1 className="text-2xl font-extrabold text-tbs-dark">Danh Mục Hư</h1>
             <p className="text-xs text-gray-500 mt-1">Hiện ra khi nhân viên báo sự cố trên App Mobile — {categories.length} mục</p>
           </div>
-          <button onClick={openCreateForm} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-tbs-dark text-white text-xs font-bold hover:opacity-90">
-            <IconPlus size={15} /> Thêm Danh Mục
-          </button>
+          <div className="flex items-center gap-2">
+            <RefreshButton onClick={() => load(true)} loading={refreshing} />
+            <button onClick={openCreateForm} className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-tbs-dark text-white text-xs font-bold hover:opacity-90">
+              <IconPlus size={15} /> Thêm Danh Mục
+            </button>
+          </div>
         </div>
 
-        {error && <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">⚠️ {error}</div>}
+        {/* Lỗi kết nối tbsMayMoc chỉ log console (F12), không hiện banner ngoài trang */}
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-xl overflow-hidden">
           <div className="divide-y divide-gray-100">

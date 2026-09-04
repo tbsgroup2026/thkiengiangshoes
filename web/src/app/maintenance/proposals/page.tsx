@@ -5,6 +5,7 @@ import { IconPackage, IconSchool, IconPlayerPause, IconCircleCheck, IconClipboar
 import MaintenanceShell from '@/components/MaintenanceShell';
 import FilterSelect from '@/components/FilterSelect';
 import DateRangeFilter, { inDateRange } from '@/components/DateRangeFilter';
+import RefreshButton from '@/components/RefreshButton';
 
 type CategoryOption = { id: string; name: string };
 
@@ -47,25 +48,30 @@ export default function ProposalsPage() {
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'PENDING' | 'RESOLVED'>('PENDING');
   const [filterFactoryId, setFilterFactoryId] = useState('');
+  const [filterAreaId, setFilterAreaId] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  const load = async () => {
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = async (force = false) => {
     try {
-      setLoading(true);
+      force ? setRefreshing(true) : setLoading(true);
       setError(null);
-      const [propRes, facRes] = await Promise.all([
-        fetch('/api/mmtb-kg/proposals').then((r) => r.json()),
-        fetch('/api/mmtb-kg/categories?type=FACTORY').then((r) => r.json()),
+      const fresh = force ? '?fresh=1' : '';
+      const settled = await Promise.allSettled([
+        fetch(`/api/mmtb-kg/proposals${fresh}`).then((r) => r.json()),
+        fetch(`/api/mmtb-kg/categories?type=FACTORY${force ? '&fresh=1' : ''}`).then((r) => r.json()),
       ]);
+      const [propRes, facRes] = settled.map((s) => (s.status === 'fulfilled' ? s.value : { success: false, error: String(s.reason) }));
       if (propRes.success) setProposals(propRes.data || []);
-      else setError(propRes.error || 'Không lấy được dữ liệu');
+      else { console.warn('Failed to load proposals from tbsMayMoc:', propRes.error); setError(propRes.error || 'Không lấy được dữ liệu'); }
       if (facRes.success) setFactories(facRes.data || []);
     } catch (err) {
       console.warn('Failed to fetch proposals from tbsMayMoc:', err);
     } finally {
-      setLoading(false);
+      force ? setRefreshing(false) : setLoading(false);
     }
   };
 
@@ -74,14 +80,26 @@ export default function ProposalsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Xưởng lọc theo Nhà máy đã chọn — dựng thẳng từ chính dữ liệu đề xuất (mỗi đề xuất đã có sẵn
+  // incident.machine.area đầy đủ id/name/parent), không cần gọi thêm API riêng cho AREA.
+  const areaOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    proposals.forEach((p) => {
+      const area = p.incident.machine.area;
+      if (area && (!filterFactoryId || area.parent?.id === filterFactoryId)) map.set(area.id, area.name);
+    });
+    return Array.from(map, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+  }, [proposals, filterFactoryId]);
+
   const filtered = useMemo(() => {
     return proposals.filter((p) => {
       const matchesStatus = filterStatus === 'ALL' || (filterStatus === 'PENDING' ? !p.resolved : p.resolved);
       const matchesFactory = !filterFactoryId || p.incident.machine.area?.parent?.id === filterFactoryId;
+      const matchesArea = !filterAreaId || p.incident.machine.area?.id === filterAreaId;
       const matchesDate = inDateRange(p.createdAt, dateFrom, dateTo);
-      return matchesStatus && matchesFactory && matchesDate;
+      return matchesStatus && matchesFactory && matchesArea && matchesDate;
     });
-  }, [proposals, filterStatus, filterFactoryId, dateFrom, dateTo]);
+  }, [proposals, filterStatus, filterFactoryId, filterAreaId, dateFrom, dateTo]);
 
   const stats = useMemo(() => {
     let unresolved = 0, resolved = 0, parts = 0, retrain = 0, hold = 0;
@@ -118,11 +136,12 @@ export default function ProposalsPage() {
   return (
     <MaintenanceShell title="Đề Xuất Cải Tiến" subtitle="Vật tư / đào tạo lại / đang chờ xử lý — đã Trưởng team xác nhận — Tổ hợp Kiên Giang">
       <div className="p-4 sm:p-6 space-y-4">
-        <div>
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <h1 className="text-2xl font-extrabold text-tbs-dark">Đề Xuất Cải Tiến</h1>
+          <RefreshButton onClick={() => load(true)} loading={refreshing} />
         </div>
 
-        {error && <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">⚠️ {error}</div>}
+        {/* Lỗi kết nối tbsMayMoc chỉ log console (F12), không hiện banner ngoài trang */}
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {[
@@ -160,7 +179,19 @@ export default function ProposalsPage() {
               {s.label}
             </button>
           ))}
-          <FilterSelect value={filterFactoryId} onChange={setFilterFactoryId} options={factories.map((f) => ({ id: f.id, name: f.name }))} placeholder="Tất cả nhà máy" />
+          <FilterSelect
+            value={filterFactoryId}
+            onChange={(v) => { setFilterFactoryId(v); setFilterAreaId(''); }}
+            options={factories.map((f) => ({ id: f.id, name: f.name }))}
+            placeholder="Tất cả nhà máy"
+          />
+          <FilterSelect
+            value={filterAreaId}
+            onChange={setFilterAreaId}
+            options={areaOptions}
+            placeholder={filterFactoryId ? 'Tất cả khu vực' : 'Chọn nhà máy trước'}
+            disabled={!filterFactoryId}
+          />
           <DateRangeFilter from={dateFrom} to={dateTo} onFromChange={setDateFrom} onToChange={setDateTo} />
         </div>
 
