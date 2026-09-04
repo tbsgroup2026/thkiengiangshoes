@@ -954,6 +954,22 @@ async function handlePph(request, env, pathname, searchParams) {
     }
   }
 
+  // ---- Xoá 1 khung giờ đã nhập nhầm (dùng ở trang Cài Đặt, đã có RequireAuth) — cho phép sửa sai
+  // (VD nhập nhầm số) mà không phải đợi qua ngày khác để nhập lại đúng khung đó. ----
+  if (sub === "/entry" && request.method === "DELETE") {
+    try {
+      const teamId = searchParams.get("teamId");
+      const date = searchParams.get("date");
+      const slot = searchParams.get("slot");
+      if (!teamId || !date || !slot) return mmtbJson({ success: false, error: "Thiếu teamId/date/slot" }, 400);
+      await env.DB.prepare("DELETE FROM pph_entries WHERE team_id = ? AND entry_date = ? AND slot = ?").bind(teamId, date, slot).run();
+      await mmtbCacheInvalidate(env, "pph:dashboard");
+      return mmtbJson({ success: true });
+    } catch (err) {
+      return mmtbJson({ success: false, error: err.message || "Không xoá được" }, 500);
+    }
+  }
+
   return mmtbJson({ success: false, error: `Không tìm thấy endpoint PPH: ${sub}` }, 404);
 }
 
