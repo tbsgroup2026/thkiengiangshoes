@@ -608,6 +608,263 @@ async function mmtbTryAutoLoginAsAdmin(request, env) {
   }
 }
 
+// ════════════════════════════════════════════════════════════════
+// 🏭 PPH (Hiệu Suất Nhà Máy) — sản lượng theo giờ, quét QR tại Tổ
+// ════════════════════════════════════════════════════════════════
+// Cây Nhà máy > Xưởng > Chuyền > Tổ DÙNG CHUNG với MMTB (đọc từ tbsMayMoc, chỉ đọc tên/id, không
+// đụng gì tới dữ liệu máy móc) — nhưng dữ liệu sản lượng giờ (pph_entries) là RIÊNG của
+// thkiengiangshoes, lưu thẳng ở D1 (env.DB) của site này, KHÔNG lưu bên tbsMayMoc.
+//
+// Trang quét QR (/pph-scan?team=...) hoàn toàn CÔNG KHAI — công nhân/tổ trưởng quét bằng camera
+// Zalo, không cần đăng nhập hệ thống, chỉ tự nhập tên trong form. Vì vậy các API GET/POST bên
+// dưới không đòi hỏi tbs_token hay mmtb_token — nhưng để LẤY TÊN Nhà máy/Xưởng/Chuyền/Tổ (dữ liệu
+// nằm bên tbsMayMoc), Worker tự đăng nhập ngầm bằng tài khoản dịch vụ dùng chung
+// (MMTB_AUTO_LOGIN_EMP_CODE, mặc định "AMDKG") — người quét không hề thấy hay cần biết gì về
+// bước này, chỉ dùng nội bộ để tra cứu tên.
+const PPH_SLOTS = ["08:00", "08:30", "09:30", "10:30", "11:30", "13:30", "14:30", "15:30", "16:30"];
+
+async function pphEnsureTable(env) {
+  await env.DB.prepare(`
+    CREATE TABLE IF NOT EXISTS pph_entries (
+      id TEXT PRIMARY KEY,
+      team_id TEXT NOT NULL,
+      entry_date TEXT NOT NULL,
+      slot TEXT NOT NULL,
+      worker_count INTEGER,
+      model TEXT,
+      planned_qty INTEGER,
+      actual_qty INTEGER,
+      submitted_by TEXT,
+      submitted_at TEXT NOT NULL,
+      UNIQUE(team_id, entry_date, slot)
+    )
+  `).run().catch(() => {});
+}
+
+// Giờ Việt Nam (UTC+7, không lệch DST) — Worker chạy theo UTC, cộng thủ công 7 tiếng rồi ĐỌC BẰNG
+// các hàm getUTC* của kết quả (không phải getHours thật) để không phụ thuộc timezone của runtime.
+function pphNowVN() {
+  return new Date(Date.now() + 7 * 60 * 60 * 1000);
+}
+function pphTodayStr() {
+  return pphNowVN().toISOString().slice(0, 10);
+}
+function pphNowMinutes() {
+  const n = pphNowVN();
+  return n.getUTCHours() * 60 + n.getUTCMinutes();
+}
+function pphSlotMinutes(s) {
+  const [h, m] = s.split(":").map(Number);
+  return h * 60 + m;
+}
+
+// setupDone=false → luôn yêu cầu làm khung 08:00 trước (bất kể đang mấy giờ — "lần quét đầu tiên
+// trong ngày" theo đúng yêu cầu, không nhất thiết đúng 8:00 nếu ai đó quét trễ).
+// setupDone=true → tìm khung SỐ LƯỢNG sớm nhất đã tới giờ (trừ hao 10 phút) mà CHƯA nhập — cho
+// "bắt kịp" nếu bỏ lỡ khung trước đó. Nếu mọi khung đã tới giờ đều xong, báo khung TIẾP THEO sắp
+// tới; nếu hết cả 8 khung, báo "done".
+function pphResolveStatus(setupDone, filledSlots) {
+  if (!setupDone) return { nextAction: "setup", targetSlot: "08:00" };
+  const nowMin = pphNowMinutes();
+  const qSlots = PPH_SLOTS.slice(1);
+  for (const s of qSlots) {
+    if (nowMin >= pphSlotMinutes(s) - 10 && !filledSlots.has(s)) {
+      return { nextAction: "quantity", targetSlot: s };
+    }
+  }
+  const next = qSlots.find((s) => pphSlotMinutes(s) - 10 > nowMin);
+  if (next) return { nextAction: "wait", targetSlot: null, nextSlot: next };
+  return { nextAction: "done", targetSlot: null };
+}
+
+async function pphServiceLogin(env) {
+  try {
+    const employeeCode = env.MMTB_AUTO_LOGIN_EMP_CODE || "AMDKG";
+    const password = env.MMTB_AUTO_LOGIN_PASSWORD || "123456";
+    const res = await fetch(`${env.TBSMAYMOC_API_URL}/api/mobile/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ employeeCode, password }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.token) return null;
+    return data.token;
+  } catch {
+    return null;
+  }
+}
+
+// Dựng cây Nhà máy > Xưởng > Chuyền > Tổ từ 4 loại danh mục MMTB bên tbsMayMoc (chỉ đọc tên/id).
+async function pphFetchTree(env) {
+  const token = await pphServiceLogin(env);
+  if (!token) return null;
+  const [facRes, areaRes, lineRes, teamRes] = await Promise.all([
+    mmtbCall(env, token, "/api/categories?type=FACTORY"),
+    mmtbCall(env, token, "/api/categories?type=AREA"),
+    mmtbCall(env, token, "/api/categories?type=PRODUCTION_LINE"),
+    mmtbCall(env, token, "/api/categories?type=TEAM"),
+  ]);
+  if (!facRes.ok || !areaRes.ok || !lineRes.ok || !teamRes.ok) return null;
+  if (!Array.isArray(facRes.data) || !Array.isArray(areaRes.data) || !Array.isArray(lineRes.data) || !Array.isArray(teamRes.data)) return null;
+
+  const factories = facRes.data.map((f) => ({ id: f.id, name: f.name, areas: [] }));
+  const factoryById = new Map(factories.map((f) => [f.id, f]));
+  const areas = areaRes.data.map((a) => ({ id: a.id, name: a.name, factoryId: a.parentId, lines: [] }));
+  const areaById = new Map(areas.map((a) => [a.id, a]));
+  for (const a of areas) {
+    const f = factoryById.get(a.factoryId);
+    if (f) f.areas.push(a);
+  }
+  const lines = lineRes.data.map((l) => ({ id: l.id, name: l.name, areaId: l.parentId, teams: [] }));
+  const lineById = new Map(lines.map((l) => [l.id, l]));
+  for (const l of lines) {
+    const a = areaById.get(l.areaId);
+    if (a) a.lines.push(l);
+  }
+  for (const t of teamRes.data) {
+    const line = lineById.get(t.parentId);
+    if (line) line.teams.push({ id: t.id, name: t.name });
+  }
+  return factories;
+}
+
+// Cache 30 phút — cây Nhà máy/Xưởng/Chuyền/Tổ hiếm khi đổi, và đây là API CÔNG KHAI (trang quét QR
+// công nhân dùng liên tục cả ngày) nên càng cần tránh gọi sang tbsMayMoc mỗi lần quét.
+async function pphGetTreeCached(env) {
+  const cacheKey = "pph:tree";
+  const cached = await mmtbCacheGet(env, cacheKey);
+  if (cached) return cached;
+  const tree = await pphFetchTree(env);
+  if (tree) await mmtbCacheSet(env, cacheKey, tree, 1800);
+  return tree;
+}
+
+function pphFindTeam(tree, teamId) {
+  for (const f of tree) {
+    for (const a of f.areas) {
+      for (const l of a.lines) {
+        const t = l.teams.find((tm) => tm.id === teamId);
+        if (t) return { team: t, line: l, area: a, factory: f };
+      }
+    }
+  }
+  return null;
+}
+
+async function handlePph(request, env, pathname, searchParams) {
+  const sub = pathname.slice("/api/pph".length) || "/";
+  await pphEnsureTable(env);
+
+  // ---- Cây Nhà máy/Xưởng/Chuyền/Tổ — dùng cho trang Cài Đặt (trong /work, đã có RequireAuth) ----
+  if (sub === "/tree" && request.method === "GET") {
+    const tree = await pphGetTreeCached(env);
+    if (!tree) return mmtbJson({ success: false, error: "Không lấy được cây Nhà máy/Xưởng/Chuyền/Tổ từ tbsMayMoc" }, 502);
+    return mmtbJson({ success: true, data: tree });
+  }
+
+  // ---- Thông tin cho trang quét QR (công khai) — tên Tổ/Chuyền/Xưởng/Nhà máy + khung giờ cần nhập ----
+  if (sub === "/scan-info" && request.method === "GET") {
+    const teamId = searchParams.get("teamId");
+    if (!teamId) return mmtbJson({ success: false, error: "Thiếu mã Tổ trong đường dẫn QR" }, 400);
+    const tree = await pphGetTreeCached(env);
+    const found = tree ? pphFindTeam(tree, teamId) : null;
+    if (!found) return mmtbJson({ success: false, error: "Không tìm thấy Tổ này — mã QR có thể đã cũ" }, 404);
+
+    const date = pphTodayStr();
+    let results = [];
+    try {
+      const r = await env.DB.prepare(
+        "SELECT slot, worker_count, model, planned_qty, actual_qty FROM pph_entries WHERE team_id = ? AND entry_date = ?"
+      ).bind(teamId, date).all();
+      results = r.results || [];
+    } catch {}
+    const bySlot = new Map(results.map((r) => [r.slot, r]));
+    const setupDone = bySlot.has("08:00");
+    const filledSlots = new Set([...bySlot.keys()].filter((s) => s !== "08:00"));
+    const resolved = pphResolveStatus(setupDone, filledSlots);
+    const setupRow = bySlot.get("08:00");
+
+    return mmtbJson({
+      success: true,
+      team: { id: found.team.id, name: found.team.name, lineName: found.line.name, areaName: found.area.name, factoryName: found.factory.name },
+      date,
+      slots: PPH_SLOTS,
+      filledSlots: [...bySlot.keys()],
+      setup: setupRow ? { workerCount: setupRow.worker_count, model: setupRow.model, plannedQty: setupRow.planned_qty } : null,
+      ...resolved,
+    });
+  }
+
+  // ---- Nộp dữ liệu (công khai, không cần đăng nhập) ----
+  if (sub === "/scan" && request.method === "POST") {
+    try {
+      const body = await request.json();
+      const teamId = body.teamId;
+      const submittedBy = String(body.submittedBy || "").trim();
+      if (!teamId) return mmtbJson({ success: false, error: "Thiếu mã Tổ" }, 400);
+      if (!submittedBy) return mmtbJson({ success: false, error: "Vui lòng nhập tên người báo cáo" }, 400);
+
+      const tree = await pphGetTreeCached(env);
+      const found = tree ? pphFindTeam(tree, teamId) : null;
+      if (!found) return mmtbJson({ success: false, error: "Không tìm thấy Tổ này — mã QR có thể đã cũ" }, 404);
+
+      const date = pphTodayStr();
+      let results = [];
+      try {
+        const r = await env.DB.prepare("SELECT slot FROM pph_entries WHERE team_id = ? AND entry_date = ?").bind(teamId, date).all();
+        results = r.results || [];
+      } catch {}
+      const filled = new Set(results.map((r) => r.slot));
+      const setupDone = filled.has("08:00");
+      const resolved = pphResolveStatus(setupDone, filled);
+
+      if (resolved.nextAction === "wait") {
+        return mmtbJson({ success: false, error: `Chưa tới giờ nhập — khung tiếp theo lúc ${resolved.nextSlot}` }, 409);
+      }
+      if (resolved.nextAction === "done") {
+        return mmtbJson({ success: false, error: "Đã cập nhật đủ các khung giờ hôm nay, cảm ơn bạn!" }, 409);
+      }
+
+      const slot = resolved.targetSlot;
+      const id = `pph_${teamId}_${date}_${slot}`.replace(/[^a-zA-Z0-9_-]/g, "_");
+      const nowIso = new Date().toISOString();
+
+      if (resolved.nextAction === "setup") {
+        const workerCount = Number(body.workerCount);
+        const model = String(body.model || "").trim();
+        const plannedQty = Number(body.plannedQty);
+        if (!Number.isFinite(workerCount) || workerCount <= 0) return mmtbJson({ success: false, error: "Vui lòng nhập đúng Số lượng công nhân" }, 400);
+        if (!model) return mmtbJson({ success: false, error: "Vui lòng nhập Model sản xuất" }, 400);
+        if (!Number.isFinite(plannedQty) || plannedQty <= 0) return mmtbJson({ success: false, error: "Vui lòng nhập đúng Số lượng kế hoạch" }, 400);
+        try {
+          await env.DB.prepare(
+            "INSERT INTO pph_entries (id, team_id, entry_date, slot, worker_count, model, planned_qty, submitted_by, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          ).bind(id, teamId, date, slot, workerCount, model, plannedQty, submittedBy, nowIso).run();
+        } catch {
+          return mmtbJson({ success: false, error: "Đã có người cập nhật đầu giờ hôm nay rồi" }, 409);
+        }
+      } else {
+        const actualQty = Number(body.actualQty);
+        if (!Number.isFinite(actualQty) || actualQty < 0) return mmtbJson({ success: false, error: "Vui lòng nhập đúng Số lượng" }, 400);
+        try {
+          await env.DB.prepare(
+            "INSERT INTO pph_entries (id, team_id, entry_date, slot, actual_qty, submitted_by, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+          ).bind(id, teamId, date, slot, actualQty, submittedBy, nowIso).run();
+        } catch {
+          return mmtbJson({ success: false, error: `Khung giờ ${slot} đã được cập nhật rồi` }, 409);
+        }
+      }
+
+      await mmtbCacheInvalidate(env, "pph:dashboard");
+      return mmtbJson({ success: true, slot, team: { name: found.team.name, lineName: found.line.name } });
+    } catch (err) {
+      return mmtbJson({ success: false, error: err.message || "Không lưu được dữ liệu" }, 500);
+    }
+  }
+
+  return mmtbJson({ success: false, error: `Không tìm thấy endpoint PPH: ${sub}` }, 404);
+}
+
 async function handleMmtbKG(request, env, pathname, searchParams) {
   const mmtbPath = pathname.slice("/api/mmtb-kg".length) || "/";
 
@@ -7917,6 +8174,13 @@ export default {
     // ════════════════════════════════════════════════════════════════
     if (pathname.startsWith("/api/mmtb-kg")) {
       return await handleMmtbKG(request, env, pathname, url.searchParams);
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // 🏭 PPH (Hiệu Suất Nhà Máy) — xem handlePph() phía trên
+    // ════════════════════════════════════════════════════════════════
+    if (pathname.startsWith("/api/pph")) {
+      return await handlePph(request, env, pathname, url.searchParams);
     }
 
     // ════════════════════════════════════════════════════════════════

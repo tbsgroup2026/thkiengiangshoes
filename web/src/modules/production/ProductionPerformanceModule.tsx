@@ -1,8 +1,9 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { IconFlask, IconCircleFilled, IconBuildingFactory2 } from '@tabler/icons-react';
+import { IconFlask, IconCircleFilled, IconBuildingFactory2, IconSettings } from '@tabler/icons-react';
 import { generateProductionMockData, type ProductionFactory, type ProductionLine, type EntryStatus, type HourStatus } from '@/lib/productionMockData';
+import PphSettingsView from './PphSettingsView';
 
 const ENTRY_LABEL: Record<EntryStatus, { label: string; cls: string }> = {
   ontime: { label: 'Đúng giờ', cls: 'bg-emerald-50 text-emerald-700' },
@@ -68,6 +69,7 @@ function aggregateHours(lines: ProductionLine[]): HourPoint[] {
 // thật cho mảng dữ liệu sản xuất này (khác MMTB) nên toàn bộ là dữ liệu MẪU sinh phía FE, có nút
 // ẩn/hiện — khi có hệ thống QC-chuyền thật, chỉ cần thay generateProductionMockData() bằng gọi API.
 export default function ProductionPerformanceModule() {
+  const [showSettings, setShowSettings] = useState(false);
   const [testDataOn, setTestDataOn] = useState(true);
   const factories = useMemo<ProductionFactory[]>(() => generateProductionMockData(), []);
   const [factoryId, setFactoryId] = useState(factories[0]?.id ?? '');
@@ -122,10 +124,14 @@ export default function ProductionPerformanceModule() {
     };
   }, [factory]);
 
+  if (showSettings) {
+    return <PphSettingsView onClose={() => setShowSettings(false)} />;
+  }
+
   if (!testDataOn) {
     return (
       <div className="space-y-4 my-auto">
-        <Header testDataOn={testDataOn} onToggle={() => setTestDataOn(true)} />
+        <Header testDataOn={testDataOn} onToggle={() => setTestDataOn(true)} onOpenSettings={() => setShowSettings(true)} />
         <div className="p-10 rounded-2xl bg-white border border-slate-200/80 shadow-sm text-center text-sm text-slate-400">
           Chưa có dữ liệu sản xuất thật — bật &quot;Dữ liệu mẫu&quot; ở trên để xem giao diện minh hoạ.
         </div>
@@ -140,7 +146,7 @@ export default function ProductionPerformanceModule() {
 
   return (
     <div className="space-y-4 my-auto">
-      <Header testDataOn={testDataOn} onToggle={() => setTestDataOn(false)} />
+      <Header testDataOn={testDataOn} onToggle={() => setTestDataOn(false)} onOpenSettings={() => setShowSettings(true)} />
 
       {/* 4 Ô Nhà Máy — hàng đầu tiên, mỗi nhà máy 1 màu riêng để dễ phân biệt */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -356,7 +362,15 @@ export default function ProductionPerformanceModule() {
   );
 }
 
-function Header({ testDataOn, onToggle }: { testDataOn: boolean; onToggle: () => void }) {
+function Header({
+  testDataOn,
+  onToggle,
+  onOpenSettings,
+}: {
+  testDataOn: boolean;
+  onToggle: () => void;
+  onOpenSettings: () => void;
+}) {
   return (
     <div className="flex items-center justify-between flex-wrap gap-3">
       <div>
@@ -367,6 +381,14 @@ function Header({ testDataOn, onToggle }: { testDataOn: boolean; onToggle: () =>
         <span className="hidden sm:flex items-center gap-1.5 text-[11px] font-bold text-slate-400">
           <IconCircleFilled size={8} className="text-[#006838]" /> Đang trực tuyến
         </span>
+        <button
+          type="button"
+          onClick={onOpenSettings}
+          title="Cài đặt — cây Nhà máy/Xưởng/Chuyền/Tổ và mã QR quét sản lượng"
+          className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-700 flex items-center justify-center transition"
+        >
+          <IconSettings size={14} />
+        </button>
         <button
           type="button"
           onClick={onToggle}
