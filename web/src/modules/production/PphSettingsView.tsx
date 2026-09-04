@@ -5,11 +5,8 @@ import QRCode from 'qrcode';
 import {
   IconArrowLeft,
   IconBuildingFactory2,
-  IconChevronDown,
-  IconChevronRight,
   IconQrcode,
   IconDownload,
-  IconUsersGroup,
   IconRefresh,
   IconPlus,
   IconTrash,
@@ -19,26 +16,24 @@ import {
 
 type PphTeam = { id: string; name: string };
 type PphLine = { id: string; name: string; teams: PphTeam[] };
-type PphArea = { id: string; name: string; lines: PphLine[] };
+type PphArea = { id: string; name: string; lines: PphLine[]; teams: PphTeam[] };
 type PphFactory = { id: string; name: string; areas: PphArea[] };
 type OrgType = 'FACTORY' | 'AREA' | 'LINE' | 'TEAM';
 
-const TYPE_LABEL: Record<OrgType, string> = { FACTORY: 'Nhà máy', AREA: 'Xưởng', LINE: 'Chuyền', TEAM: 'Tổ' };
+const TYPE_LABEL: Record<OrgType, string> = { FACTORY: 'Nhà máy', AREA: 'Phân xưởng', LINE: 'Chuyền', TEAM: 'Tổ' };
 
-// Cài Đặt Hiệu Suất Nhà Máy — cây Nhà máy > Xưởng > Chuyền > Tổ RIÊNG cho module này, tự quản lý
-// (thêm/xoá ngay ở đây) — KHÔNG dùng chung danh mục MMTB nữa (tbsMayMoc chưa có dữ liệu cấp Tổ
-// thật). Mỗi Tổ có 1 mã QR cố định để dán tại chuyền, quét bằng camera Zalo.
+// Cài Đặt Hiệu Suất Nhà Máy — cây Nhà máy > Xưởng > (Chuyền > Tổ) HOẶC (Tổ thẳng) RIÊNG cho module
+// này, tự quản lý. KHÔNG dùng dạng cây thu gọn nữa — hiện hết, chữ to, nút lớn, mỗi Nhà máy 1 khối
+// riêng. Điểm quét QR có thể là Xưởng (VD "Đầu vào" — không chia gì thêm), Chuyền (VD "Gò" — không
+// có Tổ bên dưới), hoặc Tổ (VD "May" — gắn thẳng dưới Xưởng, bỏ qua Chuyền) — bất kỳ mục nào KHÔNG
+// còn mục con thì tự động là điểm quét, hiện nút QR ngay tại đó.
 export default function PphSettingsView({ onClose }: { onClose: () => void }) {
   const [factories, setFactories] = useState<PphFactory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [openAreas, setOpenAreas] = useState<Set<string>>(new Set());
-  const [openLines, setOpenLines] = useState<Set<string>>(new Set());
-  const [openFactories, setOpenFactories] = useState<Set<string>>(new Set());
   const [qrTeam, setQrTeam] = useState<{ id: string; name: string; path: string } | null>(null);
   const [qrImageUrl, setQrImageUrl] = useState<string | null>(null);
 
-  // addingFor: đang mở form thêm mục con cho node nào (null = không mở form nào)
   const [addingFor, setAddingFor] = useState<{ type: OrgType; parentId: string | null } | null>(null);
   const [addName, setAddName] = useState('');
   const [addSubmitting, setAddSubmitting] = useState(false);
@@ -78,13 +73,6 @@ export default function PphSettingsView({ onClose }: { onClose: () => void }) {
       .catch(() => setQrImageUrl(null));
   }, [qrTeam]);
 
-  function toggle(set: Set<string>, setSet: (s: Set<string>) => void, id: string) {
-    const next = new Set(set);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSet(next);
-  }
-
   function openAddForm(type: OrgType, parentId: string | null) {
     setAddingFor({ type, parentId });
     setAddName('');
@@ -112,12 +100,6 @@ export default function PphSettingsView({ onClose }: { onClose: () => void }) {
         return;
       }
       setAddingFor(null);
-      // Tự mở khung cha vừa thêm con vào để thấy ngay mục mới
-      if (addingFor.parentId) {
-        if (addingFor.type === 'AREA') setOpenFactories((s) => new Set(s).add(addingFor.parentId!));
-        if (addingFor.type === 'LINE') setOpenAreas((s) => new Set(s).add(addingFor.parentId!));
-        if (addingFor.type === 'TEAM') setOpenLines((s) => new Set(s).add(addingFor.parentId!));
-      }
       await load();
     } catch {
       setAddError('Không kết nối được tới hệ thống');
@@ -144,205 +126,208 @@ export default function PphSettingsView({ onClose }: { onClose: () => void }) {
     }
   }
 
-  const AddInline = ({ type, parentId }: { type: OrgType; parentId: string | null }) => {
+  const AddInline = ({ type, parentId, big }: { type: OrgType; parentId: string | null; big?: boolean }) => {
     const isOpen = addingFor?.type === type && addingFor?.parentId === parentId;
+    const sizeCls = big ? 'px-4 py-3 text-sm' : 'px-3 py-2 text-xs';
     if (!isOpen) {
       return (
         <button
           type="button"
           onClick={() => openAddForm(type, parentId)}
-          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-dashed border-slate-300 text-[11px] font-bold text-slate-500 hover:border-[#006838] hover:text-[#006838]"
+          className={`flex items-center gap-1.5 rounded-xl bg-white border-2 border-dashed border-slate-300 font-extrabold text-slate-500 hover:border-[#006838] hover:text-[#006838] hover:bg-emerald-50/50 transition ${sizeCls}`}
         >
-          <IconPlus size={12} /> Thêm {TYPE_LABEL[type]}
+          <IconPlus size={big ? 16 : 13} /> Thêm {TYPE_LABEL[type]}
         </button>
       );
     }
     return (
-      <form onSubmit={submitAdd} className="flex items-center gap-1.5 flex-wrap">
+      <form onSubmit={submitAdd} className="flex items-center gap-2 flex-wrap bg-emerald-50 border-2 border-[#006838] rounded-xl p-2">
         <input
           autoFocus
           value={addName}
           onChange={(e) => setAddName(e.target.value)}
           placeholder={`Tên ${TYPE_LABEL[type]} mới`}
-          className="px-2.5 py-1.5 bg-white border border-[#006838] rounded-lg text-[11px] font-semibold w-40 focus:outline-none"
+          className="px-3 py-2 bg-white border border-[#006838]/40 rounded-lg text-sm font-bold w-44 focus:outline-none"
         />
-        <button type="submit" disabled={addSubmitting} className="w-7 h-7 rounded-lg bg-[#006838] text-white flex items-center justify-center disabled:opacity-50">
-          <IconCheck size={13} />
+        <button type="submit" disabled={addSubmitting} className="w-9 h-9 rounded-lg bg-[#006838] text-white flex items-center justify-center disabled:opacity-50">
+          <IconCheck size={16} />
         </button>
-        <button type="button" onClick={() => setAddingFor(null)} className="w-7 h-7 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center">
-          <IconX size={13} />
+        <button type="button" onClick={() => setAddingFor(null)} className="w-9 h-9 rounded-lg bg-slate-200 text-slate-600 flex items-center justify-center">
+          <IconX size={16} />
         </button>
-        {addError && <span className="text-[10px] text-rose-600 font-semibold w-full">{addError}</span>}
+        {addError && <span className="text-xs text-rose-600 font-bold w-full">{addError}</span>}
       </form>
     );
   };
 
+  const QrChip = ({ id, name, path, type }: { id: string; name: string; path: string; type: OrgType }) => (
+    <div className="flex items-center gap-1 pl-4 pr-1.5 py-3 rounded-2xl bg-emerald-50 border-2 border-emerald-200 text-emerald-800">
+      <button type="button" onClick={() => setQrTeam({ id, name, path })} className="flex items-center gap-2 font-black text-sm flex-1">
+        <IconQrcode size={18} className="text-emerald-500 flex-shrink-0" />
+        {name}
+      </button>
+      <button
+        type="button"
+        onClick={() => handleDelete(id, type, name)}
+        disabled={deletingId === id}
+        className="w-8 h-8 rounded-lg text-rose-400 hover:bg-rose-100 hover:text-rose-600 flex items-center justify-center flex-shrink-0 disabled:opacity-40"
+        title={`Xoá ${TYPE_LABEL[type]}`}
+      >
+        <IconTrash size={14} />
+      </button>
+    </div>
+  );
+
   return (
-    <div className="space-y-4 my-auto">
+    <div className="space-y-5 my-auto">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-xl bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 flex items-center justify-center flex-shrink-0"
+            className="w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 flex items-center justify-center flex-shrink-0"
             title="Về Hiệu Suất Nhà Máy"
           >
-            <IconArrowLeft size={16} />
+            <IconArrowLeft size={18} />
           </button>
           <div>
-            <h2 className="text-lg font-black text-slate-900">⚙️ Cài Đặt — Hiệu Suất Nhà Máy</h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Nhà máy › Xưởng › Chuyền › Tổ — mỗi Tổ có 1 mã QR cố định để dán tại chuyền, quét bằng camera Zalo.
+            <h2 className="text-xl font-black text-slate-900">⚙️ Cài Đặt — Hiệu Suất Nhà Máy</h2>
+            <p className="text-sm text-slate-500 mt-0.5">
+              Nhà máy › Phân xưởng › Chuyền/Tổ — mục nào không còn mục con là 1 điểm quét, có mã QR riêng để dán tại chỗ.
             </p>
           </div>
         </div>
         <button
           type="button"
           onClick={load}
-          className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50"
+          className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50"
         >
-          <IconRefresh size={14} /> Làm mới
+          <IconRefresh size={16} /> Làm mới
         </button>
       </div>
 
       {error && (
-        <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold">
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-700 text-sm font-semibold">
           ⚠️ {error} — kiểm tra Console (F12) để biết chi tiết.
         </div>
       )}
 
-      {loading && <div className="p-10 rounded-2xl bg-white border border-slate-200/80 shadow-sm text-center text-sm text-slate-400">Đang tải...</div>}
+      {loading && <div className="p-12 rounded-2xl bg-white border border-slate-200/80 shadow-sm text-center text-base text-slate-400">Đang tải...</div>}
 
       {!loading && (
-        <div className="p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-sm">
-          <AddInline type="FACTORY" parentId={null} />
+        <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm">
+          <AddInline type="FACTORY" parentId={null} big />
         </div>
       )}
 
       {!loading && !error && factories.length === 0 && (
-        <div className="p-10 rounded-2xl bg-white border border-slate-200/80 shadow-sm text-center text-sm text-slate-400">
+        <div className="p-12 rounded-2xl bg-white border border-slate-200/80 shadow-sm text-center text-base text-slate-400">
           Chưa có Nhà máy nào — bấm &quot;Thêm Nhà máy&quot; ở trên để bắt đầu.
         </div>
       )}
 
-      <div className="space-y-3">
-        {factories.map((f) => {
-          const fOpen = openFactories.has(f.id);
-          const teamCount = f.areas.reduce((s, a) => s + a.lines.reduce((s2, l) => s2 + l.teams.length, 0), 0);
-          return (
-            <div key={f.id} className="rounded-2xl bg-white border border-slate-200/80 shadow-sm overflow-hidden">
-              <div className="w-full flex items-center gap-2.5 px-4 py-3.5 hover:bg-slate-50/80">
-                <button type="button" onClick={() => toggle(openFactories, setOpenFactories, f.id)} className="flex items-center gap-2.5 flex-1 min-w-0">
-                  {fOpen ? <IconChevronDown size={16} className="text-slate-400" /> : <IconChevronRight size={16} className="text-slate-400" />}
-                  <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0">
-                    <IconBuildingFactory2 size={16} />
-                  </div>
-                  <span className="font-black text-slate-900 text-sm truncate">{f.name}</span>
-                  <span className="text-[11px] text-slate-400 font-semibold flex-shrink-0">{f.areas.length} xưởng · {teamCount} tổ</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(f.id, 'FACTORY', f.name)}
-                  disabled={deletingId === f.id}
-                  className="w-7 h-7 rounded-lg text-rose-400 hover:bg-rose-50 hover:text-rose-600 flex items-center justify-center flex-shrink-0 disabled:opacity-40"
-                  title="Xoá Nhà máy"
-                >
-                  <IconTrash size={13} />
-                </button>
+      <div className="space-y-5">
+        {factories.map((f) => (
+          <div key={f.id} className="rounded-3xl bg-white border-2 border-slate-200 shadow-sm overflow-hidden">
+            {/* Header Nhà máy — to, nổi bật */}
+            <div className="flex items-center gap-3 px-5 py-4 bg-[#08221a] text-white">
+              <div className="w-11 h-11 rounded-2xl bg-emerald-400/20 text-emerald-300 flex items-center justify-center flex-shrink-0">
+                <IconBuildingFactory2 size={22} />
               </div>
-              {fOpen && (
-                <div className="border-t border-slate-100 divide-y divide-slate-50">
-                  {f.areas.length === 0 && <div className="px-4 py-3 text-xs text-slate-400">Chưa có Xưởng nào.</div>}
-                  {f.areas.map((a) => {
-                    const aOpen = openAreas.has(a.id);
-                    return (
-                      <div key={a.id} className="pl-4">
-                        <div className="flex items-center gap-2.5 px-2 py-2.5 hover:bg-slate-50/80">
-                          <button type="button" onClick={() => toggle(openAreas, setOpenAreas, a.id)} className="flex items-center gap-2.5 flex-1 min-w-0">
-                            {aOpen ? <IconChevronDown size={14} className="text-slate-400" /> : <IconChevronRight size={14} className="text-slate-400" />}
-                            <span className="font-bold text-slate-800 text-xs truncate">{a.name}</span>
-                            <span className="text-[10px] text-slate-400 font-semibold flex-shrink-0">{a.lines.length} chuyền</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(a.id, 'AREA', a.name)}
-                            disabled={deletingId === a.id}
-                            className="w-6 h-6 rounded-lg text-rose-400 hover:bg-rose-50 hover:text-rose-600 flex items-center justify-center flex-shrink-0 disabled:opacity-40"
-                            title="Xoá Xưởng"
-                          >
-                            <IconTrash size={12} />
-                          </button>
-                        </div>
-                        {aOpen && (
-                          <div className="pl-5 pb-2 space-y-1.5">
-                            {a.lines.length === 0 && <div className="px-2 py-1 text-[11px] text-slate-400">Chưa có Chuyền nào.</div>}
-                            {a.lines.map((l) => {
-                              const lOpen = openLines.has(l.id);
-                              return (
-                                <div key={l.id}>
-                                  <div className="flex items-center gap-2 px-2 py-2 hover:bg-slate-50/80">
-                                    <button type="button" onClick={() => toggle(openLines, setOpenLines, l.id)} className="flex items-center gap-2 flex-1 min-w-0">
-                                      {lOpen ? <IconChevronDown size={12} className="text-slate-400" /> : <IconChevronRight size={12} className="text-slate-400" />}
-                                      <span className="font-semibold text-slate-700 text-[11px] truncate">{l.name}</span>
-                                      <span className="text-[10px] text-slate-400 flex-shrink-0">{l.teams.length} tổ</span>
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDelete(l.id, 'LINE', l.name)}
-                                      disabled={deletingId === l.id}
-                                      className="w-6 h-6 rounded-lg text-rose-400 hover:bg-rose-50 hover:text-rose-600 flex items-center justify-center flex-shrink-0 disabled:opacity-40"
-                                      title="Xoá Chuyền"
-                                    >
-                                      <IconTrash size={11} />
-                                    </button>
-                                  </div>
-                                  {lOpen && (
-                                    <div className="pl-5 pb-2 flex flex-wrap items-center gap-1.5">
-                                      {l.teams.map((t) => (
-                                        <span
-                                          key={t.id}
-                                          className="flex items-center gap-1 pl-2.5 pr-1 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold"
-                                        >
-                                          <button
-                                            type="button"
-                                            onClick={() => setQrTeam({ id: t.id, name: t.name, path: `${f.name} › ${a.name} › ${l.name}` })}
-                                            className="flex items-center gap-1.5 hover:underline"
-                                          >
-                                            <IconUsersGroup size={12} />
-                                            {t.name}
-                                            <IconQrcode size={12} className="text-emerald-500" />
-                                          </button>
-                                          <button
-                                            type="button"
-                                            onClick={() => handleDelete(t.id, 'TEAM', t.name)}
-                                            disabled={deletingId === t.id}
-                                            className="w-5 h-5 rounded text-rose-400 hover:bg-rose-100 hover:text-rose-600 flex items-center justify-center disabled:opacity-40"
-                                            title="Xoá Tổ"
-                                          >
-                                            <IconTrash size={10} />
-                                          </button>
-                                        </span>
-                                      ))}
-                                      <AddInline type="TEAM" parentId={l.id} />
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                            <AddInline type="LINE" parentId={a.id} />
-                          </div>
+              <h3 className="font-black text-lg flex-1 truncate">{f.name}</h3>
+              <button
+                type="button"
+                onClick={() => handleDelete(f.id, 'FACTORY', f.name)}
+                disabled={deletingId === f.id}
+                className="w-9 h-9 rounded-lg text-white/50 hover:bg-white/10 hover:text-rose-300 flex items-center justify-center flex-shrink-0 disabled:opacity-30"
+                title="Xoá Nhà máy"
+              >
+                <IconTrash size={16} />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-5">
+              {f.areas.length === 0 && <div className="text-sm text-slate-400 py-2">Chưa có Phân xưởng nào.</div>}
+
+              {f.areas.map((a) => {
+                const isLeafArea = a.lines.length === 0 && a.teams.length === 0;
+                return (
+                  <div key={a.id} className="rounded-2xl bg-slate-50 border border-slate-200 p-4 space-y-3">
+                    <div className="flex items-center gap-2.5">
+                      <h4 className="font-black text-slate-900 text-base flex-1">{a.name}</h4>
+                      {!isLeafArea && (
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(a.id, 'AREA', a.name)}
+                          disabled={deletingId === a.id}
+                          className="w-8 h-8 rounded-lg text-rose-400 hover:bg-rose-50 hover:text-rose-600 flex items-center justify-center flex-shrink-0 disabled:opacity-40"
+                          title="Xoá Phân xưởng"
+                        >
+                          <IconTrash size={14} />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Xưởng trống hẳn (VD Đầu vào) → chính Xưởng là điểm quét */}
+                    {isLeafArea && (
+                      <QrChip id={a.id} name={a.name} path={f.name} type="AREA" />
+                    )}
+
+                    {/* Tổ gắn thẳng dưới Xưởng (VD May) */}
+                    {a.teams.length > 0 && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+                        {a.teams.map((t) => (
+                          <QrChip key={t.id} id={t.id} name={t.name} path={`${f.name} › ${a.name}`} type="TEAM" />
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Chuyền dưới Xưởng (VD Gò) — Chuyền không có Tổ con thì Chuyền là điểm quét */}
+                    {a.lines.length > 0 && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+                        {a.lines.map((l) =>
+                          l.teams.length === 0 ? (
+                            <QrChip key={l.id} id={l.id} name={l.name} path={`${f.name} › ${a.name}`} type="LINE" />
+                          ) : (
+                            <div key={l.id} className="col-span-full rounded-xl bg-white border border-slate-200 p-3 space-y-2">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-slate-800 text-sm flex-1">{l.name}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDelete(l.id, 'LINE', l.name)}
+                                  disabled={deletingId === l.id}
+                                  className="w-7 h-7 rounded-lg text-rose-400 hover:bg-rose-50 flex items-center justify-center flex-shrink-0 disabled:opacity-40"
+                                >
+                                  <IconTrash size={12} />
+                                </button>
+                              </div>
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                {l.teams.map((t) => (
+                                  <QrChip key={t.id} id={t.id} name={t.name} path={`${f.name} › ${a.name} › ${l.name}`} type="TEAM" />
+                                ))}
+                                <AddInline type="TEAM" parentId={l.id} />
+                              </div>
+                            </div>
+                          )
                         )}
                       </div>
-                    );
-                  })}
-                  <div className="px-4 py-3">
-                    <AddInline type="AREA" parentId={f.id} />
+                    )}
+
+                    {/* Nút thêm — chỉ hiện khi Xưởng chưa "chốt" thành điểm quét trống */}
+                    {!isLeafArea && (
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        <AddInline type="LINE" parentId={a.id} />
+                        <AddInline type="TEAM" parentId={a.id} />
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
+                );
+              })}
+
+              <AddInline type="AREA" parentId={f.id} big />
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
 
       {/* Modal mã QR */}
@@ -353,33 +338,33 @@ export default function PphSettingsView({ onClose }: { onClose: () => void }) {
             onClick={(e) => e.stopPropagation()}
           >
             <div>
-              <div className="text-[11px] text-slate-400 font-semibold">{qrTeam.path}</div>
-              <h3 className="font-black text-lg text-slate-900">Tổ {qrTeam.name}</h3>
+              <div className="text-xs text-slate-400 font-semibold">{qrTeam.path}</div>
+              <h3 className="font-black text-xl text-slate-900">{qrTeam.name}</h3>
             </div>
             <div className="flex items-center justify-center p-3 bg-slate-50 rounded-2xl border border-slate-200">
               {qrImageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={qrImageUrl} alt={`QR Tổ ${qrTeam.name}`} className="w-56 h-56" />
+                <img src={qrImageUrl} alt={`QR ${qrTeam.name}`} className="w-56 h-56" />
               ) : (
                 <div className="w-56 h-56 flex items-center justify-center text-xs text-slate-400">Đang tạo mã...</div>
               )}
             </div>
-            <p className="text-[11px] text-slate-400">Dán mã này tại vị trí Tổ — quét bằng camera Zalo để mở form cập nhật sản lượng.</p>
+            <p className="text-xs text-slate-400">Dán mã này tại vị trí tương ứng — quét bằng camera Zalo để mở form cập nhật sản lượng.</p>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setQrTeam(null)}
-                className="flex-1 py-2.5 rounded-xl bg-slate-100 text-slate-600 text-xs font-bold hover:bg-slate-200"
+                className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-600 text-sm font-bold hover:bg-slate-200"
               >
                 Đóng
               </button>
               {qrImageUrl && (
                 <a
                   href={qrImageUrl}
-                  download={`QR-To-${qrTeam.name.replace(/\s+/g, '-')}.png`}
-                  className="flex-1 py-2.5 rounded-xl bg-[#006838] text-white text-xs font-bold hover:opacity-90 flex items-center justify-center gap-1.5"
+                  download={`QR-${qrTeam.name.replace(/\s+/g, '-')}.png`}
+                  className="flex-1 py-3 rounded-xl bg-[#006838] text-white text-sm font-bold hover:opacity-90 flex items-center justify-center gap-1.5"
                 >
-                  <IconDownload size={14} /> Tải ảnh
+                  <IconDownload size={16} /> Tải ảnh
                 </a>
               )}
             </div>

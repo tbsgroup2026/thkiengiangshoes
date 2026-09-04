@@ -683,8 +683,13 @@ function pphResolveStatus(setupDone, filledSlots) {
 // thật sự (Nhà máy>Khu vực>Chuyền), không có cấp Tổ độc lập. Theo yêu cầu người dùng, cây tổ chức
 // cho PPH giờ hoàn toàn RIÊNG, tự quản lý (thêm/sửa/xoá) ngay trong D1 của thkiengiangshoes, không
 // gọi sang tbsMayMoc nữa.
+// Độ sâu KHÔNG cố định theo Nhà máy — mỗi Xưởng dừng ở đúng cấp sâu nhất có dữ liệu thật: có
+// Xưởng không chia gì thêm (VD "Đầu vào" — điểm quét QR ngay ở Xưởng), có Xưởng chỉ chia Chuyền
+// (VD "Gò" — điểm quét ở Chuyền, không có Tổ bên dưới), có Xưởng nhảy thẳng xuống Tổ bỏ qua
+// Chuyền (VD "May" — điểm quét ở Tổ, KHÔNG có Chuyền ở giữa). Vì vậy TEAM được phép có cha là
+// AREA (gắn thẳng dưới Xưởng) HOẶC LINE (gắn dưới Chuyền, cho nhánh nào thật sự cần đủ 4 cấp).
 const PPH_ORG_TYPES = ["FACTORY", "AREA", "LINE", "TEAM"];
-const PPH_ORG_REQUIRED_PARENT = { AREA: "FACTORY", LINE: "AREA", TEAM: "LINE" };
+const PPH_ORG_ALLOWED_PARENT_TYPES = { AREA: ["FACTORY"], LINE: ["AREA"], TEAM: ["AREA", "LINE"] };
 
 async function pphOrgEnsureTable(env) {
   await env.DB.prepare(`
@@ -699,14 +704,16 @@ async function pphOrgEnsureTable(env) {
   `).run().catch(() => {});
 }
 
-// Dựng cây Nhà máy > Xưởng > Chuyền > Tổ từ bảng pph_org (tự quản lý, không phụ thuộc tbsMayMoc).
+// Dựng cây Nhà máy > Xưởng > (Chuyền > Tổ) HOẶC (Tổ thẳng) từ bảng pph_org. Mỗi Xưởng có CẢ hai
+// mảng `lines` (Chuyền, có thể chứa Tổ con) và `teams` (Tổ gắn THẲNG dưới Xưởng, bỏ qua Chuyền) —
+// FE tự quyết định hiển thị mảng nào tuỳ nhánh có dữ liệu.
 async function pphBuildTree(env) {
   await pphOrgEnsureTable(env);
   const { results } = await env.DB.prepare("SELECT * FROM pph_org ORDER BY order_num ASC, created_at ASC").all();
   const rows = results || [];
   const factories = rows.filter((r) => r.type === "FACTORY").map((f) => ({ id: f.id, name: f.name, areas: [] }));
   const factoryById = new Map(factories.map((f) => [f.id, f]));
-  const areas = rows.filter((r) => r.type === "AREA").map((a) => ({ id: a.id, name: a.name, factoryId: a.parent_id, lines: [] }));
+  const areas = rows.filter((r) => r.type === "AREA").map((a) => ({ id: a.id, name: a.name, factoryId: a.parent_id, lines: [], teams: [] }));
   const areaById = new Map(areas.map((a) => [a.id, a]));
   for (const a of areas) {
     const f = factoryById.get(a.factoryId);
@@ -720,24 +727,39 @@ async function pphBuildTree(env) {
   }
   for (const t of rows.filter((r) => r.type === "TEAM")) {
     const line = lineById.get(t.parent_id);
-    if (line) line.teams.push({ id: t.id, name: t.name });
+    if (line) {
+      line.teams.push({ id: t.id, name: t.name });
+      continue;
+    }
+    const area = areaById.get(t.parent_id);
+    if (area) area.teams.push({ id: t.id, name: t.name });
   }
   return factories;
 }
 
-// Tra 1 Tổ + đi ngược lên Chuyền/Xưởng/Nhà máy cha — dùng cho trang quét QR (không cần tải cả cây).
-async function pphFindTeamInfo(env, teamId) {
+// Tra 1 nút BẤT KỲ (Xưởng/Chuyền/Tổ đều có thể là điểm quét QR — tuỳ nhánh dừng ở cấp nào) và đi
+// ngược lên tới Nhà máy — dùng cho trang quét QR (không cần tải cả cây). ancestors KHÔNG bao gồm
+// chính node đang tra, nên area/line/factory luôn là TỔ TIÊN thật, không bị trùng với chính nó.
+async function pphFindNodeChain(env, nodeId) {
   await pphOrgEnsureTable(env);
-  const team = await env.DB.prepare("SELECT * FROM pph_org WHERE id = ? AND type = 'TEAM'").bind(teamId).first();
-  if (!team) return null;
-  const line = team.parent_id ? await env.DB.prepare("SELECT * FROM pph_org WHERE id = ?").bind(team.parent_id).first() : null;
-  const area = line && line.parent_id ? await env.DB.prepare("SELECT * FROM pph_org WHERE id = ?").bind(line.parent_id).first() : null;
-  const factory = area && area.parent_id ? await env.DB.prepare("SELECT * FROM pph_org WHERE id = ?").bind(area.parent_id).first() : null;
+  const node = await env.DB.prepare("SELECT * FROM pph_org WHERE id = ?").bind(nodeId).first();
+  if (!node) return null;
+  const ancestors = [];
+  let parentId = node.parent_id;
+  while (parentId) {
+    const parent = await env.DB.prepare("SELECT * FROM pph_org WHERE id = ?").bind(parentId).first();
+    if (!parent) break;
+    ancestors.push(parent);
+    parentId = parent.parent_id;
+  }
+  const factory = ancestors.find((a) => a.type === "FACTORY") || null;
+  const area = ancestors.find((a) => a.type === "AREA") || null;
+  const line = ancestors.find((a) => a.type === "LINE") || null;
   return {
-    team: { id: team.id, name: team.name },
-    line: { id: line ? line.id : null, name: line ? line.name : "" },
-    area: { id: area ? area.id : null, name: area ? area.name : "" },
-    factory: { id: factory ? factory.id : null, name: factory ? factory.name : "" },
+    node: { id: node.id, name: node.name, type: node.type },
+    factory: factory ? { id: factory.id, name: factory.name } : null,
+    area: area ? { id: area.id, name: area.name } : null,
+    line: line ? { id: line.id, name: line.name } : null,
   };
 }
 
@@ -761,18 +783,18 @@ async function handlePph(request, env, pathname, searchParams) {
       const parentId = body.parentId || null;
       if (!PPH_ORG_TYPES.includes(type)) return mmtbJson({ success: false, error: "Loại không hợp lệ" }, 400);
       if (!name) return mmtbJson({ success: false, error: "Thiếu tên" }, 400);
-      const requiredParentType = PPH_ORG_REQUIRED_PARENT[type];
-      if (requiredParentType && !parentId) return mmtbJson({ success: false, error: "Thiếu mục cha" }, 400);
+      const allowedParentTypes = PPH_ORG_ALLOWED_PARENT_TYPES[type];
+      if (allowedParentTypes && !parentId) return mmtbJson({ success: false, error: "Thiếu mục cha" }, 400);
       await pphOrgEnsureTable(env);
-      if (requiredParentType) {
+      if (allowedParentTypes) {
         const parent = await env.DB.prepare("SELECT type FROM pph_org WHERE id = ?").bind(parentId).first();
-        if (!parent || parent.type !== requiredParentType) return mmtbJson({ success: false, error: "Mục cha không hợp lệ" }, 400);
+        if (!parent || !allowedParentTypes.includes(parent.type)) return mmtbJson({ success: false, error: "Mục cha không hợp lệ" }, 400);
       }
       const id = `pphorg_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
       await env.DB.prepare(
         "INSERT INTO pph_org (id, type, name, parent_id, order_num, created_at) VALUES (?, ?, ?, ?, 0, ?)"
-      ).bind(id, type, name, requiredParentType ? parentId : null, new Date().toISOString()).run();
-      return mmtbJson({ success: true, data: { id, type, name, parentId: requiredParentType ? parentId : null } }, 201);
+      ).bind(id, type, name, allowedParentTypes ? parentId : null, new Date().toISOString()).run();
+      return mmtbJson({ success: true, data: { id, type, name, parentId: allowedParentTypes ? parentId : null } }, 201);
     } catch (err) {
       return mmtbJson({ success: false, error: err.message || "Không thêm được" }, 400);
     }
@@ -807,9 +829,9 @@ async function handlePph(request, env, pathname, searchParams) {
   // ---- Thông tin cho trang quét QR (công khai) — tên Tổ/Chuyền/Xưởng/Nhà máy + khung giờ cần nhập ----
   if (sub === "/scan-info" && request.method === "GET") {
     const teamId = searchParams.get("teamId");
-    if (!teamId) return mmtbJson({ success: false, error: "Thiếu mã Tổ trong đường dẫn QR" }, 400);
-    const found = await pphFindTeamInfo(env, teamId);
-    if (!found) return mmtbJson({ success: false, error: "Không tìm thấy Tổ này — mã QR có thể đã cũ" }, 404);
+    if (!teamId) return mmtbJson({ success: false, error: "Thiếu mã điểm quét trong đường dẫn QR" }, 400);
+    const found = await pphFindNodeChain(env, teamId);
+    if (!found) return mmtbJson({ success: false, error: "Không tìm thấy điểm quét này — mã QR có thể đã cũ" }, 404);
 
     const date = pphTodayStr();
     let results = [];
@@ -827,7 +849,13 @@ async function handlePph(request, env, pathname, searchParams) {
 
     return mmtbJson({
       success: true,
-      team: { id: found.team.id, name: found.team.name, lineName: found.line.name, areaName: found.area.name, factoryName: found.factory.name },
+      team: {
+        id: found.node.id,
+        name: found.node.name,
+        lineName: found.line ? found.line.name : "",
+        areaName: found.area ? found.area.name : "",
+        factoryName: found.factory ? found.factory.name : "",
+      },
       date,
       slots: PPH_SLOTS,
       filledSlots: [...bySlot.keys()],
@@ -842,11 +870,11 @@ async function handlePph(request, env, pathname, searchParams) {
       const body = await request.json();
       const teamId = body.teamId;
       const submittedBy = String(body.submittedBy || "").trim();
-      if (!teamId) return mmtbJson({ success: false, error: "Thiếu mã Tổ" }, 400);
+      if (!teamId) return mmtbJson({ success: false, error: "Thiếu mã điểm quét" }, 400);
       if (!submittedBy) return mmtbJson({ success: false, error: "Vui lòng nhập tên người báo cáo" }, 400);
 
-      const found = await pphFindTeamInfo(env, teamId);
-      if (!found) return mmtbJson({ success: false, error: "Không tìm thấy Tổ này — mã QR có thể đã cũ" }, 404);
+      const found = await pphFindNodeChain(env, teamId);
+      if (!found) return mmtbJson({ success: false, error: "Không tìm thấy điểm quét này — mã QR có thể đã cũ" }, 404);
 
       const date = pphTodayStr();
       let results = [];
@@ -896,7 +924,7 @@ async function handlePph(request, env, pathname, searchParams) {
       }
 
       await mmtbCacheInvalidate(env, "pph:dashboard");
-      return mmtbJson({ success: true, slot, team: { name: found.team.name, lineName: found.line.name } });
+      return mmtbJson({ success: true, slot, team: { name: found.node.name, lineName: found.line ? found.line.name : "" } });
     } catch (err) {
       return mmtbJson({ success: false, error: err.message || "Không lưu được dữ liệu" }, 500);
     }

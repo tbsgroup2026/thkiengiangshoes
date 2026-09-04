@@ -276,9 +276,9 @@ function ScanShell({
                 <IconBuildingFactory2 size={18} />
               </div>
               <div className="min-w-0">
-                <div className="font-black text-slate-900 text-sm truncate">Tổ {team.name}</div>
+                <div className="font-black text-slate-900 text-sm truncate">{team.name}</div>
                 <div className="text-[11px] text-slate-400 font-semibold truncate">
-                  {team.factoryName} › {team.areaName} › {team.lineName}
+                  {[team.factoryName, team.areaName, team.lineName].filter(Boolean).join(' › ')}
                 </div>
               </div>
             </div>
