@@ -13,6 +13,7 @@ import {
   IconTag,
   IconUser,
 } from "@tabler/icons-react";
+import { firstImageUrl } from "./kaizenImageUtils";
 
 interface KaizenDuplicateCompareModalProps {
   newSubmission: {
@@ -179,7 +180,7 @@ export default function KaizenDuplicateCompareModal({
                       <div>
                         <span className="text-[10px] font-bold text-slate-500 block mb-1">Ảnh TRƯỚC:</span>
                         <img
-                          src={newSubmission.beforeImageUrl}
+                          src={firstImageUrl(newSubmission.beforeImageUrl)}
                           alt="Before"
                           className="w-full h-24 object-cover rounded-xl border border-slate-300"
                         />
@@ -189,7 +190,7 @@ export default function KaizenDuplicateCompareModal({
                       <div>
                         <span className="text-[10px] font-bold text-slate-500 block mb-1">Ảnh SAU:</span>
                         <img
-                          src={newSubmission.afterImageUrl}
+                          src={firstImageUrl(newSubmission.afterImageUrl)}
                           alt="After"
                           className="w-full h-24 object-cover rounded-xl border border-slate-300"
                         />
@@ -254,7 +255,7 @@ export default function KaizenDuplicateCompareModal({
                       <div>
                         <span className="text-[10px] font-bold text-slate-500 block mb-1">Ảnh TRƯỚC gốc:</span>
                         <img
-                          src={orig.before_image_url}
+                          src={firstImageUrl(orig.before_image_url)}
                           alt="Original Before"
                           className="w-full h-24 object-cover rounded-xl border border-amber-300"
                         />
@@ -264,7 +265,7 @@ export default function KaizenDuplicateCompareModal({
                       <div>
                         <span className="text-[10px] font-bold text-slate-500 block mb-1">Ảnh SAU gốc:</span>
                         <img
-                          src={orig.after_image_url}
+                          src={firstImageUrl(orig.after_image_url)}
                           alt="Original After"
                           className="w-full h-24 object-cover rounded-xl border border-amber-300"
                         />

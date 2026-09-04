@@ -31,6 +31,7 @@ import { convertNumberToWords } from "@/lib/numberToWords";
 import { KaizenProposal } from "./CIModule";
 import { usePermission } from "@/hooks/usePermission";
 import FeasibilityApprovalModal from "./FeasibilityApprovalModal";
+import { splitImageUrls } from "./kaizenImageUtils";
 
 interface KaizenDetailModalProps {
   proposal: KaizenProposal;
@@ -64,20 +65,36 @@ export default function KaizenDetailModal({
 }: KaizenDetailModalProps) {
   const { user, isExecutiveOrAdmin, levelRank } = usePermission();
   const [activeTab, setActiveTab] = useState<"info" | "expert_review" | "star_review">("info");
+
+  // 1 đề xuất có thể có NHIỀU ảnh trước/sau — lưu gộp thành 1 chuỗi phân cách dấu phẩy trong
+  // before_image_url/after_image_url (xem kaizenImageUtils.ts). Tách ra để hiện ĐỦ dải thumbnail,
+  // thay vì chỉ 1 ảnh "Trước" + 1 ảnh "Sau" như trước đây (khiến ảnh 2, 3, 4... không hiện ra).
+  const beforeImageUrls = useMemo(() => splitImageUrls(proposal?.before_image_url), [proposal?.before_image_url]);
+  const afterImageUrls = useMemo(() => splitImageUrls(proposal?.after_image_url), [proposal?.after_image_url]);
+
+  const allMedia = useMemo(() => {
+    const before = beforeImageUrls.map((url, idx) => ({
+      type: "image" as const,
+      url,
+      label: `Trước${idx > 0 ? ` #${idx + 1}` : ""}`,
+    }));
+    const after = afterImageUrls.map((url, idx) => ({
+      type: "image" as const,
+      url,
+      label: `Sau${idx > 0 ? ` #${idx + 1}` : ""}`,
+    }));
+    return [...before, ...after];
+  }, [beforeImageUrls, afterImageUrls]);
+
   const [selectedMedia, setSelectedMedia] = useState<{
     type: "image" | "video";
     url: string;
-  } | null>(proposal?.before_image_url ? { type: "image", url: proposal.before_image_url } : null);
+  } | null>(allMedia[0] || null);
 
   // Sync selected media when proposal changes
   useEffect(() => {
-    if (proposal?.before_image_url) {
-      setSelectedMedia({ type: "image", url: proposal.before_image_url });
-    } else if (proposal?.after_image_url) {
-      setSelectedMedia({ type: "image", url: proposal.after_image_url });
-    } else {
-      setSelectedMedia(null);
-    }
+    setSelectedMedia(allMedia[0] || null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [proposal]);
 
   // Determine permissions for Tab 2 "Đánh giá chuyên môn" & Tab 3 "Đánh giá thưởng"
@@ -245,36 +262,25 @@ export default function KaizenDetailModal({
             </div>
 
             {/* Dải Thumbnail vuông 56-64px */}
-            <div className="flex gap-2">
-              {proposal.before_image_url && (
-                <button
-                  type="button"
-                  onClick={() => proposal.before_image_url && setSelectedMedia({ type: "image", url: proposal.before_image_url })}
-                  className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all cursor-pointer bg-slate-900 ${
-                    selectedMedia?.url === proposal.before_image_url && selectedMedia?.type === "image"
-                      ? "border-[#006838] ring-2 ring-[#006838]/40"
-                      : "border-slate-300 hover:border-slate-400 opacity-80 hover:opacity-100"
-                  }`}
-                  title="Ảnh Trước"
-                >
-                  <img src={proposal.before_image_url} alt="Before" className="w-full h-full object-cover" />
-                </button>
-              )}
-              {proposal.after_image_url && (
-                <button
-                  type="button"
-                  onClick={() => proposal.after_image_url && setSelectedMedia({ type: "image", url: proposal.after_image_url })}
-                  className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all cursor-pointer bg-slate-900 ${
-                    selectedMedia?.url === proposal.after_image_url && selectedMedia?.type === "image"
-                      ? "border-[#006838] ring-2 ring-[#006838]/40"
-                      : "border-slate-300 hover:border-slate-400 opacity-80 hover:opacity-100"
-                  }`}
-                  title="Ảnh Sau"
-                >
-                  <img src={proposal.after_image_url} alt="After" className="w-full h-full object-cover" />
-                </button>
-              )}
-            </div>
+            {allMedia.length > 0 && (
+              <div className="flex gap-2 flex-wrap">
+                {allMedia.map((m) => (
+                  <button
+                    key={m.url}
+                    type="button"
+                    onClick={() => setSelectedMedia({ type: "image", url: m.url })}
+                    className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all cursor-pointer bg-slate-900 shrink-0 ${
+                      selectedMedia?.url === m.url && selectedMedia?.type === "image"
+                        ? "border-[#006838] ring-2 ring-[#006838]/40"
+                        : "border-slate-300 hover:border-slate-400 opacity-80 hover:opacity-100"
+                    }`}
+                    title={`Ảnh ${m.label}`}
+                  >
+                    <img src={m.url} alt={m.label} className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Label Vị Trí + Phân Loại */}
@@ -633,6 +639,10 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
   const qty = (proposal as any).quantity || proposal.vote_count;
   const pricingDir = (proposal as any).pricing_direction || "THOI_GIAN";
 
+  // Có thể có nhiều ảnh, lưu gộp chuỗi "url1,url2,..." trong before_image_url/after_image_url
+  const beforeImageUrls = splitImageUrls(proposal.before_image_url);
+  const afterImageUrls = splitImageUrls(proposal.after_image_url);
+
   // Build overview cards list
   const overviewCards = [];
   if (prodCode && prodCode.trim() && prodCode !== "---") {
@@ -852,17 +862,21 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
             <div className="flex items-center justify-between">
               <span className="text-xs font-black text-rose-900">Trước</span>
               <span className="w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center shadow-2xs">
-                {proposal.before_image_url ? "1" : "0"}
+                {beforeImageUrls.length}
               </span>
             </div>
-            {proposal.before_image_url ? (
-              <a href={proposal.before_image_url} target="_blank" rel="noreferrer" className="block relative">
-                <img
-                  src={proposal.before_image_url}
-                  alt="Before"
-                  className="w-full h-44 sm:h-52 object-contain rounded-xl border border-rose-200 bg-white"
-                />
-              </a>
+            {beforeImageUrls.length > 0 ? (
+              <div className="grid grid-cols-2 gap-2">
+                {beforeImageUrls.map((u, idx) => (
+                  <a key={u} href={u} target="_blank" rel="noreferrer" className="block relative">
+                    <img
+                      src={u}
+                      alt={`Before ${idx + 1}`}
+                      className="w-full h-20 sm:h-24 object-cover rounded-xl border border-rose-200 bg-white"
+                    />
+                  </a>
+                ))}
+              </div>
             ) : (
               <div className="w-full h-36 sm:h-44 rounded-xl border border-dashed border-rose-200 bg-white flex items-center justify-center text-slate-400 font-bold text-xs">
                 Chưa có ảnh trước
@@ -875,17 +889,21 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
             <div className="flex items-center justify-between">
               <span className="text-xs font-black text-emerald-900">Sau</span>
               <span className="w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] font-black flex items-center justify-center shadow-2xs">
-                {proposal.after_image_url ? "1" : "0"}
+                {afterImageUrls.length}
               </span>
             </div>
-            {proposal.after_image_url ? (
-              <a href={proposal.after_image_url} target="_blank" rel="noreferrer" className="block relative">
-                <img
-                  src={proposal.after_image_url}
-                  alt="After"
-                  className="w-full h-44 sm:h-52 object-contain rounded-xl border border-emerald-200 bg-white"
-                />
-              </a>
+            {afterImageUrls.length > 0 ? (
+              <div className="grid grid-cols-2 gap-2">
+                {afterImageUrls.map((u, idx) => (
+                  <a key={u} href={u} target="_blank" rel="noreferrer" className="block relative">
+                    <img
+                      src={u}
+                      alt={`After ${idx + 1}`}
+                      className="w-full h-20 sm:h-24 object-cover rounded-xl border border-emerald-200 bg-white"
+                    />
+                  </a>
+                ))}
+              </div>
             ) : (
               <div className="w-full h-36 sm:h-44 rounded-xl border border-dashed border-emerald-200 bg-white flex items-center justify-center text-slate-400 font-bold text-xs">
                 Chưa có ảnh sau

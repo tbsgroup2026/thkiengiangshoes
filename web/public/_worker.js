@@ -5514,6 +5514,150 @@ export default {
         }
       }
 
+      // POST /api/ci-kaizen/check-duplicate — Kiểm tra trùng lặp TRƯỚC khi tạo đề xuất mới.
+      // QUAN TRỌNG: endpoint này TRƯỚC ĐÂY KHÔNG TỒN TẠI — vì khối /api/ci-kaizen chỉ khớp theo
+      // startsWith(), mọi request POST tới /api/ci-kaizen/check-duplicate rơi thẳng xuống nhánh
+      // "POST: Create New Kaizen Proposal" bên dưới (khớp method POST, không kiểm tra path) và bị
+      // hiểu nhầm thành 1 lượt ĐĂNG KÝ MỚI thật sự — với payload thiếu proposerName/proposerEmpCode
+      // và KHÔNG có ảnh (form KaizenPublicSubmitForm.tsx chỉ gửi factory/region/line/category/
+      // beforeDescription/afterSolution/title ở bước "check"). Sau đó form vẫn tiếp tục gửi POST
+      // /api/ci-kaizen lần 2 với đầy đủ dữ liệu thật (có ảnh) — kết quả là MỖI LẦN ĐĂNG KÝ QUA FORM
+      // CÔNG KHAI ĐỀU TẠO RA 2 BÀI TRÙNG NHAU (1 bài "ma" không ảnh/không tên thật + 1 bài thật).
+      // Đây chính là nguyên nhân "1 bài hiện 2 lần" người dùng báo cáo. Nay dựng đúng endpoint này.
+      if (url.pathname.endsWith("/check-duplicate") && request.method === "POST") {
+        try {
+          const body = await request.json().catch(() => ({}));
+          const { factory, region, line, category, beforeDescription, afterSolution, title } = body;
+          const scopeFactory = factory || region || "";
+
+          const normalize = (s) =>
+            String(s || "")
+              .toLowerCase()
+              .normalize("NFD")
+              .replace(new RegExp("[\\u0300-\\u036f]", "g"), "")
+              .replace(/đ/g, "d")
+              .replace(/[^a-z0-9\s]/g, " ")
+              .replace(/\s+/g, " ")
+              .trim();
+
+          const wordSet = (s) => new Set(normalize(s).split(" ").filter((w) => w.length > 1));
+
+          const newTitleWords = wordSet(title);
+          const newBodyWords = wordSet(`${beforeDescription || ""} ${afterSolution || ""}`);
+
+          const similarity = (setA, setB) => {
+            if (setA.size === 0 || setB.size === 0) return 0;
+            let inter = 0;
+            for (const w of setA) if (setB.has(w)) inter++;
+            const union = setA.size + setB.size - inter;
+            return union > 0 ? inter / union : 0;
+          };
+
+          let candidates = [];
+          if (env.DB) {
+            const { results } = await env.DB.prepare(
+              `SELECT * FROM ci_kaizen_proposals
+               WHERE status != 'REJECTED'
+                 AND created_at >= datetime('now', '-30 days')
+                 AND (factory = ? OR region = ?)
+               ORDER BY created_at DESC LIMIT 100`
+            ).bind(scopeFactory, scopeFactory).all().catch(() => ({ results: [] }));
+            candidates = results || [];
+          }
+
+          const matches = [];
+          for (const c of candidates) {
+            const cTitleWords = wordSet(c.title);
+            const cBodyWords = wordSet(`${c.before_description || ""} ${c.after_solution || ""}`);
+            const titleSim = similarity(newTitleWords, cTitleWords);
+            const bodySim = similarity(newBodyWords, cBodyWords);
+            // Ưu tiên tiêu đề (trọng số cao hơn) — 2 bài trùng thường có tiêu đề gần giống hệt nhau.
+            const combined = titleSim * 0.7 + bodySim * 0.3;
+            const pct = Math.round(combined * 100);
+            if (pct >= 55) {
+              matches.push({
+                proposal: c,
+                similarityPercentage: pct,
+                matchReason:
+                  titleSim >= 0.6
+                    ? "Tiêu đề gần giống hệt 1 đề xuất đã có"
+                    : "Nội dung mô tả trước/sau khá tương đồng với 1 đề xuất đã có",
+              });
+            }
+          }
+
+          matches.sort((a, b) => b.similarityPercentage - a.similarityPercentage);
+          const topMatches = matches.slice(0, 5);
+
+          return new Response(
+            JSON.stringify({ success: true, isDuplicate: topMatches.length > 0, matches: topMatches }),
+            { headers: SECURE_JSON_HEADERS }
+          );
+        } catch (err) {
+          // Lỗi ở bước kiểm tra KHÔNG được chặn luồng đăng ký chính — trả về "không trùng" để form
+          // tiếp tục nộp bình thường thay vì kẹt lại.
+          return new Response(JSON.stringify({ success: true, isDuplicate: false, matches: [] }), { headers: SECURE_JSON_HEADERS });
+        }
+      }
+
+      // POST /api/ci-kaizen/merge — Gộp ảnh/video đính kèm mới vào 1 đề xuất GỐC đã tồn tại thay
+      // vì tạo bài mới (khi người dùng chọn "Xác Nhận Gộp Vào Đề Xuất Gốc" ở modal trùng lặp).
+      if (url.pathname.endsWith("/merge") && request.method === "POST") {
+        try {
+          const body = await request.json().catch(() => ({}));
+          const { originalProposalId, newAttachments, proposerName } = body;
+          if (!originalProposalId) {
+            return new Response(JSON.stringify({ success: false, error: "MISSING_ID", message: "Thiếu originalProposalId" }), { status: 400, headers: SECURE_JSON_HEADERS });
+          }
+
+          const { results } = await env.DB.prepare("SELECT * FROM ci_kaizen_proposals WHERE id = ?").bind(originalProposalId).all();
+          const orig = results && results[0];
+          if (!orig) {
+            return new Response(JSON.stringify({ success: false, error: "NOT_FOUND", message: "Không tìm thấy đề xuất gốc" }), { status: 404, headers: SECURE_JSON_HEADERS });
+          }
+
+          let attachmentsList = [];
+          if (orig.attachments_json) {
+            try {
+              const parsed = JSON.parse(orig.attachments_json);
+              if (Array.isArray(parsed)) attachmentsList = parsed;
+            } catch (e) {}
+          }
+
+          if (Array.isArray(newAttachments)) {
+            for (const att of newAttachments) {
+              if (att && att.url && !attachmentsList.some((a) => a.url === att.url)) {
+                attachmentsList.push({
+                  type: att.type || "image",
+                  url: att.url,
+                  title: att.tag === "AFTER" ? `Ảnh gộp thêm (SAU) - ${proposerName || "Người gộp"}` : `Ảnh gộp thêm (TRƯỚC) - ${proposerName || "Người gộp"}`,
+                });
+              }
+            }
+          }
+
+          await env.DB.prepare(
+            `UPDATE ci_kaizen_proposals SET attachments_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+          ).bind(JSON.stringify(attachmentsList), originalProposalId).run();
+
+          try {
+            await env.DB.prepare(
+              `INSERT INTO ci_kaizen_status_history (proposal_id, from_status, to_status, action, actor_id, actor_name, note)
+               VALUES (?, NULL, NULL, 'MERGE_ATTACHMENT', NULL, ?, 'Gộp ảnh/video từ 1 lượt đăng ký trùng thay vì tạo bài mới')`
+            ).bind(originalProposalId, proposerName || "Người gộp").run();
+          } catch (e) {}
+
+          invalidateKaizenStatsCache();
+
+          return new Response(
+            JSON.stringify({ success: true, message: `Đã gộp ảnh/video vào đề xuất gốc ${orig.code || orig.legacy_code || originalProposalId} thành công!`, originalCode: orig.code || orig.legacy_code }),
+            { headers: SECURE_JSON_HEADERS }
+          );
+        } catch (err) {
+          return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500, headers: SECURE_JSON_HEADERS });
+        }
+      }
+
       // GET: List Kaizen Proposals with Filters & Stable Pagination
       if (request.method === "GET") {
         try {

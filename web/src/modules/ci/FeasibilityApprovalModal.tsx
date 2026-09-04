@@ -67,6 +67,12 @@ export default function FeasibilityApprovalModal({
   const [afterMediaList, setAfterMediaList] = useState<{ id: string; type: "image" | "video"; url: string; name?: string }[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Ảnh/video TRƯỚC do người đăng ký gửi lên — có thể nhiều ảnh gộp chuỗi "url1,url2,..."
+  const beforeMediaUrls = React.useMemo(
+    () => (proposal?.before_image_url || "").split(",").map((s) => s.trim()).filter(Boolean),
+    [proposal?.before_image_url]
+  );
+
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [pairQtyError, setPairQtyError] = useState<string | null>(null);
@@ -498,23 +504,26 @@ export default function FeasibilityApprovalModal({
           </div>
 
           {/* HÌNH ẢNH / VIDEO TRƯỚC CẢI TIẾN (CỐ ĐỊNH TỪ NGƯỜI ĐĂNG KÝ - KHÔNG ĐƯỢC XÓA) */}
-          {proposal.before_image_url && (
+          {/* Có thể có NHIỀU ảnh, lưu gộp chuỗi "url1,url2,..." — tách ra để hiện đủ, không chỉ 1 ảnh */}
+          {beforeMediaUrls.length > 0 && (
             <div className="space-y-1.5 pt-1 border-t border-slate-100">
               <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
                 <IconPhoto size={14} className="text-slate-500" />
                 <span>Ảnh / Video Trước Cải Tiến (Cố định từ người đăng ký)</span>
               </span>
-              <div className="flex gap-2">
-                <div className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 w-24 h-24 shadow-2xs">
-                  {proposal.before_image_url.endsWith(".mp4") || proposal.before_image_url.endsWith(".mov") || proposal.before_image_url.startsWith("data:video") ? (
-                    <video src={proposal.before_image_url} className="w-full h-full object-cover" />
-                  ) : (
-                    <img src={proposal.before_image_url} alt="Trước Cải Tiến" className="w-full h-full object-cover" />
-                  )}
-                  <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-black/70 text-white text-[9px] font-mono font-bold backdrop-blur-xs">
-                    🔒 Trước Cải Tiến
-                  </span>
-                </div>
+              <div className="flex gap-2 flex-wrap">
+                {beforeMediaUrls.map((u, idx) => (
+                  <div key={u} className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 w-24 h-24 shadow-2xs">
+                    {u.endsWith(".mp4") || u.endsWith(".mov") || u.startsWith("data:video") ? (
+                      <video src={u} className="w-full h-full object-cover" />
+                    ) : (
+                      <img src={u} alt={`Trước Cải Tiến ${idx + 1}`} className="w-full h-full object-cover" />
+                    )}
+                    <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-black/70 text-white text-[9px] font-mono font-bold backdrop-blur-xs">
+                      🔒 Trước
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
           )}

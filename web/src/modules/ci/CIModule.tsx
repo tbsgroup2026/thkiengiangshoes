@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useStatusCounts } from "@/context/StatusCountsContext";
+import { primaryImageUrl } from "./kaizenImageUtils";
 
 // Dynamic Imports for Modals & Sub-views to shrink initial JS bundle & accelerate 3G/4G loading
 const KaizenDashboard = dynamic(() => import("./KaizenDashboard"), { ssr: false });
@@ -1955,6 +1956,10 @@ export default function CIModule() {
               {filteredProposals.map((prop) => {
                 const catObj = CATEGORIES.find((c) => c.id === prop.category) || CATEGORIES[7];
                 const rankInfo = proposalRanksMap[prop.id];
+                // Đề xuất có từ 2 ảnh trở lên lưu gộp chuỗi "url1,url2,..." trong before_image_url —
+                // phải tách lấy đúng 1 URL đầu tiên trước khi đưa vào <img src>, nếu không ảnh sẽ
+                // không hiện ra (xem giải thích trong kaizenImageUtils.ts).
+                const cardThumbUrl = primaryImageUrl(prop.before_image_url, prop.after_image_url);
                 return (
                   <div
                     key={prop.id}
@@ -1963,9 +1968,9 @@ export default function CIModule() {
                   >
                     {/* Image / Thumbnail Section with Badges Overlay */}
                     <div className="relative h-28 bg-slate-100 border-b border-slate-100 overflow-hidden flex items-center justify-center group/img">
-                      {prop.before_image_url ? (
+                      {cardThumbUrl ? (
                         <img
-                          src={prop.before_image_url}
+                          src={cardThumbUrl}
                           alt={prop.title}
                           className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-500"
                         />
