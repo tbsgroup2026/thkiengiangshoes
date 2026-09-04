@@ -116,12 +116,19 @@ export default function PphScanClient() {
       setCountdownLabel(null); // Khung cuối ngày — không còn mốc để đếm tới
       return;
     }
-    const deadline = slotLabelToDeadlineDate(nextBoundarySlot);
+    const deadlineVNMs = slotLabelToDeadlineVNMs(nextBoundarySlot);
+    let expired = false;
 
     const tick = () => {
-      const diffMs = deadline.getTime() - Date.now();
+      const diffMs = deadlineVNMs - vnNowMs();
       if (diffMs <= 0) {
         setCountdownLabel('00:00');
+        // Hết giờ khung hiện tại — tự tải lại để chuyển sang khung kế tiếp, không bắt người dùng
+        // phải tự bấm làm mới hay quét lại QR mới thấy khung mới.
+        if (!expired) {
+          expired = true;
+          load();
+        }
         return;
       }
       const totalSec = Math.floor(diffMs / 1000);
@@ -133,6 +140,7 @@ export default function PphScanClient() {
     tick();
     const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [info?.slots, info?.targetSlot, info?.nextAction]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -386,14 +394,20 @@ export default function PphScanClient() {
   );
 }
 
-// Parse nhãn "HH:MM" thành mốc thời gian HÔM NAY theo giờ CỦA THIẾT BỊ (điện thoại luôn để đúng
-// giờ Việt Nam trên thực tế), rồi trừ 10 phút — khớp đúng luật "trừ hao 10 phút" của
-// pphResolveStatus() phía backend, để đồng hồ đếm ngược hiển thị đúng lúc khung giờ thật sự đóng.
-function slotLabelToDeadlineDate(slotLabel: string): Date {
+// Đồng hồ đếm ngược tính theo ĐÚNG giờ Việt Nam (UTC+7) — KHÔNG phụ thuộc múi giờ đặt trên điện
+// thoại (đề phòng máy bị đặt sai giờ/múi giờ), khớp chính xác cách backend tính pphNowVN() trong
+// _worker.js: cộng UTC+7 vào mốc UTC thật rồi ĐỌC bằng các hàm getUTC* của kết quả.
+function vnNowMs(): number {
+  return Date.now() + 7 * 60 * 60 * 1000;
+}
+
+// Parse nhãn "HH:MM" thành mốc "giờ VN hôm nay" (cùng hệ quy chiếu với vnNowMs()), trừ hao 10 phút
+// — khớp đúng luật pphResolveStatus() phía backend, để đồng hồ đếm ngược hiển thị đúng lúc khung
+// giờ thật sự đóng.
+function slotLabelToDeadlineVNMs(slotLabel: string): number {
   const [h, m] = slotLabel.split(':').map(Number);
-  const d = new Date();
-  d.setHours(h, m - 10, 0, 0);
-  return d;
+  const vnNow = new Date(vnNowMs());
+  return Date.UTC(vnNow.getUTCFullYear(), vnNow.getUTCMonth(), vnNow.getUTCDate(), h, m - 10, 0, 0);
 }
 
 function pad(n: number): string {
