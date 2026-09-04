@@ -138,6 +138,25 @@ export async function POST(request: Request) {
           )
           .run();
       } else {
+        try {
+          const recentDup = await db.prepare(`
+            SELECT id, code FROM ci_kaizen_proposals
+            WHERE title = ? AND (proposer_name = ? OR proposer_emp_code = ?)
+              AND datetime(created_at) >= datetime('now', '-60 seconds')
+            LIMIT 1
+          `).bind(title, proposerName, proposerEmpCode || session?.empCode || 'KG-EMP').first();
+
+          if (recentDup) {
+            return NextResponse.json({
+              success: true,
+              message: 'Gửi đề xuất Kaizen thành công (chống trùng)!',
+              code: recentDup.code,
+              id: recentDup.id,
+              duplicateBlocked: true,
+            });
+          }
+        } catch (e) {}
+
         const query = `
           INSERT INTO ci_kaizen_proposals (
             id, code, title, category, category_label, registration_type,

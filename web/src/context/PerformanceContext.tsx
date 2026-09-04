@@ -107,7 +107,15 @@ export function usePerformance(): PerformanceContextValue {
     // Fallback default context if used outside provider
     return {
       profile: "medium",
-      details: { effectiveType: "unknown", saveData: false, profile: "medium", isFallbackMeasured: false },
+      details: {
+        effectiveType: "unknown",
+        saveData: false,
+        profile: "medium",
+        isFallbackMeasured: false,
+        cloudinaryQuality: "q_auto:good",
+        maxConcurrency: 4,
+        imageScaleFactor: 1.0,
+      },
       activeQuality: PERFORMANCE_CONFIG.profiles.medium.cloudinaryQuality,
       prefersReducedMotion: false,
       shouldAnimate: true,

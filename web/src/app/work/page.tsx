@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, Suspense } from "react";
 import NavLink from "@/components/NavLink";
@@ -607,20 +607,39 @@ function WorkDashboardContent() {
         const res = await fetch("/api/profile");
         if (res.ok) {
           const json = await res.json();
-          if (json.success && json.data) {
-            const d1Avatar = json.data.avatar || json.data.avatar_url;
+          const serverUser = json.user || json.data;
+          if (json.success && serverUser) {
+            const serverEmpCode = (serverUser.emp_code || serverUser.empCode || "").trim();
+
+            // Read current local/session user to prevent cross-user profile overwrite
+            const storedUserStr = sessionStorage.getItem("tbs_current_user") || localStorage.getItem("tbs_current_user");
+            let localEmpCode = "";
+            if (storedUserStr) {
+              try {
+                const parsed = JSON.parse(storedUserStr);
+                localEmpCode = (parsed.empCode || "").trim();
+              } catch {}
+            }
+
+            // DO NOT overwrite session if server returned profile for a DIFFERENT user than currently logged in
+            if (localEmpCode && serverEmpCode && localEmpCode.toUpperCase() !== serverEmpCode.toUpperCase()) {
+              console.warn(`[PROFILE SYNC SKIPPED] Local user is ${localEmpCode} but server returned ${serverEmpCode}`);
+              return;
+            }
+
+            const d1Avatar = serverUser.avatar || serverUser.avatar_url;
             const finalAvatar = isValidAvatar(localCustomAvatar)
               ? localCustomAvatar
               : (isValidAvatar(d1Avatar) ? d1Avatar : "/images/tbs-logo.png");
 
             const loaded = {
-              empCode: json.data.emp_code || json.data.empCode || "202608001",
-              name: json.data.name || "Phạm Nguyễn Anh Huy",
-              phone: json.data.phone || "0522511245",
-              email: json.data.email || "anhy.work.2004@gmail.com",
+              empCode: serverEmpCode || localEmpCode || "202608001",
+              name: serverUser.name || "Cán Bộ Công Nhân Viên",
+              phone: serverUser.phone || "",
+              email: serverUser.email || `${serverEmpCode || localEmpCode}@tbsgroup.vn`,
               avatar: finalAvatar,
-              title: json.data.title || "IT - Team chuyển đổi số",
-              department: json.data.department || "NHÂN SỰ-HC",
+              title: serverUser.title || "Cán Bộ Công Nhân Viên",
+              department: serverUser.department || "NHÂN SỰ-HC",
             };
             setUserInfo(loaded);
             setEditProfileForm(loaded);

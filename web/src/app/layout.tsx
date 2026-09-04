@@ -46,6 +46,7 @@ import { StatusCountsProvider } from "@/context/StatusCountsContext";
 import { PerformanceProvider } from "@/context/PerformanceContext";
 import { ServiceWorkerRegister } from "@/components/performance/ServiceWorkerRegister";
 import { PerformanceDebugOverlay } from "@/components/performance/PerformanceDebugOverlay";
+import { WebVitalsReporter } from "@/components/vitals/WebVitalsReporter";
 
 export default function RootLayout({
   children,
@@ -92,6 +93,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col font-sans bg-canvas text-ink" suppressHydrationWarning>
         <DevToolsShield />
         <NotificationInitializer />
+        <WebVitalsReporter />
         {/* FIX: Banner thông báo SW update — user-controlled, không tự reload */}
         <SWUpdateBanner />
         <PerformanceProvider>

@@ -1,14 +1,15 @@
 "use client";
 
 import React from "react";
-import { SmartImage, SmartImageProps } from "./performance/SmartImage";
+import { SmartCloudinaryImage, SmartCloudinaryImageProps } from "./SmartCloudinaryImage";
 
-export interface SafeImageProps extends SmartImageProps {}
+export interface SafeImageProps extends SmartCloudinaryImageProps {}
 
 /**
- * Enhanced SafeImage component wrapped with adaptive Cloudinary SmartImage loader.
- * Maintains 100% backwards compatibility with previous SafeImage props while auto-applying performance features.
+ * SafeImage — Component tải ảnh tương thích ngược toàn dự án KG-KAIZEN.
+ * Tự động áp dụng tối ưu Cloudinary URL (f_auto, q_auto), progressive blur LQIP,
+ * retry backoff khi mất mạng và chống vỡ layout (CLS = 0).
  */
 export default function SafeImage(props: SafeImageProps) {
-  return <SmartImage {...props} />;
+  return <SmartCloudinaryImage {...props} />;
 }

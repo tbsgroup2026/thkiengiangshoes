@@ -14,6 +14,12 @@ export interface NetworkQualityDetails {
   profile: NetworkProfile;
   isFallbackMeasured: boolean;
   measuredLatencyMs?: number;
+  /** Cloudinary quality preset tự động: 'q_auto:eco' | 'q_auto:low' | 'q_auto:good' | 'q_auto:best' */
+  cloudinaryQuality: string;
+  /** Số lượng tải ảnh đồng thời tối đa dựa theo dung lượng RAM / băng thông thiết bị */
+  maxConcurrency: number;
+  /** Tỷ lệ thu nhỏ kích thước ảnh trên kết nối quá yếu (ví dụ 0.75x) */
+  imageScaleFactor: number;
 }
 
 export function useNetworkQuality(): NetworkQualityDetails {
@@ -22,6 +28,9 @@ export function useNetworkQuality(): NetworkQualityDetails {
     saveData: false,
     profile: "medium",
     isFallbackMeasured: false,
+    cloudinaryQuality: "q_auto:good",
+    maxConcurrency: 4,
+    imageScaleFactor: 1.0,
   });
 
   const calculateProfile = useCallback(
@@ -65,7 +74,6 @@ export function useNetworkQuality(): NetworkQualityDetails {
   const measureFallbackLatency = useCallback(async (): Promise<number> => {
     try {
       const start = performance.now();
-      // Fetch small favicon/logo asset or HEAD request to measure latency
       await fetch("/favicon.ico", { method: "HEAD", cache: "no-store" });
       const duration = performance.now() - start;
       return duration;
@@ -94,9 +102,27 @@ export function useNetworkQuality(): NetworkQualityDetails {
       if (conn) {
         computedProfile = calculateProfile(effType, saveData, cores, ram, rtt, downlink, measuredLatency);
       } else {
-        // Fallback for browsers like Safari that lack Network Information API
         const estLatency = measuredLatency || 150;
         computedProfile = calculateProfile("3g", false, cores, ram, undefined, undefined, estLatency);
+      }
+
+      // Chọn preset Cloudinary quality phù hợp theo mạng & thiết bị
+      let cloudinaryQuality = "q_auto:good";
+      let imageScaleFactor = 1.0;
+      let maxConcurrency = 4;
+
+      if (computedProfile === "low") {
+        cloudinaryQuality = saveData || effType === "slow-2g" ? "q_auto:eco" : "q_auto:low";
+        imageScaleFactor = 0.75;
+        maxConcurrency = ram <= 2 ? 2 : 3;
+      } else if (computedProfile === "medium") {
+        cloudinaryQuality = "q_auto:good";
+        imageScaleFactor = 0.9;
+        maxConcurrency = ram <= 4 ? 4 : 6;
+      } else {
+        cloudinaryQuality = "q_auto:best";
+        imageScaleFactor = 1.0;
+        maxConcurrency = ram >= 8 ? 8 : 6;
       }
 
       setDetails({
@@ -109,18 +135,19 @@ export function useNetworkQuality(): NetworkQualityDetails {
         profile: computedProfile,
         isFallbackMeasured: !conn,
         measuredLatencyMs: measuredLatency,
+        cloudinaryQuality,
+        maxConcurrency,
+        imageScaleFactor,
       });
     };
 
     updateFromConnection();
 
-    // Listen to network status changes if API available
     if (conn) {
       const handleChange = () => updateFromConnection();
       conn.addEventListener("change", handleChange);
       return () => conn.removeEventListener("change", handleChange);
     } else {
-      // Run micro-benchmark once for Safari
       let isMounted = true;
       measureFallbackLatency().then((latency) => {
         if (isMounted) updateFromConnection(latency);
