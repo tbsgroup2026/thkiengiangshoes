@@ -231,8 +231,25 @@ export default function KaizenDetailModal({
   if (!isOpen || !proposal) return null;
 
   const catObj = CATEGORIES.find((c) => c.id === proposal.category) || CATEGORIES[0];
-  const pMonth = (proposal as any).proposer_month || (proposal.created_at ? new Date(proposal.created_at).getMonth() + 1 : new Date().getMonth() + 1);
-  const pYear = (proposal as any).proposer_year || (proposal.created_at ? new Date(proposal.created_at).getFullYear() : new Date().getFullYear());
+
+  const isApprovedProposal =
+    proposal.approval_status === "PHE_DUYET" ||
+    (proposal as any).approvalStatus === "PHE_DUYET" ||
+    proposal.sub_status === "CHO_DANH_GIA" ||
+    proposal.sub_status === "DA_DANH_GIA" ||
+    proposal.sub_status === "LUU_TRU";
+
+  const effectiveDateStr = isApprovedProposal
+    ? ((proposal as any).approved_at || (proposal as any).approvedAt || (proposal as any).updated_at || proposal.created_at)
+    : (proposal.created_at || (proposal as any).updated_at);
+
+  const effDate = effectiveDateStr ? new Date(effectiveDateStr) : new Date();
+  const pMonth = !isNaN(effDate.getTime())
+    ? effDate.getMonth() + 1
+    : ((proposal as any).proposer_month || new Date().getMonth() + 1);
+  const pYear = !isNaN(effDate.getTime())
+    ? effDate.getFullYear()
+    : ((proposal as any).proposer_year || new Date().getFullYear());
   const vtcv = (proposal as any).proposer_position || proposal.department || "Công Nhân Sản Xuất";
   const cust = proposal.customer || "Skechers";
   const prodGroup = (proposal as any).product_group || proposal.factory || "Quai";
@@ -622,9 +639,28 @@ export default function KaizenDetailModal({
           proposal.approval_status = updated.approval_status;
           proposal.sub_status = updated.sub_status;
           proposal.status = updated.status;
+          if (updated.category) proposal.category = updated.category;
           if (updated.time_before_seconds !== undefined) proposal.time_before_seconds = updated.time_before_seconds;
           if (updated.time_after_seconds !== undefined) proposal.time_after_seconds = updated.time_after_seconds;
           if (updated.saved_seconds !== undefined) proposal.saved_seconds = updated.saved_seconds;
+          if (updated.efficiency_value_vnd !== undefined) proposal.efficiency_value_vnd = updated.efficiency_value_vnd;
+          if (updated.pair_quantity !== undefined) {
+            proposal.pair_quantity = updated.pair_quantity;
+            (proposal as any).pairQuantity = updated.pair_quantity;
+            (proposal as any).so_luong_giay = updated.pair_quantity;
+            (proposal as any).quantity = updated.pair_quantity;
+          }
+          if (updated.total_savings_vnd !== undefined) {
+            proposal.total_savings_vnd = updated.total_savings_vnd;
+            (proposal as any).totalSavingsVND = updated.total_savings_vnd;
+            (proposal as any).tong_tien_tiet_kiem = updated.total_savings_vnd;
+          }
+          if (updated.total_savings_words !== undefined) proposal.total_savings_words = updated.total_savings_words;
+          if (updated.after_image_url) proposal.after_image_url = updated.after_image_url;
+          if (updated.approved_at) (proposal as any).approved_at = updated.approved_at;
+          if (updated.proposer_month) (proposal as any).proposer_month = updated.proposer_month;
+          if (updated.proposer_year) (proposal as any).proposer_year = updated.proposer_year;
+
           setStep3Msg(
             updated.approval_status === "PHE_DUYET"
               ? "✅ Đã phê duyệt tính khả thi (Bước 3) thành công!"

@@ -35,6 +35,9 @@ interface FeasibilityApprovalModalProps {
     total_savings_vnd?: number;
     total_savings_words?: string;
     after_image_url?: string;
+    approved_at?: string;
+    proposer_month?: number;
+    proposer_year?: number;
   }) => void;
 }
 
@@ -354,6 +357,9 @@ export default function FeasibilityApprovalModal({
           total_savings_vnd: json.total_savings_vnd !== undefined ? json.total_savings_vnd : finalTotalSavings,
           total_savings_words: json.total_savings_words !== undefined ? json.total_savings_words : savingsInWords,
           after_image_url: afterImgUrlStr,
+          approved_at: json.approved_at || (decision === "APPROVE" ? new Date().toISOString() : undefined),
+          proposer_month: json.proposer_month || (decision === "APPROVE" ? new Date().getMonth() + 1 : undefined),
+          proposer_year: json.proposer_year || (decision === "APPROVE" ? new Date().getFullYear() : undefined),
         });
         onClose();
       } else {
