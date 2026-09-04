@@ -79,7 +79,7 @@ export default function LoginPage() {
       }
 
       const cleanEmpCode = (empCode || quickPersonCode).trim();
-      await loginWithD1Database(cleanEmpCode, password, selectedRoleGroup);
+      await loginWithD1Database(cleanEmpCode, password, selectedRoleGroup, rememberMe);
       router.push("/");
     } catch (err: unknown) {
       const message =

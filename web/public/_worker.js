@@ -1801,14 +1801,15 @@ export default {
         if (env.DB) {
           const targetEmp = empCode || "202608001";
           try {
+            // Ghi vào đúng dòng riêng của targetEmp (id = targetEmp), không dùng chung id='current_user'.
             await env.DB.prepare(
               `INSERT INTO user_profile (id, emp_code, avatar, updated_at)
-               VALUES ('current_user', ?, ?, CURRENT_TIMESTAMP)
+               VALUES (?, ?, ?, CURRENT_TIMESTAMP)
                ON CONFLICT(id) DO UPDATE SET
                  avatar = excluded.avatar,
                  emp_code = excluded.emp_code,
                  updated_at = CURRENT_TIMESTAMP`
-            ).bind(targetEmp, finalUrl).run();
+            ).bind(targetEmp, targetEmp, finalUrl).run();
 
             await env.DB.prepare(
               `UPDATE users SET avatar_url = ?, updated_at = CURRENT_TIMESTAMP WHERE emp_code = ?`
@@ -2442,40 +2443,11 @@ export default {
     }
 
     // API Route: User Profile (/api/profile)
-    if (url.pathname === "/api/profile") {
-      if (request.method === "OPTIONS") {
-        return new Response(null, { headers: SECURE_JSON_HEADERS });
-      }
-      try {
-        let userProfile = {
-          empCode: "202608001",
-          name: "Cán Bộ Công Nhân Viên",
-          title: "Cán Bộ Công Nhân Viên",
-          department: "Văn Phòng Chuỗi SKECHERS",
-          roleCode: "CBCNV",
-          status: "ACTIVE"
-        };
-        if (env.DB) {
-          try {
-            const { results } = await env.DB.prepare(
-              `SELECT * FROM users WHERE status = 'ACTIVE' LIMIT 1`
-            ).all();
-            if (results && results[0]) {
-              userProfile = { ...userProfile, ...results[0] };
-            }
-          } catch (e) {}
-        }
-        return new Response(JSON.stringify({ success: true, user: userProfile }), {
-          headers: SECURE_JSON_HEADERS
-        });
-      } catch (err) {
-        return new Response(JSON.stringify({ success: true, user: null }), {
-          headers: SECURE_JSON_HEADERS
-        });
-      }
-    }
-
-
+    // (Đã xoá handler /api/profile trùng lặp từng nằm ở đây — nó chặn TẤT CẢ method (GET/POST/PUT)
+    // và luôn trả về `SELECT * FROM users WHERE status='ACTIVE' LIMIT 1` — tức "người active đầu
+    // tiên trong bảng", HOÀN TOÀN không phân biệt ai đang gọi API, đồng thời khiến handler
+    // /api/profile CHUẨN (định danh đúng theo JWT, phần dưới file) không bao giờ được chạy tới.
+    // Đây chính là nguyên nhân "đăng nhập tài khoản nào cũng hiện ra thành 1 người" (202608001).
 
     // 0.0 API Route: Employee Auto-Fill Lookup by MSNV (/api/employee/lookup?code=...)
     if (url.pathname === "/api/employee/lookup" && request.method === "GET") {
@@ -2855,21 +2827,9 @@ export default {
 
             userAccount.avatar = finalAvatar;
 
-            await env.DB.prepare(
-              `INSERT OR REPLACE INTO user_profile (id, emp_code, name, email, phone, avatar, title, department, role_code, redirect_url, updated_at)
-               VALUES ('current_user', ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
-            ).bind(
-              userAccount.empCode,
-              userAccount.name,
-              userAccount.email,
-              userAccount.phone || "",
-              finalAvatar,
-              userAccount.title,
-              userAccount.department,
-              userAccount.roleCode,
-              userAccount.redirectUrl
-            ).run();
-
+            // Chỉ ghi vào đúng dòng riêng của userAccount.empCode (id = empCode) — KHÔNG còn ghi
+            // thêm 1 bản vào id='current_user' dùng chung cho cả hệ thống nữa (xem giải thích ở
+            // handler GET/POST /api/profile phía dưới file).
             await env.DB.prepare(
               `INSERT OR REPLACE INTO user_profile (id, emp_code, name, email, phone, avatar, title, department, role_code, redirect_url, updated_at)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
@@ -3306,10 +3266,19 @@ export default {
       // GET: Retrieve User Profile from D1 Database
       if (request.method === "GET") {
         try {
-          if (env.DB) {
+          // QUAN TRỌNG: 'user_profile' KHÔNG được đọc qua id='current_user' (1 dòng DUY NHẤT
+          // dùng chung cho TẤT CẢ mọi người) — trước đây làm vậy khiến ai đăng nhập/lưu hồ sơ sau
+          // cùng trên TOÀN HỆ THỐNG sẽ "đè" lên hồ sơ hiển thị của MỌI tài khoản khác (đúng lỗi
+          // "đăng nhập 202608002 lại hiện thành 202608001"). Phải xác định đúng người đang gọi API
+          // qua JWT (cookie tbs_token) rồi chỉ đọc đúng dòng emp_code của riêng người đó.
+          const authInfo = await verifyServerAuth(request, env);
+          const queryEmpCode = url.searchParams.get("empCode");
+          const scopedEmpCode = (authInfo && authInfo.authenticated && authInfo.empCode) || queryEmpCode || "";
+
+          if (env.DB && scopedEmpCode) {
             const { results } = await env.DB.prepare(
-              "SELECT * FROM user_profile WHERE id = 'current_user'"
-            ).all();
+              "SELECT * FROM user_profile WHERE emp_code = ? AND id != 'current_user'"
+            ).bind(scopedEmpCode).all();
             if (results && results.length > 0) {
               const userProf = { ...results[0] };
               if (!userProf.avatar || typeof userProf.avatar !== "string" || userProf.avatar.trim() === "") {
@@ -3338,7 +3307,10 @@ export default {
         try {
           const body = await request.json();
           const { empCode, emp_code, name, email, phone, avatar, title, department, roleCode, role_code } = body;
-          const targetEmpCode = empCode || emp_code || "202608001";
+          // Ưu tiên empCode xác thực thật từ JWT (cookie tbs_token) hơn empCode client tự gửi lên,
+          // để không ai lỡ (hoặc cố tình) ghi đè hồ sơ D1 của MSNV khác qua body request.
+          const authInfo = await verifyServerAuth(request, env);
+          const targetEmpCode = (authInfo && authInfo.authenticated && authInfo.empCode) || empCode || emp_code || "202608001";
           const targetRoleCode = roleCode || role_code || "CBCNV";
 
           let finalAvatar = avatar;
@@ -3360,15 +3332,18 @@ export default {
             ).run();
 
             if (!finalAvatar || typeof finalAvatar !== "string" || finalAvatar.trim() === "") {
-              const { results: existing } = await env.DB.prepare("SELECT avatar FROM user_profile WHERE id = 'current_user'").all();
+              const { results: existing } = await env.DB.prepare("SELECT avatar FROM user_profile WHERE emp_code = ? AND id != 'current_user'").bind(targetEmpCode).all();
               finalAvatar = (existing && existing[0] && existing[0].avatar && existing[0].avatar.trim() !== "")
                 ? existing[0].avatar
                 : "/images/tbs-logo.png";
             }
 
+            // GHI VÀO ĐÚNG DÒNG RIÊNG CỦA TỪNG MSNV (id = targetEmpCode) — KHÔNG còn dùng chung
+            // id='current_user' nữa (đó chính là nguyên nhân "đăng nhập tài khoản nào cũng ra
+            // thành 1 người" vì mọi lần lưu hồ sơ đều đè lên đúng 1 dòng dùng chung cho cả hệ thống).
             await env.DB.prepare(
               `INSERT INTO user_profile (id, emp_code, name, email, phone, avatar, title, department, role_code, updated_at)
-               VALUES ('current_user', ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
                ON CONFLICT(id) DO UPDATE SET
                  emp_code = excluded.emp_code,
                  name = COALESCE(excluded.name, user_profile.name),
@@ -3382,12 +3357,13 @@ export default {
             )
               .bind(
                 targetEmpCode,
-                name || "Phạm Nguyễn Anh Huy",
-                email || "anhy.work.2004@gmail.com",
-                phone || "0522511245",
+                targetEmpCode,
+                name || `Cán Bộ Nhân Viên (${targetEmpCode})`,
+                email || `${String(targetEmpCode).toLowerCase()}@tbsgroup.vn`,
+                phone || "",
                 finalAvatar,
-                title || "IT - Team Chuyển Đổi Số",
-                department || "IT - Team Chuyển Đổi Số",
+                title || "Cán Bộ Công Nhân Viên",
+                department || "NHÂN SỰ-HC",
                 targetRoleCode
               )
               .run();
