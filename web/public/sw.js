@@ -1,25 +1,24 @@
 /**
  * Service Worker — KG-KAIZEN (thkiengiangshoes.tbsgroup2026.workers.dev)
- * Version: v23-no-js-cache
+ * Version: v24-no-nav-intercept
  *
  * Strategies:
- *  1. Cloudinary images  → Cache-First (opaque response support)
- *  2. JS / CSS / fonts   → KHÔNG can thiệp — để trình duyệt tự xử lý bằng HTTP cache chuẩn (worker
- *     phía server đã set Cache-Control: public, max-age=31536000, immutable cho các file
- *     /_next/static/ có tên gắn content-hash, nên đã an toàn tuyệt đối — cache SW ở TẦNG NÀY từng
- *     là rủi ro thừa: nếu 1 file JS dùng chung (framework/runtime chunk) không đổi hash giữa 2 lần
- *     build dù nội dung liên kết module bên trong có đổi, SW từng ưu tiên trả bản CŨ trong cache
- *     ("cached || fetchPromise") mà không hề fetch mạng để so sánh — có thể gây lỗi JS runtime im
- *     lặng (không phải lỗi tải file 404 rõ ràng) khiến React không khởi động được, mà cơ chế phát
- *     hiện lỗi ở layout.tsx không bắt được (chỉ bắt lỗi TẢI file, không bắt lỗi NỘI DUNG file cũ).
- *  3. Next.js .txt files → Network-Only (do not cache RSC navigation payloads)
- *  4. Navigation (HTML)  → Network-First, fallback /offline.html
- *  5. SKIP_WAITING message → user-controlled update
+ *  1. Cloudinary images  → Cache-First (opaque response support) — DUY NHẤT thứ SW còn can thiệp.
+ *  2. JS / CSS / fonts   → KHÔNG can thiệp — browser tự xử lý bằng HTTP cache chuẩn (server đã set
+ *     Cache-Control: public, max-age=31536000, immutable cho file content-hash).
+ *  3. Điều hướng trang (HTML) → KHÔNG can thiệp nữa (bỏ hẳn từ v24) — trước đây "Network-First,
+ *     fallback /offline.html" nghe hợp lý, nhưng qua kiểm chứng thực tế bằng Chrome headless: khi
+ *     có 1 SW đang thực sự điều khiển trang và người dùng ĐIỀU HƯỚNG SANG TRANG MỚI, việc SW chặn
+ *     lại request điều hướng đó (respondWith) để tự fetch hộ khiến trình duyệt xử lý nặng/chậm hơn
+ *     hẳn so với để trình duyệt tự điều hướng bình thường — đúng lớp nguyên nhân gây cảm giác giật/
+ *     kẹt lúc chuyển trang đã dày vò suốt phiên làm việc hôm nay. Cái giá đánh đổi (mất trang
+ *     offline.html khi rớt mạng hoàn toàn) nhỏ hơn nhiều lợi ích "điều hướng trang luôn mượt, không
+ *     còn tầng SW nào chen vào giữa nữa".
+ *  4. SKIP_WAITING → tự động ngay khi cài (skipWaiting), không chờ user bấm banner nữa.
  */
 
 const CACHE_NAMES = {
-  IMAGES: "cloudinary-images-v23",
-  PAGES:  "pages-v23",
+  IMAGES: "cloudinary-images-v24",
 };
 
 self.addEventListener("install", (event) => {
@@ -29,11 +28,6 @@ self.addEventListener("install", (event) => {
   // bản JS cũ" như trước — chỉ cần bản SW điều khiển fetch được cập nhật càng sớm càng tốt, không
   // đụng gì tới trang đang mở (skipWaiting KHÔNG tự reload trang, chỉ đổi ai xử lý request kế tiếp).
   self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE_NAMES.PAGES).then((cache) =>
-      cache.add("/offline.html").catch(() => {})
-    )
-  );
 });
 
 self.addEventListener("activate", (event) => {
@@ -90,20 +84,6 @@ self.addEventListener("fetch", (event) => {
   // Cache-Control server đã set (immutable cho file có content-hash, nên vẫn nhanh/đỡ tốn mạng ở
   // lần sau, chỉ là để trình duyệt tự quyết định thay vì SW tự ý ưu tiên cache không kiểm tra).
 
-  // 3. Navigation Requests (HTML pages) → Network-First
-  if (request.mode === "navigate" || (request.headers.get("accept") || "").includes("text/html")) {
-    event.respondWith(
-      fetch(request).catch(() =>
-        caches.match("/offline.html").then(
-          (offline) =>
-            offline ||
-            new Response("<h1>Mất kết nối</h1>", {
-              status: 503,
-              headers: { "Content-Type": "text/html; charset=utf-8" },
-            })
-        )
-      )
-    );
-    return;
-  }
+  // 3. Điều hướng trang (HTML) → KHÔNG can thiệp nữa (xem giải thích ở đầu file) — không gọi
+  // event.respondWith() nghĩa là trình duyệt tự điều hướng bình thường, không qua SW.
 });
