@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import { usePathname } from "next/navigation";
 import UserAvatar from "@/components/UserAvatar";
 import { getCurrentUser } from "@/lib/userProfiles";
@@ -273,7 +273,7 @@ export default function FinanceShell({
         {/* Sidebar Header Brand Logo */}
         <div className="p-3.5 sm:p-4 flex items-center justify-between border-b border-slate-100 flex-shrink-0 min-h-[58px]">
           {!isSidebarCollapsed ? (
-            <Link
+            <NavLink
               href="/"
               title="Về Trang Chủ TBS Group (https://thkiengiangshoes.tbsgroup2026.workers.dev)"
               className="flex items-center gap-2 group overflow-hidden cursor-pointer min-w-0"
@@ -283,15 +283,15 @@ export default function FinanceShell({
                 alt="TBS Group Logo"
                 className="h-7 w-auto object-contain group-hover:scale-105 transition-transform flex-shrink-0"
               />
-            </Link>
+            </NavLink>
           ) : (
-            <Link href="/" className="mx-auto hover:opacity-80 transition-opacity" title="Về Trang Chủ TBS Group">
+            <NavLink href="/" className="mx-auto hover:opacity-80 transition-opacity" title="Về Trang Chủ TBS Group">
               <img
                 src="/images/tbs-logo.png"
                 alt="TBS Logo"
                 className="h-6 w-auto object-contain"
               />
-            </Link>
+            </NavLink>
           )}
 
           <button
@@ -355,7 +355,7 @@ export default function FinanceShell({
                               (isActive && sIdx === 0 && !activeSubmenu && pathname === item.href);
                           }
                           return (
-                            <Link
+                            <NavLink
                               key={sIdx}
                               href={sub.href}
                               className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${
@@ -366,14 +366,14 @@ export default function FinanceShell({
                             >
                               {isSubActive && <span className="w-1.5 h-1.5 rounded-full bg-[#006838] flex-shrink-0" />}
                               <span className="truncate">{sub.label}</span>
-                            </Link>
+                            </NavLink>
                           );
                         })}
                       </div>
                     )}
                   </div>
                 ) : (
-                  <Link
+                  <NavLink
                     href={item.href}
                     className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
                       isActive
@@ -383,7 +383,7 @@ export default function FinanceShell({
                   >
                     <Icon size={17} className={isActive ? "text-[#006838]" : "text-slate-500"} />
                     {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
-                  </Link>
+                  </NavLink>
                 )}
               </div>
             );
@@ -442,14 +442,14 @@ export default function FinanceShell({
 
           <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
             {/* Link back to Work Dashboard */}
-            <Link
+            <NavLink
               href="/work?dept=finance"
               className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-emerald-50 text-slate-600 hover:text-[#006838] border border-slate-200 text-xs font-bold transition-all flex items-center gap-1 sm:gap-1.5"
             >
               <IconArrowLeft size={14} />
               <span className="hidden xs:inline">Về Dashboard</span>
               <span className="xs:hidden">Về DB</span>
-            </Link>
+            </NavLink>
 
             {/* Notification Icon */}
             <button className="relative w-8 h-8 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer">
@@ -532,7 +532,7 @@ export default function FinanceShell({
                               {item.subItems.map((sub, sIdx) => {
                                 const isSubActive = pathname === sub.href;
                                 return (
-                                  <Link
+                                  <NavLink
                                     key={sIdx}
                                     href={sub.href}
                                     onClick={() => setIsMobileMenuOpen(false)}
@@ -543,14 +543,14 @@ export default function FinanceShell({
                                     }`}
                                   >
                                     {sub.label}
-                                  </Link>
+                                  </NavLink>
                                 );
                               })}
                             </div>
                           )}
                         </div>
                       ) : (
-                        <Link
+                        <NavLink
                           href={item.href}
                           onClick={() => setIsMobileMenuOpen(false)}
                           className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
@@ -561,7 +561,7 @@ export default function FinanceShell({
                         >
                           <Icon size={17} className={isActive ? "text-[#006838]" : "text-slate-500"} />
                           <span>{item.label}</span>
-                        </Link>
+                        </NavLink>
                       )}
                     </div>
                   );
@@ -580,9 +580,9 @@ export default function FinanceShell({
               <React.Fragment key={idx}>
                 {idx > 0 && <span className="text-slate-300">›</span>}
                 {bc.href ? (
-                  <Link href={bc.href} className="hover:text-[#006838] transition-colors">
+                  <NavLink href={bc.href} className="hover:text-[#006838] transition-colors">
                     {bc.label}
-                  </Link>
+                  </NavLink>
                 ) : (
                   <span className="text-slate-900 font-bold">{bc.label}</span>
                 )}
@@ -638,13 +638,13 @@ export default function FinanceShell({
               </div>
 
               <div className="pt-2">
-                <Link
+                <NavLink
                   href="/work"
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#006838] hover:bg-[#004d29] text-white text-xs font-bold transition shadow-sm"
                 >
                   <IconArrowLeft size={16} />
                   <span>Quay về Dashboard Công Việc</span>
-                </Link>
+                </NavLink>
               </div>
             </div>
           ) : (

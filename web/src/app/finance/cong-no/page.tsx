@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import FinanceShell from "@/components/FinanceShell";
 import {
   IconUsers,
@@ -222,12 +222,12 @@ export default function CongNoPage() {
                       </span>
                     </td>
                     <td className="py-2.5 px-3 text-center">
-                      <Link
+                      <NavLink
                         href={`/finance/thu-chi?tab=${activeTab === "tra" ? "chi" : "thu"}`}
                         className="px-2 py-1 rounded bg-[#e6f4ed] hover:bg-emerald-100 text-[#006838] font-bold text-[10px] inline-block"
                       >
                         Tạo phiếu TT
-                      </Link>
+                      </NavLink>
                     </td>
                   </tr>
                 ))}

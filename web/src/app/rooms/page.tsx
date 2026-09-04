@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import {
   IconArrowLeft,
   IconCalendar,
@@ -1253,7 +1253,7 @@ export default function MeetingRoomsPage() {
          ════════════════════════════════════════════════════════════════ */}
       <header className="px-3.5 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 bg-white border-b border-slate-200/80 shadow-xs flex items-center justify-between sticky top-0 z-40">
         <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-          <Link href="/work" className="flex items-center gap-2 group flex-shrink-0">
+          <NavLink href="/work" className="flex items-center gap-2 group flex-shrink-0">
             <img
               src="/images/tbs-logo.png"
               alt="TBS Group Logo"
@@ -1265,7 +1265,7 @@ export default function MeetingRoomsPage() {
               alt="Skechers Logo"
               className="h-5 sm:h-5.5 w-auto object-contain group-hover:scale-105 transition-transform"
             />
-          </Link>
+          </NavLink>
           <span className="hidden md:inline-block px-2.5 py-1 rounded-full bg-[#e6f4ed] text-[#006838] text-xs font-bold border border-emerald-100 truncate">
             Hệ Thống Quản Lý Phòng Họp &amp; Đón Khách
           </span>
@@ -1317,13 +1317,13 @@ export default function MeetingRoomsPage() {
 
         {/* Title & Back Header (Flex Responsive - No Absolute Overlap on Mobile) */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
-          <Link
+          <NavLink
             href="/work"
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold hover:bg-emerald-50 hover:text-[#006838] transition-colors shadow-2xs"
           >
             <IconArrowLeft size={16} />
             <span>Trở về Tổng quan</span>
-          </Link>
+          </NavLink>
 
           <div className="text-center sm:text-right">
             <h1 className="text-base sm:text-2xl font-black text-slate-900 tracking-tight">

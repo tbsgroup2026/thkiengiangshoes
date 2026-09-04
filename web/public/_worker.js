@@ -7689,8 +7689,22 @@ export default {
       });
     }
 
-    // Default Fallback: Serve Next.js Static Export Assets
-    return env.ASSETS.fetch(request);
+    // Default Fallback: Serve Next.js Static Export Assets with Edge Caching Headers
+    const assetResponse = await env.ASSETS.fetch(request);
+    if (assetResponse.ok) {
+      const responseHeaders = new Headers(assetResponse.headers);
+      if (pathname.startsWith("/_next/static/") || pathname.endsWith(".woff2")) {
+        responseHeaders.set("Cache-Control", "public, max-age=31536000, immutable");
+      } else if (pathname.startsWith("/images/") || pathname.endsWith(".png") || pathname.endsWith(".jpg") || pathname.endsWith(".svg") || pathname.endsWith(".ico")) {
+        responseHeaders.set("Cache-Control", "public, max-age=86400, s-maxage=604800");
+      }
+      return new Response(assetResponse.body, {
+        status: assetResponse.status,
+        statusText: assetResponse.statusText,
+        headers: responseHeaders,
+      });
+    }
+    return assetResponse;
   },
 
   // ⏰ Cloudflare Worker Cron Trigger Handler (Automated Weekly Execution)

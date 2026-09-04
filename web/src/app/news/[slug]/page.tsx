@@ -1,5 +1,5 @@
 import React from "react";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import { Navbar, Footer } from "@/components/home";
 import { IconCalendar, IconEye, IconArrowLeft } from "@tabler/icons-react";
 
@@ -38,9 +38,9 @@ export default async function NewsDetailPage({ params }: { params: Promise<{ slu
 
       <article className="flex-grow pt-28 pb-20">
         <div className="max-w-3xl mx-auto px-5 sm:px-8">
-          <Link href="/news" className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-emerald-600 transition-colors mb-6">
+          <NavLink href="/news" className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-emerald-600 transition-colors mb-6">
             <IconArrowLeft size={16} /> Tin tức
-          </Link>
+          </NavLink>
 
           <div className="flex flex-wrap items-center gap-3 mb-4">
             <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase text-white bg-accent">

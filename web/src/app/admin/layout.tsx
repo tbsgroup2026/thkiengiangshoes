@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import {
   IconUsers,
   IconShield,
@@ -64,13 +64,13 @@ export default function AdminLayout({
         <p className="text-slate-400 text-sm max-w-md mb-6">
           Tài khoản của bạn không được cấp quyền Quản trị hệ thống (`admin`). Đang tự động chuyển hướng về trang làm việc...
         </p>
-        <Link
+        <NavLink
           href="/work"
           className="px-6 py-2.5 rounded-xl bg-[#006838] hover:bg-[#00522c] text-white font-bold text-xs flex items-center gap-2"
         >
           <IconArrowLeft size={16} />
           <span>Về trang Dashboard ngay</span>
-        </Link>
+        </NavLink>
       </div>
     );
   }
@@ -89,7 +89,7 @@ export default function AdminLayout({
       <aside className="hidden lg:flex w-64 bg-[#00381e] text-white p-6 border-r border-[#006838]/20 flex-col justify-between shadow-xl flex-shrink-0">
         <div>
           <div className="mb-8 pb-4 border-b border-white/10">
-            <Link href="/work" className="flex items-center gap-2 group">
+            <NavLink href="/work" className="flex items-center gap-2 group">
               <img
                 src="/images/tbs-logo.png"
                 alt="TBS Group Logo"
@@ -101,7 +101,7 @@ export default function AdminLayout({
                 alt="Skechers Logo"
                 className="h-5 w-auto object-contain brightness-0 invert group-hover:scale-105 transition-transform"
               />
-            </Link>
+            </NavLink>
             <div className="mt-3 flex items-center justify-between">
               <span className="font-mono text-[10px] font-black text-emerald-300 uppercase tracking-widest">
                 QUẢN TRỊ HỆ THỐNG
@@ -113,7 +113,7 @@ export default function AdminLayout({
           </div>
 
           <nav className="space-y-1 text-xs font-extrabold">
-            <Link
+            <NavLink
               href="/admin"
               className={`flex items-center gap-3 px-4 py-3 rounded-xl transition ${
                 pathname === "/admin"
@@ -123,9 +123,9 @@ export default function AdminLayout({
             >
               <IconLayoutDashboard size={18} />
               <span>Cổng Quản trị Admin</span>
-            </Link>
+            </NavLink>
 
-            <Link
+            <NavLink
               href="/admin/users"
               className={`flex items-center gap-3 px-4 py-3 rounded-xl transition ${
                 pathname === "/admin/users"
@@ -135,8 +135,8 @@ export default function AdminLayout({
             >
               <IconUsers size={18} />
               Quản lý nhân viên
-            </Link>
-            <Link
+            </NavLink>
+            <NavLink
               href="/admin/roles"
               className={`flex items-center gap-3 px-4 py-3 rounded-xl transition ${
                 pathname === "/admin/roles"
@@ -146,8 +146,8 @@ export default function AdminLayout({
             >
               <IconShield size={18} />
               Vai trò (Roles)
-            </Link>
-            <Link
+            </NavLink>
+            <NavLink
               href="/admin/departments"
               className={`flex items-center gap-3 px-4 py-3 rounded-xl transition ${
                 pathname === "/admin/departments"
@@ -157,9 +157,9 @@ export default function AdminLayout({
             >
               <IconBuilding size={18} />
               Phòng ban
-            </Link>
+            </NavLink>
 
-            <Link
+            <NavLink
               href="/admin/judges"
               className={`flex items-center gap-3 px-4 py-3 rounded-xl transition ${
                 pathname === "/admin/judges"
@@ -169,49 +169,49 @@ export default function AdminLayout({
             >
               <IconAward size={18} />
               Hội đồng đánh giá (BGK)
-            </Link>
+            </NavLink>
 
-            <Link
+            <NavLink
               href="/admin?tab=products"
               className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-emerald-100/90 hover:text-white transition"
             >
               <IconShoe size={18} />
               <span>Dòng sản phẩm</span>
-            </Link>
+            </NavLink>
 
-            <Link
+            <NavLink
               href="/admin?tab=landing_cms"
               className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 text-emerald-100/90 hover:text-white transition"
             >
               <IconHome size={18} />
               <span>Quản trị Trang chủ</span>
-            </Link>
+            </NavLink>
 
             <div className="pt-4 mt-4 border-t border-white/10 text-[10px] text-emerald-300/70 font-black uppercase tracking-widest px-4">
               Phân hệ khác
             </div>
-            <Link
+            <NavLink
               href="/documents/templates"
               className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 hover:text-white transition text-emerald-100/90"
             >
               <IconFileText size={18} />
               Số hóa giấy tờ
-            </Link>
-            <Link
+            </NavLink>
+            <NavLink
               href="/work"
               className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/10 hover:text-white transition text-emerald-100/90"
             >
               <IconChartBar size={18} />
               BI Dashboard
-            </Link>
+            </NavLink>
           </nav>
         </div>
 
         <div className="pt-6 border-t border-white/10 flex items-center justify-between text-xs text-emerald-200/50">
           <span>TBS Group v1.0</span>
-          <Link href="/login" className="text-rose-300 hover:underline font-bold">
+          <NavLink href="/login" className="text-rose-300 hover:underline font-bold">
             Đăng xuất
-          </Link>
+          </NavLink>
         </div>
       </aside>
 
@@ -228,9 +228,9 @@ export default function AdminLayout({
             </button>
             <span className="font-extrabold text-xs text-white">Quản Trị Admin</span>
           </div>
-          <Link href="/work" className="text-xs font-bold text-emerald-300 hover:underline">
+          <NavLink href="/work" className="text-xs font-bold text-emerald-300 hover:underline">
             Về Dashboard
-          </Link>
+          </NavLink>
         </header>
 
         {/* Mobile Drawer Overlay */}
@@ -248,54 +248,54 @@ export default function AdminLayout({
               </div>
 
               <nav className="flex-1 overflow-y-auto space-y-1 text-xs font-bold">
-                <Link
+                <NavLink
                   href="/admin"
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/10"
                 >
                   <IconLayoutDashboard size={18} />
                   <span>Cổng Quản trị Admin</span>
-                </Link>
-                <Link
+                </NavLink>
+                <NavLink
                   href="/admin/users"
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/10"
                 >
                   <IconUsers size={18} />
                   <span>Quản lý nhân viên</span>
-                </Link>
-                <Link
+                </NavLink>
+                <NavLink
                   href="/admin/roles"
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/10"
                 >
                   <IconShield size={18} />
                   <span>Vai trò (Roles)</span>
-                </Link>
-                <Link
+                </NavLink>
+                <NavLink
                   href="/admin/departments"
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/10"
                 >
                   <IconBuilding size={18} />
                   <span>Phòng ban</span>
-                </Link>
-                <Link
+                </NavLink>
+                <NavLink
                   href="/admin?tab=products"
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/10"
                 >
                   <IconShoe size={18} />
                   <span>Dòng sản phẩm</span>
-                </Link>
-                <Link
+                </NavLink>
+                <NavLink
                   href="/admin?tab=landing_cms"
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/10"
                 >
                   <IconHome size={18} />
                   <span>Quản trị Trang chủ</span>
-                </Link>
+                </NavLink>
               </nav>
             </div>
             <div className="flex-1" onClick={() => setIsMobileMenuOpen(false)} />

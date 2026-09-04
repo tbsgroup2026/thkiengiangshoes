@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import {
   IconUser,
   IconLock,
@@ -100,12 +100,12 @@ export default function LoginPage() {
             <div className="flex items-center gap-3">
               <img src="/images/tbs-logo.png" alt="TBS Group Logo" className="h-8 sm:h-9 w-auto object-contain" />
             </div>
-            <Link
+            <NavLink
               href="/"
               className="text-xs font-bold text-gray-500 hover:text-[#08221a] transition-colors"
             >
               Về trang chủ
-            </Link>
+            </NavLink>
           </div>
 
           {/* Tiêu đề chào mừng */}

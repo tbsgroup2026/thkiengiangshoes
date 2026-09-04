@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import DevToolsShield from "@/components/DevToolsShield";
 import NotificationInitializer from "@/components/NotificationInitializer";
+import SWUpdateBanner from "@/components/SWUpdateBanner";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -42,6 +43,9 @@ export const metadata: Metadata = {
 };
 
 import { StatusCountsProvider } from "@/context/StatusCountsContext";
+import { PerformanceProvider } from "@/context/PerformanceContext";
+import { ServiceWorkerRegister } from "@/components/performance/ServiceWorkerRegister";
+import { PerformanceDebugOverlay } from "@/components/performance/PerformanceDebugOverlay";
 
 export default function RootLayout({
   children,
@@ -64,7 +68,7 @@ export default function RootLayout({
               if ('serviceWorker' in navigator && 'caches' in window) {
                 caches.keys().then(function(keys) {
                   keys.forEach(function(key) {
-                    if (key !== 'skechers-tbs-v18-no-api-fix') {
+                    if (key !== 'skechers-tbs-v18-no-api-fix' && !key.includes('cloudinary') && !key.includes('static-assets')) {
                       caches.delete(key);
                     }
                   });
@@ -88,9 +92,15 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col font-sans bg-canvas text-ink" suppressHydrationWarning>
         <DevToolsShield />
         <NotificationInitializer />
-        <StatusCountsProvider>
-          {children}
-        </StatusCountsProvider>
+        {/* FIX: Banner thông báo SW update — user-controlled, không tự reload */}
+        <SWUpdateBanner />
+        <PerformanceProvider>
+          <ServiceWorkerRegister />
+          <StatusCountsProvider>
+            {children}
+          </StatusCountsProvider>
+          <PerformanceDebugOverlay />
+        </PerformanceProvider>
       </body>
     </html>
   );

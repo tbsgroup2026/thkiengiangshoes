@@ -1,150 +1,164 @@
-// PWA Service Worker for Văn Phòng Chuỗi SKECHERS - TBS Group
-const CACHE_NAME = "skechers-tbs-v18-no-api-fix";
-const ASSETS_TO_CACHE = [
-  "/",
-  "/favicon.ico",
-  "/icon.png",
-  "/manifest.json"
-];
+/**
+ * Service Worker — KG-KAIZEN (thkiengiangshoes.tbsgroup2026.workers.dev)
+ * Version: v5
+ *
+ * FIX: Bump version để buộc client lấy SW mới, cleanup cache v4 cũ.
+ *
+ * Strategies:
+ *  1. Cloudinary images  → Cache-First (opaque response support)
+ *  2. JS / CSS / fonts   → Stale-While-Revalidate
+ *     - FIX: Content-type guard — không cache nếu server trả text/html
+ *     - FIX: Safe 503 fallback — không trả undefined khi mạng lỗi + cache rỗng
+ *  3. Navigation (HTML)  → Network-First, fallback /offline.html
+ *     - FIX: Tách riêng navigation request, không dùng chung fallback với JS/CSS
+ *  4. SKIP_WAITING message → user-controlled update, không tự reload
+ */
 
+const CACHE_NAMES = {
+  IMAGES: "cloudinary-images-v5",
+  STATIC: "static-assets-v5",
+  PAGES:  "pages-v5",
+};
+
+// ---------------------------------------------------------------------------
+// Install — KHÔNG gọi self.skipWaiting() tự động.
+// SW mới sẽ ở trạng thái "waiting" cho đến khi user bấm banner "Cập Nhật Ngay".
+// Điều này ngăn việc SW tự apply → tab reload bất ngờ.
+// ---------------------------------------------------------------------------
 self.addEventListener("install", (event) => {
+  // Pre-cache trang offline để dùng được khi mất mạng hoàn toàn
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE).catch(() => {});
-    })
+    caches.open(CACHE_NAMES.PAGES).then((cache) =>
+      cache.add("/offline.html").catch(() => {})
+    )
   );
-  self.skipWaiting();
+  // Không gọi self.skipWaiting() — để SWUpdateBanner quyết định khi nào apply
 });
 
+// ---------------------------------------------------------------------------
+// Activate — cleanup tất cả cache cũ (v2 và các version khác)
+// ---------------------------------------------------------------------------
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
-      );
-    })
+    caches.keys().then((cacheNames) =>
+      Promise.all(
+        cacheNames
+          .filter((name) => !Object.values(CACHE_NAMES).includes(name))
+          .map((name) => caches.delete(name))
+      )
+    ).then(() => self.clients.claim())
   );
 });
 
-// Handling Mobile Push Notifications (Android & iOS 16.4+ Web Push)
-self.addEventListener("push", (event) => {
-  let payload = {
-    title: "🔔 Văn Phòng Chuỗi SKECHERS",
-    message: "Bạn có thông báo vận hành mới từ hệ thống TBS Group.",
-    url: "/work",
-    priority: "NORMAL",
-    tag: `tbs_push_${Date.now()}`
-  };
-
-  if (event.data) {
-    try {
-      const parsed = event.data.json();
-      payload = { ...payload, ...parsed };
-    } catch (e) {
-      payload.message = event.data.text();
-    }
+// ---------------------------------------------------------------------------
+// Message — user-controlled SKIP_WAITING
+// FIX: Thay vì tự gọi skipWaiting() trong install, SW chờ lệnh từ client.
+// Client gửi { type: 'SKIP_WAITING' } khi user bấm "Cập Nhật Ngay" trên banner.
+// ---------------------------------------------------------------------------
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
   }
-
-  const isUrgent =
-    payload.priority === "CRITICAL" ||
-    payload.priority === "URGENT" ||
-    (payload.title && (payload.title.includes("🚨") || payload.title.includes("KHẨN")));
-
-  const options = {
-    body: payload.message,
-    icon: "/icon.png",
-    badge: "/icon.png",
-    vibrate: isUrgent ? [500, 150, 500, 150, 500, 150, 500] : [200, 100, 200],
-    tag: payload.tag || `tbs_push_${Date.now()}`,
-    data: { url: payload.url || "/work" },
-    requireInteraction: isUrgent,
-    renotify: true,
-    actions: [
-      { action: "open", title: "Xem ngay" },
-      { action: "close", title: "Đóng" }
-    ]
-  };
-
-  event.waitUntil(
-    self.registration.showNotification(payload.title, options)
-  );
 });
 
-// Click action on mobile notification toast / banner
-self.addEventListener("notificationclick", (event) => {
-  event.notification.close();
-  if (event.action === "close") return;
-
-  const targetUrl = event.notification.data?.url || "/work";
-
-  event.waitUntil(
-    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
-        if (client.url && "focus" in client) {
-          client.focus();
-          if ("navigate" in client) {
-            client.navigate(targetUrl);
-          }
-          return;
-        }
-      }
-      if (clients.openWindow) {
-        return clients.openWindow(targetUrl);
-      }
-    })
-  );
-});
-
+// ---------------------------------------------------------------------------
+// Fetch Interceptor
+// ---------------------------------------------------------------------------
 self.addEventListener("fetch", (event) => {
-  // CRITICAL RULE 1: Only handle http/https requests. Ignore chrome-extension://, file://, etc.
-  if (!event.request.url.startsWith("http://") && !event.request.url.startsWith("https://")) {
-    return;
-  }
+  const request = event.request;
+  const url = new URL(request.url);
 
-  // CRITICAL RULE 2: NEVER intercept or cache API requests. Pass directly to browser network!
-  if (
-    event.request.method !== "GET" ||
-    event.request.url.includes("/api/")
-  ) {
-    return;
-  }
+  // Skip non-GET requests (POST, PUT, etc.)
+  if (request.method !== "GET") return;
 
-  // Network-First for HTML navigation to guarantee latest HTML and CSS/JS hashes
-  if (event.request.mode === "navigate" || (event.request.headers.get("accept") || "").includes("text/html")) {
+  // FIX: Bắt buộc check protocol — tránh chrome-extension:// hoặc moz-extension:// lọt vào
+  if (url.protocol !== "http:" && url.protocol !== "https:") return;
+
+  // ── 1. Cloudinary Images → Cache-First ──────────────────────────────────
+  if (url.hostname.includes("res.cloudinary.com")) {
     event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response.status === 200 && (event.request.url.startsWith("http://") || event.request.url.startsWith("https://"))) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy).catch(() => {}));
-          }
-          return response;
-        })
-        .catch(() => {
-          return caches.match(event.request).then((cached) => {
-            if (cached) return cached;
-            return caches.match("/");
+      caches.open(CACHE_NAMES.IMAGES).then((cache) =>
+        cache.match(request).then((cached) => {
+          if (cached) return cached;
+          return fetch(request).then((res) => {
+            // Cache opaque responses (status 0) và 200 OK
+            if (res && (res.status === 200 || res.status === 0 || res.type === "opaque")) {
+              try { cache.put(request, res.clone()); } catch (_) {}
+            }
+            return res;
           });
         })
+      )
     );
     return;
   }
 
-  // Static assets (JS, CSS, images, fonts) - Cache First with Network Fallback. NEVER return index HTML on failure!
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request)
-        .then((networkResponse) => {
-          if (networkResponse.status === 200 && (event.request.url.startsWith("http://") || event.request.url.startsWith("https://"))) {
-            const copy = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy).catch(() => {}));
-          }
-          return networkResponse;
-        });
-    })
-  );
-});
+  // ── 2. Static JS / CSS / Fonts → Stale-While-Revalidate ────────────────
+  const isStaticAsset =
+    url.pathname.includes("/_next/static/") ||
+    url.pathname.endsWith(".css") ||
+    url.pathname.endsWith(".js") ||
+    url.pathname.endsWith(".mjs") ||
+    url.pathname.endsWith(".woff") ||
+    url.pathname.endsWith(".woff2") ||
+    url.pathname.endsWith(".ttf");
 
+  if (isStaticAsset) {
+    event.respondWith(
+      caches.open(CACHE_NAMES.STATIC).then((cache) =>
+        cache.match(request).then((cached) => {
+          const fetchPromise = fetch(request).then((res) => {
+            // FIX: Content-type guard — nếu server trả HTML (lỗi/trang 404),
+            // KHÔNG cache và KHÔNG trả về làm JS/CSS → tránh "Unexpected token '<'"
+            const contentType = res.headers.get("content-type") || "";
+            if (res.status === 200 && !contentType.includes("text/html")) {
+              try { cache.put(request, res.clone()); } catch (_) {}
+            }
+            return res;
+          }).catch(() => {
+            // FIX: Nếu cache có → dùng cache; nếu không có → trả 503 đúng content-type
+            // Không bao giờ trả undefined hay HTML giả làm JS/CSS
+            if (cached) return cached;
+            const ext = url.pathname.split(".").pop() || "";
+            const mime =
+              ext === "css"                ? "text/css"
+              : ext === "js" || ext === "mjs" ? "application/javascript"
+              : ext === "woff2"            ? "font/woff2"
+              : ext === "woff"             ? "font/woff"
+              : "application/octet-stream";
+            return new Response(
+              `/* SW: Network error fetching ${url.pathname} */`,
+              { status: 503, headers: { "Content-Type": mime } }
+            );
+          });
+
+          // Trả cache ngay (stale), đồng thời revalidate ngầm
+          return cached || fetchPromise;
+        })
+      )
+    );
+    return;
+  }
+
+  // ── 3. Navigation Requests (HTML pages) → Network-First ────────────────
+  // FIX: Tách riêng navigation request — không trộn với JS/CSS logic.
+  // Fallback về /offline.html (HTML đúng nghĩa) khi mất mạng.
+  if (request.mode === "navigate") {
+    event.respondWith(
+      fetch(request).catch(() =>
+        caches.match("/offline.html").then(
+          (offline) =>
+            offline ||
+            new Response("<h1>Mất kết nối</h1>", {
+              status: 503,
+              headers: { "Content-Type": "text/html; charset=utf-8" },
+            })
+        )
+      )
+    );
+    return;
+  }
+
+  // ── 4. Tất cả request khác → Network (không can thiệp) ─────────────────
+  // API calls, analytics, v.v. → để browser xử lý bình thường
+});

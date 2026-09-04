@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect, Suspense } from "react";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import { useSearchParams } from "next/navigation";
 import FinanceShell from "@/components/FinanceShell";
 import {

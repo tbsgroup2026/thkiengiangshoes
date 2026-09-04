@@ -1,6 +1,6 @@
-import Header from "@/components/Header";
+﻿import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import {
   IconMapPin,
   IconPhone,
@@ -107,12 +107,12 @@ export default function ContactPage() {
                   tài khoản nội bộ để quản lý công việc và xử lý quy trình biểu mẫu.
                 </p>
               </div>
-              <Link
+              <NavLink
                 href="/login"
                 className="w-full text-center py-3.5 rounded-xl bg-white text-accent-deep font-bold text-sm hover:bg-accent-soft hover:text-white transition-colors duration-200 active:scale-[0.98]"
               >
                 Đăng nhập tài khoản
-              </Link>
+              </NavLink>
             </div>
           </div>
         </div>

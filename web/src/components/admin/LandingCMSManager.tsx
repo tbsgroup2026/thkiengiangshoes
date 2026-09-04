@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import {
   IconUpload,
   IconCheck,
@@ -275,14 +275,14 @@ export default function LandingCMSManager({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-          <Link
+          <NavLink
             href="/"
             target="_blank"
             className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
           >
             <IconExternalLink size={16} />
             <span>Xem Trang Chủ (Tab mới)</span>
-          </Link>
+          </NavLink>
 
           <button
             type="button"

@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import { IconArrowRight, IconCalendar, IconEye, IconNews, IconExternalLink } from "@tabler/icons-react";
 
 interface NewsItem {
@@ -138,7 +138,7 @@ export default function NewsSection() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
             {filteredNews.length > 0 ? (
               filteredNews.map((item, i) => (
-                <Link
+                <NavLink
                   href={`/news/${item.slug}`}
                   key={item.id}
                   className="group bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-500 flex flex-col"
@@ -199,7 +199,7 @@ export default function NewsSection() {
                       Đọc tiếp <IconArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                     </div>
                   </div>
-                </Link>
+                </NavLink>
               ))
             ) : (
               <div className="col-span-full text-center py-20 text-gray-400">

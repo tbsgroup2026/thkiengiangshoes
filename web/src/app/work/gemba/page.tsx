@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import {
   IconArrowLeft,
   IconMapPin,
@@ -124,18 +124,18 @@ export default function GembaDedicatedPage() {
       {/* Top Header Bar */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs">
         <div className="flex flex-wrap items-center gap-3">
-          <Link
+          <NavLink
             href="/work/cn-ci"
             className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-black transition-all flex items-center gap-2 cursor-pointer border border-slate-200 shadow-2xs"
           >
             <IconArrowLeft size={16} />
             <span>Quay lại CN-CI</span>
-          </Link>
+          </NavLink>
 
           <div className="flex items-center gap-2 text-xs font-bold text-slate-500 flex-wrap">
-            <Link href="/work" className="hover:text-[#006838] transition-colors">
+            <NavLink href="/work" className="hover:text-[#006838] transition-colors">
               Văn phòng SKECHERS
-            </Link>
+            </NavLink>
             <span>/</span>
             <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-900 font-black uppercase text-[10px] border border-amber-200 flex items-center gap-1">
               <IconMapPin size={12} className="text-amber-600" />

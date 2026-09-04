@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import dynamic from "next/dynamic";
 import { useStatusCounts } from "@/context/StatusCountsContext";
 
@@ -1332,7 +1332,7 @@ export default function CIModule() {
             )}
             <div className="space-y-1">
               {/* Nút Quay lại /work */}
-              <Link
+              <NavLink
                 href="/work"
                 className={`w-full text-left rounded-xl transition-all cursor-pointer flex items-center gap-2.5 ${
                   isSidebarCollapsed ? "p-2.5 justify-center" : "px-3.5 py-2"
@@ -1341,7 +1341,7 @@ export default function CIModule() {
               >
                 <IconArrowLeft size={18} className="shrink-0 text-emerald-400" />
                 {!isSidebarCollapsed && <span className="truncate">Về Trang Chủ</span>}
-              </Link>
+              </NavLink>
 
 
 

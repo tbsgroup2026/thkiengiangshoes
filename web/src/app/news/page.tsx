@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import { Navbar, Footer } from "@/components/home";
 import {
   IconSearch, IconCalendar, IconEye, IconArrowRight,
@@ -155,7 +155,7 @@ export default function NewsPage() {
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {news.map((item, i) => (
-                  <Link href={`/news/${item.slug}`} key={item.id}
+                  <NavLink href={`/news/${item.slug}`} key={item.id}
                     className="group bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col">
                     <div className="relative h-52 overflow-hidden">
                       <img src={item.featured_image || FALLBACK_IMAGES[i % FALLBACK_IMAGES.length]}
@@ -184,7 +184,7 @@ export default function NewsPage() {
                         Đọc tiếp <IconArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                       </div>
                     </div>
-                  </Link>
+                  </NavLink>
                 ))}
               </div>
 

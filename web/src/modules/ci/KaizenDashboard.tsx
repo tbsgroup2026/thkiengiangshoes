@@ -20,6 +20,9 @@ import {
   IconCheck,
   IconFilter,
   IconX,
+  IconArrowsSort,
+  IconSortAscending,
+  IconSortDescending,
 } from "@tabler/icons-react";
 import { KaizenProposal } from "./CIModule";
 
@@ -505,7 +508,39 @@ export default function KaizenDashboard({ proposals, onBackToLibrary, onNavigate
 
   const [showTop11Modal, setShowTop11Modal] = useState(false);
 
-  // 5. Top 38 Thi Đua Proposals with strict Award Quota (Chỉ xếp hạng những bài ĐÃ PHÊ DUYỆT)
+  // ════════════════════════════════════════════════════════════════
+  // SORT STATE FOR RANKING TABLE (shared between inline table & modal)
+  // ════════════════════════════════════════════════════════════════
+  type SortCol = "rank" | "name" | "empCode" | "title" | "value";
+  type SortDir = "asc" | "desc";
+  const [sortCol, setSortCol] = useState<SortCol>("rank");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  // Reset sort về mặc định (Hạng ↑) khi người dùng đổi tháng hoặc đổi org filter
+  useEffect(() => {
+    setSortCol("rank");
+    setSortDir("asc");
+  }, [selectedMonth, cascadingFilterState]);
+
+  const handleSort = (col: SortCol) => {
+    if (sortCol === col) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortCol(col);
+      setSortDir(col === "value" ? "desc" : "asc");
+    }
+  };
+
+  const SortIcon = ({ col }: { col: SortCol }) => {
+    if (sortCol !== col) return <IconArrowsSort size={12} className="opacity-40" />;
+    return sortDir === "asc" ? (
+      <IconSortAscending size={12} className="text-amber-400" />
+    ) : (
+      <IconSortDescending size={12} className="text-amber-400" />
+    );
+  };
+
+  // 5. Top 38 Thi Đua Proposals with strict Award Quota (Chỉ xếp hạng những bài ĐÃ PHÊ DUYỆT & theo lọc tháng / tổ chức)
   const ranked11Proposals = useMemo(() => {
     let thiDuaList = proposals.filter((p) => {
       if (!p || p.is_archived) return false;
@@ -533,10 +568,33 @@ export default function KaizenDashboard({ proposals, onBackToLibrary, onNavigate
         status === "APPROVED" ||
         status === "COMPLETED";
 
-      return isApproved;
+      if (!isApproved) return false;
+
+      // 1. Month Filter
+      if (selectedMonth !== "ALL") {
+        if (!p.created_at) return false;
+        try {
+          const d = new Date(p.created_at);
+          if (isNaN(d.getTime())) return false;
+          const mYear = `T${d.getMonth() + 1}/${d.getFullYear()}`;
+          if (mYear !== selectedMonth) return false;
+        } catch {
+          return false;
+        }
+      }
+
+      // 2. Cascading Org Filter
+      if (!matchCascadingFilter(p, cascadingFilterState)) return false;
+
+      return true;
     });
 
-    if (thiDuaList.length === 0 && proposals.length > 0) {
+    if (
+      thiDuaList.length === 0 &&
+      proposals.length > 0 &&
+      selectedMonth === "ALL" &&
+      cascadingFilterState.factories.length === 0
+    ) {
       thiDuaList = proposals;
     }
 
@@ -626,7 +684,34 @@ export default function KaizenDashboard({ proposals, onBackToLibrary, onNavigate
 
       return { item, rank, rankTitle, prizeValueTr, badgeLabel, badgeStyle, isTied };
     });
-  }, [proposals]);
+  }, [proposals, selectedMonth, cascadingFilterState]);
+
+  // Sorted version of ranked11Proposals applied on top of the ranked array
+  const sortedRankedProposals = useMemo(() => {
+    return [...ranked11Proposals].sort((a, b) => {
+      let cmp = 0;
+      if (sortCol === "rank") {
+        cmp = a.rank - b.rank;
+      } else if (sortCol === "name") {
+        const nameA = (a.item.proposer_name || (a.item as any).proposerName || "").toLowerCase();
+        const nameB = (b.item.proposer_name || (b.item as any).proposerName || "").toLowerCase();
+        cmp = nameA.localeCompare(nameB, "vi");
+      } else if (sortCol === "empCode") {
+        const codeA = (a.item.proposer_emp_code || (a.item as any).proposerEmpCode || a.item.code || "").toLowerCase();
+        const codeB = (b.item.proposer_emp_code || (b.item as any).proposerEmpCode || b.item.code || "").toLowerCase();
+        cmp = codeA.localeCompare(codeB, "vi");
+      } else if (sortCol === "title") {
+        const tA = (a.item.title || "").toLowerCase();
+        const tB = (b.item.title || "").toLowerCase();
+        cmp = tA.localeCompare(tB, "vi");
+      } else if (sortCol === "value") {
+        cmp = getProposalValue(b.item) - getProposalValue(a.item);
+        // Note: default for value is already desc via sortDir
+        return sortDir === "desc" ? cmp : -cmp;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [ranked11Proposals, sortCol, sortDir]);
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1152,7 +1237,7 @@ export default function KaizenDashboard({ proposals, onBackToLibrary, onNavigate
           ROW 4: TABLE CẢI TIẾN TIÊU BIỂU (TOP THI ĐUA KHEN THƯỞNG)
          ════════════════════════════════════════════════════════════════ */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
-        <div className="bg-[#0b1739] text-white px-4 py-3 flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
+        <div className="bg-[#0b1739] text-white px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <IconStar size={18} className="text-amber-400 shrink-0" />
             <div>
@@ -1162,30 +1247,85 @@ export default function KaizenDashboard({ proposals, onBackToLibrary, onNavigate
             </div>
           </div>
 
-          <button
-            onClick={() => setShowTop11Modal(true)}
-            className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black transition-all shadow-md cursor-pointer flex items-center gap-1.5"
-          >
-            <IconTrophy size={15} />
-            <span>Xem tất cả (Bảng xếp hạng 38 giải thi đua)</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end">
+            {/* Filter Lọc Theo Tháng cho Bảng Thi Đua */}
+            <div className="flex items-center gap-1.5 bg-slate-800/90 px-2.5 py-1.5 rounded-xl border border-slate-700/80 shadow-2xs">
+              <IconCalendar size={15} className="text-amber-400 shrink-0" />
+              <span className="text-[11px] font-bold text-slate-300 whitespace-nowrap">Lọc tháng:</span>
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="bg-slate-950 text-amber-300 text-xs font-extrabold px-2 py-0.5 rounded-lg border border-slate-700 outline-none focus:border-amber-400 cursor-pointer"
+              >
+                <option value="ALL">Tất cả thời gian</option>
+                {monthOptions.map((m) => (
+                  <option key={m} value={m}>
+                    Tháng {m.replace("T", "")}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              onClick={() => setShowTop11Modal(true)}
+              className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black transition-all shadow-md cursor-pointer flex items-center gap-1.5 shrink-0"
+            >
+              <IconTrophy size={15} />
+              <span>Xem tất cả</span>
+            </button>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-extrabold text-[10px] uppercase tracking-wider">
-                <th className="py-3 px-4 w-32 text-center">HẠNG</th>
-                <th className="py-3 px-4">HỌ VÀ TÊN</th>
-                <th className="py-3 px-4 text-center">MSNV</th>
-                <th className="py-3 px-4">CẢI TIẾN</th>
-                <th className="py-3 px-4 text-right">GIÁ TRỊ</th>
+                <th
+                  className="py-3 px-4 w-32 text-center cursor-pointer hover:bg-slate-100 select-none transition-colors"
+                  onClick={() => handleSort("rank")}
+                >
+                  <span className="inline-flex items-center justify-center gap-1">
+                    HẠNG <SortIcon col="rank" />
+                  </span>
+                </th>
+                <th
+                  className="py-3 px-4 cursor-pointer hover:bg-slate-100 select-none transition-colors"
+                  onClick={() => handleSort("name")}
+                >
+                  <span className="inline-flex items-center gap-1">
+                    HỌ VÀ TÊN <SortIcon col="name" />
+                  </span>
+                </th>
+                <th
+                  className="py-3 px-4 text-center cursor-pointer hover:bg-slate-100 select-none transition-colors"
+                  onClick={() => handleSort("empCode")}
+                >
+                  <span className="inline-flex items-center justify-center gap-1">
+                    MSNV <SortIcon col="empCode" />
+                  </span>
+                </th>
+                <th
+                  className="py-3 px-4 cursor-pointer hover:bg-slate-100 select-none transition-colors"
+                  onClick={() => handleSort("title")}
+                >
+                  <span className="inline-flex items-center gap-1">
+                    CẢI TIẾN <SortIcon col="title" />
+                  </span>
+                </th>
+                <th
+                  className="py-3 px-4 text-right cursor-pointer hover:bg-slate-100 select-none transition-colors"
+                  onClick={() => handleSort("value")}
+                >
+                  <span className="inline-flex items-center justify-end gap-1 w-full">
+                    GIÁ TRỊ <SortIcon col="value" />
+                  </span>
+                </th>
               </tr>
             </thead>
 
             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-              {ranked11Proposals.length > 0 ? (
-                ranked11Proposals.slice(0, 5).map(({ item, rank, prizeValueTr, badgeLabel, badgeStyle, isTied }) => {
+              {sortedRankedProposals.length > 0 ? (
+                sortedRankedProposals.slice(0, 5).map(({ item, rank, prizeValueTr, badgeLabel, badgeStyle, isTied }) => {
                   return (
                     <tr
                       key={item.id}
@@ -1270,7 +1410,7 @@ export default function KaizenDashboard({ proposals, onBackToLibrary, onNavigate
                 </div>
                 <div>
                   <h2 className="text-base sm:text-lg font-black tracking-tight flex items-center gap-2">
-                    🏆 BẢNG XẾP HẠNG THI ĐUA KHEN THƯỞNG KAIZEN (38 GIẢI)
+                    🏆 BẢNG XẾP HẠNG THI ĐUA KHEN THƯỞNG KAIZEN {selectedMonth !== "ALL" ? `(THÁNG ${selectedMonth.replace("T", "")})` : "(38 GIẢI)"}
                   </h2>
                   <p className="text-xs text-slate-300 font-medium mt-0.5">
                     1 Hạng Nhất &bull; 2 Hạng Nhì &bull; 5 Hạng Ba &bull; 10 Hạng 4 &bull; 20 Hạng 5
@@ -1290,28 +1430,82 @@ export default function KaizenDashboard({ proposals, onBackToLibrary, onNavigate
 
             {/* Modal Content Body */}
             <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4">
-              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-xs font-bold text-amber-900 flex items-center gap-2">
-                <span className="text-base">💡</span>
-                <span>
-                  <strong>Cơ cấu Giải Khen Thưởng Thi Đua:</strong> 1 Giải Hạng Nhất (1,0 Tr), 2 Giải Hạng Nhì (0,5 Tr), 5 Giải Hạng Ba (0,3 Tr), 10 Giải Hạng 4 (0,2 Tr), 20 Giải Hạng 5 (0,1 Tr). Bấm vào dòng để xem chi tiết.
-                </span>
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-xs font-bold text-amber-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">💡</span>
+                  <span>
+                    <strong>Cơ cấu Giải Khen Thưởng:</strong> 1 Hạng Nhất (1,0 Tr), 2 Hạng Nhì (0,5 Tr), 5 Hạng Ba (0,3 Tr), 10 Hạng 4 (0,2 Tr), 20 Hạng 5 (0,1 Tr).
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-xl border border-amber-300 shrink-0">
+                  <IconCalendar size={14} className="text-amber-600 shrink-0" />
+                  <span className="text-[11px] font-bold text-amber-900 whitespace-nowrap">Lọc tháng:</span>
+                  <select
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="bg-amber-100 text-amber-950 text-xs font-black px-2 py-0.5 rounded-lg border border-amber-400 outline-none cursor-pointer"
+                  >
+                    <option value="ALL">Tất cả thời gian</option>
+                    {monthOptions.map((m) => (
+                      <option key={m} value={m}>
+                        Tháng {m.replace("T", "")}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="overflow-x-auto border border-slate-200 rounded-2xl shadow-2xs">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-slate-900 text-white font-black text-[10px] uppercase tracking-wider">
-                      <th className="py-3.5 px-4 w-32 text-center">HẠNG</th>
-                      <th className="py-3.5 px-4">NGƯỜI ĐỀ XUẤT</th>
-                      <th className="py-3.5 px-4 text-center">MSNV</th>
-                      <th className="py-3.5 px-4">TÊN CẢI TIẾN</th>
-                      <th className="py-3.5 px-4 text-right">GIÁ TRỊ KHEN THƯỞNG</th>
+                      <th
+                        className="py-3.5 px-4 w-32 text-center cursor-pointer hover:bg-slate-800 select-none transition-colors"
+                        onClick={() => handleSort("rank")}
+                      >
+                        <span className="inline-flex items-center justify-center gap-1">
+                          HẠNG <SortIcon col="rank" />
+                        </span>
+                      </th>
+                      <th
+                        className="py-3.5 px-4 cursor-pointer hover:bg-slate-800 select-none transition-colors"
+                        onClick={() => handleSort("name")}
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          NGƯỜI ĐỀ XUẤT <SortIcon col="name" />
+                        </span>
+                      </th>
+                      <th
+                        className="py-3.5 px-4 text-center cursor-pointer hover:bg-slate-800 select-none transition-colors"
+                        onClick={() => handleSort("empCode")}
+                      >
+                        <span className="inline-flex items-center justify-center gap-1">
+                          MSNV <SortIcon col="empCode" />
+                        </span>
+                      </th>
+                      <th
+                        className="py-3.5 px-4 cursor-pointer hover:bg-slate-800 select-none transition-colors"
+                        onClick={() => handleSort("title")}
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          TÊN CẢI TIẾN <SortIcon col="title" />
+                        </span>
+                      </th>
+                      <th
+                        className="py-3.5 px-4 text-right cursor-pointer hover:bg-slate-800 select-none transition-colors"
+                        onClick={() => handleSort("value")}
+                      >
+                        <span className="inline-flex items-center justify-end gap-1 w-full">
+                          GIÁ TRỊ KHEN THƯỞNG <SortIcon col="value" />
+                        </span>
+                      </th>
                     </tr>
                   </thead>
 
                   <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
-                    {ranked11Proposals.length > 0 ? (
-                      ranked11Proposals.map(({ item, rank, badgeLabel, badgeStyle, prizeValueTr, isTied }) => (
+                    {sortedRankedProposals.length > 0 ? (
+                      sortedRankedProposals.map(({ item, rank, badgeLabel, badgeStyle, prizeValueTr, isTied }) => (
                         <tr
                           key={item.id}
                           onClick={() => {
@@ -1375,7 +1569,15 @@ export default function KaizenDashboard({ proposals, onBackToLibrary, onNavigate
             {/* Modal Footer */}
             <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
               <span className="text-xs text-slate-500 font-bold">
-                Hiển thị {ranked11Proposals.length} / 38 sáng kiến khen thưởng thi đua
+                Hiển thị {sortedRankedProposals.length} / 38 sáng kiến khen thưởng thi đua
+                {sortCol !== "rank" && (
+                  <button
+                    onClick={() => { setSortCol("rank"); setSortDir("asc"); }}
+                    className="ml-2 text-amber-600 hover:text-amber-700 underline cursor-pointer"
+                  >
+                    Đặt lại sắp xếp
+                  </button>
+                )}
               </span>
               <button
                 type="button"

@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import AIChatBubble from "@/components/recruitment/AIChatBubble";
@@ -91,7 +91,7 @@ export default function InterviewConfirmationClient() {
 
   if (error || !application) {
     return (
-      <div className="min-h-screen flex flex-col bg-tbs-light"><Header /><main className="flex-1 flex items-center justify-center"><div className="text-center max-w-md mx-auto px-6"><IconX size={56} className="mx-auto text-red-300 mb-4" /><h2 className="text-xl font-bold text-tbs-dark mb-2">Không Tìm Thấy</h2><p className="text-sm text-gray-500 mb-6">{error || "Không tìm thấy hồ sơ"}</p><Link href="/careers" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-accent text-white text-sm font-semibold hover:bg-accent-light transition-colors">Xem Các Vị Trí Tuyển Dụng<IconArrowRight size={18} /></Link></div></main><Footer /></div>
+      <div className="min-h-screen flex flex-col bg-tbs-light"><Header /><main className="flex-1 flex items-center justify-center"><div className="text-center max-w-md mx-auto px-6"><IconX size={56} className="mx-auto text-red-300 mb-4" /><h2 className="text-xl font-bold text-tbs-dark mb-2">Không Tìm Thấy</h2><p className="text-sm text-gray-500 mb-6">{error || "Không tìm thấy hồ sơ"}</p><NavLink href="/careers" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-accent text-white text-sm font-semibold hover:bg-accent-light transition-colors">Xem Các Vị Trí Tuyển Dụng<IconArrowRight size={18} /></NavLink></div></main><Footer /></div>
     );
   }
 
@@ -151,8 +151,8 @@ export default function InterviewConfirmationClient() {
         )}
 
         <div className="flex flex-wrap gap-3 justify-center">
-          <Link href="/careers/tracker" className="px-6 py-3 rounded-xl bg-accent text-white font-bold text-sm hover:bg-accent-light transition-colors">Theo dõi hồ sơ</Link>
-          <Link href="/careers" className="px-6 py-3 rounded-xl bg-gray-100 text-gray-700 font-bold text-sm hover:bg-gray-200 transition-colors">Xem Thêm Vị Trí</Link>
+          <NavLink href="/careers/tracker" className="px-6 py-3 rounded-xl bg-accent text-white font-bold text-sm hover:bg-accent-light transition-colors">Theo dõi hồ sơ</NavLink>
+          <NavLink href="/careers" className="px-6 py-3 rounded-xl bg-gray-100 text-gray-700 font-bold text-sm hover:bg-gray-200 transition-colors">Xem Thêm Vị Trí</NavLink>
         </div>
         <div className="text-center mt-8">
           <p className="text-xs text-gray-400 mb-2">Cần hỗ trợ? Liên hệ Phòng Nhân sự:</p>

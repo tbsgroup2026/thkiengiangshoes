@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import NavLink from "@/components/NavLink";
 import { usePathname, useRouter } from 'next/navigation';
 import {
   IconTools,
@@ -112,14 +112,14 @@ export default function MaintenanceShell({
       >
         <div className="p-4 flex items-center justify-between border-b border-white/10 min-h-[58px]">
           {!collapsed ? (
-            <Link href="/work" className="flex items-center gap-2 min-w-0">
+            <NavLink href="/work" className="flex items-center gap-2 min-w-0">
               <img src="/images/tbs-logo.png" alt="TBS Group Logo" className="h-7 w-auto object-contain flex-shrink-0" />
               <span className="text-xs font-black text-white truncate">Quản Lý MMTB</span>
-            </Link>
+            </NavLink>
           ) : (
-            <Link href="/work" className="mx-auto">
+            <NavLink href="/work" className="mx-auto">
               <img src="/images/tbs-logo.png" alt="TBS Logo" className="h-6 w-auto object-contain" />
-            </Link>
+            </NavLink>
           )}
           <button
             onClick={() => setCollapsed(!collapsed)}
@@ -135,7 +135,7 @@ export default function MaintenanceShell({
               const Icon = ICONS[entry.iconName] ?? IconTools;
               const isActive = pathname === entry.href;
               return (
-                <Link
+                <NavLink
                   key={entry.id}
                   href={entry.href}
                   className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-150 border-l-2 ${
@@ -146,7 +146,7 @@ export default function MaintenanceShell({
                 >
                   <Icon size={17} className={isActive ? 'text-accent-light' : 'text-white/40'} />
                   {!collapsed && <span className="truncate">{entry.label}</span>}
-                </Link>
+                </NavLink>
               );
             }
 
@@ -176,7 +176,7 @@ export default function MaintenanceShell({
                       const CIcon = ICONS[c.iconName] ?? IconTools;
                       const isActive = pathname === c.href;
                       return (
-                        <Link
+                        <NavLink
                           key={c.id}
                           href={c.href}
                           className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all duration-150 ${
@@ -185,7 +185,7 @@ export default function MaintenanceShell({
                         >
                           <CIcon size={14} className={isActive ? 'text-accent-light' : 'text-white/30'} />
                           <span className="truncate">{c.label}</span>
-                        </Link>
+                        </NavLink>
                       );
                     })}
                   </div>
@@ -196,13 +196,13 @@ export default function MaintenanceShell({
         </nav>
 
         <div className="p-3 border-t border-white/10 space-y-0.5">
-          <Link
+          <NavLink
             href="/work"
             className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-white/50 hover:bg-white/[0.06] hover:text-white transition-colors duration-150"
           >
             <IconArrowLeft size={16} />
             {!collapsed && <span>Về Trang Chủ</span>}
-          </Link>
+          </NavLink>
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 transition-colors duration-150"
@@ -216,14 +216,14 @@ export default function MaintenanceShell({
       {/* NỘI DUNG */}
       <div className="flex-1 flex flex-col min-w-0">
         <header className="bg-white border-b border-slate-200/80 px-4 sm:px-6 py-3 sticky top-0 z-20 flex items-center justify-between gap-3 lg:hidden">
-          <Link href="/work" className="flex items-center gap-1.5 text-xs font-bold text-slate-600">
+          <NavLink href="/work" className="flex items-center gap-1.5 text-xs font-bold text-slate-600">
             <IconArrowLeft size={16} />
             Về Trang Chủ
-          </Link>
+          </NavLink>
         </header>
         <div className="px-4 sm:px-6 pt-4 hidden lg:block">
           <div className="text-[11px] font-semibold text-gray-400">
-            <Link href="/work" className="hover:text-accent">Trang chủ</Link>
+            <NavLink href="/work" className="hover:text-accent">Trang chủ</NavLink>
             <span className="mx-1.5">/</span>
             <span>Quản Lý MMTB</span>
             <span className="mx-1.5">/</span>

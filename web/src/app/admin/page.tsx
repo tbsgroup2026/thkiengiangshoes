@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import {
   IconUsers,
   IconSettings,
@@ -1094,13 +1094,13 @@ export default function AdminPage() {
       <header className="bg-white border-b border-slate-200/90 shadow-2xs sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/work" className="flex items-center gap-2 group">
+            <NavLink href="/work" className="flex items-center gap-2 group">
               <img
                 src="/images/tbs-logo.png"
                 alt="TBS Group Logo"
                 className="h-7 sm:h-8 w-auto object-contain group-hover:scale-105 transition-transform"
               />
-            </Link>
+            </NavLink>
             <div className="h-5 w-[1px] bg-slate-200" />
             <div>
               <span className="text-xs sm:text-sm font-black text-slate-900 tracking-wider block leading-none">ADMIN PORTAL</span>
@@ -1109,13 +1109,13 @@ export default function AdminPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Link
+            <NavLink
               href="/work"
               className="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold hover:bg-emerald-50 hover:text-[#006838] transition-colors flex items-center gap-1 shadow-2xs"
             >
               <IconArrowLeft size={14} />
               <span>Về Tổng quan</span>
-            </Link>
+            </NavLink>
 
             <div className="flex items-center gap-2 pl-3 border-l border-slate-200">
               <img src={adminUser.avatar} alt="Admin" className="w-8 h-8 rounded-full bg-emerald-50 p-1 border border-emerald-200" />

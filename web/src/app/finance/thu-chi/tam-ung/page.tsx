@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import FinanceShell from "@/components/FinanceShell";
 import {
   IconFileInvoice,
@@ -73,12 +73,12 @@ export default function TamUngPage() {
         </div>
 
         <div className="flex items-center gap-2.5">
-          <Link
+          <NavLink
             href="/finance/thu-chi"
             className="px-4 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-bold transition-all shadow-2xs"
           >
             Quay lại
-          </Link>
+          </NavLink>
           <button
             type="button"
             onClick={() => showToast("📝 Đã mở form tạo giấy đề nghị tạm ứng mới!")}
@@ -131,12 +131,12 @@ export default function TamUngPage() {
                     </span>
                   </td>
                   <td className="py-2.5 px-3 text-center">
-                    <Link
+                    <NavLink
                       href={`/finance/thu-chi/hoan-ung?ref=${row.id}`}
                       className="px-2 py-1 rounded bg-[#e6f4ed] hover:bg-emerald-100 text-[#006838] font-bold text-[10px] inline-block"
                     >
                       Hoàn ứng
-                    </Link>
+                    </NavLink>
                   </td>
                 </tr>
               ))}

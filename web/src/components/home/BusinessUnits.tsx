@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import React, { useRef, useEffect, useState } from "react";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import { IconArrowRight, IconBuildingFactory, IconBackpack, IconBuildingSkyscraper, IconShip, IconBuildingStore } from "@tabler/icons-react";
 
 const BUSINESSES = [
@@ -162,12 +162,12 @@ export default function BusinessUnits() {
                     </h3>
                     <p className="text-sm text-gray-500 leading-relaxed">{biz.desc}</p>
                     <div className="pt-2">
-                      <Link
+                      <NavLink
                         href={`/news?category=${biz.newsCategory}`}
                         className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 hover:text-emerald-700 transition-colors"
                       >
                         Tin tức liên quan <IconArrowRight size={14} />
-                      </Link>
+                      </NavLink>
                     </div>
                   </div>
                 </div>

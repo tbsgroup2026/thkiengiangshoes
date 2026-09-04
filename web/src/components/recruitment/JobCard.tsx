@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import React from "react";
-import Link from "next/link";
+import NavLink from "@/components/NavLink";
 import { IconMapPin, IconClock, IconUsers, IconArrowRight } from "@tabler/icons-react";
 import type { Job } from "@/lib/api";
 
@@ -99,13 +99,13 @@ export default function JobCard({ job, compact = false }: JobCardProps) {
           <span className="text-xs font-medium text-accent">
             {job._count?.applications ?? job.applyCount} lượt ứng tuyển
           </span>
-          <Link
+          <NavLink
             href={`/careers/${job.id}`}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-accent text-white text-xs font-semibold hover:bg-accent-light active:scale-[0.98] transition-all duration-200 shadow-sm"
           >
             Xem Chi Tiết
             <IconArrowRight size={14} />
-          </Link>
+          </NavLink>
         </div>
       </div>
     </div>

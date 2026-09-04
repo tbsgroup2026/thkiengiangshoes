@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
+import NavLink from "@/components/NavLink";
 import {
   IconDeviceLaptop,
   IconAlertTriangle,
@@ -649,9 +649,9 @@ export default function OverviewPage() {
                     <div className="text-[11px] font-semibold text-gray-500 mt-0.5">Chưa lên lịch</div>
                   </div>
                 </div>
-                <Link href="/maintenance/schedule" className="mt-3 flex items-center justify-center gap-1.5 text-xs font-bold text-accent hover:underline">
+                <NavLink href="/maintenance/schedule" className="mt-3 flex items-center justify-center gap-1.5 text-xs font-bold text-accent hover:underline">
                   Xem chi tiết <IconArrowRight size={13} />
-                </Link>
+                </NavLink>
               </div>
             </div>
 
@@ -659,10 +659,10 @@ export default function OverviewPage() {
               <h2 className="text-sm font-extrabold text-tbs-dark mb-2">Truy Cập Nhanh</h2>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {shortcuts.map((s) => (
-                  <Link key={s.href} href={s.href} className={`flex flex-col items-center gap-2 rounded-2xl ${s.bg} p-4 hover:brightness-95 transition`}>
+                  <NavLink key={s.href} href={s.href} className={`flex flex-col items-center gap-2 rounded-2xl ${s.bg} p-4 hover:brightness-95 transition`}>
                     <s.icon size={24} className={s.text} />
                     <span className="text-xs font-bold text-tbs-dark text-center">{s.label}</span>
-                  </Link>
+                  </NavLink>
                 ))}
                 {pendingProposals > 0 && (
                   <div className="col-span-2 sm:col-span-4 text-[11px] text-gray-400 text-center">{pendingProposals} đề xuất chưa xử lý</div>
