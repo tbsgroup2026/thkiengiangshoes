@@ -54,6 +54,10 @@ export function formatCloudinaryUrl(
     return trimmed;
   }
 
+  if ((trimmed.startsWith("http://") || trimmed.startsWith("https://")) && !trimmed.includes("res.cloudinary.com")) {
+    return trimmed;
+  }
+
   const uploadMarker = "/upload/";
   const uploadIdx = trimmed.indexOf(uploadMarker);
   if (uploadIdx !== -1 && trimmed.includes("res.cloudinary.com")) {
@@ -113,6 +117,10 @@ export function getCloudinaryUrl(
   if (!trimmed) return "";
 
   if (trimmed.startsWith("data:") || trimmed.startsWith("blob:") || (trimmed.startsWith("/") && !trimmed.startsWith("//"))) {
+    return trimmed;
+  }
+
+  if ((trimmed.startsWith("http://") || trimmed.startsWith("https://")) && !trimmed.includes("res.cloudinary.com")) {
     return trimmed;
   }
 
@@ -187,6 +195,11 @@ export function getCloudinaryLQIP(
   publicIdOrUrl: string,
   options: Omit<CloudinaryTransformOptions, "width" | "quality" | "blur"> = {}
 ): string {
+  if (!publicIdOrUrl) return "";
+  const trimmed = publicIdOrUrl.trim();
+  if ((trimmed.startsWith("http://") || trimmed.startsWith("https://")) && !trimmed.includes("res.cloudinary.com")) {
+    return "";
+  }
   return getCloudinaryUrl(publicIdOrUrl, {
     ...options,
     width: 50,
