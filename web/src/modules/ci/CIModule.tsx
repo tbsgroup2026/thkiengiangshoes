@@ -153,6 +153,8 @@ export interface KaizenProposal {
   merged_into_id?: string;
   version: number;
   created_at: string;
+  updated_at?: string;
+  approved_at?: string;
 }
 
 

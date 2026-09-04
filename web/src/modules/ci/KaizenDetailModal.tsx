@@ -231,8 +231,25 @@ export default function KaizenDetailModal({
   if (!isOpen || !proposal) return null;
 
   const catObj = CATEGORIES.find((c) => c.id === proposal.category) || CATEGORIES[0];
-  const pMonth = (proposal as any).proposer_month || (proposal.created_at ? new Date(proposal.created_at).getMonth() + 1 : new Date().getMonth() + 1);
-  const pYear = (proposal as any).proposer_year || (proposal.created_at ? new Date(proposal.created_at).getFullYear() : new Date().getFullYear());
+
+  const isApprovedProposal =
+    proposal.approval_status === "PHE_DUYET" ||
+    (proposal as any).approvalStatus === "PHE_DUYET" ||
+    proposal.sub_status === "CHO_DANH_GIA" ||
+    proposal.sub_status === "DA_DANH_GIA" ||
+    proposal.sub_status === "LUU_TRU";
+
+  const effectiveDateStr = isApprovedProposal
+    ? ((proposal as any).approved_at || (proposal as any).approvedAt || (proposal as any).updated_at || proposal.created_at)
+    : (proposal.created_at || (proposal as any).updated_at);
+
+  const effDate = effectiveDateStr ? new Date(effectiveDateStr) : new Date();
+  const pMonth = !isNaN(effDate.getTime())
+    ? effDate.getMonth() + 1
+    : ((proposal as any).proposer_month || new Date().getMonth() + 1);
+  const pYear = !isNaN(effDate.getTime())
+    ? effDate.getFullYear()
+    : ((proposal as any).proposer_year || new Date().getFullYear());
   const vtcv = (proposal as any).proposer_position || proposal.department || "Công Nhân Sản Xuất";
   const cust = proposal.customer || "Skechers";
   const prodGroup = (proposal as any).product_group || proposal.factory || "Quai";
@@ -640,6 +657,9 @@ export default function KaizenDetailModal({
           }
           if (updated.total_savings_words !== undefined) proposal.total_savings_words = updated.total_savings_words;
           if (updated.after_image_url) proposal.after_image_url = updated.after_image_url;
+          if (updated.approved_at) (proposal as any).approved_at = updated.approved_at;
+          if (updated.proposer_month) (proposal as any).proposer_month = updated.proposer_month;
+          if (updated.proposer_year) (proposal as any).proposer_year = updated.proposer_year;
 
           setStep3Msg(
             updated.approval_status === "PHE_DUYET"

@@ -111,6 +111,10 @@ export async function POST(request: Request) {
               after_image_url = COALESCE(?, after_image_url),
               attachments_json = COALESCE(?, attachments_json),
               review_comment = COALESCE(?, review_comment),
+              approved_at = CASE WHEN ? = 'PHE_DUYET' THEN CURRENT_TIMESTAMP ELSE approved_at END,
+              approved_by = CASE WHEN ? = 'PHE_DUYET' THEN ? ELSE approved_by END,
+              proposer_month = CASE WHEN ? = 'PHE_DUYET' THEN CAST(strftime('%m', 'now') AS INTEGER) ELSE proposer_month END,
+              proposer_year = CASE WHEN ? = 'PHE_DUYET' THEN CAST(strftime('%Y', 'now') AS INTEGER) ELSE proposer_year END,
               updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
         `;
@@ -133,6 +137,11 @@ export async function POST(request: Request) {
             afterImageUrl,
             attachmentsJson,
             note || null,
+            approvalStatus,
+            approvalStatus,
+            session?.name || session?.empCode || 'Người Phê Duyệt',
+            approvalStatus,
+            approvalStatus,
             proposalId
           )
           .run();
@@ -172,6 +181,9 @@ export async function POST(request: Request) {
       pair_quantity: pairQty,
       total_savings_vnd: totalSavings,
       total_savings_words: totalSavingsWordsVal,
+      approved_at: isApproved ? new Date().toISOString() : null,
+      proposer_month: isApproved ? new Date().getMonth() + 1 : undefined,
+      proposer_year: isApproved ? new Date().getFullYear() : undefined,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Lỗi xử lý phê duyệt';

@@ -119,6 +119,32 @@ const getProposalValue = (p: any): number => {
   return 0;
 };
 
+// Helper to extract proposal effective date for month/year calculation
+// Rule: Đăng tháng 8, duyệt tháng 9 thì sáng kiến thuộc về Tháng 9 (tính theo ngày duyệt, không theo ngày đăng ký)
+export function getEffectiveDate(p: KaizenProposal | any): Date {
+  if (!p) return new Date();
+
+  const appStatus = String(p.approval_status || p.approvalStatus || "").toUpperCase();
+  const subStatus = String(p.sub_status || p.subStatus || "").toUpperCase();
+  const status = String(p.status || "").toUpperCase();
+
+  const isApproved =
+    appStatus === "PHE_DUYET" ||
+    subStatus === "CHO_DANH_GIA" ||
+    subStatus === "DA_DANH_GIA" ||
+    subStatus === "LUU_TRU" ||
+    status === "APPROVED" ||
+    status === "IMPLEMENTED" ||
+    status === "EVALUATED";
+
+  const dateStr = isApproved
+    ? (p.approved_at || p.approvedAt || p.updated_at || p.created_at)
+    : (p.created_at || p.updated_at);
+
+  const d = dateStr ? new Date(dateStr) : new Date();
+  return !isNaN(d.getTime()) ? d : new Date();
+}
+
 // Helper to match region string to 8 standard region/department buckets
 const normalizeRegion = (p: KaizenProposal | any): string => {
   if (!p) return "Kiên Giang 1";
@@ -252,10 +278,9 @@ export default function KaizenDashboard({ proposals, onBackToLibrary, onNavigate
         if (!isEvaluated) return false;
       }
 
-      // 2. Month Filter
+      // 2. Month Filter (Tính theo NGÀY DUYỆT nếu bài đã được phê duyệt)
       if (selectedMonth !== "ALL") {
-        if (!p.created_at) return false;
-        const d = new Date(p.created_at);
+        const d = getEffectiveDate(p);
         const mYear = `T${d.getMonth() + 1}/${d.getFullYear()}`;
         if (mYear !== selectedMonth) return false;
       }
@@ -267,20 +292,19 @@ export default function KaizenDashboard({ proposals, onBackToLibrary, onNavigate
     });
   }, [proposals, statusScope, selectedMonth, cascadingFilterState]);
 
-  // Dynamically generate available month options from actual proposals dates
+  // Dynamically generate available month options from actual proposals dates (bằng Ngày duyệt nếu đã duyệt)
   const monthOptions = useMemo(() => {
     const set = new Set<string>();
     proposals.forEach((p) => {
-      if (p.created_at) {
-        try {
-          const d = new Date(p.created_at);
-          if (!isNaN(d.getTime())) {
-            set.add(`T${d.getMonth() + 1}/${d.getFullYear()}`);
-          }
-        } catch {}
-      }
+      try {
+        const d = getEffectiveDate(p);
+        if (!isNaN(d.getTime())) {
+          set.add(`T${d.getMonth() + 1}/${d.getFullYear()}`);
+        }
+      } catch {}
     });
 
+    set.add("T9/2026");
     set.add("T8/2026");
     set.add("T7/2026");
 
@@ -298,16 +322,18 @@ export default function KaizenDashboard({ proposals, onBackToLibrary, onNavigate
   const countLuuTru = filteredProposals.filter((p) => p.registration_type === "LUU_TRU").length;
 
   // Dynamic label & count for Card 4 matching selected month or current month
-  const activeMonthLabel = selectedMonth !== "ALL" ? `Cải tiến ${selectedMonth}` : `Cải tiến T8/2026`;
+  const activeMonthLabel = selectedMonth !== "ALL" ? `Cải tiến ${selectedMonth}` : `Cải tiến T9/2026`;
 
   const activeMonthCount = useMemo(() => {
     if (selectedMonth !== "ALL") {
       return filteredProposals.length;
     }
+    const currentNow = new Date();
+    const targetMonth = currentNow.getMonth();
+    const targetYear = currentNow.getFullYear();
     return filteredProposals.filter((p) => {
-      if (!p.created_at) return false;
-      const d = new Date(p.created_at);
-      return !isNaN(d.getTime()) && d.getMonth() === 7 && d.getFullYear() === 2026;
+      const d = getEffectiveDate(p);
+      return !isNaN(d.getTime()) && d.getMonth() === targetMonth && d.getFullYear() === targetYear;
     }).length;
   }, [filteredProposals, selectedMonth]);
 
@@ -483,13 +509,11 @@ export default function KaizenDashboard({ proposals, onBackToLibrary, onNavigate
     });
 
     filteredProposals.forEach((p) => {
-      if (p.created_at) {
-        const d = new Date(p.created_at);
-        const mKey = `T${d.getMonth() + 1}`;
-        if (map[mKey]) {
-          map[mKey].count += 1;
-          map[mKey].value += getProposalValue(p);
-        }
+      const d = getEffectiveDate(p);
+      const mKey = `T${d.getMonth() + 1}`;
+      if (map[mKey]) {
+        map[mKey].count += 1;
+        map[mKey].value += getProposalValue(p);
       }
     });
 
@@ -570,11 +594,10 @@ export default function KaizenDashboard({ proposals, onBackToLibrary, onNavigate
 
       if (!isApproved) return false;
 
-      // 1. Month Filter
+      // 1. Month Filter (Tính theo Ngày duyệt nếu đã duyệt)
       if (selectedMonth !== "ALL") {
-        if (!p.created_at) return false;
         try {
-          const d = new Date(p.created_at);
+          const d = getEffectiveDate(p);
           if (isNaN(d.getTime())) return false;
           const mYear = `T${d.getMonth() + 1}/${d.getFullYear()}`;
           if (mYear !== selectedMonth) return false;
