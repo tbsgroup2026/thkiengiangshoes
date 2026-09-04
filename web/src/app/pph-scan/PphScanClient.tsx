@@ -114,18 +114,6 @@ export default function PphScanClient() {
     return () => clearTimeout(t);
   }, [loading]);
 
-  // Sau khi ghi nhận thành công, tự quay lại FORM (không phải quét lại QR) sau vài giây — tải lại
-  // thông tin để biết ngay khung kế tiếp đã tới giờ hay chưa, thay vì dừng hẳn ở màn hình cảm ơn.
-  useEffect(() => {
-    if (!success) return;
-    const timer = setTimeout(() => {
-      setSuccess(null);
-      load();
-    }, 2200);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [success]);
-
   // Đồng hồ đếm ngược realtime — đếm tới lúc khung giờ ĐANG nhập hết hạn (= mốc bắt đầu của khung
   // kế tiếp, trừ hao 10 phút, khớp đúng luật pphResolveStatus() phía backend). Chỉ chạy khi đang ở
   // chế độ nhập số lượng (không áp dụng cho đầu ca / chờ / đã xong).
@@ -257,6 +245,9 @@ export default function PphScanClient() {
     );
   }
 
+  // Dừng hẳn ở đây sau khi ghi nhận — KHÔNG tự quay lại form/tải lại gì nữa. Muốn nhập tiếp thì
+  // quét lại đúng mã QR đó (lần quét mới sẽ tự biết đúng khung giờ hiện tại, cho xem lại các khung
+  // cũ lẫn khung mới y như lúc mới quét lần đầu).
   if (success) {
     return (
       <ScanShell team={info.team}>
@@ -266,7 +257,6 @@ export default function PphScanClient() {
           title="Đã ghi nhận!"
           desc={`Cập nhật khung giờ ${success.slot} thành công. Cảm ơn bạn!`}
         />
-        <p className="text-center text-[11px] text-slate-400 font-semibold -mt-2">Đang quay lại...</p>
       </ScanShell>
     );
   }
