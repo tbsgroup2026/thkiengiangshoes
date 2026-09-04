@@ -740,6 +740,34 @@ async function pphBuildTree(env) {
   return factories;
 }
 
+// Liệt kê TẤT CẢ điểm quét (lá của cây) trong 1 Nhà máy đã dựng qua pphBuildTree() — đúng y hệt
+// logic quyết định QrChip ở đâu bên PphSettingsView.tsx (Xưởng trống hẳn / Tổ thẳng dưới Xưởng /
+// Chuyền không có Tổ con / Tổ dưới Chuyền) — dùng cho dashboard thật (KHÔNG còn "Chuyền 1..9" giả
+// định cứng nữa, hiện đúng tên thật + đúng số lượng điểm quét của từng Nhà máy).
+function pphCollectFactoryLeaves(factory) {
+  const leaves = [];
+  for (const a of factory.areas) {
+    const isLeafArea = (a.lines || []).length === 0 && (a.teams || []).length === 0;
+    if (isLeafArea) {
+      leaves.push({ id: a.id, name: a.name, path: factory.name });
+      continue;
+    }
+    for (const t of a.teams || []) {
+      leaves.push({ id: t.id, name: t.name, path: `${factory.name} › ${a.name}` });
+    }
+    for (const l of a.lines || []) {
+      if ((l.teams || []).length === 0) {
+        leaves.push({ id: l.id, name: l.name, path: `${factory.name} › ${a.name}` });
+      } else {
+        for (const t of l.teams) {
+          leaves.push({ id: t.id, name: t.name, path: `${factory.name} › ${a.name} › ${l.name}` });
+        }
+      }
+    }
+  }
+  return leaves;
+}
+
 // Tra 1 nút BẤT KỲ (Xưởng/Chuyền/Tổ đều có thể là điểm quét QR — tuỳ nhánh dừng ở cấp nào) và đi
 // ngược lên tới Nhà máy — dùng cho trang quét QR (không cần tải cả cây). ancestors KHÔNG bao gồm
 // chính node đang tra, nên area/line/factory luôn là TỔ TIÊN thật, không bị trùng với chính nó.
@@ -775,6 +803,99 @@ async function handlePph(request, env, pathname, searchParams) {
   if (sub === "/tree" && request.method === "GET") {
     const tree = await pphBuildTree(env);
     return mmtbJson({ success: true, data: tree });
+  }
+
+  // ---- Dashboard THẬT (Nhà máy > từng điểm quét) — thay hẳn dữ liệu mẫu sinh phía FE trước đây.
+  // Cache đọc 5 phút (mmtbCachedJson, giống các route MMTB khác) nhưng MỌI lượt ghi (nộp số liệu ở
+  // /pph-scan, xoá khung nhập nhầm) đều tự invalidate cache này ngay, nên số liệu cập nhật gần như
+  // tức thời chứ không phải đợi hết TTL — FE tự poll lại mỗi 60s để cảm giác "realtime". ----
+  if (sub === "/dashboard" && request.method === "GET") {
+    const forceRefresh = searchParams.get("fresh") === "1";
+    return mmtbCachedJson(env, "pph:dashboard", forceRefresh, async () => {
+      const factories = await pphBuildTree(env);
+      const date = pphTodayStr();
+      const nowMin = pphNowMinutes();
+      const qSlots = PPH_SLOTS.slice(1); // 8 khung SỐ LƯỢNG (không tính "08:00" đầu ca)
+
+      const factoriesOut = [];
+      for (const f of factories) {
+        const leaves = pphCollectFactoryLeaves(f);
+        const leafOut = [];
+        for (const leaf of leaves) {
+          let entries = [];
+          try {
+            const r = await env.DB.prepare(
+              "SELECT slot, worker_count, model, planned_qty, target_rft, actual_qty, submitted_at FROM pph_entries WHERE team_id = ? AND entry_date = ?"
+            ).bind(leaf.id, date).all();
+            entries = r.results || [];
+          } catch {}
+          const bySlot = new Map(entries.map((e) => [e.slot, e]));
+          const setupRow = bySlot.get("08:00");
+
+          const slotDetails = qSlots.map((s) => {
+            const row = bySlot.get(s);
+            return { slot: s, actualQty: row ? row.actual_qty : null, filled: !!row };
+          });
+          const filledQtySlots = slotDetails.filter((s) => s.filled);
+          const latest = filledQtySlots[filledQtySlots.length - 1] || null;
+
+          // Chỉ tiêu/giờ SUY RA từ kế hoạch NGUYÊN NGÀY chia đều cho 8 khung số lượng — pph_org
+          // hiện chưa có field "chỉ tiêu/giờ" riêng, đây là cách quy đổi hợp lý nhất từ dữ liệu
+          // đầu ca thật đang có (không bịa số).
+          const plannedQty = setupRow ? setupRow.planned_qty : null;
+          const perHourTarget = plannedQty ? plannedQty / qSlots.length : 0;
+
+          const cumulativeActual = filledQtySlots.reduce((s, x) => s + (x.actualQty || 0), 0);
+          const cumulativeTarget = perHourTarget * filledQtySlots.length;
+          const pphLatest = latest ? latest.actualQty : null;
+          const efficiencyPctLatest =
+            latest && perHourTarget > 0 ? Math.round((latest.actualQty / perHourTarget) * 1000) / 10 : null;
+
+          // Trạng thái nhập: so khung nào ĐÃ TỚI GIỜ (trừ hao 10 phút, khớp pphResolveStatus) với
+          // khung đã thực sự nhập. "late" nếu có khung nhập trễ hơn 20 phút so với mốc của nó.
+          let entryStatus = "missing";
+          if (!setupRow) {
+            entryStatus = "missing";
+          } else {
+            const dueSlots = qSlots.filter((s) => nowMin >= pphSlotMinutes(s) - 10);
+            const dueFilled = dueSlots.every((s) => bySlot.has(s));
+            if (dueSlots.length === 0 || dueFilled) {
+              const anyLate = dueSlots.some((s) => {
+                const row = bySlot.get(s);
+                if (!row || !row.submitted_at) return false;
+                const subMs = new Date(row.submitted_at).getTime();
+                if (Number.isNaN(subMs)) return false;
+                const subVN = new Date(subMs + 7 * 60 * 60 * 1000);
+                const subMin = subVN.getUTCHours() * 60 + subVN.getUTCMinutes();
+                return subMin - pphSlotMinutes(s) > 20;
+              });
+              entryStatus = anyLate ? "late" : "ontime";
+            } else {
+              entryStatus = "missing";
+            }
+          }
+
+          leafOut.push({
+            id: leaf.id,
+            name: leaf.name,
+            path: leaf.path,
+            setup: setupRow
+              ? { workerCount: setupRow.worker_count, model: setupRow.model, plannedQty: setupRow.planned_qty, targetRft: setupRow.target_rft }
+              : null,
+            slots: slotDetails,
+            pphLatest,
+            efficiencyPctLatest,
+            perHourTarget: Math.round(perHourTarget * 10) / 10,
+            cumulativeActual,
+            cumulativeTarget: Math.round(cumulativeTarget),
+            entryStatus,
+          });
+        }
+        factoriesOut.push({ id: f.id, name: f.name, leaves: leafOut });
+      }
+
+      return { success: true, data: { date, factories: factoriesOut } };
+    });
   }
 
   // ---- Thêm mục vào cây (Nhà máy/Xưởng/Chuyền/Tổ) ----
