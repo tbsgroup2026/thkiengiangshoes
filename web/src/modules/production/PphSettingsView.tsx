@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
+import { buildQrLabelImage } from '@/lib/qrLabelImage';
 import {
   IconArrowLeft,
   IconBuildingFactory2,
@@ -33,6 +34,9 @@ export default function PphSettingsView({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [qrTeam, setQrTeam] = useState<{ id: string; name: string; path: string } | null>(null);
   const [qrImageUrl, setQrImageUrl] = useState<string | null>(null);
+  // Ảnh THỰC SỰ tải về khi bấm "Tải ảnh" — đã ghép sẵn đường dẫn + tên vào ảnh, khác với qrImageUrl
+  // (chỉ là mã QR trần, dùng để hiển thị xem trước trong popup).
+  const [qrDownloadUrl, setQrDownloadUrl] = useState<string | null>(null);
 
   const [addingFor, setAddingFor] = useState<{ type: OrgType; parentId: string | null } | null>(null);
   const [addName, setAddName] = useState('');
@@ -65,11 +69,25 @@ export default function PphSettingsView({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     if (!qrTeam) {
       setQrImageUrl(null);
+      setQrDownloadUrl(null);
       return;
     }
+    setQrDownloadUrl(null);
     const url = `${window.location.origin}/pph-scan?team=${encodeURIComponent(qrTeam.id)}`;
     QRCode.toDataURL(url, { width: 480, margin: 2 })
-      .then(setQrImageUrl)
+      .then(async (dataUrl) => {
+        setQrImageUrl(dataUrl);
+        // Ghép sẵn đường dẫn + tên vào ảnh tải về — để dán ra thực tế là biết ngay mã này ở đâu,
+        // không cần mở lại hệ thống mới biết. Lỗi ở bước ghép KHÔNG chặn việc xem mã QR bình
+        // thường — chỉ đơn giản là nút "Tải ảnh" khi đó tải mã QR trần (vẫn dùng được).
+        try {
+          const labelUrl = await buildQrLabelImage({ path: qrTeam.path, name: qrTeam.name, qrDataUrl: dataUrl });
+          setQrDownloadUrl(labelUrl);
+        } catch (err) {
+          console.warn('Không ghép được nhãn vào ảnh QR:', err);
+          setQrDownloadUrl(dataUrl);
+        }
+      })
       .catch(() => setQrImageUrl(null));
   }, [qrTeam]);
 
@@ -360,7 +378,7 @@ export default function PphSettingsView({ onClose }: { onClose: () => void }) {
               </button>
               {qrImageUrl && (
                 <a
-                  href={qrImageUrl}
+                  href={qrDownloadUrl || qrImageUrl}
                   download={`QR-${qrTeam.name.replace(/\s+/g, '-')}.png`}
                   className="flex-1 py-3 rounded-xl bg-[#006838] text-white text-sm font-bold hover:opacity-90 flex items-center justify-center gap-1.5"
                 >
