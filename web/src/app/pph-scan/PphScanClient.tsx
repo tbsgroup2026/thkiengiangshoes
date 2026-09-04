@@ -83,18 +83,29 @@ export default function PphScanClient() {
   // gì (luôn cần mạng thật để nộp số liệu) — nên KHÔNG có lý do gì để Service Worker can thiệp vào
   // đây cả, và SW từng là nguồn gốc hàng loạt sự cố "kẹt/chập chờn" khó dò khác nhau suốt phiên làm
   // việc hôm nay (bản cache cũ trên điện thoại đã ghé từ trước khi có các bản sửa mới nhất). Chủ
-  // động HUỶ ĐĂNG KÝ mọi Service Worker của domain này ngay khi vào trang — đảm bảo từ lần vào
-  // trang NÀY trở đi, không còn tầng SW nào chen vào giữa nữa, chỉ còn HTTP thuần (đã ép no-store
-  // cho HTML + browser tự cache đúng chuẩn cho file JS content-hash).
+  // động HUỶ ĐĂNG KÝ mọi Service Worker của domain — đảm bảo từ lần vào trang NÀY trở đi không còn
+  // tầng SW nào chen vào giữa nữa, chỉ còn HTTP thuần (đã ép no-store cho HTML).
+  //
+  // QUAN TRỌNG: đã tự kiểm chứng bằng Chrome thật (headless, giả lập điện thoại) — nếu chạy việc
+  // huỷ đăng ký này NGAY LÚC MOUNT (cùng lúc với form đang tải dữ liệu lần đầu), nó CẠNH TRANH tài
+  // nguyên với chính quá trình tải/hiển thị form, gây đúng cảm giác giật/chập chờn lúc tải (dù cuối
+  // cùng vẫn ra đúng kết quả) — đặc biệt rõ trên máy yếu vì huỷ 1 SW đang thực sự điều khiển trang
+  // là việc tốn tài nguyên (Chrome phải chờ dừng hẳn việc SW đang chặn fetch). Nên CHỦ ĐỘNG ĐỢI đến
+  // khi form đã hiển thị xong (loading=false) rồi mới âm thầm dọn dẹp SW ở nền, không cạnh tranh gì
+  // với trải nghiệm của người dùng đang xem/nhập liệu nữa.
   useEffect(() => {
+    if (loading) return;
     if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
-    navigator.serviceWorker.getRegistrations()
-      .then((regs) => Promise.all(regs.map((r) => r.unregister())))
-      .catch(() => {});
-    if ('caches' in window) {
-      caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))).catch(() => {});
-    }
-  }, []);
+    const t = setTimeout(() => {
+      navigator.serviceWorker.getRegistrations()
+        .then((regs) => Promise.all(regs.map((r) => r.unregister())))
+        .catch(() => {});
+      if ('caches' in window) {
+        caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))).catch(() => {});
+      }
+    }, 2000);
+    return () => clearTimeout(t);
+  }, [loading]);
 
   // Nhớ tên người báo cáo TRÊN CHÍNH ĐIỆN THOẠI này — chỉ lần đầu tiên (bất kỳ Tổ nào) mới phải
   // gõ tên, các lần quét sau tự điền sẵn, vẫn cho bấm "Đổi tên" nếu điện thoại đổi người dùng.
