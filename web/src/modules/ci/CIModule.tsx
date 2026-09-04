@@ -530,6 +530,8 @@ export default function CIModule() {
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [selectedRegion, setSelectedRegion] = useState("ALL");
   const [selectedRegType, setSelectedRegType] = useState("ALL");
+  // "Tháng/Năm" — lọc theo tháng đăng ký thật (created_at), giá trị dạng "M-YYYY" (VD "8-2026")
+  const [selectedMonthYear, setSelectedMonthYear] = useState("ALL");
   const [selectedSubStatus, setSelectedSubStatus] = useState("CHO_DANH_GIA");
   const [selectedStatus, setSelectedStatus] = useState("ALL");
 
@@ -1073,6 +1075,24 @@ export default function CIModule() {
     return proposals.map(normalizeProposal);
   }, [proposals]);
 
+  // Danh sách Tháng/Năm CÓ THẬT trong dữ liệu (không hardcode cứng ngày tháng) — lấy từ created_at
+  // của từng đề xuất, gộp trùng, sắp MỚI -> CŨ để hiện lên đầu dropdown.
+  const monthYearOptions = useMemo(() => {
+    const seen = new Map<string, { value: string; label: string; sortKey: number }>();
+    for (const p of normalizedProposals) {
+      if (!p.created_at) continue;
+      const d = new Date(p.created_at);
+      if (Number.isNaN(d.getTime())) continue;
+      const month = d.getMonth() + 1;
+      const year = d.getFullYear();
+      const value = `${month}-${year}`;
+      if (!seen.has(value)) {
+        seen.set(value, { value, label: `T${month}/${year}`, sortKey: year * 12 + month });
+      }
+    }
+    return [...seen.values()].sort((a, b) => b.sortKey - a.sortKey);
+  }, [normalizedProposals]);
+
   // ⚡ Helper to extract proposal savings value in Million VNĐ
   const getProposalSavingsVal = (p: any): number => {
     if (!p) return 0;
@@ -1204,6 +1224,12 @@ export default function CIModule() {
         return false;
       }
 
+      if (selectedMonthYear !== "ALL") {
+        const d = p.created_at ? new Date(p.created_at) : null;
+        const value = d && !Number.isNaN(d.getTime()) ? `${d.getMonth() + 1}-${d.getFullYear()}` : null;
+        if (value !== selectedMonthYear) return false;
+      }
+
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
         const matchSearch =
@@ -1242,7 +1268,7 @@ export default function CIModule() {
       const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
       return dateA - dateB;
     });
-  }, [normalizedProposals, selectedRegion, selectedCategory, selectedRegType, searchQuery, proposalRanksMap]);
+  }, [normalizedProposals, selectedRegion, selectedCategory, selectedRegType, selectedMonthYear, searchQuery, proposalRanksMap]);
 
   // ⚡ Helper predicate to test if a proposal matches active search query
   const matchesSearch = (p: KaizenProposal, query: string) => {
@@ -1930,11 +1956,18 @@ export default function CIModule() {
             <option value="DE_CAU_TRUC">Đế Cấu Trúc</option>
           </select>
 
-          {/* Tháng/Năm */}
-          <select className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 text-[11px] font-bold text-slate-700 outline-none focus:border-[#006838]">
+          {/* Tháng/Năm — lọc theo tháng đăng ký thật, danh sách lấy từ dữ liệu hiện có */}
+          <select
+            value={selectedMonthYear}
+            onChange={(e) => setSelectedMonthYear(e.target.value)}
+            className="w-full px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 text-[11px] font-bold text-slate-700 outline-none focus:border-[#006838]"
+          >
             <option value="ALL">📅 Tháng/Năm</option>
-            <option value="8/2026">T8/2026</option>
-            <option value="7/2026">T7/2026</option>
+            {monthYearOptions.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
           </select>
 
           {/* Reset Filters Button */}
@@ -1946,6 +1979,7 @@ export default function CIModule() {
               setSelectedRegType("ALL");
               setSelectedSubStatus("ALL");
               setSelectedStatus("ALL");
+              setSelectedMonthYear("ALL");
             }}
             className="w-full px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer border border-slate-200"
           >

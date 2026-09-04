@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
+import PizZip from 'pizzip';
 import { buildQrLabelImage } from '@/lib/qrLabelImage';
 import {
   IconArrowLeft,
@@ -13,6 +14,8 @@ import {
   IconTrash,
   IconCheck,
   IconX,
+  IconFolderDown,
+  IconLoader2,
 } from '@tabler/icons-react';
 
 type PphTeam = { id: string; name: string };
@@ -42,6 +45,10 @@ export default function PphSettingsView({ onClose }: { onClose: () => void }) {
   const [addName, setAddName] = useState('');
   const [addSubmitting, setAddSubmitting] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+
+  // Tải QR hàng loạt — id Nhà máy đang tạo file (disable nút + hiện spinner), null = không có.
+  const [bulkDownloadingId, setBulkDownloadingId] = useState<string | null>(null);
+  const [bulkError, setBulkError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const load = async () => {
@@ -144,6 +151,78 @@ export default function PphSettingsView({ onClose }: { onClose: () => void }) {
     }
   }
 
+  // Liệt kê TẤT CẢ điểm quét (lá của cây) trong 1 Nhà máy — đúng y hệt logic đang dùng để quyết
+  // định hiện QrChip ở đâu trong phần render bên dưới (Xưởng trống hẳn / Tổ thẳng dưới Xưởng /
+  // Chuyền không có Tổ con / Tổ dưới Chuyền), để nút "Tải QR hàng loạt" luôn khớp với đúng những gì
+  // đang hiện mã QR riêng lẻ trên màn hình.
+  function collectFactoryLeafPoints(f: PphFactory): { id: string; name: string; path: string }[] {
+    const points: { id: string; name: string; path: string }[] = [];
+    for (const a of f.areas) {
+      const isLeafArea = a.lines.length === 0 && a.teams.length === 0;
+      if (isLeafArea) {
+        points.push({ id: a.id, name: a.name, path: f.name });
+        continue;
+      }
+      for (const t of a.teams) {
+        points.push({ id: t.id, name: t.name, path: `${f.name} › ${a.name}` });
+      }
+      for (const l of a.lines) {
+        if (l.teams.length === 0) {
+          points.push({ id: l.id, name: l.name, path: `${f.name} › ${a.name}` });
+        } else {
+          for (const t of l.teams) {
+            points.push({ id: t.id, name: t.name, path: `${f.name} › ${a.name} › ${l.name}` });
+          }
+        }
+      }
+    }
+    return points;
+  }
+
+  // Tải hết QR (đã ghép nhãn đường dẫn + tên, giống hệt ảnh tải lẻ) của cả 1 Nhà máy vào 1 file
+  // .zip duy nhất — dùng chung buildQrLabelImage() để 2 nơi tải (lẻ / hàng loạt) luôn ra ảnh giống
+  // nhau. Đóng gói bằng PizZip (đã có sẵn trong dự án, tương thích JSZip) — không cần thêm thư viện.
+  async function handleBulkDownload(f: PphFactory) {
+    const points = collectFactoryLeafPoints(f);
+    if (points.length === 0) {
+      setBulkError(`Nhà máy "${f.name}" chưa có điểm quét nào để tải.`);
+      return;
+    }
+    setBulkError(null);
+    setBulkDownloadingId(f.id);
+    try {
+      const zip = new PizZip();
+      const usedNames = new Set<string>();
+      for (const p of points) {
+        const url = `${window.location.origin}/pph-scan?team=${encodeURIComponent(p.id)}`;
+        const qrDataUrl = await QRCode.toDataURL(url, { width: 480, margin: 2 });
+        const labelDataUrl = await buildQrLabelImage({ path: p.path, name: p.name, qrDataUrl }).catch(() => qrDataUrl);
+        const base64 = labelDataUrl.split(',')[1] || '';
+
+        let fileName = `${p.path} - ${p.name}`.replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim();
+        if (usedNames.has(fileName)) fileName = `${fileName} (${p.id.slice(-4)})`;
+        usedNames.add(fileName);
+
+        zip.file(`${fileName}.png`, base64, { base64: true });
+      }
+
+      const blob = zip.generate({ type: 'blob', mimeType: 'application/zip' }) as Blob;
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `QR-${f.name.replace(/\s+/g, '-')}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+    } catch (err) {
+      console.warn('Bulk QR download failed:', err);
+      setBulkError('Không tạo được file QR hàng loạt — vui lòng thử lại.');
+    } finally {
+      setBulkDownloadingId(null);
+    }
+  }
+
   const AddInline = ({ type, parentId, big }: { type: OrgType; parentId: string | null; big?: boolean }) => {
     const isOpen = addingFor?.type === type && addingFor?.parentId === parentId;
     const sizeCls = big ? 'px-4 py-3 text-sm' : 'px-3 py-2 text-xs';
@@ -230,6 +309,15 @@ export default function PphSettingsView({ onClose }: { onClose: () => void }) {
         </div>
       )}
 
+      {bulkError && (
+        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-sm font-semibold flex items-center justify-between gap-3">
+          <span>⚠️ {bulkError}</span>
+          <button type="button" onClick={() => setBulkError(null)} className="text-rose-400 hover:text-rose-600 flex-shrink-0">
+            <IconX size={16} />
+          </button>
+        </div>
+      )}
+
       {loading && <div className="p-12 rounded-2xl bg-white border border-slate-200/80 shadow-sm text-center text-base text-slate-400">Đang tải...</div>}
 
       {!loading && (
@@ -253,6 +341,20 @@ export default function PphSettingsView({ onClose }: { onClose: () => void }) {
                 <IconBuildingFactory2 size={22} />
               </div>
               <h3 className="font-black text-lg flex-1 truncate">{f.name}</h3>
+              <button
+                type="button"
+                onClick={() => handleBulkDownload(f)}
+                disabled={bulkDownloadingId === f.id}
+                className="flex items-center gap-1.5 px-3 h-9 rounded-lg bg-emerald-400/15 text-emerald-300 hover:bg-emerald-400/25 text-xs font-black flex-shrink-0 disabled:opacity-50"
+                title="Tải hết mã QR của Nhà máy này (1 file .zip)"
+              >
+                {bulkDownloadingId === f.id ? (
+                  <IconLoader2 size={15} className="animate-spin" />
+                ) : (
+                  <IconFolderDown size={15} />
+                )}
+                <span className="hidden sm:inline">{bulkDownloadingId === f.id ? 'Đang tạo...' : 'Tải QR hàng loạt'}</span>
+              </button>
               <button
                 type="button"
                 onClick={() => handleDelete(f.id, 'FACTORY', f.name)}
