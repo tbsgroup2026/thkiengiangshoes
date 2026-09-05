@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { IconCircleFilled, IconBuildingFactory2, IconSettings, IconRefresh } from '@tabler/icons-react';
+import { IconCircleFilled, IconBuildingFactory2, IconSettings, IconRefresh, IconCalendar } from '@tabler/icons-react';
 import PphSettingsView from './PphSettingsView';
 
 type EntryStatus = 'ontime' | 'late' | 'missing';
@@ -104,25 +104,37 @@ function aggregateHours(leaves: PphLeaf[]): HourPoint[] {
 
 const POLL_MS = 60_000;
 
+// "Hôm nay" tính theo giờ VN (UTC+7), khớp đúng cách backend pphTodayStr() tính — không dùng
+// new Date().toISOString() trực tiếp (theo UTC, có thể lệch 1 ngày tuỳ giờ trong ngày).
+function todayVNStr(): string {
+  const vn = new Date(Date.now() + 7 * 60 * 60 * 1000);
+  return vn.toISOString().slice(0, 10);
+}
+
 // Hiệu Suất Nhà Máy — dữ liệu THẬT từ các lượt quét QR ở /pph-scan (bảng pph_entries), gộp theo
-// đúng cây Nhà máy/Xưởng/Chuyền/Tổ đang cấu hình ở trang Cài Đặt. Tự làm mới mỗi 60s để cảm giác
-// gần-realtime mà không cần bấm lại; API /api/pph/dashboard cũng tự xoá cache ngay khi có ai nộp
-// số liệu mới nên số liệu luôn đúng thời điểm gần nhất.
+// đúng cây Nhà máy/Xưởng/Chuyền/Tổ đang cấu hình ở trang Cài Đặt. Mặc định xem HÔM NAY, tự làm
+// mới mỗi 60s cho cảm giác gần-realtime; chọn 1 ngày khác thì xem đúng dữ liệu ngày đó (không tự
+// làm mới nữa vì dữ liệu ngày cũ không đổi).
 export default function ProductionPerformanceModule() {
   const [showSettings, setShowSettings] = useState(false);
   const [factories, setFactories] = useState<PphDashboardFactory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>(() => todayVNStr());
   const [factoryId, setFactoryId] = useState<string>('');
   const [leafId, setLeafId] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(true);
   const firstLoadRef = useRef(true);
+  const isToday = selectedDate === todayVNStr();
 
-  const load = useCallback(async (opts?: { silent?: boolean; fresh?: boolean }) => {
+  const load = useCallback(async (opts?: { silent?: boolean; fresh?: boolean; date?: string }) => {
     if (!opts?.silent) setLoading(true);
     try {
-      const res = await fetch(`/api/pph/dashboard${opts?.fresh ? '?fresh=1' : ''}`);
+      const params = new URLSearchParams();
+      params.set('date', opts?.date || selectedDate);
+      if (opts?.fresh) params.set('fresh', '1');
+      const res = await fetch(`/api/pph/dashboard?${params.toString()}`);
       const json: PphDashboardResponse = await res.json();
       if (json.success && json.data) {
         setFactories(json.data.factories);
@@ -140,13 +152,15 @@ export default function ProductionPerformanceModule() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedDate]);
 
   useEffect(() => {
     load();
+    if (!isToday) return; // Ngày quá khứ không đổi nữa — không cần tự làm mới định kỳ.
     const timer = setInterval(() => load({ silent: true }), POLL_MS);
     return () => clearInterval(timer);
-  }, [load]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load, isToday]);
 
   const factory = factories.find((f) => f.id === factoryId) ?? null;
   const leaf = factory && leafId ? factory.leaves.find((l) => l.id === leafId) ?? null : null;
@@ -204,7 +218,7 @@ export default function ProductionPerformanceModule() {
   if (loading && factories.length === 0) {
     return (
       <div className="space-y-4 my-auto">
-        <Header lastUpdated={lastUpdated} onRefresh={() => load({ fresh: true })} onOpenSettings={() => setShowSettings(true)} />
+        <Header lastUpdated={lastUpdated} selectedDate={selectedDate} onDateChange={setSelectedDate} onRefresh={() => load({ fresh: true })} onOpenSettings={() => setShowSettings(true)} />
         <div className="p-12 rounded-2xl bg-white border border-slate-200/80 shadow-sm text-center text-sm text-slate-400">Đang tải dữ liệu...</div>
       </div>
     );
@@ -213,7 +227,7 @@ export default function ProductionPerformanceModule() {
   if (error && factories.length === 0) {
     return (
       <div className="space-y-4 my-auto">
-        <Header lastUpdated={lastUpdated} onRefresh={() => load({ fresh: true })} onOpenSettings={() => setShowSettings(true)} />
+        <Header lastUpdated={lastUpdated} selectedDate={selectedDate} onDateChange={setSelectedDate} onRefresh={() => load({ fresh: true })} onOpenSettings={() => setShowSettings(true)} />
         <div className="p-8 rounded-2xl bg-rose-50 border border-rose-200 text-center text-sm text-rose-600 font-semibold">⚠️ {error}</div>
       </div>
     );
@@ -222,7 +236,7 @@ export default function ProductionPerformanceModule() {
   if (factories.length === 0) {
     return (
       <div className="space-y-4 my-auto">
-        <Header lastUpdated={lastUpdated} onRefresh={() => load({ fresh: true })} onOpenSettings={() => setShowSettings(true)} />
+        <Header lastUpdated={lastUpdated} selectedDate={selectedDate} onDateChange={setSelectedDate} onRefresh={() => load({ fresh: true })} onOpenSettings={() => setShowSettings(true)} />
         <div className="p-12 rounded-2xl bg-white border border-slate-200/80 shadow-sm text-center text-sm text-slate-400 space-y-2">
           <p>Chưa có Nhà máy nào được cấu hình.</p>
           <button type="button" onClick={() => setShowSettings(true)} className="text-[#006838] font-bold hover:underline">
@@ -238,7 +252,7 @@ export default function ProductionPerformanceModule() {
 
   return (
     <div className="space-y-4 my-auto">
-      <Header lastUpdated={lastUpdated} onRefresh={() => load({ fresh: true })} onOpenSettings={() => setShowSettings(true)} />
+      <Header lastUpdated={lastUpdated} selectedDate={selectedDate} onDateChange={setSelectedDate} onRefresh={() => load({ fresh: true })} onOpenSettings={() => setShowSettings(true)} />
 
       {/* Ô các Nhà máy — hàng đầu tiên, mỗi nhà máy 1 màu riêng để dễ phân biệt */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -479,26 +493,54 @@ function fmtPctOrDash(n: number | null | undefined): string {
 
 function Header({
   lastUpdated,
+  selectedDate,
+  onDateChange,
   onRefresh,
   onOpenSettings,
 }: {
   lastUpdated: Date | null;
+  selectedDate: string;
+  onDateChange: (date: string) => void;
   onRefresh: () => void;
   onOpenSettings: () => void;
 }) {
+  const isToday = selectedDate === todayVNStr();
   return (
     <div className="flex items-center justify-between flex-wrap gap-3">
       <div>
         <h2 className="text-lg font-black text-slate-900">🏭 Hiệu Suất Nhà Máy</h2>
         <p className="text-xs text-slate-500 mt-0.5">
-          Theo dõi sản lượng theo giờ so với chỉ tiêu — dữ liệu thật từ quét QR tại Tổ/Chuyền, tự làm mới mỗi 60 giây.
+          Theo dõi sản lượng theo giờ so với chỉ tiêu — dữ liệu thật từ quét QR tại Tổ/Chuyền
+          {isToday ? ', tự làm mới mỗi 60 giây.' : ' — đang xem lại 1 ngày trong quá khứ.'}
         </p>
       </div>
       <div className="flex items-center gap-2">
         <span className="hidden sm:flex items-center gap-1.5 text-[11px] font-bold text-slate-400">
-          <IconCircleFilled size={8} className="text-[#006838]" />
+          <IconCircleFilled size={8} className={isToday ? 'text-[#006838]' : 'text-slate-300'} />
           {lastUpdated ? `Cập nhật lúc ${lastUpdated.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}` : 'Đang tải...'}
         </span>
+        <label
+          className="flex items-center gap-1.5 px-2.5 h-8 rounded-lg bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+          title="Chọn ngày xem lại"
+        >
+          <IconCalendar size={14} className="text-slate-400 shrink-0" />
+          <input
+            type="date"
+            value={selectedDate}
+            max={todayVNStr()}
+            onChange={(e) => e.target.value && onDateChange(e.target.value)}
+            className="bg-transparent text-[11px] font-bold outline-none cursor-pointer"
+          />
+        </label>
+        {!isToday && (
+          <button
+            type="button"
+            onClick={() => onDateChange(todayVNStr())}
+            className="px-2.5 h-8 rounded-lg bg-emerald-50 border border-emerald-200 text-[#006838] text-[11px] font-bold hover:bg-emerald-100 transition"
+          >
+            Hôm nay
+          </button>
+        )}
         <button
           type="button"
           onClick={onRefresh}

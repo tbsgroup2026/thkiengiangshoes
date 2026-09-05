@@ -679,12 +679,19 @@ function pphSlotMinutes(s) {
 // setupDone=true → tìm khung SỐ LƯỢNG sớm nhất đã tới giờ (trừ hao 10 phút) mà CHƯA nhập — cho
 // "bắt kịp" nếu bỏ lỡ khung trước đó. Nếu mọi khung đã tới giờ đều xong, báo khung TIẾP THEO sắp
 // tới; nếu hết cả 8 khung, báo "done".
+// 🚧 CÔNG TẮC DEMO TẠM THỜI — bật (true) = BỎ QUA hẳn giới hạn "chưa tới giờ", cho phép nhập số
+// lượng ở BẤT KỲ khung giờ nào ngay lập tức (dùng để demo cho sếp xem, không phải đợi đúng giờ
+// thật). Áp dụng CHO TOÀN BỘ hệ thống (mọi Nhà máy/Xưởng/Chuyền/Tổ) — người dùng đã xác nhận chấp
+// nhận đánh đổi này trong lúc demo. NHỚ set lại `false` ngay sau khi demo xong để khôi phục đúng
+// luật giờ giấc thật cho dữ liệu sản xuất thật.
+const PPH_DEMO_SKIP_TIME_GATE = true;
+
 function pphResolveStatus(setupDone, filledSlots) {
   if (!setupDone) return { nextAction: "setup", targetSlot: "08:00" };
   const nowMin = pphNowMinutes();
   const qSlots = PPH_SLOTS.slice(1);
   for (const s of qSlots) {
-    if (nowMin >= pphSlotMinutes(s) - 10 && !filledSlots.has(s)) {
+    if ((PPH_DEMO_SKIP_TIME_GATE || nowMin >= pphSlotMinutes(s) - 10) && !filledSlots.has(s)) {
       return { nextAction: "quantity", targetSlot: s };
     }
   }
@@ -828,9 +835,16 @@ async function handlePph(request, env, pathname, searchParams) {
   // tức thời chứ không phải đợi hết TTL — FE tự poll lại mỗi 60s để cảm giác "realtime". ----
   if (sub === "/dashboard" && request.method === "GET") {
     const forceRefresh = searchParams.get("fresh") === "1";
-    return mmtbCachedJson(env, "pph:dashboard", forceRefresh, async () => {
+    // Bộ lọc ngày — mặc định hôm nay, không cho chọn ngày trong TƯƠNG LAI (chưa có dữ liệu). Cache
+    // key gắn theo TỪNG NGÀY (pph:dashboard:YYYY-MM-DD) để xem ngày khác không bị dính cache của
+    // ngày khác — các chỗ gọi mmtbCacheInvalidate(env, "pph:dashboard") vẫn xoá đúng vì so khớp
+    // theo tiền tố (LIKE "pph:dashboard%"), không cần sửa gì thêm ở đó.
+    const today = pphTodayStr();
+    const requestedDate = searchParams.get("date");
+    const date = requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) && requestedDate <= today ? requestedDate : today;
+    const isToday = date === today;
+    return mmtbCachedJson(env, `pph:dashboard:${date}`, forceRefresh, async () => {
       const factories = await pphBuildTree(env);
-      const date = pphTodayStr();
       const nowMin = pphNowMinutes();
       const qSlots = PPH_SLOTS.slice(1); // 8 khung SỐ LƯỢNG (không tính "08:00" đầu ca)
 
@@ -869,12 +883,13 @@ async function handlePph(request, env, pathname, searchParams) {
             latest && perHourTarget > 0 ? Math.round((latest.actualQty / perHourTarget) * 1000) / 10 : null;
 
           // Trạng thái nhập: so khung nào ĐÃ TỚI GIỜ (trừ hao 10 phút, khớp pphResolveStatus) với
-          // khung đã thực sự nhập. "late" nếu có khung nhập trễ hơn 20 phút so với mốc của nó.
+          // khung đã thực sự nhập. "late" nếu có khung nhập trễ hơn 20 phút so với mốc của nó. Xem
+          // NGÀY QUÁ KHỨ thì cả ngày đã qua rồi — mọi khung đều coi là "đã tới giờ".
           let entryStatus = "missing";
           if (!setupRow) {
             entryStatus = "missing";
           } else {
-            const dueSlots = qSlots.filter((s) => nowMin >= pphSlotMinutes(s) - 10);
+            const dueSlots = isToday ? qSlots.filter((s) => nowMin >= pphSlotMinutes(s) - 10) : qSlots;
             const dueFilled = dueSlots.every((s) => bySlot.has(s));
             if (dueSlots.length === 0 || dueFilled) {
               const anyLate = dueSlots.some((s) => {
