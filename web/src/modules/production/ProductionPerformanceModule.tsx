@@ -321,9 +321,9 @@ export default function ProductionPerformanceModule({
     <DarkShell>
       <Header {...headerProps} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      <div className="grid grid-cols-1 @lg:grid-cols-12 gap-4">
         {/* CỘT TRÁI — Danh sách Nhà máy + Thông số */}
-        <div className="lg:col-span-4 space-y-4">
+        <div className="@lg:col-span-4 space-y-4">
           <FactoryListPanel
             factories={factories}
             factoryId={factoryId}
@@ -337,10 +337,10 @@ export default function ProductionPerformanceModule({
         </div>
 
         {/* CỘT PHẢI — Chỉ số nhanh + Biểu đồ + Bảng chi tiết */}
-        <div className="lg:col-span-8 space-y-4">
+        <div className="@lg:col-span-8 space-y-4">
           {factory && factoryAggregate && (
             <>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 @lg:grid-cols-4 gap-3">
                 {statCards.map((c) => (
                   <div key={c.label} className={`rounded-2xl bg-[#111d33] border border-white/10 border-t-4 ${c.accent} p-4`}>
                     <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{c.label}</div>
@@ -542,9 +542,15 @@ function fmtPctOrDash(n: number | null | undefined): string {
 
 // Khung nền tối bao toàn bộ khối Hiệu Suất Nhà Máy — tách riêng khỏi nền sáng chung của trang
 // /work, đọc như 1 "màn hình điều hành" độc lập.
+//
+// @container: các breakpoint bên trong (@lg:...) co giãn theo đúng CHIỀU RỘNG THẬT của khối này,
+// không theo chiều rộng toàn màn hình — vì khối này nằm cạnh menu trái có thể đóng/mở (w-20 hoặc
+// w-64..80), 2 trạng thái đó cho khối này 2 chiều rộng khả dụng rất khác nhau dù viewport y
+// nguyên. Dùng lg:/sm: (viewport-based) ở đây sẽ làm layout bể/chật khi menu đang mở dù màn hình
+// đủ rộng để hiện 2 cột lúc menu đóng — container query tránh đúng lỗi này.
 function DarkShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-3xl bg-[#0b1424] border border-white/10 shadow-xl shadow-slate-950/20 p-4 sm:p-6 space-y-5">
+    <div className="@container rounded-3xl bg-[#0b1424] border border-white/10 shadow-xl shadow-slate-950/20 p-4 sm:p-6 space-y-5">
       {children}
     </div>
   );
