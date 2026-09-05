@@ -1,13 +1,30 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { IconCircleFilled, IconBuildingFactory2, IconSettings, IconRefresh, IconCalendar } from '@tabler/icons-react';
+import {
+  IconCircleFilled,
+  IconBuildingFactory2,
+  IconSettings,
+  IconRefresh,
+  IconCalendar,
+  IconAlertTriangle,
+  IconUser,
+  IconX,
+} from '@tabler/icons-react';
 import PphSettingsView from './PphSettingsView';
 
 type EntryStatus = 'ontime' | 'late' | 'missing';
 type HourStatus = 'ok' | 'warn' | 'bad' | 'pending';
 
-type PphSlot = { slot: string; actualQty: number | null; filled: boolean };
+type PphSlot = {
+  slot: string;
+  actualQty: number | null;
+  filled: boolean;
+  submittedBy?: string | null;
+  submittedAt?: string | null;
+  shortfallReason?: string | null;
+  shortfallSolution?: string | null;
+};
 type PphLeaf = {
   id: string;
   name: string;
@@ -111,6 +128,33 @@ function todayVNStr(): string {
   return vn.toISOString().slice(0, 10);
 }
 
+function nowVNMinutes(): number {
+  const vn = new Date(Date.now() + 7 * 60 * 60 * 1000);
+  return vn.getUTCHours() * 60 + vn.getUTCMinutes();
+}
+
+function slotMinutes(slot: string): number {
+  const [h, m] = slot.split(':').map(Number);
+  return h * 60 + m;
+}
+
+// Hàng đầu tiên (chọn Nhà máy) — số cột CỐ ĐỊNH ghi cứng theo số nhà máy để lấp đầy chiều ngang,
+// không để trống ô thừa như grid-cols-4 cứng khi chỉ có 3 nhà máy. Ghi literal class Tailwind
+// (không nội suy chuỗi) để build nhận diện đúng.
+function factoryGridCls(count: number): string {
+  if (count <= 1) return 'grid-cols-1';
+  if (count === 2) return 'grid-cols-1 sm:grid-cols-2';
+  if (count === 3) return 'grid-cols-1 sm:grid-cols-3';
+  return 'grid-cols-2 lg:grid-cols-4';
+}
+
+// Trạng thái 1 khung giờ cụ thể của 1 Tổ — dùng cho bảng chi tiết khi đang lọc riêng 1 Tổ.
+function slotDueState(slot: string, filled: boolean, isToday: boolean): { label: string; cls: string } {
+  if (filled) return { label: 'Đã nhập', cls: 'bg-emerald-50 text-emerald-700' };
+  const due = !isToday || nowVNMinutes() >= slotMinutes(slot) - 10;
+  return due ? { label: 'Chưa nhập', cls: 'bg-rose-50 text-rose-700' } : { label: 'Chưa tới giờ', cls: 'bg-slate-100 text-slate-400' };
+}
+
 // Hiệu Suất Nhà Máy — dữ liệu THẬT từ các lượt quét QR ở /pph-scan (bảng pph_entries), gộp theo
 // đúng cây Nhà máy/Xưởng/Chuyền/Tổ đang cấu hình ở trang Cài Đặt. Mặc định xem HÔM NAY, tự làm
 // mới mỗi 60s cho cảm giác gần-realtime; chọn 1 ngày khác thì xem đúng dữ liệu ngày đó (không tự
@@ -125,6 +169,7 @@ export default function ProductionPerformanceModule() {
   const [factoryId, setFactoryId] = useState<string>('');
   const [leafId, setLeafId] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(true);
+  const [shortfallPopup, setShortfallPopup] = useState<{ slot: string; reason: string | null; solution: string | null } | null>(null);
   const firstLoadRef = useRef(true);
   const isToday = selectedDate === todayVNStr();
 
@@ -254,8 +299,9 @@ export default function ProductionPerformanceModule() {
     <div className="space-y-4 my-auto">
       <Header lastUpdated={lastUpdated} selectedDate={selectedDate} onDateChange={setSelectedDate} onRefresh={() => load({ fresh: true })} onOpenSettings={() => setShowSettings(true)} />
 
-      {/* Ô các Nhà máy — hàng đầu tiên, mỗi nhà máy 1 màu riêng để dễ phân biệt */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* Ô các Nhà máy — hàng đầu tiên, mỗi nhà máy 1 màu riêng để dễ phân biệt. Số cột lấp đầy
+          hàng theo đúng số nhà máy đang có, không để trống ô thừa. */}
+      <div className={`grid ${factoryGridCls(factories.length)} gap-3`}>
         {factories.map((f, idx) => {
           const s = FACTORY_STYLE_LIST[idx % FACTORY_STYLE_LIST.length];
           const selected = factoryId === f.id;
@@ -320,15 +366,15 @@ export default function ProductionPerformanceModule() {
 
       {factory && factoryAggregate && (
         <>
-          {/* 4 chỉ số nhanh */}
+          {/* 4 chỉ số nhanh — vạch màu bên trái mỗi ô để phân biệt nhanh bằng mắt */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {[
-              { label: 'PPH trung bình', value: fmtOrDash(leaf ? leaf.pphLatest : factoryAggregate.pph), unit: 'đôi/giờ', cls: 'bg-white' },
-              { label: 'Mục tiêu RFT', value: fmtPctOrDash(leaf ? leaf.setup?.targetRft ?? null : factoryAggregate.targetRftPct), unit: '', cls: 'bg-[#f7f8f6]' },
-              { label: 'Hiệu suất', value: fmtPctOrDash(leaf ? leaf.efficiencyPctLatest : factoryAggregate.efficiencyPct), unit: '', cls: 'bg-white' },
-              { label: 'Đạt chỉ tiêu giờ này', value: `${leavesMeetingTargetNow.met}/${leavesMeetingTargetNow.total}`, unit: 'điểm quét', cls: 'bg-[#f7f8f6]' },
+              { label: 'PPH trung bình', value: fmtOrDash(leaf ? leaf.pphLatest : factoryAggregate.pph), unit: 'đôi/giờ', cls: 'bg-white', accent: 'border-l-4 border-l-blue-500' },
+              { label: 'Mục tiêu RFT', value: fmtPctOrDash(leaf ? leaf.setup?.targetRft ?? null : factoryAggregate.targetRftPct), unit: '', cls: 'bg-[#f7f8f6]', accent: 'border-l-4 border-l-emerald-500' },
+              { label: 'Hiệu suất', value: fmtPctOrDash(leaf ? leaf.efficiencyPctLatest : factoryAggregate.efficiencyPct), unit: '', cls: 'bg-white', accent: 'border-l-4 border-l-amber-500' },
+              { label: 'Đạt chỉ tiêu giờ này', value: `${leavesMeetingTargetNow.met}/${leavesMeetingTargetNow.total}`, unit: 'điểm quét', cls: 'bg-[#f7f8f6]', accent: 'border-l-4 border-l-violet-500' },
             ].map((c) => (
-              <div key={c.label} className={`p-4 rounded-2xl border border-slate-200/80 shadow-sm ${c.cls}`}>
+              <div key={c.label} className={`p-4 rounded-2xl border border-slate-200/80 shadow-sm ${c.cls} ${c.accent}`}>
                 <div className="text-xs font-bold text-slate-500">{c.label}</div>
                 <div className="text-xl font-black text-slate-900 mt-1">
                   {c.value} {c.unit && <span className="text-xs font-bold text-slate-400">{c.unit}</span>}
@@ -440,12 +486,70 @@ export default function ProductionPerformanceModule() {
             </div>
           </div>
 
-          {/* Trạng thái từng điểm quét */}
+          {/* Trạng thái từng điểm quét — đang xem TOÀN nhà máy: bảng tổng hợp 1 dòng/Tổ.
+              Đã chọn riêng 1 Tổ: đổi thành bảng chi tiết từng khung giờ của đúng Tổ đó. */}
           <div className="rounded-2xl bg-white border border-slate-200/80 shadow-sm overflow-x-auto">
-            <div className="px-4 sm:px-5 pt-4 pb-2">
-              <h3 className="text-sm font-black text-slate-900">Trạng thái từng điểm quét — hôm nay</h3>
+            <div className="px-4 sm:px-5 pt-4 pb-2 flex items-center justify-between gap-2">
+              <h3 className="text-sm font-black text-slate-900">
+                {leaf ? `Chi tiết từng khung giờ — ${leaf.name}` : 'Trạng thái từng điểm quét — hôm nay'}
+              </h3>
+              {leaf && (
+                <button
+                  type="button"
+                  onClick={() => setLeafId(null)}
+                  className="text-[11px] font-bold text-[#006838] hover:underline shrink-0"
+                >
+                  ← Xem toàn nhà máy
+                </button>
+              )}
             </div>
-            {factory.leaves.length === 0 ? (
+            {leaf ? (
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="text-[11px] font-bold text-slate-400 uppercase border-b border-slate-100 whitespace-nowrap">
+                    <th className="px-4 sm:px-5 py-2">Khung giờ</th>
+                    <th className="px-4 py-2">Sản lượng</th>
+                    <th className="px-4 py-2">Người nhập</th>
+                    <th className="px-4 py-2">Trạng thái</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50 text-xs text-slate-700 whitespace-nowrap">
+                  {leaf.slots.map((s) => {
+                    const due = slotDueState(s.slot, s.filled, isToday);
+                    const hasShortfall = !!(s.filled && s.shortfallReason);
+                    return (
+                      <tr key={s.slot}>
+                        <td className="px-4 sm:px-5 py-2.5 font-bold text-slate-800">{s.slot}</td>
+                        <td className="px-4 py-2.5">
+                          {hasShortfall ? (
+                            <button
+                              type="button"
+                              onClick={() => setShortfallPopup({ slot: s.slot, reason: s.shortfallReason ?? null, solution: s.shortfallSolution ?? null })}
+                              className="inline-flex items-center gap-1 font-bold text-rose-700 underline decoration-dotted decoration-rose-400 underline-offset-2 hover:text-rose-800"
+                              title="Xem Nguyên nhân / Giải pháp"
+                            >
+                              <IconAlertTriangle size={12} />
+                              {s.actualQty}
+                            </button>
+                          ) : (
+                            <span className="font-bold">{s.filled ? s.actualQty : '—'}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <span className="inline-flex items-center gap-1 text-slate-600">
+                            {s.submittedBy ? <IconUser size={12} className="text-slate-400" /> : null}
+                            {s.submittedBy || '—'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${due.cls}`}>{due.label}</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            ) : factory.leaves.length === 0 ? (
               <div className="px-5 py-6 text-sm text-slate-400">Nhà máy này chưa có điểm quét nào.</div>
             ) : (
               <table className="w-full text-left border-collapse">
@@ -479,6 +583,41 @@ export default function ProductionPerformanceModule() {
             )}
           </div>
         </>
+      )}
+
+      {/* Popup Nguyên nhân / Giải pháp khi hụt chỉ tiêu — bấm ra ngoài hoặc nút X để đóng */}
+      {shortfallPopup && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-900/40 flex items-center justify-center p-4"
+          onClick={() => setShortfallPopup(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-5 space-y-3.5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <h4 className="font-black text-slate-900 text-sm flex items-center gap-1.5">
+                <IconAlertTriangle size={16} className="text-rose-500" />
+                Hụt chỉ tiêu — khung {shortfallPopup.slot}
+              </h4>
+              <button
+                type="button"
+                onClick={() => setShortfallPopup(null)}
+                className="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center transition shrink-0"
+              >
+                <IconX size={16} />
+              </button>
+            </div>
+            <div>
+              <div className="text-[11px] font-bold text-slate-400 uppercase mb-1">Nguyên nhân</div>
+              <p className="text-sm text-slate-700 whitespace-pre-wrap">{shortfallPopup.reason || '—'}</p>
+            </div>
+            <div>
+              <div className="text-[11px] font-bold text-slate-400 uppercase mb-1">Giải pháp</div>
+              <p className="text-sm text-slate-700 whitespace-pre-wrap">{shortfallPopup.solution || '—'}</p>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

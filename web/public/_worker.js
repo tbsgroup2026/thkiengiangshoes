@@ -861,16 +861,26 @@ async function handlePph(request, env, pathname, searchParams) {
           let entries = [];
           try {
             const r = await env.DB.prepare(
-              "SELECT slot, worker_count, model, planned_qty, target_rft, actual_qty, submitted_at FROM pph_entries WHERE team_id = ? AND entry_date = ?"
+              "SELECT slot, worker_count, model, planned_qty, target_rft, actual_qty, submitted_by, submitted_at, shortfall_reason, shortfall_solution FROM pph_entries WHERE team_id = ? AND entry_date = ?"
             ).bind(leaf.id, date).all();
             entries = r.results || [];
           } catch {}
           const bySlot = new Map(entries.map((e) => [e.slot, e]));
           const setupRow = bySlot.get("08:00");
 
+          // Chi tiết từng khung giờ — dùng cho bảng "chi tiết theo khung giờ" khi Dashboard đang lọc
+          // riêng 1 Tổ: cần thêm ai nhập (submittedBy) + lý do/giải pháp hụt chỉ tiêu để bấm xem.
           const slotDetails = qSlots.map((s) => {
             const row = bySlot.get(s);
-            return { slot: s, actualQty: row ? row.actual_qty : null, filled: !!row };
+            return {
+              slot: s,
+              actualQty: row ? row.actual_qty : null,
+              filled: !!row,
+              submittedBy: row ? row.submitted_by : null,
+              submittedAt: row ? row.submitted_at : null,
+              shortfallReason: row ? row.shortfall_reason : null,
+              shortfallSolution: row ? row.shortfall_solution : null,
+            };
           });
           const filledQtySlots = slotDetails.filter((s) => s.filled);
           const latest = filledQtySlots[filledQtySlots.length - 1] || null;
@@ -1108,8 +1118,8 @@ async function handlePph(request, env, pathname, searchParams) {
         const targetRft = Number(body.targetRft);
         if (!Number.isFinite(workerCount) || workerCount <= 0) return mmtbJson({ success: false, error: "Vui lòng nhập đúng Số lượng công nhân" }, 400);
         if (!model) return mmtbJson({ success: false, error: "Vui lòng nhập Model sản xuất" }, 400);
-        if (!Number.isFinite(plannedQty) || plannedQty <= 0) return mmtbJson({ success: false, error: "Vui lòng nhập đúng Số lượng kế hoạch" }, 400);
-        if (!Number.isFinite(targetRft) || targetRft < 0 || targetRft > 100) return mmtbJson({ success: false, error: "Vui lòng nhập đúng Mục tiêu RFT (0-100%)" }, 400);
+        if (!Number.isFinite(plannedQty) || plannedQty <= 0) return mmtbJson({ success: false, error: "Vui lòng nhập đúng Sản lượng kế hoạch cả ca" }, 400);
+        if (!Number.isFinite(targetRft) || targetRft < 0 || targetRft > 100) return mmtbJson({ success: false, error: "Vui lòng nhập đúng Mục tiêu hàng đạt chuẩn (RFT 0-100%)" }, 400);
         try {
           await env.DB.prepare(
             "INSERT INTO pph_entries (id, team_id, entry_date, slot, worker_count, model, planned_qty, target_rft, submitted_by, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"

@@ -254,8 +254,8 @@ export default function PphScanClient() {
         const rft = Number(targetRft);
         if (!Number.isFinite(wc) || wc <= 0) { setFormError('Vui lòng nhập đúng Số lượng công nhân'); setSubmitting(false); return; }
         if (!model.trim()) { setFormError('Vui lòng nhập Model sản xuất'); setSubmitting(false); return; }
-        if (!Number.isFinite(pq) || pq <= 0) { setFormError('Vui lòng nhập đúng Số lượng kế hoạch'); setSubmitting(false); return; }
-        if (!Number.isFinite(rft) || rft < 0 || rft > 100) { setFormError('Vui lòng nhập đúng Mục tiêu RFT (0-100%)'); setSubmitting(false); return; }
+        if (!Number.isFinite(pq) || pq <= 0) { setFormError('Vui lòng nhập đúng Sản lượng kế hoạch cả ca'); setSubmitting(false); return; }
+        if (!Number.isFinite(rft) || rft < 0 || rft > 100) { setFormError('Vui lòng nhập đúng Mục tiêu hàng đạt chuẩn (RFT 0-100%)'); setSubmitting(false); return; }
         body.workerCount = wc;
         body.model = model.trim();
         body.plannedQty = pq;
@@ -417,7 +417,7 @@ export default function PphScanClient() {
                 required
               />
             </Field>
-            <Field label="Số lượng kế hoạch hôm nay *" icon={IconTarget}>
+            <Field label="Sản lượng kế hoạch cả ca *" icon={IconTarget}>
               <input
                 type="number"
                 inputMode="numeric"
@@ -429,7 +429,20 @@ export default function PphScanClient() {
                 required
               />
             </Field>
-            <Field label="Mục tiêu RFT (%) *" icon={IconPercentage}>
+            {/* Chỉ tự tính & hiện xem trước — không phải ô nhập, suy ra từ Sản lượng kế hoạch cả ca
+                chia đều 8 khung số lượng, khớp đúng công thức perHourTarget bên server. */}
+            <div className="flex items-center justify-between gap-3 px-3.5 py-3 bg-emerald-50/60 border border-emerald-100 rounded-xl">
+              <span className="flex items-center gap-1.5 text-xs font-bold text-slate-600">
+                <IconChartBar size={13} className="text-emerald-600" />
+                Mục tiêu sản lượng mỗi giờ (PPH)
+              </span>
+              <span className="text-sm font-black text-emerald-700">
+                {plannedQty && Number.isFinite(Number(plannedQty)) && Number(plannedQty) > 0
+                  ? `${Math.round((Number(plannedQty) / 8) * 10) / 10} đôi/giờ`
+                  : '—'}
+              </span>
+            </div>
+            <Field label="Mục tiêu hàng đạt chuẩn (RFT %) *" icon={IconPercentage}>
               <input
                 type="number"
                 inputMode="decimal"
@@ -684,8 +697,12 @@ function SlotHistoryPanel({ info, onClose }: { info: ScanInfo; onClose: () => vo
                       <>
                         <DetailRow label="Số lượng công nhân" value={e.workerCount ?? '—'} />
                         <DetailRow label="Model sản xuất" value={e.model ?? '—'} />
-                        <DetailRow label="Số lượng kế hoạch" value={e.plannedQty ?? '—'} />
-                        <DetailRow label="Mục tiêu RFT" value={e.targetRft != null ? `${e.targetRft}%` : '—'} />
+                        <DetailRow label="Sản lượng kế hoạch cả ca" value={e.plannedQty ?? '—'} />
+                        <DetailRow
+                          label="Mục tiêu sản lượng mỗi giờ (PPH)"
+                          value={e.plannedQty ? `${Math.round((e.plannedQty / 8) * 10) / 10} đôi/giờ` : '—'}
+                        />
+                        <DetailRow label="Mục tiêu hàng đạt chuẩn (RFT)" value={e.targetRft != null ? `${e.targetRft}%` : '—'} />
                       </>
                     ) : (
                       <>
