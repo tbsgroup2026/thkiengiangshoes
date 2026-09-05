@@ -750,10 +750,18 @@ function Field({
 }) {
   return (
     <label className="block space-y-1.5">
-      <span className="flex items-center gap-1.5 text-xs font-bold text-slate-600">
-        <Icon size={13} className="text-slate-400" />
-        {label}
-        {hint && <span className="font-semibold text-slate-400">— {hint}</span>}
+      {/* Nhãn + Mục tiêu chung 1 hàng — nhãn bên trái (co lại/rút gọn nếu thiếu chỗ), mục tiêu ghim
+          bên phải dạng thẻ nhỏ, không bị đẩy xuống dòng 2 như trước. */}
+      <span className="flex items-center justify-between gap-2">
+        <span className="flex items-center gap-1.5 min-w-0 text-xs font-bold text-slate-600">
+          <Icon size={13} className="text-slate-400 shrink-0" />
+          <span className="truncate">{label}</span>
+        </span>
+        {hint && (
+          <span className="shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">
+            {hint}
+          </span>
+        )}
       </span>
       {children}
     </label>
