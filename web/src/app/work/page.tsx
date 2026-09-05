@@ -865,7 +865,7 @@ function WorkDashboardContent() {
   const activeDeptObj = departments.find((d) => d.id === selectedDept);
 
   return (
-    <div className="h-screen w-full flex overflow-hidden bg-[#f4f7f5] text-slate-900 font-sans antialiased selection:bg-[#006838] selection:text-white">
+    <div className="h-screen w-full flex overflow-hidden bg-white text-slate-900 font-sans antialiased selection:bg-[#006838] selection:text-white">
       {/* ════════════════════════════════════════════════════════════════
           LEFT SIDEBAR (Hidden on Mobile, Fixed Height on Desktop)
          ════════════════════════════════════════════════════════════════ */}
@@ -1061,7 +1061,7 @@ function WorkDashboardContent() {
       {/* ════════════════════════════════════════════════════════════════
           MAIN DASHBOARD AREA
          ════════════════════════════════════════════════════════════════ */}
-      <main className="flex-1 min-w-0 h-screen overflow-y-auto overflow-x-hidden bg-[#f4f7f5] text-slate-900 rounded-tl-none lg:rounded-tl-[24px] flex flex-col justify-between transition-all duration-300 pb-24 lg:pb-6">
+      <main className="flex-1 min-w-0 h-screen overflow-y-auto overflow-x-hidden bg-white text-slate-900 rounded-tl-none lg:rounded-tl-[24px] flex flex-col justify-between transition-all duration-300 pb-24 lg:pb-6">
         {/* Top Header Bar (Fine-tuned +10px higher for exact iPhone Status Bar clearance) */}
         <header className="sticky top-0 z-40 px-3 sm:px-5 lg:px-6 pt-[calc(env(safe-area-inset-top,44px)+14px)] sm:pt-3.5 pb-2.5 flex items-center justify-between border-b border-slate-200/80 bg-white/95 backdrop-blur-md flex-shrink-0 gap-2">
           <div className="flex items-center gap-2 min-w-0">
@@ -2164,7 +2164,7 @@ function WorkDashboardContent() {
         </div>
 
         {/* Footer info bar inside dashboard */}
-        <footer className="py-2.5 px-6 border-t border-slate-200/70 text-xs text-slate-500 flex items-center justify-between bg-[#f4f7f5] flex-shrink-0">
+        <footer className="py-2.5 px-6 border-t border-slate-200/70 text-xs text-slate-500 flex items-center justify-between bg-white flex-shrink-0">
           <span>Tổ hợp Kiên Giang - TBS Group Dashboard v2.4</span>
           <span className="font-mono text-[#006838] font-bold">● System Online 24/7</span>
         </footer>

@@ -329,8 +329,9 @@ export default function ProductionPerformanceModule({
       <Header {...headerProps} />
 
       <div className="grid grid-cols-1 @lg:grid-cols-12 gap-4">
-        {/* CỘT TRÁI — Danh sách Nhà máy + Thông số */}
-        <div className="@lg:col-span-4 space-y-4">
+        {/* CỘT TRÁI — Danh sách Nhà máy + Thông số — thu hẹp còn 1 nửa (2/12 thay vì 4/12) để
+            nhường thêm diện tích cho cột phải (biểu đồ + bảng). */}
+        <div className="@lg:col-span-2 space-y-4">
           <FactoryListPanel
             factories={factories}
             factoryId={factoryId}
@@ -344,7 +345,7 @@ export default function ProductionPerformanceModule({
         </div>
 
         {/* CỘT PHẢI — Chỉ số nhanh + Biểu đồ + Bảng chi tiết */}
-        <div className="@lg:col-span-8 space-y-4">
+        <div className="@lg:col-span-10 space-y-4">
           {factory && factoryAggregate && (
             <>
               <div className="grid grid-cols-2 @lg:grid-cols-4 gap-3">
