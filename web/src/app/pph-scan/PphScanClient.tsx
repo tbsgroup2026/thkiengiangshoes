@@ -141,6 +141,20 @@ export default function PphScanClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamId]);
 
+  // Sau khi ghi nhận thành công, tự chuyển sang khung giờ TIẾP THEO mà KHÔNG cần quét lại mã QR —
+  // tải lại thông tin sau ~1.8s (đủ để đọc dòng "Đã ghi nhận!"), rồi hiện thẳng form của khung kế
+  // tiếp (hoặc trạng thái phù hợp: chờ/đã xong). An toàn không lặp vô hạn vì đây là timer 1 lần,
+  // tách biệt hẳn với đồng hồ đếm ngược khung giờ (đã fix riêng ở effect bên dưới).
+  useEffect(() => {
+    if (!success) return;
+    const t = setTimeout(() => {
+      setSuccess(null);
+      load();
+    }, 1800);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [success]);
+
   // Nếu tải lâu bất thường (mạng yếu, hoặc trình duyệt đang giữ 1 bản trang cũ không tải nổi file
   // mới) — sau 8s hiện thêm nút "Tải lại trang" thay vì để màn hình quay vòng vô tận không rõ lý do.
   useEffect(() => {
@@ -301,9 +315,8 @@ export default function PphScanClient() {
     );
   }
 
-  // Dừng hẳn ở đây sau khi ghi nhận — KHÔNG tự quay lại form/tải lại gì nữa. Muốn nhập tiếp thì
-  // quét lại đúng mã QR đó (lần quét mới sẽ tự biết đúng khung giờ hiện tại, cho xem lại các khung
-  // cũ lẫn khung mới y như lúc mới quét lần đầu).
+  // Sau khi ghi nhận, tự chuyển sang khung kế tiếp sau ~1.8s (xem effect ở trên) — không cần quét
+  // lại mã QR mới nhập được khung tiếp theo.
   if (success) {
     return (
       <ScanShell team={info.team}>
@@ -313,6 +326,7 @@ export default function PphScanClient() {
           title="Đã ghi nhận!"
           desc={`Cập nhật khung giờ ${success.slot} thành công. Cảm ơn bạn!`}
         />
+        <p className="text-center text-[11px] text-slate-400 font-semibold -mt-2">Đang chuyển sang khung tiếp theo...</p>
       </ScanShell>
     );
   }
