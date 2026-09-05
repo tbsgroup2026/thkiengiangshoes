@@ -328,11 +328,12 @@ export default function ProductionPerformanceModule({
     <DarkShell>
       <Header {...headerProps} />
 
-      <div className="grid grid-cols-1 @lg:grid-cols-12 gap-4">
-        {/* CỘT TRÁI — Danh sách Nhà máy + Thông số — thu hẹp (3/12 thay vì 4/12) để nhường thêm
-            diện tích cho cột phải. Thử đúng "1 nửa" (2/12) trước nhưng vỡ chữ (tên nhà máy bị cắt,
-            nhãn xuống dòng lộn xộn) nên lùi về 3/12 — vẫn hẹp hơn rõ rệt nhưng còn đọc được. */}
-        <div className="@lg:col-span-3 space-y-4">
+      {/* Dùng flex + chiều rộng CỐ ĐỊNH cho cột trái (không phải tỉ lệ %/12 cột) — vì lúc đóng
+          menu bên trái, khoảng trống khả dụng tăng lên nhiều, tỉ lệ % sẽ kéo cột trái rộng ra theo
+          dù nội dung (tên Nhà máy, vài dòng Thông số) không cần thêm chỗ — cố định lại để cột trái
+          luôn gọn như nhau, mọi khoảng dư đều nhường hết cho cột phải (biểu đồ + bảng). */}
+      <div className="flex flex-col @lg:flex-row gap-4">
+        <div className="@lg:w-72 @lg:flex-shrink-0 space-y-4">
           <FactoryListPanel
             factories={factories}
             factoryId={factoryId}
@@ -345,8 +346,8 @@ export default function ProductionPerformanceModule({
           {factory && factoryAggregate && <InfoPanel leaf={leaf} factory={factory} factoryAggregate={factoryAggregate} />}
         </div>
 
-        {/* CỘT PHẢI — Chỉ số nhanh + Biểu đồ + Bảng chi tiết */}
-        <div className="@lg:col-span-9 space-y-4">
+        {/* CỘT PHẢI — Chỉ số nhanh + Biểu đồ + Bảng chi tiết — nhận hết phần rộng còn dư */}
+        <div className="flex-1 min-w-0 space-y-4">
           {factory && factoryAggregate && (
             <>
               <div className="grid grid-cols-2 @lg:grid-cols-4 gap-3">
