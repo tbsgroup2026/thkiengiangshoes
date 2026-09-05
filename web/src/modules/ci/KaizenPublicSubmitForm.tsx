@@ -346,6 +346,23 @@ export default function KaizenPublicSubmitForm({
 
   React.useEffect(() => {
     if (isEdit && initialData) {
+      // Video (nếu có) được lưu trong attachments_json (type "video_before"/"video_after") —
+      // KHÔNG có cột riêng như ảnh, nên phải tự parse ra mới khôi phục lại đúng vào form khi sửa.
+      // Thiếu bước này thì mở sửa 1 đề xuất đã có video xong lưu lại là video biến mất luôn.
+      let existingBeforeVideo = "";
+      let existingAfterVideo = "";
+      const rawAttachments = initialData.attachments_json || initialData.attachmentsJson;
+      if (rawAttachments) {
+        try {
+          const parsed = typeof rawAttachments === "string" ? JSON.parse(rawAttachments) : rawAttachments;
+          if (Array.isArray(parsed)) {
+            const before = parsed.find((a: any) => a?.type === "video_before");
+            const after = parsed.find((a: any) => a?.type === "video_after");
+            if (before?.url) existingBeforeVideo = before.url;
+            if (after?.url) existingAfterVideo = after.url;
+          }
+        } catch {}
+      }
       setForm({
         region: initialData.region || "KG 1",
         proposerEmpCode: initialData.proposer_emp_code || initialData.proposerEmpCode || "",
@@ -373,8 +390,8 @@ export default function KaizenPublicSubmitForm({
         afterImageUrl: initialData.after_image_url || initialData.afterImageUrl || "",
         beforeImageLink: "",
         afterImageLink: "",
-        beforeVideoUrl: "",
-        afterVideoUrl: "",
+        beforeVideoUrl: existingBeforeVideo,
+        afterVideoUrl: existingAfterVideo,
         beforeVideoLink: "",
         afterVideoLink: "",
         registrationType: "LUU_TRU",
@@ -538,8 +555,8 @@ export default function KaizenPublicSubmitForm({
         proposerYear: currentYear,
         beforeImageUrl: finalBeforeImg,
         afterImageUrl: finalAfterImg,
-        beforeVideoUrl: "",
-        afterVideoUrl: "",
+        beforeVideoUrl: form.beforeVideoUrl || "",
+        afterVideoUrl: form.afterVideoUrl || "",
         efficiencyValueVND: 0,
         registrationType: "THI_DUA",
         sub_status: "CHO_DUYET",
