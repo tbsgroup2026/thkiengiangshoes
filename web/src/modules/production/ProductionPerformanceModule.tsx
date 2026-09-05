@@ -88,7 +88,10 @@ function slotStatus(actual: number | null, target: number): HourStatus {
   return ratio >= 0.95 ? 'ok' : ratio >= 0.75 ? 'warn' : 'bad';
 }
 
-type HourPoint = { time: string; actual: number | null; target: number; status: HourStatus };
+// slotData chỉ có khi đang xem RIÊNG 1 Tổ (leafHours) — mỗi cột khi đó ứng với đúng 1 lượt nhập
+// thật, bấm vào xem được ai nhập/nguyên nhân/giải pháp. Xem TOÀN nhà máy (aggregateHours) là số
+// cộng dồn nhiều Tổ nên không gắn được với 1 người nhập cụ thể — không cho bấm.
+type HourPoint = { time: string; actual: number | null; target: number; status: HourStatus; slotData?: PphSlot };
 
 function leafHours(leaf: PphLeaf): HourPoint[] {
   return leaf.slots.map((s) => ({
@@ -96,6 +99,7 @@ function leafHours(leaf: PphLeaf): HourPoint[] {
     actual: s.actualQty,
     target: leaf.perHourTarget,
     status: slotStatus(s.actualQty, leaf.perHourTarget),
+    slotData: s,
   }));
 }
 
@@ -176,7 +180,10 @@ export default function ProductionPerformanceModule({
   const [factoryId, setFactoryId] = useState<string>('');
   const [leafId, setLeafId] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(true);
-  const [shortfallPopup, setShortfallPopup] = useState<{ slot: string; reason: string | null; solution: string | null } | null>(null);
+  // Popup chi tiết 1 khung giờ — bấm từ cột trên biểu đồ HOẶC từ ô Sản lượng trong bảng chi tiết
+  // (đang xem riêng 1 Tổ) đều mở popup này. actualQty/submittedBy luôn có khi khung đã nhập;
+  // reason/solution chỉ có khi khung đó từng hụt chỉ tiêu/giờ.
+  const [slotPopup, setSlotPopup] = useState<PphSlot | null>(null);
   const firstLoadRef = useRef(true);
   const isToday = selectedDate === todayVNStr();
 
@@ -379,11 +386,30 @@ export default function ProductionPerformanceModule({
                   <div className="flex items-end gap-2 sm:gap-3 h-40">
                     {hours.map((h) => {
                       const heightPct = h.actual != null && h.target > 0 ? Math.max(8, Math.min(100, (h.actual / h.target) * 80)) : 4;
-                      return (
-                        <div key={h.time} className="flex-1 flex flex-col items-center justify-end h-full">
+                      // Chỉ bấm được khi đang xem RIÊNG 1 Tổ (có slotData gắn với đúng 1 lượt
+                      // nhập) VÀ khung đó đã có người nhập — xem toàn nhà máy là số cộng dồn
+                      // nhiều Tổ, không gắn được với 1 người nhập cụ thể nên không cho bấm.
+                      const clickable = !!(h.slotData && h.slotData.filled);
+                      const barCore = (
+                        <>
                           {h.actual != null && <span className="text-[10px] font-bold text-slate-300 mb-1">{h.actual}</span>}
-                          <div className={`w-full rounded-t-lg ${STATUS_BAR_CLS[h.status]}`} style={{ height: `${heightPct}%` }} />
+                          <div className={`w-full rounded-t-lg ${STATUS_BAR_CLS[h.status]} ${clickable ? 'group-hover:brightness-125 transition' : ''}`} style={{ height: `${heightPct}%` }} />
                           <span className="text-[10px] text-slate-500 mt-1.5">{h.time}</span>
+                        </>
+                      );
+                      return clickable ? (
+                        <button
+                          key={h.time}
+                          type="button"
+                          onClick={() => setSlotPopup(h.slotData!)}
+                          title="Xem chi tiết khung giờ này"
+                          className="group flex-1 flex flex-col items-center justify-end h-full cursor-pointer"
+                        >
+                          {barCore}
+                        </button>
+                      ) : (
+                        <div key={h.time} className="flex-1 flex flex-col items-center justify-end h-full">
+                          {barCore}
                         </div>
                       );
                     })}
@@ -428,18 +454,22 @@ export default function ProductionPerformanceModule({
                           <tr key={s.slot}>
                             <td className="px-4 sm:px-5 py-2.5 font-bold text-slate-100">{s.slot}</td>
                             <td className="px-4 py-2.5">
-                              {hasShortfall ? (
+                              {s.filled ? (
                                 <button
                                   type="button"
-                                  onClick={() => setShortfallPopup({ slot: s.slot, reason: s.shortfallReason ?? null, solution: s.shortfallSolution ?? null })}
-                                  className="inline-flex items-center gap-1 font-bold text-rose-300 underline decoration-dotted decoration-rose-400/60 underline-offset-2 hover:text-rose-200"
-                                  title="Xem Nguyên nhân / Giải pháp"
+                                  onClick={() => setSlotPopup(s)}
+                                  className={`inline-flex items-center gap-1 font-bold underline underline-offset-2 transition ${
+                                    hasShortfall
+                                      ? 'text-rose-300 decoration-dotted decoration-rose-400/60 hover:text-rose-200'
+                                      : 'text-slate-100 decoration-dotted decoration-slate-500 hover:text-white'
+                                  }`}
+                                  title="Xem chi tiết khung giờ này"
                                 >
-                                  <IconAlertTriangle size={12} />
+                                  {hasShortfall && <IconAlertTriangle size={12} />}
                                   {s.actualQty}
                                 </button>
                               ) : (
-                                <span className="font-bold text-slate-100">{s.filled ? s.actualQty : '—'}</span>
+                                <span className="font-bold text-slate-100">—</span>
                               )}
                             </td>
                             <td className="px-4 py-2.5">
@@ -495,40 +525,62 @@ export default function ProductionPerformanceModule({
         </div>
       </div>
 
-      {/* Popup Nguyên nhân / Giải pháp khi hụt chỉ tiêu — bấm ra ngoài hoặc nút X để đóng */}
-      {shortfallPopup && (
-        <div
-          className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4"
-          onClick={() => setShortfallPopup(null)}
-        >
+      {/* Popup chi tiết 1 khung giờ — bấm từ cột biểu đồ hoặc ô Sản lượng trong bảng đều mở đây.
+          Luôn hiện Người nhập + Sản lượng; Nguyên nhân/Giải pháp chỉ hiện khi khung đó từng hụt
+          chỉ tiêu/giờ. Bấm ra ngoài hoặc nút X để đóng. */}
+      {slotPopup && (() => {
+        const hasShortfall = !!slotPopup.shortfallReason;
+        return (
           <div
-            className="bg-[#111d33] border border-white/10 rounded-2xl shadow-xl max-w-sm w-full p-5 space-y-3.5"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4"
+            onClick={() => setSlotPopup(null)}
           >
-            <div className="flex items-center justify-between gap-2">
-              <h4 className="font-black text-white text-sm flex items-center gap-1.5">
-                <IconAlertTriangle size={16} className="text-rose-400" />
-                Hụt chỉ tiêu — khung {shortfallPopup.slot}
-              </h4>
-              <button
-                type="button"
-                onClick={() => setShortfallPopup(null)}
-                className="w-7 h-7 rounded-lg text-slate-400 hover:bg-white/10 hover:text-slate-200 flex items-center justify-center transition shrink-0"
-              >
-                <IconX size={16} />
-              </button>
-            </div>
-            <div>
-              <div className="text-[11px] font-bold text-slate-500 uppercase mb-1">Nguyên nhân</div>
-              <p className="text-sm text-slate-200 whitespace-pre-wrap">{shortfallPopup.reason || '—'}</p>
-            </div>
-            <div>
-              <div className="text-[11px] font-bold text-slate-500 uppercase mb-1">Giải pháp</div>
-              <p className="text-sm text-slate-200 whitespace-pre-wrap">{shortfallPopup.solution || '—'}</p>
+            <div
+              className="bg-[#111d33] border border-white/10 rounded-2xl shadow-xl max-w-sm w-full p-5 space-y-3.5"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <h4 className="font-black text-white text-sm flex items-center gap-1.5">
+                  {hasShortfall && <IconAlertTriangle size={16} className="text-rose-400" />}
+                  Chi tiết khung {slotPopup.slot}
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => setSlotPopup(null)}
+                  className="w-7 h-7 rounded-lg text-slate-400 hover:bg-white/10 hover:text-slate-200 flex items-center justify-center transition shrink-0"
+                >
+                  <IconX size={16} />
+                </button>
+              </div>
+              <dl className="space-y-2.5 text-xs">
+                <div className="flex items-center justify-between gap-2">
+                  <dt className="text-slate-400 font-semibold">Sản lượng:</dt>
+                  <dd className="font-black text-slate-100">{slotPopup.actualQty ?? '—'} đôi</dd>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <dt className="text-slate-400 font-semibold">Người nhập:</dt>
+                  <dd className="font-black text-slate-100">{slotPopup.submittedBy || '—'}</dd>
+                </div>
+              </dl>
+              {hasShortfall ? (
+                <>
+                  <div className="h-px bg-white/10" />
+                  <div>
+                    <div className="text-[11px] font-bold text-slate-500 uppercase mb-1">Nguyên nhân</div>
+                    <p className="text-sm text-slate-200 whitespace-pre-wrap">{slotPopup.shortfallReason || '—'}</p>
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-bold text-slate-500 uppercase mb-1">Giải pháp</div>
+                    <p className="text-sm text-slate-200 whitespace-pre-wrap">{slotPopup.shortfallSolution || '—'}</p>
+                  </div>
+                </>
+              ) : (
+                <p className="text-[11px] text-emerald-400 font-semibold">✓ Khung này đạt chỉ tiêu, không có ghi chú hụt chỉ tiêu.</p>
+              )}
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </DarkShell>
   );
 }
