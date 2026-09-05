@@ -1362,6 +1362,36 @@ export default function CIModule() {
     );
   };
 
+  // ⚡ Handler khi click vào nút LỌC NHANH bên sidebar: Lọc riêng biệt từng nút, không stack/gộp trùng các tiêu chí khác
+  const handleSidebarFilterClick = (type: "REG_TYPE" | "REGION" | "CATEGORY", value: string) => {
+    setActiveTab("LIBRARY");
+    if (type === "REG_TYPE") {
+      const next = selectedRegType === value ? "ALL" : value;
+      setSelectedRegType(next);
+      setSelectedRegion("ALL");
+      setSelectedCategory("ALL");
+      setSelectedMonth("ALL");
+      setSelectedMonthYear("ALL");
+      setSelectedProductGroup("ALL");
+    } else if (type === "REGION") {
+      const next = selectedRegion === value ? "ALL" : value;
+      setSelectedRegion(next);
+      setSelectedRegType("ALL");
+      setSelectedCategory("ALL");
+      setSelectedMonth("ALL");
+      setSelectedMonthYear("ALL");
+      setSelectedProductGroup("ALL");
+    } else if (type === "CATEGORY") {
+      const next = selectedCategory === value ? "ALL" : value;
+      setSelectedCategory(next);
+      setSelectedRegType("ALL");
+      setSelectedRegion("ALL");
+      setSelectedMonth("ALL");
+      setSelectedMonthYear("ALL");
+      setSelectedProductGroup("ALL");
+    }
+  };
+
   // ⚡ Sidebar Badge Counters — Loại đăng ký (Tổng số cho từng loại đăng ký)
   const regTypeCounts = useMemo(() => {
     let thiDua = 0, choReview = 0, choDanhGia = 0, daDanhGia = 0, luuTru = 0;
@@ -1577,11 +1607,7 @@ export default function CIModule() {
                 <div className="space-y-0.5 pl-2 text-xs font-bold">
                   {/* Thi đua */}
                   <button
-                    onClick={() => {
-                      const nextReg = selectedRegType === "THI_DUA" ? "ALL" : "THI_DUA";
-                      setSelectedRegType(nextReg);
-                      setActiveTab("LIBRARY");
-                    }}
+                    onClick={() => handleSidebarFilterClick("REG_TYPE", "THI_DUA")}
                     className={`w-full text-left px-2.5 py-1 rounded-lg flex items-center justify-between transition-colors ${
                       selectedRegType === "THI_DUA"
                         ? "bg-[#006838] text-white font-extrabold"
@@ -1598,11 +1624,7 @@ export default function CIModule() {
 
                   {/* Chờ phê duyệt */}
                   <button
-                    onClick={() => {
-                      const nextReg = selectedRegType === "CHO_PHE_DUYET" ? "ALL" : "CHO_PHE_DUYET";
-                      setSelectedRegType(nextReg);
-                      setActiveTab("LIBRARY");
-                    }}
+                    onClick={() => handleSidebarFilterClick("REG_TYPE", "CHO_PHE_DUYET")}
                     className={`w-full text-left px-3 py-1 rounded-lg flex items-center justify-between text-[11px] transition-colors ${
                       selectedRegType === "CHO_PHE_DUYET"
                         ? "bg-blue-950/80 text-blue-300 font-extrabold"
@@ -1620,11 +1642,7 @@ export default function CIModule() {
 
                   {/* Đã duyệt */}
                   <button
-                    onClick={() => {
-                      const nextReg = selectedRegType === "DA_DANH_GIA" ? "ALL" : "DA_DANH_GIA";
-                      setSelectedRegType(nextReg);
-                      setActiveTab("LIBRARY");
-                    }}
+                    onClick={() => handleSidebarFilterClick("REG_TYPE", "DA_DANH_GIA")}
                     className={`w-full text-left px-3 py-1 rounded-lg flex items-center justify-between text-[11px] transition-colors ${
                       selectedRegType === "DA_DANH_GIA"
                         ? "bg-emerald-950/80 text-emerald-300 font-extrabold"
@@ -1642,11 +1660,7 @@ export default function CIModule() {
 
                   {/* Lưu trữ */}
                   <button
-                    onClick={() => {
-                      const nextReg = selectedRegType === "LUU_TRU" ? "ALL" : "LUU_TRU";
-                      setSelectedRegType(nextReg);
-                      setActiveTab("LIBRARY");
-                    }}
+                    onClick={() => handleSidebarFilterClick("REG_TYPE", "LUU_TRU")}
                     className={`w-full text-left px-2.5 py-1 rounded-lg flex items-center justify-between transition-colors ${
                       selectedRegType === "LUU_TRU"
                         ? "bg-slate-800 text-white font-extrabold"
@@ -1698,11 +1712,7 @@ export default function CIModule() {
                       return (
                         <button
                           key={subItem}
-                          onClick={() => {
-                            const nextRegion = selectedRegion === subItem ? "ALL" : subItem;
-                            setSelectedRegion(nextRegion);
-                            setActiveTab("LIBRARY");
-                          }}
+                          onClick={() => handleSidebarFilterClick("REGION", subItem)}
                           className={`w-full text-left px-2 py-0.5 rounded flex items-center justify-between text-[11px] transition-colors ${
                             selectedRegion === subItem ? "bg-emerald-900/80 text-emerald-200 font-black" : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 font-medium"
                           }`}
@@ -1744,11 +1754,7 @@ export default function CIModule() {
                     return (
                       <button
                         key={c.id}
-                        onClick={() => {
-                          const nextCat = selectedCategory === c.id ? "ALL" : c.id;
-                          setSelectedCategory(nextCat);
-                          setActiveTab("LIBRARY");
-                        }}
+                        onClick={() => handleSidebarFilterClick("CATEGORY", c.id)}
                         className={`w-full text-left px-2 py-0.5 rounded-lg flex items-center justify-between transition-colors ${
                           selectedCategory === c.id ? "bg-[#006838] text-white font-extrabold" : "text-slate-300 hover:bg-slate-800/80 hover:text-white"
                         }`}
