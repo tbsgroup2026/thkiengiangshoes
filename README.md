@@ -677,7 +677,17 @@ npx wrangler deploy --name thkiengiangshoes
 ### 8.4 Chuẩn Hóa Badge Trạng Thái Thẻ (Status Badges Sync)
 - Loại bỏ hoàn toàn thẻ nhãn màu vàng "Chờ duyệt" thừa trên các bài đã phê duyệt. Các đề xuất đã duyệt chỉ hiển thị duy nhất nhãn xanh lá **✅ Đã duyệt**.
 
+### 8.5 Nâng Cấp Hệ Thống & Persistence Dữ Liệu Kaizen (RELEASE NOTES - 05/09/2026)
+- **Persistence Dữ Liệu Phê Duyệt Triển Khai (Bước 3)**: Đã sửa lỗi không lưu xuống database D1. Khi duyệt đề xuất, hệ thống lưu chính xác các trường: `pair_quantity` (Số lượng giày), `efficiency_value_vnd` (Hiệu quả VNĐ), `total_savings_vnd` (Tổng tiền tiết kiệm VNĐ), `cost_before` (Chi phí trước) và `cost_after` (Chi phí sau).
+- **Duy Trì Công Thức Tự Động Khi Chỉnh Sửa (Inline Edit)**: Khi mở chế độ "Sửa" trên thẻ Kaizen, hệ thống bảo lưu và tính toán tự động theo thời gian thực:
+  - `Hiệu quả` = `Số giây tiết kiệm × 12.5 đ/giây`
+  - `Tổng tiết kiệm` = `Hiệu quả × Số lượng giày` (hoặc bằng `Hiệu quả` nếu số lượng giày = 0).
+- **Form Chỉnh Sửa Động Theo Phân Loại**: Khi bấm "Sửa" và thay đổi phân loại sáng kiến (Tiết kiệm vật tư, Giảm thời gian, 5S/An toàn), giao diện và công thức tính toán tự động chuyển đổi phù hợp với loại đề xuất tương ứng.
+- **Giải Quyết Xác Thực JWT & Phân Quyền Full Admin/PGĐ**: Cập nhật `verifyServerAuth` giải mã JWT token tiêu chuẩn, cấp đầy đủ quyền thao tác và duyệt cho tài khoản PGĐ Kiều Thanh Vũ (`201809012` / `PGĐ-005`).
+- **Quản Lý Đính Kèm Đa Phương Tiện (Images & Videos JSON)**: Chuẩn hóa đính kèm video và ảnh trước/sau cải tiến lưu trữ dưới dạng JSON array trong CSDL D1 (`attachments_json`).
+
 ---
 
-> **Tài liệu Kỹ thuật Tổng thể Ban Hành Ngày**: `04/09/2026` (Phiên bản v2.5)  
+> **Tài liệu Kỹ thuật Tổng thể Ban Hành Ngày**: `05/09/2026` (Phiên bản v2.6)  
 > **Tác giả**: Ban Công Nghệ & Kaizen TBS Group — AI Agent Pair Programming
+
