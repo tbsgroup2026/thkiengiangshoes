@@ -158,11 +158,35 @@ function slotMinutes(slot: string): number {
   return h * 60 + m;
 }
 
-// Trạng thái 1 khung giờ cụ thể của 1 Tổ — dùng cho bảng chi tiết khi đang lọc riêng 1 Tổ.
+// Trạng thái 1 khung giờ cụ thể của 1 Tổ — dùng cho bảng chi tiết khi đang lọc riêng 1 Tổ. Đã QUA
+// giờ của khung mà vẫn chưa nhập -> "Quá hạn" (khác với "Chưa tới giờ" — chưa đến lúc, bình
+// thường, không có gì đáng lo).
 function slotDueState(slot: string, filled: boolean, isToday: boolean): { label: string; cls: string } {
   if (filled) return { label: 'Đã cập nhật', cls: 'bg-emerald-50 text-emerald-700' };
   const due = !isToday || nowVNMinutes() >= slotMinutes(slot) - 10;
-  return due ? { label: 'Chưa nhập', cls: 'bg-rose-50 text-rose-700' } : { label: 'Chưa tới giờ', cls: 'bg-slate-100 text-slate-400' };
+  return due ? { label: 'Quá hạn', cls: 'bg-rose-50 text-rose-700' } : { label: 'Chưa tới giờ', cls: 'bg-slate-100 text-slate-400' };
+}
+
+// Trạng thái cập nhật của CẢ 1 Tổ (bảng tổng hợp toàn nhà máy + dòng "Trạng thái nhập" ở Thông
+// Số) — server chỉ trả "ontime/late/missing"; "missing" gộp chung 2 tình huống rất khác nhau: (1)
+// còn SỚM, chưa tới lúc phải nhập gì cả (bình thường) và (2) ĐÃ QUA giờ 1 khung nào đó mà vẫn
+// chưa nhập (đáng chú ý, cần nhắc). Tách riêng ở đây bằng đúng dữ liệu slots đã có sẵn, không cần
+// đổi gì bên server.
+function leafStatusBadge(leaf: PphLeaf, isToday: boolean): { label: string; cls: string } {
+  if (leaf.entryStatus !== 'missing') return ENTRY_LABEL[leaf.entryStatus];
+  if (!isToday) return { label: 'Quá hạn', cls: 'bg-rose-50 text-rose-700' }; // Ngày đã qua — còn thiếu chắc chắn là trễ.
+  if (!leaf.setup) {
+    // Chưa cập nhật đầu ca — chỉ tính "quá hạn" khi đã qua luôn cả mốc khung số lượng ĐẦU TIÊN
+    // (không có đầu ca thì không nhập được khung nào cả, nên mốc quan trọng là khung đầu tiên).
+    const firstQtyDueMin = slotMinutes('08:30') - 10;
+    return nowVNMinutes() >= firstQtyDueMin
+      ? { label: 'Quá hạn', cls: 'bg-rose-50 text-rose-700' }
+      : { label: 'Chưa tới hạn', cls: 'bg-slate-100 text-slate-400' };
+  }
+  const overdue = leaf.slots.some((s) => !s.filled && nowVNMinutes() >= slotMinutes(s.slot) - 10);
+  return overdue
+    ? { label: 'Quá hạn', cls: 'bg-rose-50 text-rose-700' }
+    : { label: 'Chưa tới hạn', cls: 'bg-slate-100 text-slate-400' };
 }
 
 // Hiệu Suất Nhà Máy — dữ liệu THẬT từ các lượt quét QR ở /pph-scan (bảng pph_entries), gộp theo
@@ -342,7 +366,7 @@ export default function ProductionPerformanceModule() {
             onSelectLeaf={handleSelectLeaf}
             onCollapse={() => setPickerOpen(false)}
           />
-          {factory && factoryAggregate && <InfoPanel leaf={leaf} factory={factory} factoryAggregate={factoryAggregate} />}
+          {factory && factoryAggregate && <InfoPanel leaf={leaf} factory={factory} factoryAggregate={factoryAggregate} isToday={isToday} />}
         </div>
 
         {/* CỘT PHẢI — Chỉ số nhanh + Biểu đồ + Bảng chi tiết — nhận hết phần rộng còn dư */}
@@ -524,7 +548,10 @@ export default function ProductionPerformanceModule() {
                               )}
                             </td>
                             <td className="px-4 py-3">
-                              <span className={`px-2 py-1 rounded-full text-xs font-bold ${ENTRY_LABEL[l.entryStatus].cls}`}>{ENTRY_LABEL[l.entryStatus].label}</span>
+                              {(() => {
+                                const badge = leafStatusBadge(l, isToday);
+                                return <span className={`px-2 py-1 rounded-full text-xs font-bold ${badge.cls}`}>{badge.label}</span>;
+                              })()}
                             </td>
                           </tr>
                         );
@@ -811,6 +838,7 @@ function InfoPanel({
   leaf,
   factory,
   factoryAggregate,
+  isToday,
 }: {
   leaf: PphLeaf | null;
   factory: PphDashboardFactory;
@@ -820,6 +848,7 @@ function InfoPanel({
     cumulativeActual: number;
     cumulativeTarget: number;
   };
+  isToday: boolean;
 }) {
   const cumActual = leaf ? leaf.cumulativeActual : factoryAggregate.cumulativeActual;
   const cumTarget = leaf ? leaf.cumulativeTarget : factoryAggregate.cumulativeTarget;
@@ -830,7 +859,7 @@ function InfoPanel({
         ['Model sản xuất', leaf.setup?.model || 'Chưa cập nhật'],
         ['Số lao động', leaf.setup ? `${leaf.setup.workerCount} người` : 'Chưa cập nhật'],
         ['Chỉ tiêu / giờ', `${leaf.perHourTarget} đôi`],
-        ['Trạng thái nhập', ENTRY_LABEL[leaf.entryStatus].label],
+        ['Trạng thái nhập', leafStatusBadge(leaf, isToday).label],
       ]
     : [
         ['Điểm quét', `${factory.leaves.length} điểm`],
