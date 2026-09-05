@@ -1,4 +1,5 @@
 'use client';
+// (build cache-buster — không đổi logic, chỉ ép tạo lượt deploy mới)
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
