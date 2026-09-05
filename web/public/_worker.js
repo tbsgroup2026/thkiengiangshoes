@@ -655,6 +655,11 @@ async function pphEnsureTable(env) {
   // Mục tiêu RFT (%) — nhập 1 lần cùng lúc cập nhật đầu ca (dòng slot='08:00'), giống worker_count/
   // model/planned_qty. ALTER riêng vì bảng có thể đã tồn tại từ trước lúc thêm cột này.
   await env.DB.prepare("ALTER TABLE pph_entries ADD COLUMN target_rft REAL").run().catch(() => {});
+  // Khi số lượng làm được THẤP HƠN mục tiêu/giờ (kế hoạch cả ngày chia đều 8 khung) — bắt buộc
+  // giải trình lý do + hướng khắc phục ngay tại thời điểm nộp, để không bị trôi qua mà không ai
+  // biết vì sao hụt chỉ tiêu giờ đó.
+  await env.DB.prepare("ALTER TABLE pph_entries ADD COLUMN shortfall_reason TEXT").run().catch(() => {});
+  await env.DB.prepare("ALTER TABLE pph_entries ADD COLUMN shortfall_solution TEXT").run().catch(() => {});
 }
 
 // Giờ Việt Nam (UTC+7, không lệch DST) — Worker chạy theo UTC, cộng thủ công 7 tiếng rồi ĐỌC BẰNG
@@ -993,7 +998,7 @@ async function handlePph(request, env, pathname, searchParams) {
     let results = [];
     try {
       const r = await env.DB.prepare(
-        "SELECT slot, worker_count, model, planned_qty, target_rft, actual_qty FROM pph_entries WHERE team_id = ? AND entry_date = ?"
+        "SELECT slot, worker_count, model, planned_qty, target_rft, actual_qty, shortfall_reason, shortfall_solution FROM pph_entries WHERE team_id = ? AND entry_date = ?"
       ).bind(teamId, date).all();
       results = r.results || [];
     } catch {}
@@ -1002,6 +1007,9 @@ async function handlePph(request, env, pathname, searchParams) {
     const filledSlots = new Set([...bySlot.keys()].filter((s) => s !== "08:00"));
     const resolved = pphResolveStatus(setupDone, filledSlots);
     const setupRow = bySlot.get("08:00");
+    // Mục tiêu/giờ — suy ra từ kế hoạch cả ngày chia đều 8 khung số lượng, khớp đúng cách tính ở
+    // dashboard — để FE hiện ngay trong nhãn ô nhập và tự phát hiện hụt chỉ tiêu lúc đang gõ.
+    const perHourTarget = setupRow && setupRow.planned_qty ? Math.round((setupRow.planned_qty / PPH_SLOTS.slice(1).length) * 10) / 10 : null;
 
     // Dữ liệu ĐẦY ĐỦ từng khung giờ trong ngày (kể cả khung đầu ca) — cho FE dựng bảng "xem lại các
     // khung đã quét" (chỉ xem, không sửa được) khi bấm vào ô giờ hiện tại.
@@ -1016,6 +1024,8 @@ async function handlePph(request, env, pathname, searchParams) {
         plannedQty: row.planned_qty ?? null,
         targetRft: row.target_rft ?? null,
         actualQty: row.actual_qty ?? null,
+        shortfallReason: row.shortfall_reason ?? null,
+        shortfallSolution: row.shortfall_solution ?? null,
       };
     });
 
@@ -1032,6 +1042,7 @@ async function handlePph(request, env, pathname, searchParams) {
       slots: PPH_SLOTS,
       filledSlots: [...bySlot.keys()],
       entries,
+      perHourTarget,
       setup: setupRow
         ? { workerCount: setupRow.worker_count, model: setupRow.model, plannedQty: setupRow.planned_qty, targetRft: setupRow.target_rft }
         : null,
@@ -1054,11 +1065,15 @@ async function handlePph(request, env, pathname, searchParams) {
       const date = pphTodayStr();
       let results = [];
       try {
-        const r = await env.DB.prepare("SELECT slot FROM pph_entries WHERE team_id = ? AND entry_date = ?").bind(teamId, date).all();
+        // Cần thêm planned_qty của dòng đầu ca (08:00) để suy ra Mục tiêu/giờ, dùng kiểm tra hụt
+        // chỉ tiêu ngay dưới đây.
+        const r = await env.DB.prepare("SELECT slot, planned_qty FROM pph_entries WHERE team_id = ? AND entry_date = ?").bind(teamId, date).all();
         results = r.results || [];
       } catch {}
       const filled = new Set(results.map((r) => r.slot));
       const setupDone = filled.has("08:00");
+      const setupRow = results.find((r) => r.slot === "08:00");
+      const perHourTarget = setupRow && setupRow.planned_qty ? setupRow.planned_qty / PPH_SLOTS.slice(1).length : 0;
       const resolved = pphResolveStatus(setupDone, filled);
 
       if (resolved.nextAction === "wait") {
@@ -1066,6 +1081,20 @@ async function handlePph(request, env, pathname, searchParams) {
       }
       if (resolved.nextAction === "done") {
         return mmtbJson({ success: false, error: "Đã cập nhật đủ các khung giờ hôm nay, cảm ơn bạn!" }, 409);
+      }
+
+      // Chống trường hợp trang đang mở bị "cũ" so với thực tế server (VD mở từ hôm qua để qua đêm
+      // mới bấm gửi, hoặc 1 tab khác vừa nộp xong khung này) — nếu dữ liệu gửi lên không khớp với
+      // hành động server ĐANG THỰC SỰ mong đợi lúc này (setup/quantity), báo rõ để tải lại trang,
+      // thay vì rơi vào lỗi "thiếu trường" khó hiểu (VD "Vui lòng nhập Số lượng công nhân" trong
+      // khi người dùng chỉ đang nộp số lượng của 1 khung giờ bình thường).
+      const bodyLooksLikeSetup = body.workerCount !== undefined || body.model !== undefined || body.plannedQty !== undefined;
+      const bodyLooksLikeQuantity = body.actualQty !== undefined;
+      if (resolved.nextAction === "setup" && bodyLooksLikeQuantity && !bodyLooksLikeSetup) {
+        return mmtbJson({ success: false, error: "Trang đang mở đã cũ (có thể đã sang ngày mới) — vui lòng tải lại trang rồi thử lại" }, 409);
+      }
+      if (resolved.nextAction === "quantity" && bodyLooksLikeSetup && !bodyLooksLikeQuantity) {
+        return mmtbJson({ success: false, error: "Trang đang mở đã cũ (đầu ca hôm nay đã có người cập nhật) — vui lòng tải lại trang rồi thử lại" }, 409);
       }
 
       const slot = resolved.targetSlot;
@@ -1091,10 +1120,20 @@ async function handlePph(request, env, pathname, searchParams) {
       } else {
         const actualQty = Number(body.actualQty);
         if (!Number.isFinite(actualQty) || actualQty < 0) return mmtbJson({ success: false, error: "Vui lòng nhập đúng Số lượng" }, 400);
+
+        // Hụt chỉ tiêu/giờ — bắt buộc giải trình nguyên nhân + giải pháp ngay lúc nộp.
+        const isShortfall = perHourTarget > 0 && actualQty < perHourTarget;
+        const shortfallReason = String(body.shortfallReason || "").trim();
+        const shortfallSolution = String(body.shortfallSolution || "").trim();
+        if (isShortfall) {
+          if (!shortfallReason) return mmtbJson({ success: false, error: "Số lượng đang thấp hơn mục tiêu/giờ — vui lòng nhập Nguyên nhân" }, 400);
+          if (!shortfallSolution) return mmtbJson({ success: false, error: "Số lượng đang thấp hơn mục tiêu/giờ — vui lòng nhập Giải pháp" }, 400);
+        }
+
         try {
           await env.DB.prepare(
-            "INSERT INTO pph_entries (id, team_id, entry_date, slot, actual_qty, submitted_by, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
-          ).bind(id, teamId, date, slot, actualQty, submittedBy, nowIso).run();
+            "INSERT INTO pph_entries (id, team_id, entry_date, slot, actual_qty, shortfall_reason, shortfall_solution, submitted_by, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          ).bind(id, teamId, date, slot, actualQty, isShortfall ? shortfallReason : null, isShortfall ? shortfallSolution : null, submittedBy, nowIso).run();
         } catch {
           return mmtbJson({ success: false, error: `Khung giờ ${slot} đã được cập nhật rồi` }, 409);
         }

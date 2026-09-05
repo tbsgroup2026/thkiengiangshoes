@@ -27,6 +27,8 @@ type PphSlotEntry = {
   plannedQty?: number | null;
   targetRft?: number | null;
   actualQty?: number | null;
+  shortfallReason?: string | null;
+  shortfallSolution?: string | null;
 };
 
 type ScanInfo = {
@@ -37,6 +39,7 @@ type ScanInfo = {
   slots?: string[];
   filledSlots?: string[];
   entries?: PphSlotEntry[];
+  perHourTarget?: number | null;
   setup?: { workerCount: number; model: string; plannedQty: number; targetRft: number } | null;
   nextAction?: 'setup' | 'quantity' | 'wait' | 'done';
   targetSlot?: string | null;
@@ -72,6 +75,8 @@ export default function PphScanClient() {
   const [plannedQty, setPlannedQty] = useState('');
   const [targetRft, setTargetRft] = useState('');
   const [actualQty, setActualQty] = useState('');
+  const [shortfallReason, setShortfallReason] = useState('');
+  const [shortfallSolution, setShortfallSolution] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState<{ slot: string } | null>(null);
@@ -223,6 +228,14 @@ export default function PphScanClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [info?.slots, info?.targetSlot, info?.nextAction]);
 
+  // Hụt Mục tiêu/giờ — so số đang gõ (chưa cần bấm gửi) với Mục tiêu/giờ suy ra từ kế hoạch đầu ca.
+  const parsedActualQty = actualQty === '' ? null : Number(actualQty);
+  const shortfallAmount =
+    info?.perHourTarget != null && parsedActualQty != null && Number.isFinite(parsedActualQty)
+      ? Math.round((info.perHourTarget - parsedActualQty) * 10) / 10
+      : null;
+  const isShortfallNow = info?.perHourTarget != null && info.perHourTarget > 0 && shortfallAmount != null && shortfallAmount > 0;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const finalName = submittedBy.trim();
@@ -251,6 +264,14 @@ export default function PphScanClient() {
         const aq = Number(actualQty);
         if (!Number.isFinite(aq) || aq < 0) { setFormError('Vui lòng nhập đúng Số lượng'); setSubmitting(false); return; }
         body.actualQty = aq;
+        // Hụt Mục tiêu/giờ — bắt buộc Nguyên nhân + Giải pháp trước khi gửi (server cũng tự kiểm
+        // tra lại, đây là chặn sớm phía form cho người dùng thấy lỗi ngay, không cần chờ mạng).
+        if (isShortfallNow) {
+          if (!shortfallReason.trim()) { setFormError('Số lượng đang thấp hơn Mục tiêu/giờ — vui lòng nhập Nguyên nhân'); setSubmitting(false); return; }
+          if (!shortfallSolution.trim()) { setFormError('Số lượng đang thấp hơn Mục tiêu/giờ — vui lòng nhập Giải pháp'); setSubmitting(false); return; }
+          body.shortfallReason = shortfallReason.trim();
+          body.shortfallSolution = shortfallSolution.trim();
+        }
       }
       const res = await fetch('/api/pph/scan', {
         method: 'POST',
@@ -266,6 +287,11 @@ export default function PphScanClient() {
         window.localStorage.setItem(REMEMBERED_NAME_KEY, finalName);
       } catch {}
       setRememberedName(finalName);
+      // Dọn sạch ô nhập số lượng + giải trình hụt chỉ tiêu — vì giờ tự chuyển sang khung tiếp theo
+      // ngay trên cùng form (không quét lại QR), không dọn thì khung sau sẽ thấy lại số cũ.
+      setActualQty('');
+      setShortfallReason('');
+      setShortfallSolution('');
       setSuccess({ slot: result.slot });
     } catch {
       setFormError('Không kết nối được tới hệ thống, vui lòng thử lại');
@@ -419,19 +445,54 @@ export default function PphScanClient() {
             </Field>
           </>
         ) : (
-          <Field label={`Số lượng làm được (${info.targetSlot}) *`} icon={IconChartBar}>
-            <input
-              type="number"
-              inputMode="numeric"
-              min={0}
-              value={actualQty}
-              onChange={(e) => setActualQty(e.target.value)}
-              placeholder="VD: 45"
-              className="w-full px-3.5 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:border-[#006838]"
-              required
-              autoFocus
-            />
-          </Field>
+          <>
+            <Field
+              label={`Số lượng làm được (${info.targetSlot}) *`}
+              hint={info.perHourTarget != null ? `Mục tiêu: ${info.perHourTarget} đôi/giờ` : undefined}
+              icon={IconChartBar}
+            >
+              <input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                value={actualQty}
+                onChange={(e) => setActualQty(e.target.value)}
+                placeholder="VD: 45"
+                className="w-full px-3.5 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:border-[#006838]"
+                required
+                autoFocus
+              />
+            </Field>
+
+            {isShortfallNow && (
+              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 space-y-3">
+                <p className="text-xs font-bold text-rose-700 flex items-center gap-1.5">
+                  <IconAlertTriangle size={14} className="shrink-0" />
+                  Đang âm {shortfallAmount} đôi so với Mục tiêu/giờ
+                </p>
+                <Field label="Nguyên nhân *" icon={IconAlertTriangle}>
+                  <textarea
+                    value={shortfallReason}
+                    onChange={(e) => setShortfallReason(e.target.value)}
+                    placeholder="VD: Máy hư, thiếu nguyên liệu, đổi model..."
+                    rows={2}
+                    className="w-full px-3.5 py-3 bg-white border border-rose-200 rounded-xl text-sm font-semibold focus:outline-none focus:border-rose-400 resize-none"
+                    required
+                  />
+                </Field>
+                <Field label="Giải pháp *" icon={IconCircleCheck}>
+                  <textarea
+                    value={shortfallSolution}
+                    onChange={(e) => setShortfallSolution(e.target.value)}
+                    placeholder="VD: Đã gọi bảo trì, bổ sung nhân lực..."
+                    rows={2}
+                    className="w-full px-3.5 py-3 bg-white border border-rose-200 rounded-xl text-sm font-semibold focus:outline-none focus:border-rose-400 resize-none"
+                    required
+                  />
+                </Field>
+              </div>
+            )}
+          </>
         )}
 
         {rememberedName && !editingName ? (
@@ -627,7 +688,16 @@ function SlotHistoryPanel({ info, onClose }: { info: ScanInfo; onClose: () => vo
                         <DetailRow label="Mục tiêu RFT" value={e.targetRft != null ? `${e.targetRft}%` : '—'} />
                       </>
                     ) : (
-                      <DetailRow label="Số lượng làm được" value={e.actualQty ?? '—'} />
+                      <>
+                        <DetailRow label="Số lượng làm được" value={e.actualQty ?? '—'} />
+                        {(e.shortfallReason || e.shortfallSolution) && (
+                          <div className="pt-1.5 mt-1.5 border-t border-rose-100 space-y-1">
+                            <p className="text-rose-600 font-black text-[11px]">⚠️ Hụt mục tiêu/giờ hôm đó:</p>
+                            {e.shortfallReason && <DetailRow label="Nguyên nhân" value={e.shortfallReason} />}
+                            {e.shortfallSolution && <DetailRow label="Giải pháp" value={e.shortfallSolution} />}
+                          </div>
+                        )}
+                      </>
                     )}
                     <p className="text-[10px] text-slate-400 italic pt-1">Chỉ xem lại — không thể chỉnh sửa khung giờ đã qua.</p>
                   </div>
@@ -650,12 +720,23 @@ function DetailRow({ label, value }: { label: string; value: string | number }) 
   );
 }
 
-function Field({ label, icon: Icon, children }: { label: string; icon: typeof IconUsers; children: React.ReactNode }) {
+function Field({
+  label,
+  hint,
+  icon: Icon,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  icon: typeof IconUsers;
+  children: React.ReactNode;
+}) {
   return (
     <label className="block space-y-1.5">
       <span className="flex items-center gap-1.5 text-xs font-bold text-slate-600">
         <Icon size={13} className="text-slate-400" />
         {label}
+        {hint && <span className="font-semibold text-slate-400">— {hint}</span>}
       </span>
       {children}
     </label>
