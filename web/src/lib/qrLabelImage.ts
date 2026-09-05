@@ -15,13 +15,21 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
+// Logo TBS Group — có sẵn trong public/images (dùng chung với logo hiện ở header toàn site),
+// ghép vào góc trái TRÊN CÙNG của ảnh tải về theo yêu cầu, không đụng vào bên trong ma trận mã QR
+// (đụng vào đó là hỏng mã, không quét được — logo chỉ nằm ở phần nhãn phía trên).
+const TBS_LOGO_SRC = "/images/tbs-logo.png";
+
 export async function buildQrLabelImage(opts: {
   path: string;
   name: string;
   qrDataUrl: string;
 }): Promise<string> {
   const { path, name, qrDataUrl } = opts;
-  const qrImg = await loadImage(qrDataUrl);
+  const [qrImg, logoImg] = await Promise.all([
+    loadImage(qrDataUrl),
+    loadImage(TBS_LOGO_SRC).catch(() => null), // Thiếu logo cũng không chặn tải ảnh QR
+  ]);
   const qrSize = qrImg.width || 480;
 
   const paddingX = 48;
@@ -34,11 +42,18 @@ export async function buildQrLabelImage(opts: {
   const boxPadding = 24;
   const qrBoxSize = qrSize + boxPadding * 2;
 
+  const logoMarginLeft = 28;
+  const logoMarginTop = 26;
+  const logoHeight = 34;
+  const logoWidth = logoImg ? (logoImg.width / logoImg.height) * logoHeight : 0;
+  const gapAfterLogo = 18;
+  const logoBandHeight = logoImg ? logoMarginTop + logoHeight + gapAfterLogo : 0;
+
   const canvasWidth = qrBoxSize + paddingX * 2;
   const pathBlockHeight = path ? pathFontSize + 14 : 0;
   const nameBlockHeight = nameFontSize + 14;
   const canvasHeight =
-    paddingTop + pathBlockHeight + (path ? gapAfterPath : 0) + nameBlockHeight + gapAfterName + qrBoxSize + paddingBottom;
+    logoBandHeight + paddingTop + pathBlockHeight + (path ? gapAfterPath : 0) + nameBlockHeight + gapAfterName + qrBoxSize + paddingBottom;
 
   const canvas = document.createElement("canvas");
   canvas.width = canvasWidth;
@@ -65,7 +80,12 @@ export async function buildQrLabelImage(opts: {
   drawRoundedRect(0, 0, canvasWidth, canvasHeight, 28);
   ctx.fill();
 
-  let cursorY = paddingTop;
+  // Logo TBS Group — góc trái trên cùng
+  if (logoImg) {
+    ctx.drawImage(logoImg, logoMarginLeft, logoMarginTop, logoWidth, logoHeight);
+  }
+
+  let cursorY = logoBandHeight + paddingTop;
   const centerX = canvasWidth / 2;
 
   if (path) {
