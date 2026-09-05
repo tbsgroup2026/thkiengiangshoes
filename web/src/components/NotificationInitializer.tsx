@@ -16,7 +16,16 @@ import { requestNotificationPermission, registerServiceWorker, syncPushSubscript
 export default function NotificationInitializer() {
   const didReloadRef = useRef(false);
 
+  // /pph-scan là trang quét QR CÔNG KHAI (không đăng nhập, rất nhiều điện thoại công nhân quét mỗi
+  // ngày) — không có lý do gì cần thông báo đẩy ở đây, và việc TỰ ĐĂNG KÝ Service Worker + xin
+  // quyền Notification (popup xin phép sau 3s) trên trang này vừa gây phiền (công nhân chỉ cần
+  // nhập số liệu rồi rời đi) vừa CHÍNH LÀ NGUYÊN NHÂN facebook gây "kẹt/chập chờn" đã dò ra trước
+  // đây (1 Service Worker đang active chen vào giữa lúc trang tải lần đầu). ServiceWorkerRegister
+  // đã loại trừ /pph-scan tương tự — ở đây làm y hệt để component NÀY cũng không đăng ký gì cả.
+  const isPphScanPage = typeof window !== "undefined" && window.location.pathname.startsWith("/pph-scan");
+
   useEffect(() => {
+    if (isPphScanPage) return;
     // Safe Service Worker listener without automatic page reloads
     if ("serviceWorker" in navigator) {
       const handleControllerChange = () => {
@@ -30,6 +39,7 @@ export default function NotificationInitializer() {
   }, []);
 
   useEffect(() => {
+    if (isPphScanPage) return;
     const initNotifications = async () => {
       try {
         // 1. Always register Service Worker first (no permission needed)
