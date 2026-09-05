@@ -662,6 +662,65 @@ async function pphEnsureTable(env) {
   await env.DB.prepare("ALTER TABLE pph_entries ADD COLUMN shortfall_solution TEXT").run().catch(() => {});
 }
 
+// "Ràng buộc thời gian" — giờ MỞ/ĐÓNG của từng khung trong 9 khung PPH_SLOTS, DÙNG CHUNG cho toàn
+// hệ thống (không phải riêng từng điểm quét). Hiện TẠI chỉ dùng để hiển thị đếm ngược ở trang quét
+// (/pph-scan) — CHƯA dùng để chặn nộp trễ/sớm (việc chặn vẫn theo đúng luật cũ ở pphResolveStatus()
+// + cờ PPH_DEMO_SKIP_TIME_GATE, không đổi gì ở đây). Bảng để TRỐNG là bình thường — GET trả về đủ
+// 9 khung bằng cách tự suy ra giờ mặc định (pphDefaultSlotWindow) cho khung nào chưa có dòng riêng.
+let __pphSlotWindowSchemaMigratedOnce = false;
+async function pphSlotWindowEnsureTable(env) {
+  if (__pphSlotWindowSchemaMigratedOnce) return;
+  __pphSlotWindowSchemaMigratedOnce = true;
+  await env.DB.prepare(`
+    CREATE TABLE IF NOT EXISTS pph_slot_windows (
+      slot TEXT PRIMARY KEY,
+      start_time TEXT NOT NULL,
+      end_time TEXT NOT NULL
+    )
+  `).run().catch(() => {});
+}
+
+// Giờ mặc định ban đầu (chưa admin chỉnh gì) — khung "08:00" (đầu ca) là NGOẠI LỆ: cửa sổ kết thúc
+// ĐÚNG lúc slot đó (chuẩn bị xong TRƯỚC khi ca chạy), lùi lại 30 phút làm giờ mở. Các khung số
+// lượng còn lại: mở đúng giờ của khung, đóng sau đúng 1 tiếng (khung kế tiếp có giờ riêng, không
+// nhất thiết nối liền — admin tự chỉnh lại ở trang "Ràng buộc thời gian" nếu cần khác đi, VD khung
+// 11:30 đụng giờ nghỉ trưa).
+function pphDefaultSlotWindow(slot) {
+  const mins = pphSlotMinutes(slot);
+  if (slot === "08:00") {
+    return { startTime: pphMinutesToLabel(mins - 30), endTime: slot };
+  }
+  return { startTime: slot, endTime: pphMinutesToLabel(mins + 60) };
+}
+
+function pphMinutesToLabel(mins) {
+  const wrapped = ((mins % 1440) + 1440) % 1440;
+  const h = Math.floor(wrapped / 60);
+  const m = wrapped % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+// Trả về đủ 9 khung {slot, startTime, endTime} — ưu tiên giá trị admin đã chỉnh (bảng
+// pph_slot_windows), khung nào chưa chỉnh thì dùng mặc định (pphDefaultSlotWindow).
+async function pphGetAllSlotWindows(env) {
+  await pphSlotWindowEnsureTable(env);
+  let rows = [];
+  try {
+    const r = await env.DB.prepare("SELECT slot, start_time, end_time FROM pph_slot_windows").all();
+    rows = r.results || [];
+  } catch {}
+  const bySlot = new Map(rows.map((r) => [r.slot, r]));
+  return PPH_SLOTS.map((slot) => {
+    const row = bySlot.get(slot);
+    const fallback = pphDefaultSlotWindow(slot);
+    return {
+      slot,
+      startTime: row ? row.start_time : fallback.startTime,
+      endTime: row ? row.end_time : fallback.endTime,
+    };
+  });
+}
+
 // Giờ Việt Nam (UTC+7, không lệch DST) — Worker chạy theo UTC, cộng thủ công 7 tiếng rồi ĐỌC BẰNG
 // các hàm getUTC* của kết quả (không phải getHours thật) để không phụ thuộc timezone của runtime.
 function pphNowVN() {
@@ -1153,6 +1212,38 @@ async function handlePph(request, env, pathname, searchParams) {
       return mmtbJson({ success: true, slot, team: { name: found.node.name, lineName: found.line ? found.line.name : "" } });
     } catch (err) {
       return mmtbJson({ success: false, error: err.message || "Không lưu được dữ liệu" }, 500);
+    }
+  }
+
+  // ---- Ràng buộc thời gian: đọc (công khai, trang quét cần để hiện đếm ngược) ----
+  if (sub === "/slot-windows" && request.method === "GET") {
+    const windows = await pphGetAllSlotWindows(env);
+    return mmtbJson({ success: true, windows });
+  }
+
+  // ---- Ràng buộc thời gian: admin chỉnh giờ mở/đóng từng khung (trang Cài Đặt) ----
+  if (sub === "/slot-windows" && request.method === "PUT") {
+    try {
+      const body = await request.json();
+      const list = Array.isArray(body.windows) ? body.windows : [];
+      if (list.length === 0) return mmtbJson({ success: false, error: "Thiếu dữ liệu khung giờ" }, 400);
+      const timeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
+      for (const w of list) {
+        if (!PPH_SLOTS.includes(w.slot)) return mmtbJson({ success: false, error: `Khung không hợp lệ: ${w.slot}` }, 400);
+        if (!timeRe.test(w.startTime) || !timeRe.test(w.endTime)) {
+          return mmtbJson({ success: false, error: `Giờ không hợp lệ ở khung ${w.slot} — định dạng phải là HH:MM` }, 400);
+        }
+      }
+      await pphSlotWindowEnsureTable(env);
+      for (const w of list) {
+        await env.DB.prepare(
+          "INSERT INTO pph_slot_windows (slot, start_time, end_time) VALUES (?, ?, ?) ON CONFLICT(slot) DO UPDATE SET start_time = excluded.start_time, end_time = excluded.end_time"
+        ).bind(w.slot, w.startTime, w.endTime).run();
+      }
+      const windows = await pphGetAllSlotWindows(env);
+      return mmtbJson({ success: true, windows });
+    } catch (err) {
+      return mmtbJson({ success: false, error: err.message || "Không lưu được" }, 500);
     }
   }
 

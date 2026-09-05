@@ -16,7 +16,9 @@ import {
   IconX,
   IconFolderDown,
   IconLoader2,
+  IconClock,
 } from '@tabler/icons-react';
+import PphSlotWindowsView from './PphSlotWindowsView';
 
 type PphTeam = { id: string; name: string };
 type PphLine = { id: string; name: string; teams: PphTeam[] };
@@ -32,6 +34,9 @@ const TYPE_LABEL: Record<OrgType, string> = { FACTORY: 'Nhà máy', AREA: 'Phân
 // có Tổ bên dưới), hoặc Tổ (VD "May" — gắn thẳng dưới Xưởng, bỏ qua Chuyền) — bất kỳ mục nào KHÔNG
 // còn mục con thì tự động là điểm quét, hiện nút QR ngay tại đó.
 export default function PphSettingsView({ onClose }: { onClose: () => void }) {
+  // Màn hình con "Ràng buộc thời gian" (giờ mở/đóng từng khung) — tách hẳn khỏi cây Nhà máy/Tổ,
+  // bấm nút ở header để chuyển qua, có nút Quay lại riêng để về lại màn hình này.
+  const [showTimeWindows, setShowTimeWindows] = useState(false);
   const [factories, setFactories] = useState<PphFactory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -275,6 +280,10 @@ export default function PphSettingsView({ onClose }: { onClose: () => void }) {
     </div>
   );
 
+  if (showTimeWindows) {
+    return <PphSlotWindowsView onBack={() => setShowTimeWindows(false)} />;
+  }
+
   return (
     <div className="space-y-5 my-auto">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -294,13 +303,23 @@ export default function PphSettingsView({ onClose }: { onClose: () => void }) {
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={load}
-          className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50"
-        >
-          <IconRefresh size={16} /> Làm mới
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowTimeWindows(true)}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50"
+            title="Cấu hình giờ mở/đóng từng khung giờ nhập số lượng"
+          >
+            <IconClock size={16} /> Ràng buộc thời gian
+          </button>
+          <button
+            type="button"
+            onClick={load}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50"
+          >
+            <IconRefresh size={16} /> Làm mới
+          </button>
+        </div>
       </div>
 
       {error && (

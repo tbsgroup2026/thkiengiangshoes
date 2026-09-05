@@ -82,6 +82,8 @@ export default function PphScanClient() {
   const [success, setSuccess] = useState<{ slot: string } | null>(null);
   const [showSlotPanel, setShowSlotPanel] = useState(false);
   const [countdownLabel, setCountdownLabel] = useState<string | null>(null);
+  const [countdownPhase, setCountdownPhase] = useState<'before-open' | 'open' | null>(null);
+  const [slotWindows, setSlotWindows] = useState<Record<string, { startTime: string; endTime: string }> | null>(null);
   const [loadingTooLong, setLoadingTooLong] = useState(false);
 
   // Trang này CÔNG KHAI, quét bởi rất nhiều điện thoại khác nhau, không cần chức năng offline/PWA
@@ -146,6 +148,22 @@ export default function PphScanClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamId]);
 
+  // Giờ mở/đóng từng khung ("Ràng buộc thời gian", cấu hình chung ở trang Cài Đặt) — tải 1 LẦN,
+  // dùng để tính đồng hồ đếm ngược bên dưới. CHỈ để hiển thị — CHƯA dùng để chặn nộp sớm/trễ (việc
+  // chặn vẫn theo đúng luật cũ, không đổi gì ở đây).
+  useEffect(() => {
+    fetch('/api/pph/slot-windows')
+      .then((r) => r.json())
+      .then((res) => {
+        if (res.success && Array.isArray(res.windows)) {
+          const map: Record<string, { startTime: string; endTime: string }> = {};
+          for (const w of res.windows) map[w.slot] = { startTime: w.startTime, endTime: w.endTime };
+          setSlotWindows(map);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // Sau khi ghi nhận thành công, tự chuyển sang khung giờ TIẾP THEO mà KHÔNG cần quét lại mã QR —
   // tải lại thông tin sau ~1.8s (đủ để đọc dòng "Đã ghi nhận!"), rồi hiện thẳng form của khung kế
   // tiếp (hoặc trạng thái phù hợp: chờ/đã xong). An toàn không lặp vô hạn vì đây là timer 1 lần,
@@ -171,37 +189,38 @@ export default function PphScanClient() {
     return () => clearTimeout(t);
   }, [loading]);
 
-  // Đồng hồ đếm ngược HIỂN THỊ — đếm từ giờ VN hiện tại TỚI ĐÚNG GIỜ của khung đang chờ (VD khung
-  // "08:30" thì đếm tới đúng 08:30, không phải tới lúc khung ĐÓNG như bản trước) — đúng theo yêu
-  // cầu người dùng. Chỉ hiện khi giờ đó CÒN Ở TƯƠNG LAI (form đang mở sớm nhờ trừ hao 10 phút); một
-  // khi đã tới/qua đúng giờ của khung thì ẩn hẳn số đếm (không còn gì để đếm nữa, cứ nhập bình
-  // thường) — KHÔNG gắn hành động tự tải lại vào đây (tách riêng ở effect bên dưới) để không lặp.
+  // Đồng hồ đếm ngược HIỂN THỊ — theo đúng "cửa sổ" (giờ mở → giờ đóng) của khung đang chờ, lấy từ
+  // slotWindows (xem "Ràng buộc thời gian" ở trang Cài Đặt). 2 giai đoạn: CHƯA tới giờ mở thì đếm
+  // "mở sau"; ĐANG trong khung mở thì đếm "đóng sau". Qua giờ đóng thì ẩn hẳn (không còn gì để
+  // đếm). CHỈ hiển thị — KHÔNG gắn hành động tự tải lại vào đây (tách riêng ở effect bên dưới, vẫn
+  // theo đúng luật cũ) để không lặp vô hạn như bug đã gặp trước đây.
   useEffect(() => {
-    if (!info?.targetSlot || info.nextAction !== 'quantity') {
+    const relevantSlot = info?.nextAction === 'setup' ? '08:00' : info?.nextAction === 'quantity' ? info.targetSlot : null;
+    const win = relevantSlot && slotWindows ? slotWindows[relevantSlot] : null;
+    if (!win) {
       setCountdownLabel(null);
+      setCountdownPhase(null);
       return;
     }
-    const slotOwnTimeMs = slotLabelToDeadlineVNMs(info.targetSlot, 0);
-    if (slotOwnTimeMs - vnNowMs() <= 0) {
-      setCountdownLabel(null); // Đã tới/qua giờ của khung — không đếm nữa
-      return;
-    }
+    const startMs = slotLabelToDeadlineVNMs(win.startTime, 0);
+    const endMs = slotLabelToDeadlineVNMs(win.endTime, 0);
     const tick = () => {
-      const diffMs = slotOwnTimeMs - vnNowMs();
-      if (diffMs <= 0) {
-        setCountdownLabel(null);
-        return;
+      const now = vnNowMs();
+      if (now < startMs) {
+        setCountdownPhase('before-open');
+        setCountdownLabel(formatDurationMs(startMs - now));
+      } else if (now < endMs) {
+        setCountdownPhase('open');
+        setCountdownLabel(formatDurationMs(endMs - now));
+      } else {
+        setCountdownPhase(null);
+        setCountdownLabel(null); // Đã qua giờ đóng — không còn gì để đếm nữa
       }
-      const totalSec = Math.floor(diffMs / 1000);
-      const h = Math.floor(totalSec / 3600);
-      const m = Math.floor((totalSec % 3600) / 60);
-      const s = totalSec % 60;
-      setCountdownLabel(h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`);
     };
     tick();
     const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
-  }, [info?.targetSlot, info?.nextAction]);
+  }, [info?.targetSlot, info?.nextAction, slotWindows]);
 
   // Tự tải lại NGẦM (không hiện số đếm nào) khi khung đang nhập THỰC SỰ hết hạn (= mốc bắt đầu của
   // khung kế tiếp, trừ hao 10 phút, khớp đúng luật pphResolveStatus() phía backend) — để tự chuyển
@@ -386,8 +405,13 @@ export default function PphScanClient() {
         <IconClock size={14} />
         <span className="flex-1">{isSetup ? 'Cập nhật đầu ca' : `Khung giờ ${info.targetSlot}`}</span>
         {countdownLabel && (
-          <span className="font-mono tabular-nums text-[11px] px-2 py-0.5 rounded-lg bg-white/70 border border-emerald-200">
-            còn {countdownLabel}
+          <span
+            className={`font-mono tabular-nums text-[11px] px-2 py-0.5 rounded-lg border ${
+              countdownPhase === 'before-open' ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-white/70 border-emerald-200'
+            }`}
+          >
+            {countdownPhase === 'before-open' ? 'mở sau ' : 'đóng sau '}
+            {countdownLabel}
           </span>
         )}
       </div>
@@ -584,6 +608,14 @@ function slotLabelToDeadlineVNMs(slotLabel: string, bufferMinutes: number): numb
 
 function pad(n: number): string {
   return String(n).padStart(2, '0');
+}
+
+function formatDurationMs(ms: number): string {
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  return h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
 }
 
 function ScanShell({
