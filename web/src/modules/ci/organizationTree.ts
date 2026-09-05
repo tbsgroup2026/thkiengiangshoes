@@ -45,9 +45,9 @@ export function isKienGiangFactory(factory: string): boolean {
 export const INITIAL_ORG_TREE: OrgNodeMap = {
   // Kiên Giang 1/2/3 — danh sách Xưởng thật theo yêu cầu (không có Line/Chuyền/Tổ con, dropdown
   // "3. Line Sản Xuất" tự ẩn khi Xưởng là mảng phẳng như dưới đây — xem availableFormLines()).
-  "Kiên Giang 1": ["Đầu vào", "May", "Gò"],
-  "Kiên Giang 2": ["Đầu vào", "May", "Gò"],
-  "Kiên Giang 3": ["Đầu vào", "Phụ trợ in ép", "May", "Gò"],
+  "Kiên Giang 1": ["Đầu vào", "May", "Gò", "Văn Phòng Điều Hành"],
+  "Kiên Giang 2": ["Đầu vào", "May", "Gò", "Văn Phòng Điều Hành"],
+  "Kiên Giang 3": ["Đầu vào", "Phụ trợ in ép", "May", "Gò", "Văn Phòng Điều Hành"],
 
   "Hoàn thiện đế": {
     "Xưởng Hoàn Thiện Đế": {
