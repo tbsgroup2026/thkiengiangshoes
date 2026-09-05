@@ -16,7 +16,7 @@ import {
 } from "@tabler/icons-react";
 import { convertNumberToWords } from "@/lib/numberToWords";
 import { KaizenProposal, CATEGORIES } from "./CIModule";
-import { normalizeCategoryId } from "./KaizenPublicSubmitForm";
+import { normalizeCategoryId, KaizenMediaLightbox, MediaItem } from "./kaizenMediaUtils";
 
 interface FeasibilityApprovalModalProps {
   isOpen: boolean;
@@ -35,6 +35,8 @@ interface FeasibilityApprovalModalProps {
     pair_quantity?: number;
     total_savings_vnd?: number;
     total_savings_words?: string;
+    cost_before?: number;
+    cost_after?: number;
     after_image_url?: string;
     approved_at?: string;
     proposer_month?: number;
@@ -80,6 +82,12 @@ export default function FeasibilityApprovalModal({
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [pairQtyError, setPairQtyError] = useState<string | null>(null);
+
+  const [lightboxState, setLightboxState] = useState<{ isOpen: boolean; items: MediaItem[]; index: number }>({
+    isOpen: false,
+    items: [],
+    index: 0,
+  });
 
   // ⚡ Determine Category Mode dynamically from selected Category
   const categoryMode = React.useMemo(() => {
@@ -520,15 +528,32 @@ export default function FeasibilityApprovalModal({
               </span>
               <div className="flex gap-2 flex-wrap">
                 {beforeMediaUrls.map((u, idx) => (
-                  <div key={u} className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 w-24 h-24 shadow-2xs">
+                  <div
+                    key={u}
+                    onClick={() =>
+                      setLightboxState({
+                        isOpen: true,
+                        items: beforeMediaUrls.map((m, i) => ({
+                          type: m.endsWith(".mp4") || m.endsWith(".mov") || m.startsWith("data:video") ? "video" : "image",
+                          url: m,
+                          title: `Ảnh/Video Trước #${i + 1}`,
+                        })),
+                        index: idx,
+                      })
+                    }
+                    className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 w-24 h-24 shadow-2xs cursor-pointer group"
+                  >
                     {u.endsWith(".mp4") || u.endsWith(".mov") || u.startsWith("data:video") ? (
                       <video src={u} className="w-full h-full object-cover" />
                     ) : (
-                      <img src={u} alt={`Trước Cải Tiến ${idx + 1}`} className="w-full h-full object-cover" />
+                      <img src={u} alt={`Trước Cải Tiến ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                     )}
                     <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-black/70 text-white text-[9px] font-mono font-bold backdrop-blur-xs">
                       🔒 Trước
                     </span>
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[9px] font-bold">
+                      🔍 Phóng to
+                    </div>
                   </div>
                 ))}
               </div>
@@ -564,12 +589,26 @@ export default function FeasibilityApprovalModal({
             {/* THUMBNAILS GRID PREVIEW (ĐƯỢC PHÉP XÓA ẢNH SAU CẢI TIẾN) */}
             {afterMediaList.length > 0 ? (
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5 pt-1">
-                {afterMediaList.map((item) => (
-                  <div key={item.id} className="relative group rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 aspect-square shadow-2xs">
+                {afterMediaList.map((item, idx) => (
+                  <div
+                    key={item.id}
+                    onClick={() =>
+                      setLightboxState({
+                        isOpen: true,
+                        items: afterMediaList.map((m) => ({
+                          type: m.type as "image" | "video",
+                          url: m.url,
+                          title: "Sau Cải Tiến",
+                        })),
+                        index: idx,
+                      })
+                    }
+                    className="relative group rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 aspect-square shadow-2xs cursor-pointer"
+                  >
                     {item.type === "video" ? (
                       <video src={item.url} className="w-full h-full object-cover" />
                     ) : (
-                      <img src={item.url} alt="Sau Cải Tiến" className="w-full h-full object-cover" />
+                      <img src={item.url} alt="Sau Cải Tiến" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                     )}
 
                     {/* Badge type */}
@@ -1107,6 +1146,14 @@ export default function FeasibilityApprovalModal({
           </button>
         </div>
       </div>
+
+      {/* MEDIA LIGHTBOX OVERLAY POPUP */}
+      <KaizenMediaLightbox
+        isOpen={lightboxState.isOpen}
+        onClose={() => setLightboxState((prev) => ({ ...prev, isOpen: false }))}
+        items={lightboxState.items}
+        currentIndex={lightboxState.index}
+      />
     </div>
   );
 }

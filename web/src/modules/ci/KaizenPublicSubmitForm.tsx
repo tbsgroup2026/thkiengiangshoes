@@ -21,6 +21,7 @@ import {
 } from "@tabler/icons-react";
 import { INITIAL_ORG_TREE } from "./organizationTree";
 import KaizenDuplicateCompareModal from "./KaizenDuplicateCompareModal";
+import { UniversalVideoPlayer } from "./kaizenMediaUtils";
 
 export const CATEGORIES = [
   { id: "MATERIAL_SAVING", label: "1.Tiết kiệm Vật tư", color: "bg-amber-600 text-white" },
@@ -404,38 +405,61 @@ export default function KaizenPublicSubmitForm({
     setTimeout(() => setToastMsg(null), 3500);
   };
 
-  // Upload file to Cloudinary
-  const uploadToCloudinary = async (fileOrDataUrl: File | string, fileType: "image" | "video"): Promise<string> => {
-    try {
-      const formData = new FormData();
-      const preset = CLOUDINARY_PRESETS[fileType];
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
-      if (typeof fileOrDataUrl === "string") {
-        const response = await fetch(fileOrDataUrl);
-        const blob = await response.blob();
-        formData.append("file", blob);
-      } else {
-        formData.append("file", fileOrDataUrl);
+  // Upload file to Cloudinary with real-time progress callback
+  const uploadToCloudinary = (
+    fileOrDataUrl: File | string,
+    fileType: "image" | "video",
+    onProgress?: (percent: number) => void
+  ): Promise<string> => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const formData = new FormData();
+        const preset = CLOUDINARY_PRESETS[fileType];
+
+        if (typeof fileOrDataUrl === "string") {
+          const response = await fetch(fileOrDataUrl);
+          const blob = await response.blob();
+          formData.append("file", blob);
+        } else {
+          formData.append("file", fileOrDataUrl);
+        }
+
+        formData.append("upload_preset", preset);
+
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${fileType}/upload`);
+
+        if (xhr.upload && onProgress) {
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+              const percent = Math.round((e.loaded / e.total) * 100);
+              onProgress(percent);
+            }
+          };
+        }
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            const data = JSON.parse(xhr.responseText);
+            resolve(data.secure_url);
+          } else {
+            try {
+              const error = JSON.parse(xhr.responseText);
+              reject(new Error(error.error?.message || `Failed to upload ${fileType}`));
+            } catch (e) {
+              reject(new Error(`Upload failed with status ${xhr.status}`));
+            }
+          }
+        };
+
+        xhr.onerror = () => reject(new Error("Network error during upload"));
+        xhr.send(formData);
+      } catch (err) {
+        reject(err);
       }
-
-      formData.append("upload_preset", preset);
-
-      const res = await fetch(
-        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${fileType}/upload`,
-        { method: "POST", body: formData }
-      );
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error?.message || `Failed to upload ${fileType}`);
-      }
-
-      const data = await res.json();
-      return data.secure_url;
-    } catch (err) {
-      console.error(`Cloudinary ${fileType} upload error:`, err);
-      throw err;
-    }
+    });
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: "beforeImageUrl" | "afterImageUrl") => {
@@ -489,8 +513,13 @@ export default function KaizenPublicSubmitForm({
 
     try {
       setUploading(true);
+      setUploadProgress(0);
       showToast("🎬 Đang tải video lên Cloudinary...");
-      const videoUrl = await uploadToCloudinary(file, "video");
+
+      const videoUrl = await uploadToCloudinary(file, "video", (percent) => {
+        setUploadProgress(percent);
+      });
+
       setForm((prev) => ({
         ...prev,
         [fieldName]: videoUrl,
@@ -500,6 +529,7 @@ export default function KaizenPublicSubmitForm({
       showToast(`❌ Lỗi tải video: ${err.message}`);
     } finally {
       setUploading(false);
+      setUploadProgress(null);
     }
   };
 
@@ -542,7 +572,16 @@ export default function KaizenPublicSubmitForm({
       const method = isEdit ? "PUT" : "POST";
       const idempotencyKey = `kz_pub_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
-      const payload = {
+      const finalBeforeVideo = (form.beforeVideoUrl || form.beforeVideoLink || "").trim();
+      const finalAfterVideo = (form.afterVideoUrl || form.afterVideoLink || "").trim();
+
+      const attachmentsList: any[] = [];
+      if (finalBeforeImg) attachmentsList.push({ type: "image", url: finalBeforeImg, tag: "BEFORE" });
+      if (finalAfterImg) attachmentsList.push({ type: "image", url: finalAfterImg, tag: "AFTER" });
+      if (finalBeforeVideo) attachmentsList.push({ type: "video_before", url: finalBeforeVideo, title: "Video TRƯỚC Cải Tiến" });
+      if (finalAfterVideo) attachmentsList.push({ type: "video_after", url: finalAfterVideo, title: "Video SAU Cải Tiến" });
+
+      const payload: any = {
         ...form,
         id: isEdit ? proposalId : undefined,
         action: isEdit ? "UPDATE" : undefined,
@@ -554,15 +593,26 @@ export default function KaizenPublicSubmitForm({
         proposerMonth: currentMonth,
         proposerYear: currentYear,
         beforeImageUrl: finalBeforeImg,
-        afterImageUrl: finalAfterImg,
-        beforeVideoUrl: form.beforeVideoUrl || "",
-        afterVideoUrl: form.afterVideoUrl || "",
+        beforeVideoUrl: finalBeforeVideo,
+        afterVideoUrl: finalAfterVideo,
+        attachmentsJson: attachmentsList.length > 0 ? JSON.stringify(attachmentsList) : null,
         efficiencyValueVND: 0,
-        registrationType: "THI_DUA",
-        sub_status: "CHO_DUYET",
-        trang_thai: "CHO_DUYET",
         isPublicScan: true,
       };
+
+      if (!isEdit) {
+        payload.registrationType = "THI_DUA";
+        payload.sub_status = "CHO_DUYET";
+        payload.trang_thai = "CHO_DUYET";
+      } else {
+        delete payload.sub_status;
+        delete payload.trang_thai;
+        delete payload.registrationType;
+        delete payload.registration_type;
+        delete payload.approval_status;
+        delete payload.status;
+        delete payload.evaluation_result;
+      }
 
       // ── Stage 1: Duplicate check before creating new record ──────────
       if (!isEdit) {
@@ -1142,9 +1192,25 @@ export default function KaizenPublicSubmitForm({
                   )}
                 </div>
 
-                {form.beforeVideoUrl ? (
+                {uploadProgress !== null ? (
+                  <div className="p-3 bg-white rounded-xl border border-indigo-200 space-y-2">
+                    <div className="flex items-center justify-between text-xs font-bold text-indigo-900">
+                      <span className="flex items-center gap-1.5">
+                        <IconLoader2 className="animate-spin text-indigo-600" size={16} />
+                        <span>Đang tải video lên Cloudinary...</span>
+                      </span>
+                      <span className="font-mono text-indigo-700">{uploadProgress}%</span>
+                    </div>
+                    <div className="w-full bg-indigo-100 rounded-full h-2 overflow-hidden">
+                      <div
+                        className="bg-indigo-600 h-2 rounded-full transition-all duration-200"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                ) : form.beforeVideoUrl ? (
                   <div className="space-y-1">
-                    <video src={form.beforeVideoUrl} controls className="w-full h-32 object-cover rounded-xl border bg-black" />
+                    <UniversalVideoPlayer url={form.beforeVideoUrl} title="Video TRƯỚC Cải Tiến" />
                   </div>
                 ) : (
                   <label className="flex flex-col items-center justify-center p-3 h-32 bg-white rounded-xl border border-slate-200 cursor-pointer text-center hover:bg-indigo-50/50 transition-colors">
@@ -1169,6 +1235,12 @@ export default function KaizenPublicSubmitForm({
                     placeholder="https://drive.google.com/file/d/..."
                     className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-[11px] font-medium outline-none focus:border-[#006838]"
                   />
+                  {form.beforeVideoLink && !form.beforeVideoUrl && (
+                    <div className="pt-2">
+                      <span className="text-[10px] font-bold text-indigo-700 block mb-1">🎬 Preview Video từ Link:</span>
+                      <UniversalVideoPlayer url={form.beforeVideoLink} title="Video TRƯỚC Cải Tiến (Link)" />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

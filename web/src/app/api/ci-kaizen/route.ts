@@ -29,7 +29,7 @@ export async function GET(request: Request) {
         },
         {
           headers: {
-            'Cache-Control': 'public, max-age=15, stale-while-revalidate=60',
+            'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
           },
         }
       );
@@ -77,7 +77,10 @@ export async function POST(request: Request) {
       savedSeconds = 0,
       beforeImageUrl = '',
       afterImageUrl = '',
+      beforeVideoUrl = '',
+      afterVideoUrl = '',
       attachments = [],
+      attachmentsJson: rawAttachmentsJson,
       status = 'SUBMITTED',
     } = body;
 
@@ -89,12 +92,28 @@ export async function POST(request: Request) {
     const id = existingId || `kz_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
     const code = existingCode || `KZ-2026-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    const attachmentsJson = Array.isArray(attachments) && attachments.length > 0
-      ? JSON.stringify(attachments)
-      : JSON.stringify([
-          ...(beforeImageUrl ? [{ url: beforeImageUrl, tag: 'BEFORE', type: 'image' }] : []),
-          ...(afterImageUrl ? [{ url: afterImageUrl, tag: 'AFTER', type: 'image' }] : []),
-        ]);
+    const finalBeforeVid = (beforeVideoUrl || body.before_video_url || body.beforeVideoLink || '').trim();
+    const finalAfterVid = (afterVideoUrl || body.after_video_url || body.afterVideoLink || '').trim();
+
+    let attachmentsJson = typeof rawAttachmentsJson === 'string' && rawAttachmentsJson.trim()
+      ? rawAttachmentsJson.trim()
+      : (body as any).attachments_json || null;
+
+    if (!attachmentsJson) {
+      const attsList: any[] = [];
+      if (beforeImageUrl) attsList.push({ type: 'image', url: beforeImageUrl, tag: 'BEFORE' });
+      if (afterImageUrl) attsList.push({ type: 'image', url: afterImageUrl, tag: 'AFTER' });
+      if (finalBeforeVid) attsList.push({ type: 'video_before', url: finalBeforeVid, title: 'Video TRƯỚC Cải Tiến' });
+      if (finalAfterVid) attsList.push({ type: 'video_after', url: finalAfterVid, title: 'Video SAU Cải Tiến' });
+
+      if (Array.isArray(attachments) && attachments.length > 0) {
+        attsList.push(...attachments);
+      }
+
+      if (attsList.length > 0) {
+        attachmentsJson = JSON.stringify(attsList);
+      }
+    }
 
     if (db) {
       if (existingId) {
@@ -112,6 +131,8 @@ export async function POST(request: Request) {
               after_solution = ?,
               before_image_url = ?,
               after_image_url = ?,
+              before_video_url = ?,
+              after_video_url = ?,
               attachments_json = ?,
               trang_thai = 'CHO_DUYET',
               sub_status = 'CHO_DUYET',
@@ -133,6 +154,8 @@ export async function POST(request: Request) {
             afterSolution,
             beforeImageUrl,
             afterImageUrl,
+            finalBeforeVid,
+            finalAfterVid,
             attachmentsJson,
             existingId
           )
@@ -162,13 +185,13 @@ export async function POST(request: Request) {
             id, code, title, category, category_label, registration_type,
             region, department, factory, line, proposer_name, proposer_emp_code,
             before_description, after_solution, saved_seconds, so_giay_tiet_kiem,
-            before_image_url, after_image_url, attachments_json, status, sub_status,
-            trang_thai, review_status, created_at, updated_at
+            before_image_url, after_image_url, before_video_url, after_video_url,
+            attachments_json, status, sub_status, trang_thai, review_status, created_at, updated_at
           ) VALUES (
             ?, ?, ?, ?, ?, ?,
             ?, ?, ?, ?, ?, ?,
             ?, ?, ?, ?,
-            ?, ?, ?, ?, 'CHO_DUYET',
+            ?, ?, ?, ?, ?, ?, 'CHO_DUYET',
             'CHO_DUYET', 'CHO_DUYET', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
           )
         `;
@@ -194,6 +217,8 @@ export async function POST(request: Request) {
             savedSeconds || 0,
             beforeImageUrl,
             afterImageUrl,
+            finalBeforeVid,
+            finalAfterVid,
             attachmentsJson,
             'SUBMITTED'
           )
@@ -216,15 +241,44 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, title, category, categoryLabel, beforeDescription, afterSolution, savedSeconds } = body;
+    const id = body.id;
 
     if (!id) {
       return NextResponse.json({ error: 'Mã đề xuất không hợp lệ' }, { status: 400 });
     }
 
+    const title = body.title;
+    const category = body.category;
+    const categoryLabel = body.categoryLabel || body.category_label;
+    const beforeDescription = body.beforeDescription !== undefined ? body.beforeDescription : body.before_description;
+    const afterSolution = body.afterSolution !== undefined ? body.afterSolution : body.after_solution;
+    const savedSeconds = body.savedSeconds !== undefined ? body.savedSeconds : body.saved_seconds;
+    const beforeImageUrl = body.beforeImageUrl !== undefined ? body.beforeImageUrl : body.before_image_url;
+    const afterImageUrl = body.afterImageUrl !== undefined ? body.afterImageUrl : body.after_image_url;
+    const beforeVideoUrl = body.beforeVideoUrl !== undefined ? body.beforeVideoUrl : body.before_video_url;
+    const afterVideoUrl = body.afterVideoUrl !== undefined ? body.afterVideoUrl : body.after_video_url;
+    const attachmentsJson = body.attachmentsJson !== undefined ? body.attachmentsJson : (typeof body.videos === 'object' ? JSON.stringify(body.videos) : body.attachments_json);
+    const productCode = body.productCode !== undefined ? body.productCode : body.product_code;
+    const quantity = body.quantity;
+    const pairQuantity = body.pairQuantity !== undefined ? body.pairQuantity : body.pair_quantity;
+    const totalSavingsVnd = body.totalSavingsVnd !== undefined ? body.totalSavingsVnd : body.total_savings_vnd;
+    const totalSavingsWords = body.totalSavingsWords !== undefined ? body.totalSavingsWords : body.total_savings_words;
+    const pricingDirection = body.pricingDirection !== undefined ? body.pricingDirection : body.pricing_direction;
+    const timeBeforeSeconds = body.timeBeforeSeconds !== undefined ? body.timeBeforeSeconds : body.time_before_seconds;
+    const timeAfterSeconds = body.timeAfterSeconds !== undefined ? body.timeAfterSeconds : body.time_after_seconds;
+    const efficiencyValueVND = body.efficiencyValueVND !== undefined ? body.efficiencyValueVND : body.efficiency_value_vnd;
+    const customer = body.customer;
+    const productGroup = body.productGroup !== undefined ? body.productGroup : body.product_group;
+    const proposerPosition = body.proposerPosition !== undefined ? body.proposerPosition : body.proposer_position;
+
+    const costBefore = body.costBefore !== undefined ? body.costBefore : (body.cost_before !== undefined ? body.cost_before : body.chi_phi_truoc);
+    const costAfter = body.costAfter !== undefined ? body.costAfter : (body.cost_after !== undefined ? body.cost_after : body.chi_phi_sau);
+
     const db = getDbBinding();
 
     if (db) {
+      await ensureKaizenSchema(db);
+
       const query = `
         UPDATE ci_kaizen_proposals
         SET title = COALESCE(?, title),
@@ -233,11 +287,69 @@ export async function PUT(request: Request) {
             before_description = COALESCE(?, before_description),
             after_solution = COALESCE(?, after_solution),
             saved_seconds = COALESCE(?, saved_seconds),
+            so_giay_tiet_kiem = COALESCE(?, so_giay_tiet_kiem),
+            before_image_url = COALESCE(?, before_image_url),
+            after_image_url = COALESCE(?, after_image_url),
+            before_video_url = COALESCE(?, before_video_url),
+            after_video_url = COALESCE(?, after_video_url),
+            attachments_json = COALESCE(?, attachments_json),
+            product_code = COALESCE(?, product_code),
+            quantity = COALESCE(?, quantity),
+            pair_quantity = COALESCE(?, pair_quantity),
+            total_savings_vnd = COALESCE(?, total_savings_vnd),
+            tong_tien_tiet_kiem = COALESCE(?, tong_tien_tiet_kiem),
+            total_savings_words = COALESCE(?, total_savings_words),
+            pricing_direction = COALESCE(?, pricing_direction),
+            time_before_seconds = COALESCE(?, time_before_seconds),
+            time_after_seconds = COALESCE(?, time_after_seconds),
+            efficiency_value_vnd = COALESCE(?, efficiency_value_vnd),
+            customer = COALESCE(?, customer),
+            product_group = COALESCE(?, product_group),
+            proposer_position = COALESCE(?, proposer_position),
+            cost_before = COALESCE(?, cost_before),
+            chi_phi_truoc = COALESCE(?, chi_phi_truoc),
+            cost_after = COALESCE(?, cost_after),
+            chi_phi_sau = COALESCE(?, chi_phi_sau),
             updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
+        WHERE id = ? OR code = ?
       `;
 
-      await db.prepare(query).bind(title, category, categoryLabel, beforeDescription, afterSolution, savedSeconds, id).run();
+      await db
+        .prepare(query)
+        .bind(
+          title ?? null,
+          category ?? null,
+          categoryLabel ?? null,
+          beforeDescription ?? null,
+          afterSolution ?? null,
+          savedSeconds ?? null,
+          savedSeconds ?? null,
+          beforeImageUrl ?? null,
+          afterImageUrl ?? null,
+          beforeVideoUrl ?? null,
+          afterVideoUrl ?? null,
+          attachmentsJson ?? null,
+          productCode ?? null,
+          quantity ?? null,
+          pairQuantity ?? quantity ?? null,
+          totalSavingsVnd ?? null,
+          totalSavingsVnd ?? null,
+          totalSavingsWords ?? null,
+          pricingDirection ?? null,
+          timeBeforeSeconds ?? null,
+          timeAfterSeconds ?? null,
+          efficiencyValueVND ?? null,
+          customer ?? null,
+          productGroup ?? null,
+          proposerPosition ?? null,
+          costBefore ?? null,
+          costBefore ?? null,
+          costAfter ?? null,
+          costAfter ?? null,
+          id,
+          id
+        )
+        .run();
     }
 
     return NextResponse.json({

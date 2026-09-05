@@ -31,8 +31,14 @@ import { convertNumberToWords } from "@/lib/numberToWords";
 import { KaizenProposal, isApprovedProposal, isRejectedProposal } from "./CIModule";
 import { usePermission } from "@/hooks/usePermission";
 import FeasibilityApprovalModal from "./FeasibilityApprovalModal";
-import { splitImageUrls } from "./kaizenImageUtils";
-import { normalizeCategoryId } from "./KaizenPublicSubmitForm";
+import {
+  splitImageUrls,
+  normalizeCategoryId,
+  extractProposalVideos,
+  UniversalVideoPlayer,
+  KaizenMediaLightbox,
+  MediaItem,
+} from "./kaizenMediaUtils";
 
 interface KaizenDetailModalProps {
   proposal: KaizenProposal;
@@ -63,6 +69,26 @@ function getFirstImageUrl(urlStr?: string | null): string {
   return first;
 }
 
+const CLOUDINARY_CLOUD_NAME = "dwl2xtbqa";
+const CLOUDINARY_PRESET = "vpchuoisk";
+
+async function uploadFileToCloudinary(file: File, fileType: "image" | "video"): Promise<string> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", CLOUDINARY_PRESET);
+
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${fileType}/upload`, {
+    method: "POST",
+    body: formData,
+  });
+
+  const json = await res.json();
+  if (!res.ok || json.error) {
+    throw new Error(json.error?.message || `Lỗi khi tải ${fileType} lên Cloudinary!`);
+  }
+  return json.secure_url || json.url;
+}
+
 export default function KaizenDetailModal({
   proposal,
   isOpen,
@@ -75,11 +101,320 @@ export default function KaizenDetailModal({
   const { user, isExecutiveOrAdmin, levelRank } = usePermission();
   const [activeTab, setActiveTab] = useState<"info" | "expert_review" | "star_review">("info");
 
-  // 1 đề xuất có thể có NHIỀU ảnh trước/sau — lưu gộp thành 1 chuỗi phân cách dấu phẩy trong
-  // before_image_url/after_image_url (xem kaizenImageUtils.ts). Tách ra để hiện ĐỦ dải thumbnail,
-  // thay vì chỉ 1 ảnh "Trước" + 1 ảnh "Sau" như trước đây (khiến ảnh 2, 3, 4... không hiện ra).
-  const beforeImageUrls = useMemo(() => splitImageUrls(proposal?.before_image_url), [proposal?.before_image_url]);
-  const afterImageUrls = useMemo(() => splitImageUrls(proposal?.after_image_url), [proposal?.after_image_url]);
+  // ═══════════════════════════════════════════════════════════════════════════
+  // INLINE EDITING STATE & FUNCTIONS
+  // ═══════════════════════════════════════════════════════════════════════════
+  const [isEditing, setIsEditing] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  const [editTitle, setEditTitle] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editProposerPosition, setEditProposerPosition] = useState("");
+  const [editProductGroup, setEditProductGroup] = useState("");
+  const [editCustomer, setEditCustomer] = useState("");
+
+  const [editProductCode, setEditProductCode] = useState("");
+  const [editQuantity, setEditQuantity] = useState<number | string>("");
+  const [editPricingDirection, setEditPricingDirection] = useState("THOI_GIAN");
+
+  const [editBeforeDescription, setEditBeforeDescription] = useState("");
+  const [editAfterSolution, setEditAfterSolution] = useState("");
+
+  const [editTimeBeforeSeconds, setEditTimeBeforeSeconds] = useState<number | string>("");
+  const [editTimeAfterSeconds, setEditTimeAfterSeconds] = useState<number | string>("");
+  const [editEfficiencyValueVnd, setEditEfficiencyValueVnd] = useState<number | string>("");
+  const [editPairQuantity, setEditPairQuantity] = useState<number | string>("");
+  const [editTotalSavingsVnd, setEditTotalSavingsVnd] = useState<number | string>("");
+
+  const [editCostBefore, setEditCostBefore] = useState<number | string>("");
+  const [editCostAfter, setEditCostAfter] = useState<number | string>("");
+
+  const [editBeforeImages, setEditBeforeImages] = useState<string[]>([]);
+  const [editAfterImages, setEditAfterImages] = useState<string[]>([]);
+  const [editVideos, setEditVideos] = useState<Array<{ title: string; url: string }>>([]);
+
+  const [uploadingBefore, setUploadingBefore] = useState(false);
+  const [uploadingAfter, setUploadingAfter] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+
+  const startEditing = () => {
+    if (!proposal) return;
+    setEditTitle(proposal.title || "");
+    setEditCategory(normalizeCategoryId(proposal.category || proposal.category_label));
+    setEditProposerPosition((proposal as any).proposer_position || proposal.department || "");
+    setEditProductGroup((proposal as any).product_group || proposal.factory || "");
+    setEditCustomer(proposal.customer || "");
+
+    setEditProductCode((proposal as any).product_code || proposal.code || "");
+    setEditQuantity((proposal as any).quantity || proposal.vote_count || 0);
+    setEditPricingDirection((proposal as any).pricing_direction || "THOI_GIAN");
+
+    setEditBeforeDescription(proposal.before_description || "");
+    setEditAfterSolution(proposal.after_solution || "");
+
+    const tBefore = Number(proposal.time_before_seconds || (proposal as any).timeBeforeSeconds || 0);
+    const tAfter = Number(proposal.time_after_seconds || (proposal as any).timeAfterSeconds || 0);
+    const tSaved = Math.max(0, tBefore - tAfter);
+    const pQty = Number(
+      proposal.pair_quantity || (proposal as any).pairQuantity || (proposal as any).so_luong_giay || (proposal as any).quantity || 0
+    );
+
+    const effVnd = Number(
+      proposal.efficiency_value_vnd || (proposal as any).efficiencyValueVND || (tSaved > 0 ? Math.round(tSaved * 12.5) : 0)
+    );
+    const totSavings = Number(
+      proposal.total_savings_vnd ||
+      (proposal as any).totalSavingsVND ||
+      (proposal as any).tong_tien_tiet_kiem ||
+      (pQty > 0 ? effVnd * pQty : effVnd)
+    );
+
+    setEditTimeBeforeSeconds(tBefore > 0 ? tBefore : "");
+    setEditTimeAfterSeconds(tAfter > 0 ? tAfter : "");
+    setEditEfficiencyValueVnd(effVnd > 0 ? effVnd : "");
+    setEditPairQuantity(pQty > 0 ? pQty : "");
+    setEditTotalSavingsVnd(totSavings > 0 ? totSavings : "");
+
+    setEditCostBefore((proposal as any).cost_before ?? (proposal as any).costBefore ?? (proposal as any).chi_phi_truoc ?? "");
+    setEditCostAfter((proposal as any).cost_after ?? (proposal as any).costAfter ?? (proposal as any).chi_phi_sau ?? "");
+
+    setEditBeforeImages(splitImageUrls(proposal.before_image_url));
+    setEditAfterImages(splitImageUrls(proposal.after_image_url));
+    setEditVideos(extractProposalVideos(proposal));
+
+    setEditError(null);
+    setIsEditing(true);
+  };
+
+  const handleUploadBeforeImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploadingBefore(true);
+    setEditError(null);
+    try {
+      const newUrls: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const url = await uploadFileToCloudinary(files[i], "image");
+        newUrls.push(url);
+      }
+      setEditBeforeImages((prev) => [...prev, ...newUrls]);
+    } catch (err: any) {
+      setEditError(err.message || "Lỗi khi tải ảnh Trước lên Cloudinary");
+    } finally {
+      setUploadingBefore(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleUploadAfterImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploadingAfter(true);
+    setEditError(null);
+    try {
+      const newUrls: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const url = await uploadFileToCloudinary(files[i], "image");
+        newUrls.push(url);
+      }
+      setEditAfterImages((prev) => [...prev, ...newUrls]);
+    } catch (err: any) {
+      setEditError(err.message || "Lỗi khi tải ảnh Sau lên Cloudinary");
+    } finally {
+      setUploadingAfter(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleUploadVideo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploadingVideo(true);
+    setEditError(null);
+    try {
+      const file = files[0];
+      const url = await uploadFileToCloudinary(file, "video");
+      setEditVideos((prev) => [...prev, { title: file.name, url }]);
+    } catch (err: any) {
+      setEditError(err.message || "Lỗi khi tải video lên Cloudinary");
+    } finally {
+      setUploadingVideo(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleRemoveBeforeImage = (idx: number) => {
+    setEditBeforeImages((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleRemoveAfterImage = (idx: number) => {
+    setEditAfterImages((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleRemoveVideo = (idx: number) => {
+    setEditVideos((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleSaveInlineEdit = async () => {
+    if (!editTitle.trim()) {
+      setEditError("Vui lòng nhập tiêu đề sáng kiến!");
+      return;
+    }
+
+    setSavingEdit(true);
+    setEditError(null);
+
+    try {
+      const timeBeforeNum = Number(editTimeBeforeSeconds) || 0;
+      const timeAfterNum = Number(editTimeAfterSeconds) || 0;
+      const savedSecsNum = Math.max(0, timeBeforeNum - timeAfterNum);
+      const efficiencyVndNum =
+        Number(editEfficiencyValueVnd) || (savedSecsNum > 0 ? Math.round(savedSecsNum * 12.5) : 0);
+      const pairQtyNum = Number(editPairQuantity) || Number(editQuantity) || 0;
+      const totalSavingsNum =
+        Number(editTotalSavingsVnd) || (pairQtyNum > 0 ? efficiencyVndNum * pairQtyNum : efficiencyVndNum);
+
+      const payload = {
+        id: proposal.id,
+        action: "UPDATE",
+        title: editTitle.trim(),
+        category: editCategory,
+        categoryLabel: CATEGORIES.find((c) => c.id === editCategory)?.label || editCategory,
+        category_label: CATEGORIES.find((c) => c.id === editCategory)?.label || editCategory,
+        proposer_position: editProposerPosition.trim(),
+        proposerPosition: editProposerPosition.trim(),
+        product_group: editProductGroup.trim(),
+        productGroup: editProductGroup.trim(),
+        customer: editCustomer.trim(),
+        product_code: editProductCode.trim(),
+        productCode: editProductCode.trim(),
+        quantity: Number(editQuantity) || 0,
+        pricing_direction: editPricingDirection,
+        pricingDirection: editPricingDirection,
+        before_description: editBeforeDescription.trim(),
+        beforeDescription: editBeforeDescription.trim(),
+        after_solution: editAfterSolution.trim(),
+        afterSolution: editAfterSolution.trim(),
+        time_before_seconds: timeBeforeNum,
+        timeBeforeSeconds: timeBeforeNum,
+        time_after_seconds: timeAfterNum,
+        timeAfterSeconds: timeAfterNum,
+        saved_seconds: savedSecsNum,
+        savedSeconds: savedSecsNum,
+        efficiency_value_vnd: efficiencyVndNum,
+        efficiencyValueVND: efficiencyVndNum,
+        pair_quantity: pairQtyNum,
+        pairQuantity: pairQtyNum,
+        total_savings_vnd: totalSavingsNum,
+        totalSavingsVnd: totalSavingsNum,
+        total_savings_words: totalSavingsNum > 0 ? convertNumberToWords(totalSavingsNum) : "",
+        totalSavingsWords: totalSavingsNum > 0 ? convertNumberToWords(totalSavingsNum) : "",
+        cost_before: Number(editCostBefore) || 0,
+        costBefore: Number(editCostBefore) || 0,
+        chi_phi_truoc: Number(editCostBefore) || 0,
+        cost_after: Number(editCostAfter) || 0,
+        costAfter: Number(editCostAfter) || 0,
+        chi_phi_sau: Number(editCostAfter) || 0,
+        before_image_url: editBeforeImages.join(","),
+        beforeImageUrl: editBeforeImages.join(","),
+        after_image_url: editAfterImages.join(","),
+        afterImageUrl: editAfterImages.join(","),
+        videos: editVideos,
+      };
+
+      const token = typeof document !== "undefined"
+        ? document.cookie.split("; ").find((row) => row.startsWith("tbs_token="))?.split("=")[1]
+        : null;
+
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const res = await fetch("/api/ci-kaizen", {
+        method: "PUT",
+        headers,
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json();
+      if (!json.success) {
+        setEditError(json.message || "Không thể cập nhật đề xuất!");
+        setSavingEdit(false);
+        return;
+      }
+
+      // Mutate local proposal object in place
+      Object.assign(proposal, {
+        title: payload.title,
+        category: payload.category,
+        category_label: payload.category_label,
+        before_description: payload.before_description,
+        after_solution: payload.after_solution,
+        customer: payload.customer,
+        time_before_seconds: payload.time_before_seconds,
+        time_after_seconds: payload.time_after_seconds,
+        saved_seconds: payload.saved_seconds,
+        efficiency_value_vnd: payload.efficiency_value_vnd,
+        pair_quantity: payload.pair_quantity,
+        total_savings_vnd: payload.total_savings_vnd,
+        total_savings_words: payload.total_savings_words,
+        cost_before: payload.cost_before,
+        cost_after: payload.cost_after,
+        before_image_url: payload.before_image_url,
+        after_image_url: payload.after_image_url,
+      });
+
+      (proposal as any).product_code = payload.product_code;
+      (proposal as any).quantity = payload.quantity;
+      (proposal as any).vote_count = payload.quantity;
+      (proposal as any).pricing_direction = payload.pricing_direction;
+      (proposal as any).pricingDirection = payload.pricing_direction;
+      (proposal as any).proposer_position = payload.proposer_position;
+      (proposal as any).proposerPosition = payload.proposer_position;
+      (proposal as any).department = payload.proposer_position;
+      (proposal as any).product_group = payload.product_group;
+      (proposal as any).productGroup = payload.product_group;
+      (proposal as any).factory = payload.product_group;
+      (proposal as any).costBefore = payload.cost_before;
+      (proposal as any).chi_phi_truoc = payload.cost_before;
+      (proposal as any).costAfter = payload.cost_after;
+      (proposal as any).chi_phi_sau = payload.cost_after;
+
+      if (typeof window !== "undefined") {
+        try {
+          const cacheStr = localStorage.getItem("tbs_kaizen_proposals_cache_v1");
+          if (cacheStr) {
+            const list = JSON.parse(cacheStr);
+            if (Array.isArray(list)) {
+              const idx = list.findIndex((item: any) => item.id === proposal.id || item.code === proposal.code);
+              if (idx >= 0) {
+                list[idx] = { ...list[idx], ...proposal };
+                localStorage.setItem("tbs_kaizen_proposals_cache_v1", JSON.stringify(list));
+              }
+            }
+          }
+        } catch (e) {}
+      }
+
+      setIsEditing(false);
+      setSavingEdit(false);
+      if (onRate) onRate();
+      if (onEvaluate) onEvaluate();
+    } catch (err: any) {
+      setEditError(err.message || "Lỗi mạng khi lưu chỉnh sửa!");
+      setSavingEdit(false);
+    }
+  };
+
+  const beforeImageUrls = useMemo(() => {
+    return isEditing ? editBeforeImages : splitImageUrls(proposal?.before_image_url);
+  }, [isEditing, editBeforeImages, proposal?.before_image_url]);
+
+  const afterImageUrls = useMemo(() => {
+    return isEditing ? editAfterImages : splitImageUrls(proposal?.after_image_url);
+  }, [isEditing, editAfterImages, proposal?.after_image_url]);
 
   const allMedia = useMemo(() => {
     const before = beforeImageUrls.map((url, idx) => ({
@@ -92,19 +427,35 @@ export default function KaizenDetailModal({
       url,
       label: `Sau${idx > 0 ? ` #${idx + 1}` : ""}`,
     }));
-    return [...before, ...after];
-  }, [beforeImageUrls, afterImageUrls]);
+    const vids = isEditing ? editVideos : extractProposalVideos(proposal);
+    const videoMedia = vids.map((v) => ({
+      type: "video" as const,
+      url: v.url,
+      label: v.title,
+    }));
+
+    return [...before, ...after, ...videoMedia];
+  }, [beforeImageUrls, afterImageUrls, isEditing, editVideos, proposal]);
 
   const [selectedMedia, setSelectedMedia] = useState<{
     type: "image" | "video";
     url: string;
+    label?: string;
   } | null>(allMedia[0] || null);
 
-  // Sync selected media when proposal changes
+  const [lightboxState, setLightboxState] = useState<{
+    isOpen: boolean;
+    items: MediaItem[];
+    index: number;
+  }>({ isOpen: false, items: [], index: 0 });
+
+  const handleOpenLightbox = (idx: number, items: MediaItem[]) => {
+    setLightboxState({ isOpen: true, items, index: Math.max(0, idx) });
+  };
+
   useEffect(() => {
     setSelectedMedia(allMedia[0] || null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proposal]);
+  }, [allMedia]);
 
   // Determine permissions for Tab 2 "Đánh giá chuyên môn" & Tab 3 "Đánh giá thưởng"
   const isOwner = useMemo(() => {
@@ -231,7 +582,7 @@ export default function KaizenDetailModal({
 
   if (!isOpen || !proposal) return null;
 
-  const catObj = CATEGORIES.find((c) => c.id === normalizeCategoryId(proposal.category || proposal.category_label)) || CATEGORIES[0];
+  const catObj = CATEGORIES.find((c) => c.id === normalizeCategoryId(isEditing ? editCategory : (proposal.category || proposal.category_label))) || CATEGORIES[0];
 
   const isApproved = isApprovedProposal(proposal);
   const isRejected = isRejectedProposal(proposal);
@@ -262,23 +613,28 @@ export default function KaizenDetailModal({
           
           {/* Cover Image 4:3 rounded-2xl */}
           <div className="space-y-2">
-            <div className="relative w-full aspect-[4/3] bg-slate-900 rounded-2xl overflow-hidden border border-slate-300 shadow-xs flex items-center justify-center">
+            <div
+              onClick={() => {
+                if (selectedMedia?.url) {
+                  const idx = allMedia.findIndex((m) => m.url === selectedMedia.url);
+                  handleOpenLightbox(idx >= 0 ? idx : 0, allMedia);
+                }
+              }}
+              className="relative w-full aspect-[4/3] bg-slate-900 rounded-2xl overflow-hidden border border-slate-300 shadow-xs flex items-center justify-center cursor-pointer group"
+              title="Bấm để mở xem phóng to"
+            >
               {selectedMedia?.type === "image" && selectedMedia.url ? (
                 <img
                   src={selectedMedia.url}
                   alt="Selected"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                 />
               ) : selectedMedia?.type === "video" && selectedMedia.url ? (
-                <video
-                  src={selectedMedia.url}
-                  controls
-                  className="w-full h-full object-cover bg-black"
-                />
+                <UniversalVideoPlayer url={selectedMedia.url} title={selectedMedia.label} />
               ) : (
                 <div className="text-center text-slate-400 text-xs font-bold flex flex-col items-center gap-1">
                   <IconPhoto size={28} className="opacity-40" />
-                  <span>Không có ảnh</span>
+                  <span>Không có ảnh/video</span>
                 </div>
               )}
             </div>
@@ -290,15 +646,22 @@ export default function KaizenDetailModal({
                   <button
                     key={m.url}
                     type="button"
-                    onClick={() => setSelectedMedia({ type: "image", url: m.url })}
-                    className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all cursor-pointer bg-slate-900 shrink-0 ${
-                      selectedMedia?.url === m.url && selectedMedia?.type === "image"
+                    onClick={() => setSelectedMedia({ type: m.type, url: m.url, label: m.label })}
+                    className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all cursor-pointer bg-slate-900 shrink-0 relative ${
+                      selectedMedia?.url === m.url
                         ? "border-[#006838] ring-2 ring-[#006838]/40"
                         : "border-slate-300 hover:border-slate-400 opacity-80 hover:opacity-100"
                     }`}
-                    title={`Ảnh ${m.label}`}
+                    title={m.label}
                   >
-                    <img src={m.url} alt={m.label} className="w-full h-full object-cover" />
+                    {m.type === "video" ? (
+                      <div className="w-full h-full flex flex-col items-center justify-center bg-purple-950 text-purple-200 p-1 text-[9px] font-bold">
+                        <span className="text-xs">🎬</span>
+                        <span className="truncate w-full text-center text-[8px]">{m.label}</span>
+                      </div>
+                    ) : (
+                      <img src={m.url} alt={m.label} className="w-full h-full object-cover" />
+                    )}
                   </button>
                 ))}
               </div>
@@ -351,24 +714,58 @@ export default function KaizenDetailModal({
             {/* Hàng 1: VTCV | NHÓM SP/DV */}
             <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-0.5">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">VTCV</span>
-              <span className="text-xs font-extrabold text-slate-900 block truncate" title={vtcv || "---"}>
-                {vtcv || "---"}
-              </span>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={editProposerPosition}
+                  onChange={(e) => setEditProposerPosition(e.target.value)}
+                  className="w-full text-xs font-extrabold text-slate-900 border border-amber-300 rounded-lg px-2 py-1 bg-amber-50/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  placeholder="Vị trí công việc..."
+                />
+              ) : (
+                <span className="text-xs font-extrabold text-slate-900 block truncate" title={vtcv || "---"}>
+                  {vtcv || "---"}
+                </span>
+              )}
             </div>
 
             <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-0.5">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">NHÓM SP/DV</span>
-              <span className="text-xs font-extrabold text-slate-900 block truncate" title={prodGroup || "---"}>
-                {prodGroup || "---"}
-              </span>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={editProductGroup}
+                  onChange={(e) => setEditProductGroup(e.target.value)}
+                  className="w-full text-xs font-extrabold text-slate-900 border border-amber-300 rounded-lg px-2 py-1 bg-amber-50/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  placeholder="Nhóm sản phẩm..."
+                />
+              ) : (
+                <span className="text-xs font-extrabold text-slate-900 block truncate" title={prodGroup || "---"}>
+                  {prodGroup || "---"}
+                </span>
+              )}
             </div>
 
             {/* Hàng 2: PHÂN LOẠI | NGÀY ĐĂNG */}
             <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-0.5">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">PHÂN LOẠI</span>
-              <span className="text-xs font-extrabold text-slate-900 block truncate" title={catObj.label}>
-                {catObj.label}
-              </span>
+              {isEditing ? (
+                <select
+                  value={editCategory}
+                  onChange={(e) => setEditCategory(e.target.value)}
+                  className="w-full text-[11px] font-black text-slate-900 border border-amber-300 rounded-lg px-1.5 py-1 bg-amber-50/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+                >
+                  {CATEGORIES.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="text-xs font-extrabold text-slate-900 block truncate" title={catObj.label}>
+                  {catObj.label}
+                </span>
+              )}
             </div>
 
             <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-0.5">
@@ -388,9 +785,19 @@ export default function KaizenDetailModal({
 
             <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-0.5">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">KHÁCH HÀNG</span>
-              <span className="text-xs font-extrabold text-slate-900 block">
-                {cust || "---"}
-              </span>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={editCustomer}
+                  onChange={(e) => setEditCustomer(e.target.value)}
+                  className="w-full text-xs font-extrabold text-slate-900 border border-amber-300 rounded-lg px-2 py-1 bg-amber-50/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  placeholder="Khách hàng..."
+                />
+              ) : (
+                <span className="text-xs font-extrabold text-slate-900 block">
+                  {cust || "---"}
+                </span>
+              )}
             </div>
           </div>
 
@@ -403,7 +810,7 @@ export default function KaizenDetailModal({
             )}
 
             {/* BGK / BGĐ Action: Chuyển sang Thi đua (chỉ khi đã Lưu trữ) */}
-            {(proposal.status === "ARCHIVED" || proposal.sub_status === "LUU_TRU" || proposal.registration_type === "LUU_TRU") && isJudgeOrExecutive && (
+            {!isEditing && (proposal.status === "ARCHIVED" || proposal.sub_status === "LUU_TRU" || proposal.registration_type === "LUU_TRU") && isJudgeOrExecutive && (
               <button
                 type="button"
                 disabled={markingThiDua}
@@ -425,11 +832,31 @@ export default function KaizenDetailModal({
               </button>
             )}
 
-            {isOwner || isExecutiveOrAdmin ? (
+            {isEditing ? (
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  disabled={savingEdit}
+                  onClick={handleSaveInlineEdit}
+                  className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-black text-xs shadow-md flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <IconDeviceFloppy size={16} />
+                  <span>{savingEdit ? "Đang lưu..." : "💾 Lưu Thay Đổi"}</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={savingEdit}
+                  onClick={() => setIsEditing(false)}
+                  className="w-full py-2.5 px-3 rounded-xl border border-slate-300 hover:bg-slate-200 text-slate-700 font-extrabold text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
+                >
+                  <span>✕ Hủy Chỉnh Sửa</span>
+                </button>
+              </div>
+            ) : isOwner || isExecutiveOrAdmin ? (
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={onEdit}
+                  onClick={startEditing}
                   className="py-2.5 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black text-xs shadow-xs flex items-center justify-center gap-1 transition-colors cursor-pointer"
                 >
                   <IconEditCircle size={15} />
@@ -463,13 +890,34 @@ export default function KaizenDetailModal({
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-white max-h-[90vh]">
           
           <div className="flex-shrink-0 p-5 md:p-6 border-b border-slate-200 bg-white">
+            {editError && (
+              <div className="mb-3 p-3.5 rounded-2xl bg-rose-100 border border-rose-300 text-rose-900 text-xs font-bold flex items-center gap-2 animate-in fade-in">
+                <IconAlertCircle size={18} className="text-rose-600 shrink-0" />
+                <span>{editError}</span>
+              </div>
+            )}
+
             {/* 3 Pills Hàng Trên */}
             <div className="flex items-center gap-2 flex-wrap mb-3">
               {/* Pill 1: Phân loại */}
-              <span className="px-3 py-1 rounded-full bg-slate-100 border border-slate-300 text-slate-800 text-xs font-black flex items-center gap-1">
-                <span>📈</span>
-                <span>{catObj.label}</span>
-              </span>
+              {isEditing ? (
+                <select
+                  value={editCategory}
+                  onChange={(e) => setEditCategory(e.target.value)}
+                  className="px-3 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-900 text-xs font-black cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500"
+                >
+                  {CATEGORIES.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="px-3 py-1 rounded-full bg-slate-100 border border-slate-300 text-slate-800 text-xs font-black flex items-center gap-1">
+                  <span>📈</span>
+                  <span>{catObj.label}</span>
+                </span>
+              )}
 
               {/* Pill 2: Hình thức */}
               <span className="px-3 py-1 rounded-full bg-amber-50 border border-amber-300 text-amber-900 text-xs font-black flex items-center gap-1">
@@ -477,7 +925,7 @@ export default function KaizenDetailModal({
                 <span>{proposal.registration_type === "THI_DUA" ? "Thi đua" : "Lưu trữ"}</span>
               </span>
 
-              {/* Pill 3: Trạng thái quy trình (Đã duyệt vs Từ chối vs Chờ duyệt) */}
+              {/* Pill 3: Trạng thái quy trình */}
               <span
                 className={`px-3 py-1 rounded-full border text-xs font-black flex items-center gap-1.5 ${
                   isRejected
@@ -488,26 +936,28 @@ export default function KaizenDetailModal({
                 }`}
               >
                 <span>
-                  {isRejected
-                    ? "❌"
-                    : isApproved
-                    ? "✅"
-                    : "👤"}
+                  {isRejected ? "❌" : isApproved ? "✅" : "👤"}
                 </span>
                 <span>
-                  {isRejected
-                    ? "Từ chối"
-                    : isApproved
-                    ? "Đã duyệt"
-                    : "Chờ duyệt"}
+                  {isRejected ? "Từ chối" : isApproved ? "Đã duyệt" : "Chờ duyệt"}
                 </span>
               </span>
             </div>
 
             {/* Tiêu đề hồ sơ */}
-            <h2 className="text-xl md:text-2xl font-black text-slate-900 leading-snug mb-1">
-              {proposal.title}
-            </h2>
+            {isEditing ? (
+              <textarea
+                rows={2}
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="w-full text-lg md:text-xl font-black text-slate-900 border-2 border-amber-400 rounded-2xl p-3 focus:outline-none focus:ring-2 focus:ring-amber-500 bg-amber-50/20 mb-1"
+                placeholder="Nhập tiêu đề sáng kiến cải tiến..."
+              />
+            ) : (
+              <h2 className="text-xl md:text-2xl font-black text-slate-900 leading-snug mb-1">
+                {proposal.title}
+              </h2>
+            )}
 
             {/* Dòng phụ: MSNV · KV · Tháng/Năm */}
             <p className="text-xs font-bold text-slate-400">
@@ -610,7 +1060,51 @@ export default function KaizenDetailModal({
 
           {/* TAB CONTENT */}
           <div className="flex-1 min-w-0 overflow-y-auto">
-            {activeTab === "info" && <TabInfoContent proposal={proposal} />}
+            {activeTab === "info" && (
+              <TabInfoContent
+                proposal={proposal}
+                onOpenLightbox={handleOpenLightbox}
+                isEditing={isEditing}
+                editCategory={editCategory}
+                setEditCategory={setEditCategory}
+                editProductCode={editProductCode}
+                setEditProductCode={setEditProductCode}
+                editQuantity={editQuantity}
+                setEditQuantity={setEditQuantity}
+                editPricingDirection={editPricingDirection}
+                setEditPricingDirection={setEditPricingDirection}
+                editBeforeDescription={editBeforeDescription}
+                setEditBeforeDescription={setEditBeforeDescription}
+                editAfterSolution={editAfterSolution}
+                setEditAfterSolution={setEditAfterSolution}
+                editTimeBeforeSeconds={editTimeBeforeSeconds}
+                setEditTimeBeforeSeconds={setEditTimeBeforeSeconds}
+                editTimeAfterSeconds={editTimeAfterSeconds}
+                setEditTimeAfterSeconds={setEditTimeAfterSeconds}
+                editEfficiencyValueVnd={editEfficiencyValueVnd}
+                setEditEfficiencyValueVnd={setEditEfficiencyValueVnd}
+                editPairQuantity={editPairQuantity}
+                setEditPairQuantity={setEditPairQuantity}
+                editTotalSavingsVnd={editTotalSavingsVnd}
+                setEditTotalSavingsVnd={setEditTotalSavingsVnd}
+                editCostBefore={editCostBefore}
+                setEditCostBefore={setEditCostBefore}
+                editCostAfter={editCostAfter}
+                setEditCostAfter={setEditCostAfter}
+                editBeforeImages={editBeforeImages}
+                handleUploadBeforeImages={handleUploadBeforeImages}
+                handleRemoveBeforeImage={handleRemoveBeforeImage}
+                uploadingBefore={uploadingBefore}
+                editAfterImages={editAfterImages}
+                handleUploadAfterImages={handleUploadAfterImages}
+                handleRemoveAfterImage={handleRemoveAfterImage}
+                uploadingAfter={uploadingAfter}
+                editVideos={editVideos}
+                handleUploadVideo={handleUploadVideo}
+                handleRemoveVideo={handleRemoveVideo}
+                uploadingVideo={uploadingVideo}
+              />
+            )}
             {activeTab === "expert_review" && canSeeExpertTab && (
               <TabExpertReviewContent proposal={proposal} isOwner={isOwner} initialEvalData={evalData} />
             )}
@@ -653,6 +1147,16 @@ export default function KaizenDetailModal({
             (proposal as any).tong_tien_tiet_kiem = updated.total_savings_vnd;
           }
           if (updated.total_savings_words !== undefined) proposal.total_savings_words = updated.total_savings_words;
+          if (updated.cost_before !== undefined) {
+            (proposal as any).cost_before = updated.cost_before;
+            (proposal as any).costBefore = updated.cost_before;
+            (proposal as any).chi_phi_truoc = updated.cost_before;
+          }
+          if (updated.cost_after !== undefined) {
+            (proposal as any).cost_after = updated.cost_after;
+            (proposal as any).costAfter = updated.cost_after;
+            (proposal as any).chi_phi_sau = updated.cost_after;
+          }
           if (updated.after_image_url) proposal.after_image_url = updated.after_image_url;
           if (updated.approved_at) (proposal as any).approved_at = updated.approved_at;
           if (updated.proposer_month) (proposal as any).proposer_month = updated.proposer_month;
@@ -668,6 +1172,14 @@ export default function KaizenDetailModal({
           if (onEvaluate) onEvaluate();
         }}
       />
+
+      {/* MEDIA LIGHTBOX OVERLAY POPUP */}
+      <KaizenMediaLightbox
+        isOpen={lightboxState.isOpen}
+        onClose={() => setLightboxState((prev) => ({ ...prev, isOpen: false }))}
+        items={lightboxState.items}
+        currentIndex={lightboxState.index}
+      />
     </div>
   );
 }
@@ -675,40 +1187,103 @@ export default function KaizenDetailModal({
 /* ═══════════════════════════════════════════════════════════════════════════════════
    3. NỘI DUNG TAB "THÔNG TIN" — CẤU TRÚC ĐẦY ĐỦ 4 SECTIONS THEO CHUẨN REFERENCE
    ═══════════════════════════════════════════════════════════════════════════════════ */
-function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
+interface TabInfoContentProps {
+  proposal: KaizenProposal;
+  onOpenLightbox?: (idx: number, items: MediaItem[]) => void;
+  isEditing?: boolean;
+  editCategory?: string;
+  setEditCategory?: (v: string) => void;
+  editProductCode?: string;
+  setEditProductCode?: (v: string) => void;
+  editQuantity?: number | string;
+  setEditQuantity?: (v: number | string) => void;
+  editPricingDirection?: string;
+  setEditPricingDirection?: (v: string) => void;
+  editBeforeDescription?: string;
+  setEditBeforeDescription?: (v: string) => void;
+  editAfterSolution?: string;
+  setEditAfterSolution?: (v: string) => void;
+  editTimeBeforeSeconds?: number | string;
+  setEditTimeBeforeSeconds?: (v: number | string) => void;
+  editTimeAfterSeconds?: number | string;
+  setEditTimeAfterSeconds?: (v: number | string) => void;
+  editEfficiencyValueVnd?: number | string;
+  setEditEfficiencyValueVnd?: (v: number | string) => void;
+  editPairQuantity?: number | string;
+  setEditPairQuantity?: (v: number | string) => void;
+  editTotalSavingsVnd?: number | string;
+  setEditTotalSavingsVnd?: (v: number | string) => void;
+  editCostBefore?: number | string;
+  setEditCostBefore?: (v: number | string) => void;
+  editCostAfter?: number | string;
+  setEditCostAfter?: (v: number | string) => void;
+  editBeforeImages?: string[];
+  handleUploadBeforeImages?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleRemoveBeforeImage?: (idx: number) => void;
+  uploadingBefore?: boolean;
+  editAfterImages?: string[];
+  handleUploadAfterImages?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleRemoveAfterImage?: (idx: number) => void;
+  uploadingAfter?: boolean;
+  editVideos?: Array<{ title: string; url: string }>;
+  handleUploadVideo?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleRemoveVideo?: (idx: number) => void;
+  uploadingVideo?: boolean;
+}
+
+function TabInfoContent({
+  proposal,
+  onOpenLightbox,
+  isEditing,
+  editCategory,
+  setEditCategory,
+  editProductCode,
+  setEditProductCode,
+  editQuantity,
+  setEditQuantity,
+  editPricingDirection,
+  setEditPricingDirection,
+  editBeforeDescription,
+  setEditBeforeDescription,
+  editAfterSolution,
+  setEditAfterSolution,
+  editTimeBeforeSeconds,
+  setEditTimeBeforeSeconds,
+  editTimeAfterSeconds,
+  setEditTimeAfterSeconds,
+  editEfficiencyValueVnd,
+  setEditEfficiencyValueVnd,
+  editPairQuantity,
+  setEditPairQuantity,
+  editTotalSavingsVnd,
+  setEditTotalSavingsVnd,
+  editCostBefore,
+  setEditCostBefore,
+  editCostAfter,
+  setEditCostAfter,
+  editBeforeImages = [],
+  handleUploadBeforeImages,
+  handleRemoveBeforeImage,
+  uploadingBefore,
+  editAfterImages = [],
+  handleUploadAfterImages,
+  handleRemoveAfterImage,
+  uploadingAfter,
+  editVideos = [],
+  handleUploadVideo,
+  handleRemoveVideo,
+  uploadingVideo,
+}: TabInfoContentProps) {
   const prodCode = (proposal as any).product_code || proposal.code;
   const qty = (proposal as any).quantity || proposal.vote_count;
-  const pricingDir = (proposal as any).pricing_direction || "THOI_GIAN";
+  const pricingDir = isEditing ? editPricingDirection : (proposal as any).pricing_direction || "THOI_GIAN";
 
-  // Có thể có nhiều ảnh, lưu gộp chuỗi "url1,url2,..." trong before_image_url/after_image_url
-  const beforeImageUrls = splitImageUrls(proposal.before_image_url);
-  const afterImageUrls = splitImageUrls(proposal.after_image_url);
+  // Images list
+  const beforeImageUrls = isEditing ? editBeforeImages : splitImageUrls(proposal.before_image_url);
+  const afterImageUrls = isEditing ? editAfterImages : splitImageUrls(proposal.after_image_url);
 
-  // Build overview cards list
-  const overviewCards = [];
-  if (prodCode && prodCode.trim() && prodCode !== "---") {
-    overviewCards.push({ label: "MÃ HÀNG", val: prodCode, key: "code" });
-  }
-  if (qty && Number(qty) > 0) {
-    overviewCards.push({ label: "SỐ LƯỢNG ĐH", val: Number(qty).toLocaleString("vi-VN"), key: "qty" });
-  }
-  overviewCards.push({
-    label: "HƯỚNG ĐÁNH GIÁ",
-    val: pricingDir === "TRI_GIA" || pricingDir === "Trị giá" ? "Trị giá" : "Thời gian",
-    key: "dir",
-    highlight: true,
-  });
-
-  // Videos list parse
-  let videos: { type: string; url: string; title?: string }[] = [];
-  if (proposal.attachments_json) {
-    try {
-      const atts = typeof proposal.attachments_json === "string" ? JSON.parse(proposal.attachments_json) : proposal.attachments_json;
-      if (Array.isArray(atts)) {
-        videos = atts.filter((a: any) => a && (a.type?.startsWith("video_") || a.url?.includes("video") || a.url?.startsWith("data:video/")));
-      }
-    } catch (e) {}
-  }
+  // Videos list
+  const videos = isEditing ? editVideos : extractProposalVideos(proposal);
 
   return (
     <div className="p-5 md:p-6 space-y-6 text-xs">
@@ -719,22 +1294,59 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
           <span>📋</span>
           <span>TỔNG QUAN CẢI TIẾN</span>
         </h4>
-        <div className={`grid gap-3 ${overviewCards.length === 3 ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-1 sm:grid-cols-2"}`}>
-          {overviewCards.map((card) => (
-            <div
-              key={card.key}
-              className={`p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1 ${
-                card.highlight ? "border-r-4 border-r-amber-500 bg-amber-50/20" : ""
-              }`}
-            >
-              <span className="text-[10px] font-black uppercase text-slate-400 block tracking-wider">
-                {card.label}
-              </span>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Card 1: MÃ HÀNG */}
+          <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
+            <span className="text-[10px] font-black uppercase text-slate-400 block tracking-wider">MÃ HÀNG</span>
+            {isEditing ? (
+              <input
+                type="text"
+                value={editProductCode || ""}
+                onChange={(e) => setEditProductCode?.(e.target.value)}
+                className="w-full text-xs font-black text-slate-900 bg-amber-50/50 border border-amber-300 rounded-lg px-2.5 py-1.5 focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+                placeholder="Nhập mã hàng..."
+              />
+            ) : (
+              <span className="text-sm font-black text-slate-900 block truncate">{prodCode || "---"}</span>
+            )}
+          </div>
+
+          {/* Card 2: SỐ LƯỢNG ĐH */}
+          <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
+            <span className="text-[10px] font-black uppercase text-slate-400 block tracking-wider">SỐ LƯỢNG ĐH</span>
+            {isEditing ? (
+              <input
+                type="number"
+                value={editQuantity ?? ""}
+                onChange={(e) => setEditQuantity?.(e.target.value)}
+                className="w-full text-xs font-black text-slate-900 bg-amber-50/50 border border-amber-300 rounded-lg px-2.5 py-1.5 focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+                placeholder="Nhập số lượng..."
+              />
+            ) : (
               <span className="text-sm font-black text-slate-900 block truncate">
-                {card.val}
+                {qty && Number(qty) > 0 ? Number(qty).toLocaleString("vi-VN") : "0"}
               </span>
-            </div>
-          ))}
+            )}
+          </div>
+
+          {/* Card 3: HƯỚNG ĐÁNH GIÁ */}
+          <div className="p-3.5 rounded-2xl bg-amber-50/20 border border-slate-200 border-r-4 border-r-amber-500 shadow-2xs space-y-1">
+            <span className="text-[10px] font-black uppercase text-slate-400 block tracking-wider">HƯỚNG ĐÁNH GIÁ</span>
+            {isEditing ? (
+              <select
+                value={editPricingDirection || "THOI_GIAN"}
+                onChange={(e) => setEditPricingDirection?.(e.target.value)}
+                className="w-full text-xs font-black text-slate-900 bg-amber-50/50 border border-amber-300 rounded-lg px-2 py-1.5 focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+              >
+                <option value="THOI_GIAN">Thời gian (giây/đôi)</option>
+                <option value="TRI_GIA">Trị giá (VNĐ)</option>
+              </select>
+            ) : (
+              <span className="text-sm font-black text-slate-900 block truncate">
+                {pricingDir === "TRI_GIA" || pricingDir === "Trị giá" ? "Trị giá" : "Thời gian"}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -751,9 +1363,19 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
               <IconAlertCircle size={15} className="text-rose-600" />
               <span>VẤN ĐỀ PHÁT HIỆN (TRƯỚC)</span>
             </h5>
-            <p className="font-bold text-rose-950 leading-relaxed whitespace-pre-wrap text-xs">
-              {proposal.before_description || "Chưa có mô tả hiện trạng lãng phí trước cải tiến."}
-            </p>
+            {isEditing ? (
+              <textarea
+                rows={3}
+                value={editBeforeDescription || ""}
+                onChange={(e) => setEditBeforeDescription?.(e.target.value)}
+                className="w-full font-bold text-rose-950 bg-white border border-rose-300 rounded-xl p-3 text-xs focus:outline-none focus:ring-2 focus:ring-rose-500"
+                placeholder="Mô tả hiện trạng lãng phí trước cải tiến..."
+              />
+            ) : (
+              <p className="font-bold text-rose-950 leading-relaxed whitespace-pre-wrap text-xs">
+                {proposal.before_description || "Chưa có mô tả hiện trạng lãng phí trước cải tiến."}
+              </p>
+            )}
           </div>
 
           {/* GIẢI PHÁP HÀNH ĐỘNG (SAU) */}
@@ -762,42 +1384,55 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
               <IconThumbUp size={15} className="text-emerald-600" />
               <span>GIẢI PHÁP HÀNH ĐỘNG (SAU)</span>
             </h5>
-            <p className="font-bold text-emerald-950 leading-relaxed whitespace-pre-wrap text-xs">
-              {proposal.after_solution || "Chưa có mô tả giải pháp sáng kiến cải tiến."}
-            </p>
+            {isEditing ? (
+              <textarea
+                rows={3}
+                value={editAfterSolution || ""}
+                onChange={(e) => setEditAfterSolution?.(e.target.value)}
+                className="w-full font-bold text-emerald-950 bg-white border border-emerald-300 rounded-xl p-3 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                placeholder="Mô tả giải pháp sáng kiến cải tiến..."
+              />
+            ) : (
+              <p className="font-bold text-emerald-950 leading-relaxed whitespace-pre-wrap text-xs">
+                {proposal.after_solution || "Chưa có mô tả giải pháp sáng kiến cải tiến."}
+              </p>
+            )}
           </div>
         </div>
       </div>
 
       {/* SECTION 3 — 📈 HIỆU QUẢ CẢI TIẾN */}
       {(() => {
-        const normCat = normalizeCategoryId(proposal.category || proposal.category_label);
+        const normCat = normalizeCategoryId(isEditing ? (editCategory || proposal.category || proposal.category_label) : (proposal.category || proposal.category_label));
         const isMaterialOrCost = normCat === "MATERIAL_SAVING" || normCat === "COST_SAVING";
         const catObj = CATEGORIES.find((c) => c.id === normCat) || CATEGORIES[0];
 
-        const timeBefore = Number(proposal.time_before_seconds || (proposal as any).timeBeforeSeconds || 0);
-        const timeAfter = Number(proposal.time_after_seconds || (proposal as any).timeAfterSeconds || 0);
-        const savedSecs = Number(proposal.saved_seconds || (proposal as any).savedSeconds || Math.max(0, timeBefore - timeAfter));
-        const efficiencyVnd = Number(
-          proposal.efficiency_value_vnd || (proposal as any).efficiencyValueVND || Math.round(savedSecs * 12.5)
-        );
-        const pairQty = Number(
-          proposal.pair_quantity || (proposal as any).pairQuantity || (proposal as any).so_luong_giay || (proposal as any).quantity || 0
-        );
-        const totalSavingsVnd = Number(
-          proposal.total_savings_vnd ||
-          (proposal as any).totalSavingsVND ||
-          (proposal as any).tong_tien_tiet_kiem ||
-          (pairQty > 0 ? efficiencyVnd * pairQty : efficiencyVnd)
-        );
-        const totalSavingsWordsText =
-          proposal.total_savings_words ||
-          (proposal as any).totalSavingsWords ||
-          (proposal as any).tong_tien_bang_chu ||
-          (totalSavingsVnd > 0 ? convertNumberToWords(totalSavingsVnd) : "");
+        const timeBefore = isEditing ? Number(editTimeBeforeSeconds || 0) : Number(proposal.time_before_seconds || (proposal as any).timeBeforeSeconds || 0);
+        const timeAfter = isEditing ? Number(editTimeAfterSeconds || 0) : Number(proposal.time_after_seconds || (proposal as any).timeAfterSeconds || 0);
+        const savedSecs = isEditing ? Math.max(0, timeBefore - timeAfter) : Number(proposal.saved_seconds || (proposal as any).savedSeconds || Math.max(0, timeBefore - timeAfter));
+        const efficiencyVnd = isEditing
+          ? (Number(editEfficiencyValueVnd) || (savedSecs > 0 ? Math.round(savedSecs * 12.5) : 0))
+          : Number(
+              proposal.efficiency_value_vnd || (proposal as any).efficiencyValueVND || Math.round(savedSecs * 12.5)
+            );
+        const pairQty = isEditing
+          ? Number(editPairQuantity || 0)
+          : Number(
+              proposal.pair_quantity || (proposal as any).pairQuantity || (proposal as any).so_luong_giay || (proposal as any).quantity || 0
+            );
+        const autoTotSavings = pairQty > 0 ? efficiencyVnd * pairQty : efficiencyVnd;
+        const totalSavingsVnd = isEditing
+          ? (Number(editTotalSavingsVnd) || autoTotSavings)
+          : Number(
+              proposal.total_savings_vnd ||
+              (proposal as any).totalSavingsVND ||
+              (proposal as any).tong_tien_tiet_kiem ||
+              autoTotSavings
+            );
+        const totalSavingsWordsText = totalSavingsVnd > 0 ? convertNumberToWords(totalSavingsVnd) : "";
 
-        const costBeforeVal = Number((proposal as any).cost_before || (proposal as any).chi_phi_truoc || 0);
-        const costAfterVal = Number((proposal as any).cost_after || (proposal as any).chi_phi_sau || 0);
+        const costBeforeVal = isEditing ? Number(editCostBefore || 0) : Number((proposal as any).cost_before ?? (proposal as any).costBefore ?? (proposal as any).chi_phi_truoc ?? 0);
+        const costAfterVal = isEditing ? Number(editCostAfter || 0) : Number((proposal as any).cost_after ?? (proposal as any).costAfter ?? (proposal as any).chi_phi_sau ?? 0);
 
         return (
           <div className="space-y-3">
@@ -811,27 +1446,71 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
                 {/* Thẻ 1: CHI PHÍ TRƯỚC */}
                 <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
                   <span className="text-[10px] font-extrabold uppercase text-slate-400 block">CHI PHÍ TRƯỚC</span>
-                  <span className="text-lg sm:text-xl font-black text-slate-900 block truncate">
-                    {costBeforeVal > 0 ? `${costBeforeVal.toLocaleString("vi-VN")} VNĐ` : "Chưa đo lường"}
-                  </span>
+                  {isEditing ? (
+                    <input
+                      type="number"
+                      value={editCostBefore ?? ""}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setEditCostBefore?.(v);
+                        const cb = Number(v) || 0;
+                        const ca = Number(editCostAfter) || 0;
+                        const diff = Math.max(0, cb - ca);
+                        setEditTotalSavingsVnd?.(diff);
+                      }}
+                      className="w-full border border-slate-300 rounded-lg p-1.5 text-xs font-black text-slate-900 bg-amber-50/50"
+                      placeholder="Chi phí trước..."
+                    />
+                  ) : (
+                    <span className="text-lg sm:text-xl font-black text-slate-900 block truncate">
+                      {costBeforeVal > 0 ? `${costBeforeVal.toLocaleString("vi-VN")} VNĐ` : "Chưa đo lường"}
+                    </span>
+                  )}
                   <span className="text-[10px] font-bold text-slate-500 block">chi phí ban đầu</span>
                 </div>
 
                 {/* Thẻ 2: CHI PHÍ SAU */}
                 <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
                   <span className="text-[10px] font-extrabold uppercase text-slate-400 block">CHI PHÍ SAU</span>
-                  <span className="text-lg sm:text-xl font-black text-slate-900 block truncate">
-                    {costAfterVal > 0 ? `${costAfterVal.toLocaleString("vi-VN")} VNĐ` : "0 VNĐ"}
-                  </span>
+                  {isEditing ? (
+                    <input
+                      type="number"
+                      value={editCostAfter ?? ""}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setEditCostAfter?.(v);
+                        const ca = Number(v) || 0;
+                        const cb = Number(editCostBefore) || 0;
+                        const diff = Math.max(0, cb - ca);
+                        setEditTotalSavingsVnd?.(diff);
+                      }}
+                      className="w-full border border-slate-300 rounded-lg p-1.5 text-xs font-black text-slate-900 bg-amber-50/50"
+                      placeholder="Chi phí sau..."
+                    />
+                  ) : (
+                    <span className="text-lg sm:text-xl font-black text-slate-900 block truncate">
+                      {costAfterVal > 0 ? `${costAfterVal.toLocaleString("vi-VN")} VNĐ` : "0 VNĐ"}
+                    </span>
+                  )}
                   <span className="text-[10px] font-bold text-emerald-600 block">sau cải tiến</span>
                 </div>
 
                 {/* Thẻ 3: TỔNG SỐ TIỀN TIẾT KIỆM */}
                 <div className="p-3.5 rounded-2xl bg-[#006838] text-white space-y-1 shadow-md border border-emerald-400/30">
                   <span className="text-[10px] font-extrabold uppercase text-amber-300 block">TỔNG TIẾT KIỆM</span>
-                  <span className="text-lg sm:text-xl font-black text-white block truncate">
-                    {totalSavingsVnd > 0 ? `${totalSavingsVnd.toLocaleString("vi-VN")} VNĐ` : "0 VNĐ"}
-                  </span>
+                  {isEditing ? (
+                    <input
+                      type="number"
+                      value={editTotalSavingsVnd ?? ""}
+                      onChange={(e) => setEditTotalSavingsVnd?.(e.target.value)}
+                      className="w-full border border-emerald-400 rounded-lg p-1.5 text-xs font-black text-white bg-emerald-900"
+                      placeholder="Tổng tiết kiệm VNĐ..."
+                    />
+                  ) : (
+                    <span className="text-lg sm:text-xl font-black text-white block truncate">
+                      {totalSavingsVnd > 0 ? `${totalSavingsVnd.toLocaleString("vi-VN")} VNĐ` : "0 VNĐ"}
+                    </span>
+                  )}
                   <span className="text-[10px] font-bold text-emerald-200 block truncate">tiết kiệm trực tiếp</span>
                 </div>
               </div>
@@ -841,9 +1520,19 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
                   <span className="text-[10px] font-extrabold uppercase text-emerald-200 block">
                     HIỆU QUẢ QUY ĐỔI VNĐ/ĐÔI
                   </span>
-                  <span className="text-xl font-black text-white block">
-                    {efficiencyVnd.toLocaleString("vi-VN")} VNĐ
-                  </span>
+                  {isEditing ? (
+                    <input
+                      type="number"
+                      value={editEfficiencyValueVnd ?? ""}
+                      onChange={(e) => setEditEfficiencyValueVnd?.(e.target.value)}
+                      className="w-full border border-emerald-400 rounded-lg p-1.5 text-xs font-black text-white bg-emerald-900"
+                      placeholder="Hiệu quả VNĐ..."
+                    />
+                  ) : (
+                    <span className="text-xl font-black text-white block">
+                      {efficiencyVnd.toLocaleString("vi-VN")} VNĐ
+                    </span>
+                  )}
                 </div>
                 <span className="px-3 py-1 bg-emerald-800 text-emerald-100 rounded-lg text-xs font-extrabold">
                   Trị giá
@@ -854,18 +1543,56 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
                 {/* Thẻ 1: TRƯỚC */}
                 <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
                   <span className="text-[10px] font-extrabold uppercase text-slate-400 block">TRƯỚC</span>
-                  <span className="text-xl font-black text-slate-900 block">
-                    {timeBefore ? `${timeBefore}` : "0"}
-                  </span>
+                  {isEditing ? (
+                    <input
+                      type="number"
+                      value={editTimeBeforeSeconds ?? ""}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setEditTimeBeforeSeconds?.(v);
+                        const tb = Number(v) || 0;
+                        const ta = Number(editTimeAfterSeconds) || 0;
+                        const saved = Math.max(0, tb - ta);
+                        const eff = Math.round(saved * 12.5);
+                        setEditEfficiencyValueVnd?.(eff);
+                        const qtyNum = Number(editPairQuantity) || 0;
+                        setEditTotalSavingsVnd?.(qtyNum > 0 ? eff * qtyNum : eff);
+                      }}
+                      className="w-full border border-amber-300 rounded-lg p-1.5 text-xs font-black text-slate-900 bg-amber-50/50"
+                    />
+                  ) : (
+                    <span className="text-xl font-black text-slate-900 block">
+                      {timeBefore ? `${timeBefore}` : "0"}
+                    </span>
+                  )}
                   <span className="text-[10px] font-bold text-slate-500 block">giây</span>
                 </div>
 
                 {/* Thẻ 2: SAU */}
                 <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
                   <span className="text-[10px] font-extrabold uppercase text-slate-400 block">SAU</span>
-                  <span className="text-xl font-black text-slate-900 block">
-                    {timeAfter ? `${timeAfter}` : "0"}
-                  </span>
+                  {isEditing ? (
+                    <input
+                      type="number"
+                      value={editTimeAfterSeconds ?? ""}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setEditTimeAfterSeconds?.(v);
+                        const ta = Number(v) || 0;
+                        const tb = Number(editTimeBeforeSeconds) || 0;
+                        const saved = Math.max(0, tb - ta);
+                        const eff = Math.round(saved * 12.5);
+                        setEditEfficiencyValueVnd?.(eff);
+                        const qtyNum = Number(editPairQuantity) || 0;
+                        setEditTotalSavingsVnd?.(qtyNum > 0 ? eff * qtyNum : eff);
+                      }}
+                      className="w-full border border-amber-300 rounded-lg p-1.5 text-xs font-black text-slate-900 bg-amber-50/50"
+                    />
+                  ) : (
+                    <span className="text-xl font-black text-slate-900 block">
+                      {timeAfter ? `${timeAfter}` : "0"}
+                    </span>
+                  )}
                   <span className="text-[10px] font-bold text-slate-500 block">giây</span>
                 </div>
 
@@ -883,27 +1610,74 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
                 {/* Thẻ 4: HIỆU QUẢ */}
                 <div className="p-3.5 rounded-2xl bg-[#006838] text-white space-y-1 shadow-md">
                   <span className="text-[10px] font-extrabold uppercase text-emerald-200 block">HIỆU QUẢ</span>
-                  <span className="text-base sm:text-lg font-black text-white block truncate">
-                    {efficiencyVnd.toLocaleString("vi-VN")} VNĐ
-                  </span>
+                  {isEditing ? (
+                    <input
+                      type="number"
+                      value={editEfficiencyValueVnd ?? ""}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setEditEfficiencyValueVnd?.(v);
+                        const eff = Number(v) || 0;
+                        const qtyNum = Number(editPairQuantity) || 0;
+                        setEditTotalSavingsVnd?.(qtyNum > 0 ? eff * qtyNum : eff);
+                      }}
+                      className="w-full border border-emerald-400 rounded-lg p-1.5 text-xs font-black text-white bg-emerald-800"
+                    />
+                  ) : (
+                    <span className="text-base sm:text-lg font-black text-white block truncate">
+                      {efficiencyVnd.toLocaleString("vi-VN")} VNĐ
+                    </span>
+                  )}
                   <span className="text-[10px] font-bold text-emerald-200 block">quy đổi / đôi</span>
                 </div>
 
                 {/* Thẻ 5: SỐ LƯỢNG GIÀY (ĐÔI) */}
                 <div className="p-3.5 rounded-2xl bg-blue-50 border border-blue-200 shadow-2xs space-y-1">
                   <span className="text-[10px] font-extrabold uppercase text-blue-700 block">SỐ LƯỢNG GIÀY</span>
-                  <span className="text-base sm:text-lg font-black text-blue-950 block truncate">
-                    {pairQty > 0 ? pairQty.toLocaleString("vi-VN") : "0"}
-                  </span>
+                  {isEditing ? (
+                    <input
+                      type="number"
+                      value={editPairQuantity ?? ""}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setEditPairQuantity?.(v);
+                        const qtyNum = Number(v) || 0;
+                        const tb = Number(editTimeBeforeSeconds) || 0;
+                        const ta = Number(editTimeAfterSeconds) || 0;
+                        const saved = Math.max(0, tb - ta);
+                        const eff = Number(editEfficiencyValueVnd) || Math.round(saved * 12.5);
+                        if (!editEfficiencyValueVnd && eff > 0) {
+                          setEditEfficiencyValueVnd?.(eff);
+                        }
+                        const tot = qtyNum > 0 ? eff * qtyNum : eff;
+                        setEditTotalSavingsVnd?.(tot);
+                      }}
+                      className="w-full border border-blue-300 rounded-lg p-1.5 text-xs font-black text-blue-950 bg-white"
+                      placeholder="Nhập số đôi..."
+                    />
+                  ) : (
+                    <span className="text-base sm:text-lg font-black text-blue-950 block truncate">
+                      {pairQty > 0 ? pairQty.toLocaleString("vi-VN") : "0"}
+                    </span>
+                  )}
                   <span className="text-[10px] font-bold text-blue-600 block">đôi / đơn hàng</span>
                 </div>
 
                 {/* Thẻ 6: TỔNG TIẾT KIỆM */}
                 <div className="p-3.5 rounded-2xl bg-[#00522c] text-white space-y-1 shadow-md border border-emerald-400/30">
                   <span className="text-[10px] font-extrabold uppercase text-amber-300 block">TỔNG TIẾT KIỆM</span>
-                  <span className="text-base sm:text-lg font-black text-white block truncate">
-                    {totalSavingsVnd > 0 ? `${totalSavingsVnd.toLocaleString("vi-VN")} VNĐ` : "0 VNĐ"}
-                  </span>
+                  {isEditing ? (
+                    <input
+                      type="number"
+                      value={editTotalSavingsVnd ?? ""}
+                      onChange={(e) => setEditTotalSavingsVnd?.(e.target.value)}
+                      className="w-full border border-emerald-400 rounded-lg p-1.5 text-xs font-black text-white bg-emerald-900"
+                    />
+                  ) : (
+                    <span className="text-base sm:text-lg font-black text-white block truncate">
+                      {totalSavingsVnd > 0 ? `${totalSavingsVnd.toLocaleString("vi-VN")} VNĐ` : "0 VNĐ"}
+                    </span>
+                  )}
                   <span className="text-[10px] font-bold text-emerald-200 block truncate">
                     {pairQty > 0 ? `cho ${pairQty.toLocaleString("vi-VN")} đôi` : "tính quy đổi"}
                   </span>
@@ -945,19 +1719,49 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
             {beforeImageUrls.length > 0 ? (
               <div className="grid grid-cols-2 gap-2">
                 {beforeImageUrls.map((u, idx) => (
-                  <a key={u} href={u} target="_blank" rel="noreferrer" className="block relative">
+                  <div key={u + idx} className="relative rounded-xl overflow-hidden group">
                     <img
                       src={u}
                       alt={`Before ${idx + 1}`}
                       className="w-full h-20 sm:h-24 object-cover rounded-xl border border-rose-200 bg-white"
                     />
-                  </a>
+                    {isEditing ? (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveBeforeImage?.(idx)}
+                        className="absolute top-1 right-1 w-6 h-6 rounded-full bg-rose-600 text-white font-black text-xs flex items-center justify-center shadow-md hover:bg-rose-700 transition-colors cursor-pointer"
+                        title="Xóa ảnh này"
+                      >
+                        ✕
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onOpenLightbox?.(
+                            idx,
+                            beforeImageUrls.map((img, i) => ({ type: "image", url: img, title: `Ảnh Trước #${i + 1}` }))
+                          )
+                        }
+                        className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold cursor-pointer"
+                      >
+                        🔍 Phóng to
+                      </button>
+                    )}
+                  </div>
                 ))}
               </div>
             ) : (
-              <div className="w-full h-36 sm:h-44 rounded-xl border border-dashed border-rose-200 bg-white flex items-center justify-center text-slate-400 font-bold text-xs">
+              <div className="w-full h-28 rounded-xl border border-dashed border-rose-200 bg-white flex items-center justify-center text-slate-400 font-bold text-xs">
                 Chưa có ảnh trước
               </div>
+            )}
+
+            {isEditing && (
+              <label className="block w-full py-2.5 px-3 rounded-xl border-2 border-dashed border-rose-300 hover:bg-rose-50 text-rose-700 font-extrabold text-xs text-center cursor-pointer transition-colors mt-2">
+                <input type="file" accept="image/*" multiple onChange={handleUploadBeforeImages} hidden />
+                <span>{uploadingBefore ? "⏳ Đang tải ảnh lên Cloudinary..." : "📷 + Thêm ảnh Trước"}</span>
+              </label>
             )}
           </div>
 
@@ -972,39 +1776,100 @@ function TabInfoContent({ proposal }: { proposal: KaizenProposal }) {
             {afterImageUrls.length > 0 ? (
               <div className="grid grid-cols-2 gap-2">
                 {afterImageUrls.map((u, idx) => (
-                  <a key={u} href={u} target="_blank" rel="noreferrer" className="block relative">
+                  <div key={u + idx} className="relative rounded-xl overflow-hidden group">
                     <img
                       src={u}
                       alt={`After ${idx + 1}`}
                       className="w-full h-20 sm:h-24 object-cover rounded-xl border border-emerald-200 bg-white"
                     />
-                  </a>
+                    {isEditing ? (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveAfterImage?.(idx)}
+                        className="absolute top-1 right-1 w-6 h-6 rounded-full bg-rose-600 text-white font-black text-xs flex items-center justify-center shadow-md hover:bg-rose-700 transition-colors cursor-pointer"
+                        title="Xóa ảnh này"
+                      >
+                        ✕
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onOpenLightbox?.(
+                            idx,
+                            afterImageUrls.map((img, i) => ({ type: "image", url: img, title: `Ảnh Sau #${i + 1}` }))
+                          )
+                        }
+                        className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold cursor-pointer"
+                      >
+                        🔍 Phóng to
+                      </button>
+                    )}
+                  </div>
                 ))}
               </div>
             ) : (
-              <div className="w-full h-36 sm:h-44 rounded-xl border border-dashed border-emerald-200 bg-white flex items-center justify-center text-slate-400 font-bold text-xs">
+              <div className="w-full h-28 rounded-xl border border-dashed border-emerald-200 bg-white flex items-center justify-center text-slate-400 font-bold text-xs">
                 Chưa có ảnh sau
               </div>
+            )}
+
+            {isEditing && (
+              <label className="block w-full py-2.5 px-3 rounded-xl border-2 border-dashed border-emerald-300 hover:bg-emerald-50 text-emerald-700 font-extrabold text-xs text-center cursor-pointer transition-colors mt-2">
+                <input type="file" accept="image/*" multiple onChange={handleUploadAfterImages} hidden />
+                <span>{uploadingAfter ? "⏳ Đang tải ảnh lên Cloudinary..." : "📷 + Thêm ảnh Sau"}</span>
+              </label>
             )}
           </div>
         </div>
       </div>
 
-      {/* VIDEO CLIPS (NẾU CÓ) */}
-      {videos.length > 0 && (
+      {/* VIDEO CLIPS (NẾU CÓ HOẶC KHI ĐANG SỬA) */}
+      {(videos.length > 0 || isEditing) && (
         <div className="space-y-3 pt-2 border-t border-slate-200">
           <h4 className="text-xs font-black uppercase tracking-wider text-purple-700 flex items-center gap-2">
             <span>🎬</span>
-            <span>VIDEO CLIPS MINH HỌA</span>
+            <span>VIDEO CLIPS MINH HỌA ({videos.length})</span>
           </h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {videos.map((vid, idx) => (
-              <div key={idx} className="p-3 rounded-2xl border border-purple-200 bg-purple-50/30 space-y-1.5">
-                <span className="text-xs font-bold text-purple-900 block">{vid.title || `Video #${idx + 1}`}</span>
-                <video controls src={vid.url} className="w-full h-44 object-cover rounded-xl bg-black" />
+              <div key={idx} className="p-3 rounded-2xl border border-purple-200 bg-purple-50/30 space-y-1.5 relative">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-purple-900 block truncate">{vid.title || `Video #${idx + 1}`}</span>
+                  {isEditing ? (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveVideo?.(idx)}
+                      className="px-2 py-0.5 rounded-lg bg-rose-600 text-white font-black text-[10px] hover:bg-rose-700 transition-colors cursor-pointer"
+                    >
+                      ✕ Xóa Video
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onOpenLightbox?.(
+                          idx,
+                          videos.map((v) => ({ type: "video", url: v.url, title: v.title }))
+                        )
+                      }
+                      className="text-[10px] text-purple-700 font-extrabold hover:underline cursor-pointer flex items-center gap-1"
+                    >
+                      <span>🔍 Xem full màn hình</span>
+                    </button>
+                  )}
+                </div>
+                <UniversalVideoPlayer url={vid.url} title={vid.title} />
               </div>
             ))}
           </div>
+
+          {isEditing && (
+            <label className="block w-full py-2.5 px-4 rounded-xl border-2 border-dashed border-purple-300 hover:bg-purple-50 text-purple-700 font-extrabold text-xs text-center cursor-pointer transition-colors mt-2">
+              <input type="file" accept="video/*" onChange={handleUploadVideo} hidden />
+              <span>{uploadingVideo ? "🎬 Đang tải video lên Cloudinary..." : "🎬 + Thêm Video Clip (Cloudinary)"}</span>
+            </label>
+          )}
         </div>
       )}
     </div>
