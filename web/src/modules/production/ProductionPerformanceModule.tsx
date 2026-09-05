@@ -1,9 +1,7 @@
 'use client';
-// (build cache-buster — không đổi logic, chỉ ép tạo lượt deploy mới)
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  IconCircleFilled,
   IconBuildingFactory2,
   IconSettings,
   IconRefresh,
@@ -45,19 +43,26 @@ type PphLeaf = {
 type PphDashboardFactory = { id: string; name: string; leaves: PphLeaf[] };
 type PphDashboardResponse = { success: boolean; data?: { date: string; factories: PphDashboardFactory[] }; error?: string };
 
-// Bảng màu tối "executive dashboard" — chỉ áp dụng RIÊNG cho khối Hiệu Suất Nhà Máy này, phần
-// khung/menu chung của trang /work vẫn giữ nền sáng như cũ.
 const ENTRY_LABEL: Record<EntryStatus, { label: string; cls: string }> = {
-  ontime: { label: 'Đúng giờ', cls: 'bg-emerald-500/15 text-emerald-300' },
-  late: { label: 'Nhập trễ', cls: 'bg-amber-500/15 text-amber-300' },
-  missing: { label: 'Chưa nhập', cls: 'bg-rose-500/15 text-rose-300' },
+  ontime: { label: 'Đúng giờ', cls: 'bg-emerald-50 text-emerald-700' },
+  late: { label: 'Nhập trễ', cls: 'bg-amber-50 text-amber-700' },
+  missing: { label: 'Chưa nhập', cls: 'bg-rose-50 text-rose-700' },
 };
 
 const STATUS_BAR_CLS: Record<HourStatus, string> = {
   ok: 'bg-emerald-500',
   warn: 'bg-amber-400',
   bad: 'bg-rose-500',
-  pending: 'bg-white/10',
+  pending: 'bg-slate-100',
+};
+
+// Badge màu cho các chỉ số PPH/Hiệu suất trong bảng — cùng ngôn ngữ màu với 3 màu trên biểu đồ
+// (đạt/gần đạt/chưa đạt), giúp nhìn bảng là biết ngay Tổ nào đang ổn/đang hụt mà không cần dò số.
+const STATUS_BADGE_CLS: Record<HourStatus, string> = {
+  ok: 'bg-emerald-50 text-emerald-700',
+  warn: 'bg-amber-50 text-amber-700',
+  bad: 'bg-rose-50 text-rose-700',
+  pending: 'bg-slate-100 text-slate-500',
 };
 
 const STATUS_DOT_LABEL: { key: 'ok' | 'warn' | 'bad'; label: string; cls: string }[] = [
@@ -70,11 +75,11 @@ const STATUS_DOT_LABEL: { key: 'ok' | 'warn' | 'bad'; label: string; cls: string
 // suy chuỗi) để Tailwind nhận diện đúng lúc build. Nhà máy ngoài danh sách (VD thêm mới sau) rơi
 // về DEFAULT_STYLE, không vỡ giao diện.
 const FACTORY_STYLE_LIST = [
-  { border: 'border-l-blue-500', iconBg: 'bg-blue-500/15', iconText: 'text-blue-400', tagText: 'text-blue-400' },
-  { border: 'border-l-violet-500', iconBg: 'bg-violet-500/15', iconText: 'text-violet-400', tagText: 'text-violet-400' },
-  { border: 'border-l-amber-500', iconBg: 'bg-amber-500/15', iconText: 'text-amber-400', tagText: 'text-amber-400' },
-  { border: 'border-l-rose-500', iconBg: 'bg-rose-500/15', iconText: 'text-rose-400', tagText: 'text-rose-400' },
-  { border: 'border-l-sky-500', iconBg: 'bg-sky-500/15', iconText: 'text-sky-400', tagText: 'text-sky-400' },
+  { border: 'border-l-blue-500', selBg: 'bg-blue-50', iconBg: 'bg-blue-100', iconText: 'text-blue-600', tagText: 'text-blue-600' },
+  { border: 'border-l-violet-500', selBg: 'bg-violet-50', iconBg: 'bg-violet-100', iconText: 'text-violet-600', tagText: 'text-violet-600' },
+  { border: 'border-l-amber-500', selBg: 'bg-amber-50', iconBg: 'bg-amber-100', iconText: 'text-amber-600', tagText: 'text-amber-600' },
+  { border: 'border-l-rose-500', selBg: 'bg-rose-50', iconBg: 'bg-rose-100', iconText: 'text-rose-600', tagText: 'text-rose-600' },
+  { border: 'border-l-sky-500', selBg: 'bg-sky-50', iconBg: 'bg-sky-100', iconText: 'text-sky-600', tagText: 'text-sky-600' },
 ];
 const DEFAULT_STYLE = FACTORY_STYLE_LIST[0];
 
@@ -155,23 +160,16 @@ function slotMinutes(slot: string): number {
 
 // Trạng thái 1 khung giờ cụ thể của 1 Tổ — dùng cho bảng chi tiết khi đang lọc riêng 1 Tổ.
 function slotDueState(slot: string, filled: boolean, isToday: boolean): { label: string; cls: string } {
-  if (filled) return { label: 'Đã cập nhật', cls: 'bg-emerald-500/15 text-emerald-300' };
+  if (filled) return { label: 'Đã cập nhật', cls: 'bg-emerald-50 text-emerald-700' };
   const due = !isToday || nowVNMinutes() >= slotMinutes(slot) - 10;
-  return due ? { label: 'Chưa nhập', cls: 'bg-rose-500/15 text-rose-300' } : { label: 'Chưa tới giờ', cls: 'bg-white/5 text-slate-500' };
+  return due ? { label: 'Chưa nhập', cls: 'bg-rose-50 text-rose-700' } : { label: 'Chưa tới giờ', cls: 'bg-slate-100 text-slate-400' };
 }
 
 // Hiệu Suất Nhà Máy — dữ liệu THẬT từ các lượt quét QR ở /pph-scan (bảng pph_entries), gộp theo
 // đúng cây Nhà máy/Xưởng/Chuyền/Tổ đang cấu hình ở trang Cài Đặt. Mặc định xem HÔM NAY, tự làm
 // mới mỗi 60s cho cảm giác gần-realtime; chọn 1 ngày khác thì xem đúng dữ liệu ngày đó (không tự
-// làm mới nữa vì dữ liệu ngày cũ không đổi). Giao diện dạng "executive dashboard" nền tối — chỉ
-// riêng khối này, không đổi màu phần khung/menu chung của trang /work.
-export default function ProductionPerformanceModule({
-  viewerName,
-  viewerTitle,
-}: {
-  viewerName?: string;
-  viewerTitle?: string;
-}) {
+// làm mới nữa vì dữ liệu ngày cũ không đổi).
+export default function ProductionPerformanceModule() {
   const [showSettings, setShowSettings] = useState(false);
   const [factories, setFactories] = useState<PphDashboardFactory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -281,37 +279,37 @@ export default function ProductionPerformanceModule({
     return <PphSettingsView onClose={() => { setShowSettings(false); load({ fresh: true }); }} />;
   }
 
-  const headerProps = { lastUpdated, selectedDate, onDateChange: setSelectedDate, onRefresh: () => load({ fresh: true }), onOpenSettings: () => setShowSettings(true), viewerName, viewerTitle };
+  const headerProps = { lastUpdated, selectedDate, onDateChange: setSelectedDate, onRefresh: () => load({ fresh: true }), onOpenSettings: () => setShowSettings(true) };
 
   if (loading && factories.length === 0) {
     return (
-      <DarkShell>
+      <Shell>
         <Header {...headerProps} />
-        <div className="p-12 rounded-2xl bg-white/[0.03] border border-white/10 text-center text-sm text-slate-400">Đang tải dữ liệu...</div>
-      </DarkShell>
+        <div className="p-12 rounded-2xl bg-slate-50 border border-slate-200 text-center text-base text-slate-400">Đang tải dữ liệu...</div>
+      </Shell>
     );
   }
 
   if (error && factories.length === 0) {
     return (
-      <DarkShell>
+      <Shell>
         <Header {...headerProps} />
-        <div className="p-8 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-center text-sm text-rose-300 font-semibold">⚠️ {error}</div>
-      </DarkShell>
+        <div className="p-8 rounded-2xl bg-rose-50 border border-rose-200 text-center text-base text-rose-600 font-semibold">⚠️ {error}</div>
+      </Shell>
     );
   }
 
   if (factories.length === 0) {
     return (
-      <DarkShell>
+      <Shell>
         <Header {...headerProps} />
-        <div className="p-12 rounded-2xl bg-white/[0.03] border border-white/10 text-center text-sm text-slate-400 space-y-2">
+        <div className="p-12 rounded-2xl bg-slate-50 border border-slate-200 text-center text-base text-slate-400 space-y-2">
           <p>Chưa có Nhà máy nào được cấu hình.</p>
-          <button type="button" onClick={() => setShowSettings(true)} className="text-blue-400 font-bold hover:underline">
+          <button type="button" onClick={() => setShowSettings(true)} className="text-[#006838] font-bold hover:underline">
             Vào Cài Đặt để thêm Nhà máy / Xưởng / Chuyền / Tổ →
           </button>
         </div>
-      </DarkShell>
+      </Shell>
     );
   }
 
@@ -319,14 +317,14 @@ export default function ProductionPerformanceModule({
   const chartTarget = leaf ? leaf.perHourTarget : factoryAggregate?.totalTargetPerHour ?? 0;
 
   const statCards = factory && factoryAggregate ? [
-    { label: 'PPH trung bình', value: fmtOrDash(leaf ? leaf.pphLatest : factoryAggregate.pph), unit: 'đôi/giờ', accent: 'border-t-blue-500', valueCls: 'text-white' },
-    { label: 'Mục tiêu RFT', value: fmtPctOrDash(leaf ? leaf.setup?.targetRft ?? null : factoryAggregate.targetRftPct), unit: '', accent: 'border-t-emerald-500', valueCls: 'text-emerald-400' },
-    { label: 'Hiệu suất tổng', value: fmtPctOrDash(leaf ? leaf.efficiencyPctLatest : factoryAggregate.efficiencyPct), unit: '', accent: 'border-t-amber-500', valueCls: 'text-amber-400' },
-    { label: 'Đạt chỉ tiêu giờ này', value: `${leavesMeetingTargetNow.met}/${leavesMeetingTargetNow.total}`, unit: 'điểm quét', accent: 'border-t-violet-500', valueCls: 'text-violet-400' },
+    { label: 'PPH trung bình', value: fmtOrDash(leaf ? leaf.pphLatest : factoryAggregate.pph), unit: 'đôi/giờ', accent: 'border-t-blue-500', valueCls: 'text-blue-600' },
+    { label: 'Mục tiêu RFT', value: fmtPctOrDash(leaf ? leaf.setup?.targetRft ?? null : factoryAggregate.targetRftPct), unit: '', accent: 'border-t-emerald-500', valueCls: 'text-emerald-600' },
+    { label: 'Hiệu suất tổng', value: fmtPctOrDash(leaf ? leaf.efficiencyPctLatest : factoryAggregate.efficiencyPct), unit: '', accent: 'border-t-amber-500', valueCls: 'text-amber-600' },
+    { label: 'Đạt chỉ tiêu giờ này', value: `${leavesMeetingTargetNow.met}/${leavesMeetingTargetNow.total}`, unit: 'điểm quét', accent: 'border-t-violet-500', valueCls: 'text-violet-600' },
   ] : [];
 
   return (
-    <DarkShell>
+    <Shell>
       <Header {...headerProps} />
 
       {/* Dùng flex + chiều rộng CỐ ĐỊNH cho cột trái (không phải tỉ lệ %/12 cột) — vì lúc đóng
@@ -353,39 +351,39 @@ export default function ProductionPerformanceModule({
             <>
               <div className="grid grid-cols-2 @lg:grid-cols-4 gap-3">
                 {statCards.map((c) => (
-                  <div key={c.label} className={`rounded-2xl bg-[#111d33] border border-white/10 border-t-4 ${c.accent} p-4`}>
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{c.label}</div>
-                    <div className={`text-xl font-black mt-1.5 ${c.valueCls}`}>
-                      {c.value} {c.unit && <span className="text-[10px] font-bold text-slate-500">{c.unit}</span>}
+                  <div key={c.label} className={`rounded-2xl bg-white border border-slate-200 shadow-sm border-t-4 ${c.accent} p-4`}>
+                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wide">{c.label}</div>
+                    <div className={`text-2xl font-black mt-1.5 ${c.valueCls}`}>
+                      {c.value} {c.unit && <span className="text-xs font-bold text-slate-400">{c.unit}</span>}
                     </div>
                   </div>
                 ))}
               </div>
 
               {/* Biểu đồ sản lượng theo giờ */}
-              <div className="rounded-2xl bg-[#111d33] border border-white/10 p-4 sm:p-5">
+              <div className="rounded-2xl bg-white border border-slate-200 shadow-sm p-4 sm:p-5">
                 <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
                   <div>
-                    <h3 className="text-xs font-black text-white uppercase tracking-wide flex items-center gap-1.5">
-                      <IconChartBar size={14} className="text-blue-400" />
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+                      <IconChartBar size={16} className="text-blue-600" />
                       Sản Lượng Theo Giờ ({leaf ? leaf.name : `Toàn ${factory.name}`})
                     </h3>
-                    <p className="text-[11px] text-slate-500 mt-1">
+                    <p className="text-xs text-slate-500 mt-1">
                       {leaf
                         ? `${leaf.setup?.model || 'Chưa có model'} · Chỉ tiêu ${leaf.perHourTarget} đôi/giờ`
                         : `${factory.leaves.length} điểm quét · Tổng chỉ tiêu ${chartTarget} đôi/giờ`}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3 text-[10px] font-semibold text-slate-400">
+                  <div className="flex items-center gap-3 text-xs font-semibold text-slate-500">
                     {STATUS_DOT_LABEL.map((s) => (
                       <span key={s.key} className="flex items-center gap-1">
-                        <span className={`w-2 h-2 rounded-full ${s.cls}`} /> {s.label}
+                        <span className={`w-2.5 h-2.5 rounded-full ${s.cls}`} /> {s.label}
                       </span>
                     ))}
                   </div>
                 </div>
                 {hours.length === 0 ? (
-                  <div className="h-40 flex items-center justify-center text-xs text-slate-500">Chưa có dữ liệu khung giờ nào hôm nay.</div>
+                  <div className="h-40 flex items-center justify-center text-sm text-slate-400">Chưa có dữ liệu khung giờ nào hôm nay.</div>
                 ) : (
                   <div className="flex items-end gap-2 sm:gap-3 h-40">
                     {hours.map((h) => {
@@ -396,9 +394,9 @@ export default function ProductionPerformanceModule({
                       const clickable = !!(h.slotData && h.slotData.filled);
                       const barCore = (
                         <>
-                          {h.actual != null && <span className="text-[10px] font-bold text-slate-300 mb-1">{h.actual}</span>}
-                          <div className={`w-full rounded-t-lg ${STATUS_BAR_CLS[h.status]} ${clickable ? 'group-hover:brightness-125 transition' : ''}`} style={{ height: `${heightPct}%` }} />
-                          <span className="text-[10px] text-slate-500 mt-1.5">{h.time}</span>
+                          {h.actual != null && <span className="text-xs font-bold text-slate-600 mb-1">{h.actual}</span>}
+                          <div className={`w-full rounded-t-lg ${STATUS_BAR_CLS[h.status]} ${clickable ? 'group-hover:brightness-110 transition' : ''}`} style={{ height: `${heightPct}%` }} />
+                          <span className="text-xs text-slate-400 mt-1.5">{h.time}</span>
                         </>
                       );
                       return clickable ? (
@@ -423,17 +421,17 @@ export default function ProductionPerformanceModule({
 
               {/* Trạng thái từng điểm quét — đang xem TOÀN nhà máy: bảng tổng hợp 1 dòng/Tổ.
                   Đã chọn riêng 1 Tổ: đổi thành bảng chi tiết từng khung giờ của đúng Tổ đó. */}
-              <div className="rounded-2xl bg-[#111d33] border border-white/10 overflow-hidden">
+              <div className="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
                 <div className="px-4 sm:px-5 pt-4 pb-2 flex items-center justify-between gap-2">
-                  <h3 className="text-xs font-black text-white uppercase tracking-wide flex items-center gap-1.5">
-                    <IconClipboardList size={14} className="text-blue-400" />
+                  <h3 className="text-sm font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+                    <IconClipboardList size={16} className="text-blue-600" />
                     {leaf ? `Chi Tiết Từng Khung Giờ — ${leaf.name}` : 'Trạng Thái Chi Tiết Các Điểm Quét'}
                   </h3>
                   {leaf && (
                     <button
                       type="button"
                       onClick={() => setLeafId(null)}
-                      className="text-[11px] font-bold text-blue-400 hover:underline shrink-0"
+                      className="text-xs font-bold text-blue-600 hover:underline shrink-0"
                     >
                       ← Xem toàn nhà máy
                     </button>
@@ -443,47 +441,44 @@ export default function ProductionPerformanceModule({
                 {leaf ? (
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="text-[11px] font-bold text-slate-500 uppercase border-b border-white/10 whitespace-nowrap">
-                        <th className="px-4 sm:px-5 py-2">Khung giờ</th>
-                        <th className="px-4 py-2">Sản lượng</th>
-                        <th className="px-4 py-2">Người nhập</th>
-                        <th className="px-4 py-2">Trạng thái cập nhật</th>
+                      <tr className="text-xs font-bold text-slate-500 uppercase border-b border-slate-100 whitespace-nowrap">
+                        <th className="px-4 sm:px-5 py-2.5">Khung giờ</th>
+                        <th className="px-4 py-2.5">Sản lượng</th>
+                        <th className="px-4 py-2.5">Người nhập</th>
+                        <th className="px-4 py-2.5">Trạng thái cập nhật</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-white/5 text-xs text-slate-300 whitespace-nowrap">
+                    <tbody className="divide-y divide-slate-50 text-sm text-slate-700 whitespace-nowrap">
                       {leaf.slots.map((s) => {
                         const due = slotDueState(s.slot, s.filled, isToday);
                         const hasShortfall = !!(s.filled && s.shortfallReason);
+                        const status = slotStatus(s.actualQty, leaf.perHourTarget);
                         return (
                           <tr key={s.slot}>
-                            <td className="px-4 sm:px-5 py-2.5 font-bold text-slate-100">{s.slot}</td>
-                            <td className="px-4 py-2.5">
+                            <td className="px-4 sm:px-5 py-3 font-bold text-slate-900">{s.slot}</td>
+                            <td className="px-4 py-3">
                               {s.filled ? (
                                 <button
                                   type="button"
                                   onClick={() => setSlotPopup(s)}
-                                  className={`inline-flex items-center gap-1 font-bold underline underline-offset-2 transition ${
-                                    hasShortfall
-                                      ? 'text-rose-300 decoration-dotted decoration-rose-400/60 hover:text-rose-200'
-                                      : 'text-slate-100 decoration-dotted decoration-slate-500 hover:text-white'
-                                  }`}
+                                  className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg font-bold transition hover:brightness-95 ${STATUS_BADGE_CLS[status]}`}
                                   title="Xem chi tiết khung giờ này"
                                 >
-                                  {hasShortfall && <IconAlertTriangle size={12} />}
+                                  {hasShortfall && <IconAlertTriangle size={13} />}
                                   {s.actualQty}
                                 </button>
                               ) : (
-                                <span className="font-bold text-slate-100">—</span>
+                                <span className="font-bold text-slate-300">—</span>
                               )}
                             </td>
-                            <td className="px-4 py-2.5">
-                              <span className="inline-flex items-center gap-1 text-slate-400">
-                                {s.submittedBy ? <IconUser size={12} className="text-slate-500" /> : null}
+                            <td className="px-4 py-3">
+                              <span className="inline-flex items-center gap-1 text-slate-500">
+                                {s.submittedBy ? <IconUser size={13} className="text-slate-400" /> : null}
                                 {s.submittedBy || '—'}
                               </span>
                             </td>
-                            <td className="px-4 py-2.5">
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${due.cls}`}>{due.label}</span>
+                            <td className="px-4 py-3">
+                              <span className={`px-2 py-1 rounded-full text-xs font-bold ${due.cls}`}>{due.label}</span>
                             </td>
                           </tr>
                         );
@@ -491,34 +486,49 @@ export default function ProductionPerformanceModule({
                     </tbody>
                   </table>
                 ) : factory.leaves.length === 0 ? (
-                  <div className="px-5 py-6 text-sm text-slate-500">Nhà máy này chưa có điểm quét nào.</div>
+                  <div className="px-5 py-6 text-sm text-slate-400">Nhà máy này chưa có điểm quét nào.</div>
                 ) : (
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="text-[11px] font-bold text-slate-500 uppercase border-b border-white/10 whitespace-nowrap">
-                        <th className="px-4 sm:px-5 py-2">Điểm quét</th>
-                        <th className="px-4 py-2">Model</th>
-                        <th className="px-4 py-2">PPH</th>
-                        <th className="px-4 py-2">Hiệu suất</th>
-                        <th className="px-4 py-2">Trạng thái cập nhật</th>
+                      <tr className="text-xs font-bold text-slate-500 uppercase border-b border-slate-100 whitespace-nowrap">
+                        <th className="px-4 sm:px-5 py-2.5">Điểm quét</th>
+                        <th className="px-4 py-2.5">Model</th>
+                        <th className="px-4 py-2.5">PPH</th>
+                        <th className="px-4 py-2.5">Hiệu suất</th>
+                        <th className="px-4 py-2.5">Trạng thái cập nhật</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-white/5 text-xs text-slate-300 whitespace-nowrap">
-                      {factory.leaves.map((l) => (
-                        <tr
-                          key={l.id}
-                          onClick={() => setLeafId(l.id)}
-                          className="cursor-pointer hover:bg-white/[0.04] transition"
-                        >
-                          <td className="px-4 sm:px-5 py-2.5 font-bold text-slate-100" title={l.path}>{l.name}</td>
-                          <td className="px-4 py-2.5 font-mono text-slate-400">{l.setup?.model || '—'}</td>
-                          <td className="px-4 py-2.5">{fmtOrDash(l.pphLatest)}</td>
-                          <td className="px-4 py-2.5 font-bold text-slate-100">{fmtPctOrDash(l.efficiencyPctLatest)}</td>
-                          <td className="px-4 py-2.5">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${ENTRY_LABEL[l.entryStatus].cls}`}>{ENTRY_LABEL[l.entryStatus].label}</span>
-                          </td>
-                        </tr>
-                      ))}
+                    <tbody className="divide-y divide-slate-50 text-sm text-slate-700 whitespace-nowrap">
+                      {factory.leaves.map((l) => {
+                        const status = slotStatus(l.pphLatest, l.perHourTarget);
+                        return (
+                          <tr
+                            key={l.id}
+                            onClick={() => setLeafId(l.id)}
+                            className="cursor-pointer hover:bg-slate-50 transition"
+                          >
+                            <td className="px-4 sm:px-5 py-3 font-bold text-slate-900" title={l.path}>{l.name}</td>
+                            <td className="px-4 py-3 font-mono text-slate-500">{l.setup?.model || '—'}</td>
+                            <td className="px-4 py-3">
+                              {l.pphLatest != null ? (
+                                <span className={`px-2 py-1 rounded-lg font-bold ${STATUS_BADGE_CLS[status]}`}>{fmtOrDash(l.pphLatest)}</span>
+                              ) : (
+                                <span className="font-bold text-slate-300">—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {l.efficiencyPctLatest != null ? (
+                                <span className={`px-2 py-1 rounded-lg font-bold ${STATUS_BADGE_CLS[status]}`}>{fmtPctOrDash(l.efficiencyPctLatest)}</span>
+                              ) : (
+                                <span className="font-bold text-slate-300">—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={`px-2 py-1 rounded-full text-xs font-bold ${ENTRY_LABEL[l.entryStatus].cls}`}>{ENTRY_LABEL[l.entryStatus].label}</span>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 )}
@@ -536,56 +546,56 @@ export default function ProductionPerformanceModule({
         const hasShortfall = !!slotPopup.shortfallReason;
         return (
           <div
-            className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 bg-slate-900/40 flex items-center justify-center p-4"
             onClick={() => setSlotPopup(null)}
           >
             <div
-              className="bg-[#111d33] border border-white/10 rounded-2xl shadow-xl max-w-sm w-full p-5 space-y-3.5"
+              className="bg-white border border-slate-200 rounded-2xl shadow-xl max-w-sm w-full p-5 space-y-3.5"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between gap-2">
-                <h4 className="font-black text-white text-sm flex items-center gap-1.5">
-                  {hasShortfall && <IconAlertTriangle size={16} className="text-rose-400" />}
+                <h4 className="font-black text-slate-900 text-base flex items-center gap-1.5">
+                  {hasShortfall && <IconAlertTriangle size={18} className="text-rose-500" />}
                   Chi tiết khung {slotPopup.slot}
                 </h4>
                 <button
                   type="button"
                   onClick={() => setSlotPopup(null)}
-                  className="w-7 h-7 rounded-lg text-slate-400 hover:bg-white/10 hover:text-slate-200 flex items-center justify-center transition shrink-0"
+                  className="w-7 h-7 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center transition shrink-0"
                 >
-                  <IconX size={16} />
+                  <IconX size={18} />
                 </button>
               </div>
-              <dl className="space-y-2.5 text-xs">
+              <dl className="space-y-2.5 text-sm">
                 <div className="flex items-center justify-between gap-2">
-                  <dt className="text-slate-400 font-semibold">Sản lượng:</dt>
-                  <dd className="font-black text-slate-100">{slotPopup.actualQty ?? '—'} đôi</dd>
+                  <dt className="text-slate-500 font-semibold">Sản lượng:</dt>
+                  <dd className="font-black text-slate-900">{slotPopup.actualQty ?? '—'} đôi</dd>
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <dt className="text-slate-400 font-semibold">Người nhập:</dt>
-                  <dd className="font-black text-slate-100">{slotPopup.submittedBy || '—'}</dd>
+                  <dt className="text-slate-500 font-semibold">Người nhập:</dt>
+                  <dd className="font-black text-slate-900">{slotPopup.submittedBy || '—'}</dd>
                 </div>
               </dl>
               {hasShortfall ? (
                 <>
-                  <div className="h-px bg-white/10" />
+                  <div className="h-px bg-slate-100" />
                   <div>
-                    <div className="text-[11px] font-bold text-slate-500 uppercase mb-1">Nguyên nhân</div>
-                    <p className="text-sm text-slate-200 whitespace-pre-wrap">{slotPopup.shortfallReason || '—'}</p>
+                    <div className="text-xs font-bold text-slate-400 uppercase mb-1">Nguyên nhân</div>
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap">{slotPopup.shortfallReason || '—'}</p>
                   </div>
                   <div>
-                    <div className="text-[11px] font-bold text-slate-500 uppercase mb-1">Giải pháp</div>
-                    <p className="text-sm text-slate-200 whitespace-pre-wrap">{slotPopup.shortfallSolution || '—'}</p>
+                    <div className="text-xs font-bold text-slate-400 uppercase mb-1">Giải pháp</div>
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap">{slotPopup.shortfallSolution || '—'}</p>
                   </div>
                 </>
               ) : (
-                <p className="text-[11px] text-emerald-400 font-semibold">✓ Khung này đạt chỉ tiêu, không có ghi chú hụt chỉ tiêu.</p>
+                <p className="text-xs text-emerald-600 font-semibold">✓ Khung này đạt chỉ tiêu, không có ghi chú hụt chỉ tiêu.</p>
               )}
             </div>
           </div>
         );
       })()}
-    </DarkShell>
+    </Shell>
   );
 }
 
@@ -596,17 +606,16 @@ function fmtPctOrDash(n: number | null | undefined): string {
   return n == null ? '—' : `${n}%`;
 }
 
-// Khung nền tối bao toàn bộ khối Hiệu Suất Nhà Máy — tách riêng khỏi nền sáng chung của trang
-// /work, đọc như 1 "màn hình điều hành" độc lập.
+// Khung nền TRẮNG bao toàn bộ khối Hiệu Suất Nhà Máy.
 //
 // @container: các breakpoint bên trong (@lg:...) co giãn theo đúng CHIỀU RỘNG THẬT của khối này,
 // không theo chiều rộng toàn màn hình — vì khối này nằm cạnh menu trái có thể đóng/mở (w-20 hoặc
 // w-64..80), 2 trạng thái đó cho khối này 2 chiều rộng khả dụng rất khác nhau dù viewport y
 // nguyên. Dùng lg:/sm: (viewport-based) ở đây sẽ làm layout bể/chật khi menu đang mở dù màn hình
 // đủ rộng để hiện 2 cột lúc menu đóng — container query tránh đúng lỗi này.
-function DarkShell({ children }: { children: React.ReactNode }) {
+function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="@container rounded-3xl bg-[#0b1424] border border-white/10 shadow-xl shadow-slate-950/20 p-4 sm:p-6 space-y-5">
+    <div className="@container rounded-3xl bg-white border border-slate-200 shadow-sm p-4 sm:p-6 space-y-5">
       {children}
     </div>
   );
@@ -618,85 +627,70 @@ function Header({
   onDateChange,
   onRefresh,
   onOpenSettings,
-  viewerName,
-  viewerTitle,
 }: {
   lastUpdated: Date | null;
   selectedDate: string;
   onDateChange: (date: string) => void;
   onRefresh: () => void;
   onOpenSettings: () => void;
-  viewerName?: string;
-  viewerTitle?: string;
 }) {
   const isToday = selectedDate === todayVNStr();
   return (
-    <div className="flex items-start justify-between flex-wrap gap-4 pb-5 border-b border-white/10">
+    <div className="flex items-start justify-between flex-wrap gap-4 pb-5 border-b border-slate-200">
       <div className="flex items-stretch gap-3">
-        <span className="w-1 rounded-full bg-blue-500" />
+        <span className="w-1 rounded-full bg-[#006838]" />
         <div>
-          <h2 className="text-lg sm:text-xl font-black text-white tracking-tight">Tổ Hợp Kiên Giang — TBS Group</h2>
-          <p className="text-[11px] font-bold uppercase tracking-wider text-cyan-400 mt-1">
+          <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Tổ Hợp Kiên Giang — TBS Group</h2>
+          <p className="text-xs font-bold uppercase tracking-wider text-[#006838] mt-1">
             Executive Dashboard · Giám sát hiệu suất {isToday ? 'thời gian thực' : `— xem lại ${formatDateVN(selectedDate)}`}
           </p>
         </div>
       </div>
 
-      <div className="flex flex-col items-end gap-2.5">
-        {viewerName && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
-            <IconCircleFilled size={7} className={isToday ? 'text-emerald-400' : 'text-slate-500'} />
-            <span className="text-xs font-bold text-slate-100">
-              {viewerName}
-              {viewerTitle && <span className="text-slate-400 font-semibold"> ({viewerTitle})</span>}
-            </span>
-          </div>
+      <div className="flex items-center gap-2">
+        <span className="hidden sm:inline text-xs font-semibold text-slate-500">
+          {isToday
+            ? `Cập nhật tự động: ${lastUpdated ? lastUpdated.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '...'} | ${formatDateVN(selectedDate)}`
+            : `Đang xem lại: ${formatDateVN(selectedDate)}`}
+        </span>
+        <label
+          className="flex items-center gap-1.5 px-2.5 h-9 rounded-lg bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+          title="Chọn ngày xem lại"
+        >
+          <IconCalendar size={15} className="text-slate-400 shrink-0" />
+          <input
+            type="date"
+            value={selectedDate}
+            max={todayVNStr()}
+            onChange={(e) => e.target.value && onDateChange(e.target.value)}
+            className="bg-transparent text-sm font-bold outline-none cursor-pointer"
+          />
+        </label>
+        {!isToday && (
+          <button
+            type="button"
+            onClick={() => onDateChange(todayVNStr())}
+            className="px-2.5 h-9 rounded-lg bg-emerald-50 border border-emerald-200 text-[#006838] text-sm font-bold hover:bg-emerald-100 transition"
+          >
+            Hôm nay
+          </button>
         )}
-        <div className="flex items-center gap-2">
-          <span className="hidden sm:inline text-[10px] font-semibold text-slate-500">
-            {isToday
-              ? `Cập nhật tự động: ${lastUpdated ? lastUpdated.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '...'} | ${formatDateVN(selectedDate)}`
-              : `Đang xem lại: ${formatDateVN(selectedDate)}`}
-          </span>
-          <label
-            className="flex items-center gap-1.5 px-2.5 h-8 rounded-lg bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 transition cursor-pointer"
-            title="Chọn ngày xem lại"
-          >
-            <IconCalendar size={14} className="text-slate-500 shrink-0" />
-            <input
-              type="date"
-              value={selectedDate}
-              max={todayVNStr()}
-              onChange={(e) => e.target.value && onDateChange(e.target.value)}
-              className="bg-transparent text-[11px] font-bold outline-none cursor-pointer [color-scheme:dark]"
-            />
-          </label>
-          {!isToday && (
-            <button
-              type="button"
-              onClick={() => onDateChange(todayVNStr())}
-              className="px-2.5 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[11px] font-bold hover:bg-emerald-500/25 transition"
-            >
-              Hôm nay
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={onRefresh}
-            title="Làm mới ngay"
-            className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 text-slate-400 hover:bg-white/10 hover:text-slate-200 flex items-center justify-center transition"
-          >
-            <IconRefresh size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={onOpenSettings}
-            title="Cài đặt — cây Nhà máy/Xưởng/Chuyền/Tổ và mã QR quét sản lượng"
-            className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 text-slate-400 hover:bg-white/10 hover:text-slate-200 flex items-center justify-center transition"
-          >
-            <IconSettings size={14} />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onRefresh}
+          title="Làm mới ngay"
+          className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-700 flex items-center justify-center transition"
+        >
+          <IconRefresh size={16} />
+        </button>
+        <button
+          type="button"
+          onClick={onOpenSettings}
+          title="Cài đặt — cây Nhà máy/Xưởng/Chuyền/Tổ và mã QR quét sản lượng"
+          className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-700 flex items-center justify-center transition"
+        >
+          <IconSettings size={16} />
+        </button>
       </div>
     </div>
   );
@@ -727,35 +721,35 @@ function FactoryListPanel({
   const expandedStyle = expandedIdx >= 0 ? FACTORY_STYLE_LIST[expandedIdx % FACTORY_STYLE_LIST.length] : DEFAULT_STYLE;
 
   return (
-    <div className="rounded-2xl bg-[#111d33] border border-white/10 overflow-hidden">
-      <div className="px-4 py-3 border-b border-white/10 flex items-center gap-2">
-        <IconBuildingFactory2 size={16} className="text-blue-400" />
-        <h3 className="text-xs font-black text-white uppercase tracking-wide">
+    <div className="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
+      <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2">
+        <IconBuildingFactory2 size={18} className="text-blue-600" />
+        <h3 className="text-sm font-black text-slate-900 uppercase tracking-wide">
           {expandedFactory ? `Chọn Điểm Quét — ${expandedFactory.name}` : 'Danh Sách Nhà Máy'}
         </h3>
       </div>
-      <div className="divide-y divide-white/5 max-h-[420px] overflow-y-auto">
+      <div className="divide-y divide-slate-100 max-h-[420px] overflow-y-auto">
         {expandedFactory ? (
           <>
             <button
               type="button"
               onClick={onCollapse}
-              className="w-full text-left px-4 py-2.5 flex items-center gap-1.5 text-slate-400 hover:bg-white/5 hover:text-slate-200 transition"
+              className="w-full text-left px-4 py-2.5 flex items-center gap-1.5 text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition"
             >
-              <IconChevronLeft size={14} />
-              <span className="text-xs font-bold">Quay lại danh sách Nhà máy</span>
+              <IconChevronLeft size={16} />
+              <span className="text-sm font-bold">Quay lại danh sách Nhà máy</span>
             </button>
             <button
               type="button"
               onClick={() => onSelectLeaf(null)}
-              className={`w-full text-left px-4 py-2.5 text-xs font-bold transition ${
-                leafId === null ? `bg-white/[0.06] ${expandedStyle.tagText}` : 'text-slate-300 hover:bg-white/5'
+              className={`w-full text-left px-4 py-2.5 text-sm font-bold transition ${
+                leafId === null ? `${expandedStyle.selBg} ${expandedStyle.tagText}` : 'text-slate-600 hover:bg-slate-50'
               }`}
             >
               Toàn nhà máy {expandedFactory.name}
             </button>
             {expandedFactory.leaves.length === 0 ? (
-              <div className="px-4 py-4 text-xs text-slate-500">Chưa có điểm quét nào.</div>
+              <div className="px-4 py-4 text-sm text-slate-400">Chưa có điểm quét nào.</div>
             ) : (
               expandedFactory.leaves.map((l) => (
                 <button
@@ -763,8 +757,8 @@ function FactoryListPanel({
                   type="button"
                   onClick={() => onSelectLeaf(l.id)}
                   title={l.path}
-                  className={`w-full text-left pl-9 pr-4 py-2 text-xs font-semibold transition flex items-center justify-between gap-2 ${
-                    leafId === l.id ? `bg-white/[0.06] ${expandedStyle.tagText}` : 'text-slate-300 hover:bg-white/5'
+                  className={`w-full text-left pl-9 pr-4 py-2.5 text-sm font-semibold transition flex items-center justify-between gap-2 ${
+                    leafId === l.id ? `${expandedStyle.selBg} ${expandedStyle.tagText}` : 'text-slate-600 hover:bg-slate-50'
                   }`}
                 >
                   <span className="truncate">{l.name}</span>
@@ -785,18 +779,18 @@ function FactoryListPanel({
                 type="button"
                 onClick={() => onSelectFactory(f.id)}
                 className={`w-full text-left px-4 py-3.5 flex items-center gap-3 transition border-l-[3px] ${
-                  selected ? `${style.border} bg-white/[0.04]` : 'border-l-transparent hover:bg-white/[0.03]'
+                  selected ? `${style.border} ${style.selBg}` : 'border-l-transparent hover:bg-slate-50'
                 }`}
               >
-                <span className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${style.iconBg} ${style.iconText}`}>
-                  <IconBuildingFactory2 size={16} />
+                <span className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${style.iconBg} ${style.iconText}`}>
+                  <IconBuildingFactory2 size={18} />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-1.5 font-black text-white text-sm">
+                  <span className="flex items-center gap-1.5 font-black text-slate-900 text-base">
                     <span className="truncate">{f.name}</span>
-                    {selected && <span className={`text-[9px] font-black tracking-wide shrink-0 ${style.tagText}`}>• ĐANG XEM</span>}
+                    {selected && <span className={`text-[10px] font-black tracking-wide shrink-0 ${style.tagText}`}>• ĐANG XEM</span>}
                   </span>
-                  <span className="block text-[11px] text-slate-400 mt-0.5 truncate">
+                  <span className="block text-xs text-slate-500 mt-0.5 truncate">
                     {f.leaves.length} điểm quét{avgEff != null ? ` · Hiệu suất ${avgEff}%` : ''}
                   </span>
                 </span>
@@ -842,30 +836,30 @@ function InfoPanel({
       ];
 
   return (
-    <div className="rounded-2xl bg-[#111d33] border border-white/10 p-4 sm:p-5">
-      <h3 className="text-xs font-black text-white uppercase tracking-wide mb-3.5 flex items-center gap-1.5">
-        <IconClipboardList size={14} className="text-blue-400" />
+    <div className="rounded-2xl bg-white border border-slate-200 shadow-sm p-4 sm:p-5">
+      <h3 className="text-sm font-black text-slate-900 uppercase tracking-wide mb-3.5 flex items-center gap-1.5">
+        <IconClipboardList size={16} className="text-blue-600" />
         Thông Số {leaf ? leaf.name : factory.name}
       </h3>
-      <dl className="space-y-2.5 text-xs">
+      <dl className="space-y-2.5 text-sm">
         {rows.map(([k, v]) => (
           <div key={k} className="flex items-center justify-between gap-2">
-            <dt className="text-slate-400 font-semibold">{k}:</dt>
-            <dd className="font-black text-slate-100 text-right">{v}</dd>
+            <dt className="text-slate-500 font-semibold">{k}:</dt>
+            <dd className="font-black text-slate-900 text-right">{v}</dd>
           </div>
         ))}
-        <div className="h-px bg-white/10 my-2.5" />
+        <div className="h-px bg-slate-100 my-2.5" />
         <div className="flex items-center justify-between gap-2">
-          <dt className="text-slate-400 font-semibold">Thực tế lũy kế:</dt>
-          <dd className="font-black text-slate-100">{cumActual} đôi</dd>
+          <dt className="text-slate-500 font-semibold">Thực tế lũy kế:</dt>
+          <dd className="font-black text-slate-900">{cumActual} đôi</dd>
         </div>
         <div className="flex items-center justify-between gap-2">
-          <dt className="text-slate-400 font-semibold">Chỉ tiêu lũy kế:</dt>
-          <dd className="font-black text-slate-100">{cumTarget} đôi</dd>
+          <dt className="text-slate-500 font-semibold">Chỉ tiêu lũy kế:</dt>
+          <dd className="font-black text-slate-900">{cumTarget} đôi</dd>
         </div>
         <div className="flex items-center justify-between gap-2">
-          <dt className="text-slate-400 font-semibold">Chênh lệch:</dt>
-          <dd className={`font-black ${diff < 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+          <dt className="text-slate-500 font-semibold">Chênh lệch:</dt>
+          <dd className={`font-black ${diff < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
             {diff > 0 ? '+' : ''}
             {diff} đôi
           </dd>

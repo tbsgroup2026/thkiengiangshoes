@@ -1815,10 +1815,7 @@ function WorkDashboardContent() {
           {/* IF HIỆU SUẤT NHÀ MÁY (PHÒNG SẢN XUẤT) IS SELECTED */}
           {selectedDept === "production" && (
             <div className="space-y-4 my-auto">
-              <ProductionPerformanceModule
-                viewerName={userInfo.name}
-                viewerTitle={formatTitleWithDepartment(userInfo.title, userInfo.department)}
-              />
+              <ProductionPerformanceModule />
             </div>
           )}
 
