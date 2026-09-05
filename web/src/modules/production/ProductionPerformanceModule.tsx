@@ -643,7 +643,7 @@ function Header({
       <div className="flex items-stretch gap-3">
         <span className="w-1 rounded-full bg-[#006838]" />
         <div>
-          <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Tổ Hợp Kiên Giang — TBS Group</h2>
+          <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Hiệu Suất Nhà Máy</h2>
           <p className="text-xs font-bold uppercase tracking-wider text-[#006838] mt-1">
             Executive Dashboard · Giám sát hiệu suất {isToday ? 'thời gian thực' : `— xem lại ${formatDateVN(selectedDate)}`}
           </p>
