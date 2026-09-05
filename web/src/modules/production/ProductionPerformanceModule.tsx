@@ -614,10 +614,11 @@ function fmtPctOrDash(n: number | null | undefined): string {
 // nguyên. Dùng lg:/sm: (viewport-based) ở đây sẽ làm layout bể/chật khi menu đang mở dù màn hình
 // đủ rộng để hiện 2 cột lúc menu đóng — container query tránh đúng lỗi này.
 function Shell({ children }: { children: React.ReactNode }) {
-  // Nền xám nhạt riêng cho khối này (khác màu trắng của trang/menu xung quanh) — để thấy rõ ranh
-  // giới khối, các card/bảng bên trong vẫn trắng nên tự nổi lên trên nền xám này.
+  // Nền xám riêng cho khối này (khác màu trắng của trang/menu xung quanh) — để thấy rõ ranh giới
+  // khối, các card/bảng bên trong vẫn trắng nên tự nổi lên trên nền xám này. slate-50 thử trước
+  // gần trắng quá, gần như không thấy khác biệt — slate-100 rõ ràng hơn hẳn mà vẫn nhẹ nhàng.
   return (
-    <div className="@container rounded-3xl bg-slate-50 border border-slate-200 shadow-sm p-4 sm:p-6 space-y-5">
+    <div className="@container rounded-3xl bg-slate-100 border border-slate-200 shadow-sm p-4 sm:p-6 space-y-5">
       {children}
     </div>
   );
