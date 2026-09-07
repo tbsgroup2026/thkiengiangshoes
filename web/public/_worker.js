@@ -4491,6 +4491,18 @@ export default {
               END
             WHERE review_status IS NULL OR review_status = ''
           `).run().catch(() => {});
+
+          // Tự vá 1 lần: đề xuất đã được trao giải/chấm điểm (award_title có giá trị, status đã
+          // APPROVED) nhưng approval_status vẫn kẹt PENDING — xảy ra với các đề xuất được trao qua
+          // nút "Khuyến Khích" TRƯỚC khi action EVALUATE được sửa để đồng bộ approval_status (xem
+          // nextApprovalStatus phía trên). Idempotent, chỉ đụng đúng nhóm bị kẹt, chạy lại vô hại.
+          await env.DB.prepare(`
+            UPDATE ci_kaizen_proposals
+            SET approval_status = 'PHE_DUYET'
+            WHERE award_title IS NOT NULL AND award_title != ''
+              AND status = 'APPROVED'
+              AND (approval_status IS NULL OR approval_status NOT IN ('PHE_DUYET', 'TU_CHOI'))
+          `).run().catch(() => {});
         } catch (e) {}
       };
 
