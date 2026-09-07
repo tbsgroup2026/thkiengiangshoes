@@ -29,6 +29,7 @@ import {
 } from "@tabler/icons-react";
 import { convertNumberToWords } from "@/lib/numberToWords";
 import { KaizenProposal, isApprovedProposal, isRejectedProposal } from "./CIModule";
+import { REAL_FACTORIES } from "./KaizenPublicSubmitForm";
 import { usePermission } from "@/hooks/usePermission";
 import FeasibilityApprovalModal from "./FeasibilityApprovalModal";
 import {
@@ -60,6 +61,12 @@ const CATEGORIES = [
   { id: "EQUIPMENT", label: "7.MMTB CCDC", color: "bg-purple-600 text-white" },
   { id: "OTHER", label: "8.Khác", color: "bg-slate-600 text-white" },
 ];
+
+// Đồng bộ với KaizenPublicSubmitForm.tsx (form đăng ký) — VTCV và Nhóm SP/DV vốn là lựa chọn cố
+// định chứ không phải gõ tay tự do, dropdown ở đây phải khớp đúng options để không tạo ra giá trị
+// lạ không khớp với bất kỳ đâu khác trong hệ thống.
+const VTCV_OPTIONS = ["Cán bộ quản lý", "Công nhân", "Nhân viên"];
+const PRODUCT_GROUPS = ["Quai", "Mũi", "Gót", "Đế", "Thành phẩm", "Phụ liệu", "Dịch vụ", "Khác"];
 
 function getFirstImageUrl(urlStr?: string | null): string {
   if (!urlStr) return "";
@@ -113,6 +120,10 @@ export default function KaizenDetailModal({
   const [editProposerPosition, setEditProposerPosition] = useState("");
   const [editProductGroup, setEditProductGroup] = useState("");
   const [editCustomer, setEditCustomer] = useState("");
+  // Khu vực/Phòng (factory+region) — TÁCH RIÊNG khỏi editProductGroup: trước đây editProductGroup
+  // lỡ nhận nhầm fallback từ proposal.factory khiến người duyệt tưởng đây là ô đổi Khu vực, sửa
+  // xong chỉ lưu vào product_group (Nhóm SP/DV) chứ KHÔNG đổi được factory/region thật.
+  const [editFactory, setEditFactory] = useState("");
 
   const [editProductCode, setEditProductCode] = useState("");
   const [editQuantity, setEditQuantity] = useState<number | string>("");
@@ -142,9 +153,10 @@ export default function KaizenDetailModal({
     if (!proposal) return;
     setEditTitle(proposal.title || "");
     setEditCategory(normalizeCategoryId(proposal.category || proposal.category_label));
-    setEditProposerPosition((proposal as any).proposer_position || proposal.department || "");
-    setEditProductGroup((proposal as any).product_group || proposal.factory || "");
+    setEditProposerPosition((proposal as any).proposer_position || VTCV_OPTIONS[1]);
+    setEditProductGroup((proposal as any).product_group || "");
     setEditCustomer(proposal.customer || "");
+    setEditFactory(proposal.factory || proposal.region || "");
 
     setEditProductCode((proposal as any).product_code || proposal.code || "");
     setEditQuantity((proposal as any).quantity || proposal.vote_count || 0);
@@ -275,6 +287,16 @@ export default function KaizenDetailModal({
       const totalSavingsNum =
         Number(editTotalSavingsVnd) || (pairQtyNum > 0 ? efficiencyVndNum * pairQtyNum : efficiencyVndNum);
 
+      // "Phòng CI"/"Phòng CN" có cơ cấu Bộ Phận cố định (không có Xưởng/Line con) nên tự map luôn
+      // department cho khớp khi đổi qua lại giữa 2 phòng này — các Khu vực khác (Kiên Giang 1/2/3...)
+      // có cơ cấu Xưởng/Line phức tạp hơn, modal này không có picker phân cấp nên để nguyên
+      // department cũ, không tự đoán.
+      const CI_CN_DEPARTMENT: Record<string, string> = {
+        "Phòng CI": "Bộ Phận Chuyển Đổi Số & Kaizen",
+        "Phòng CN": "Bộ Phận Công Nghệ",
+      };
+      const mappedDepartment = CI_CN_DEPARTMENT[editFactory];
+
       const payload = {
         id: proposal.id,
         action: "UPDATE",
@@ -286,6 +308,9 @@ export default function KaizenDetailModal({
         proposerPosition: editProposerPosition.trim(),
         product_group: editProductGroup.trim(),
         productGroup: editProductGroup.trim(),
+        factory: editFactory.trim(),
+        region: editFactory.trim(),
+        department: mappedDepartment,
         customer: editCustomer.trim(),
         product_code: editProductCode.trim(),
         productCode: editProductCode.trim(),
@@ -353,6 +378,9 @@ export default function KaizenDetailModal({
         before_description: payload.before_description,
         after_solution: payload.after_solution,
         customer: payload.customer,
+        factory: payload.factory,
+        region: payload.region,
+        department: payload.department ?? (proposal as any).department,
         time_before_seconds: payload.time_before_seconds,
         time_after_seconds: payload.time_after_seconds,
         saved_seconds: payload.saved_seconds,
@@ -373,10 +401,8 @@ export default function KaizenDetailModal({
       (proposal as any).pricingDirection = payload.pricing_direction;
       (proposal as any).proposer_position = payload.proposer_position;
       (proposal as any).proposerPosition = payload.proposer_position;
-      (proposal as any).department = payload.proposer_position;
       (proposal as any).product_group = payload.product_group;
       (proposal as any).productGroup = payload.product_group;
-      (proposal as any).factory = payload.product_group;
       (proposal as any).costBefore = payload.cost_before;
       (proposal as any).chi_phi_truoc = payload.cost_before;
       (proposal as any).costAfter = payload.cost_after;
@@ -598,9 +624,10 @@ export default function KaizenDetailModal({
   const pYear = !isNaN(effDate.getTime())
     ? effDate.getFullYear()
     : ((proposal as any).proposer_year || new Date().getFullYear());
-  const vtcv = (proposal as any).proposer_position || proposal.department || "Công Nhân Sản Xuất";
+  const vtcv = (proposal as any).proposer_position || "";
   const cust = proposal.customer || "Skechers";
-  const prodGroup = (proposal as any).product_group || proposal.factory || "Quai";
+  const prodGroup = (proposal as any).product_group || "";
+  const khuVuc = proposal.factory || proposal.region || "";
 
   return (
     <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-5 md:p-6 animate-in fade-in duration-200">
@@ -709,19 +736,48 @@ export default function KaizenDetailModal({
             </div>
           </div>
 
+          {/* Thẻ KHU VỰC / PHÒNG (Full width) — đổi Phòng CI/CN cho đề xuất đã có sẵn */}
+          <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+              KHU VỰC / NHÀ MÁY
+            </span>
+            {isEditing ? (
+              <select
+                value={editFactory}
+                onChange={(e) => setEditFactory(e.target.value)}
+                className="w-full text-xs font-extrabold text-slate-900 border border-amber-300 rounded-lg px-2 py-1.5 bg-amber-50/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+              >
+                {REAL_FACTORIES.map((f) => (
+                  <option key={f} value={f}>
+                    {f}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <IconBuilding size={14} className="text-[#006838] shrink-0" />
+                <span className="text-xs font-extrabold text-slate-900">{khuVuc || "---"}</span>
+              </div>
+            )}
+          </div>
+
           {/* 3 Hàng Grid 2 cột */}
           <div className="grid grid-cols-2 gap-2.5">
             {/* Hàng 1: VTCV | NHÓM SP/DV */}
             <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-0.5">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">VTCV</span>
               {isEditing ? (
-                <input
-                  type="text"
+                <select
                   value={editProposerPosition}
                   onChange={(e) => setEditProposerPosition(e.target.value)}
-                  className="w-full text-xs font-extrabold text-slate-900 border border-amber-300 rounded-lg px-2 py-1 bg-amber-50/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
-                  placeholder="Vị trí công việc..."
-                />
+                  className="w-full text-xs font-extrabold text-slate-900 border border-amber-300 rounded-lg px-1.5 py-1 bg-amber-50/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+                >
+                  {VTCV_OPTIONS.map((v) => (
+                    <option key={v} value={v}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
               ) : (
                 <span className="text-xs font-extrabold text-slate-900 block truncate" title={vtcv || "---"}>
                   {vtcv || "---"}
@@ -732,13 +788,18 @@ export default function KaizenDetailModal({
             <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-0.5">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">NHÓM SP/DV</span>
               {isEditing ? (
-                <input
-                  type="text"
+                <select
                   value={editProductGroup}
                   onChange={(e) => setEditProductGroup(e.target.value)}
-                  className="w-full text-xs font-extrabold text-slate-900 border border-amber-300 rounded-lg px-2 py-1 bg-amber-50/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
-                  placeholder="Nhóm sản phẩm..."
-                />
+                  className="w-full text-xs font-extrabold text-slate-900 border border-amber-300 rounded-lg px-1.5 py-1 bg-amber-50/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+                >
+                  <option value="">-- Chưa chọn --</option>
+                  {PRODUCT_GROUPS.map((g) => (
+                    <option key={g} value={g}>
+                      {g}
+                    </option>
+                  ))}
+                </select>
               ) : (
                 <span className="text-xs font-extrabold text-slate-900 block truncate" title={prodGroup || "---"}>
                   {prodGroup || "---"}
