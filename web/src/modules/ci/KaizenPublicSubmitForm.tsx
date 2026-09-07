@@ -60,13 +60,16 @@ export function normalizeCategoryId(catRaw?: string): string {
   return "PRODUCTIVITY";
 }
 
+// "Phòng CN-CI" đã tách thành "Phòng CI" (Cải Tiến) và "Phòng CN" (Công Nghệ) riêng biệt — xem
+// organizationTree.ts. Đề xuất CŨ đã lưu factory = "Phòng CN-CI" giữ nguyên, không đổi.
 export const REAL_FACTORIES = [
   "Kiên Giang 1",
   "Kiên Giang 2",
   "Kiên Giang 3",
   "Hoàn thiện đế",
   "Phòng kế hoạch",
-  "Phòng CN-CI",
+  "Phòng CI",
+  "Phòng CN",
   "Phòng chất lượng",
   "Phòng nhân sự",
 ];
@@ -1239,6 +1242,181 @@ export default function KaizenPublicSubmitForm({
                     <div className="pt-2">
                       <span className="text-[10px] font-bold text-indigo-700 block mb-1">🎬 Preview Video từ Link:</span>
                       <UniversalVideoPlayer url={form.beforeVideoLink} title="Video TRƯỚC Cải Tiến (Link)" />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ════════════════════════════════════════════════════════════════
+              SECTION E: HÌNH ẢNH & VIDEO SAU CẢI TIẾN (Không bắt buộc)
+             ════════════════════════════════════════════════════════════════ */}
+          <div className="space-y-3 pb-4 border-b border-slate-200">
+            <div className="flex items-center gap-2 text-blue-600">
+              <IconPhoto size={18} />
+              <h3 className="font-black text-slate-900 text-xs uppercase tracking-wide">
+                E. HÌNH ẢNH &amp; VIDEO SAU CẢI TIẾN
+                <span className="text-slate-400 font-normal normal-case ml-1.5">(Nếu có, không bắt buộc)</span>
+              </h3>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-[11px] font-bold text-slate-600 flex items-center gap-2">
+              <span>💡</span>
+              <span>Nếu đã có kết quả SAU cải tiến thì đính kèm luôn tại đây — không có thì có thể bỏ qua, bổ sung sau khi được duyệt hiện trạng</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* AFTER IMAGES (Multiple Photos Upload & Grid Preview) */}
+              <div className="space-y-2 p-3.5 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/30">
+                <div className="flex items-center justify-between">
+                  <label className="font-black text-slate-900 text-xs flex items-center gap-1.5">
+                    <IconPhoto size={16} className="text-slate-600" />
+                    <span>Ảnh SAU Cải Tiến (Chọn nhiều ảnh):</span>
+                  </label>
+                  {form.afterImageUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, afterImageUrl: "" })}
+                      className="text-[11px] text-rose-600 font-bold flex items-center gap-1 cursor-pointer"
+                    >
+                      <IconTrash size={13} />
+                      <span>Xóa tất cả</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Grid preview of uploaded after images */}
+                {form.afterImageUrl ? (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto p-1 bg-white rounded-xl border border-slate-200">
+                      {form.afterImageUrl.split(",").map((url, idx) => {
+                        const cleanUrl = url.trim();
+                        if (!cleanUrl) return null;
+                        return (
+                          <div key={idx} className="relative group rounded-lg overflow-hidden border border-slate-200 aspect-square">
+                            <img src={cleanUrl} alt={`After ${idx}`} className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const currentUrls = form.afterImageUrl.split(",").map((s) => s.trim()).filter(Boolean);
+                                const updated = currentUrls.filter((_, i) => i !== idx);
+                                setForm({ ...form, afterImageUrl: updated.join(",") });
+                              }}
+                              className="absolute top-1 right-1 bg-rose-600 text-white rounded-full p-1 shadow-md hover:bg-rose-700 transition cursor-pointer"
+                              title="Xóa ảnh này"
+                            >
+                              <IconX size={10} />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <label className="flex items-center justify-center gap-1.5 p-2 bg-white rounded-xl border border-slate-300 cursor-pointer text-center hover:bg-slate-50 text-[11px] font-bold text-slate-700">
+                      <IconUpload size={14} />
+                      <span>Thêm ảnh khác</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => handleFileUpload(e, "afterImageUrl")}
+                      />
+                    </label>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center p-3 h-32 bg-white rounded-xl border border-slate-200 cursor-pointer text-center hover:bg-slate-50 transition-colors">
+                    <IconUpload size={24} className="text-slate-500 mb-1" />
+                    <span className="text-[11px] font-black text-slate-900">Upload ảnh (Có thể chọn nhiều ảnh cùng lúc)</span>
+                    <span className="text-[10px] text-slate-500 font-medium">Hỗ trợ JPG, PNG, WEBP tối đa 15MB/ảnh</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => handleFileUpload(e, "afterImageUrl")}
+                    />
+                  </label>
+                )}
+
+                <div className="space-y-1 pt-1">
+                  <label className="text-[10px] font-bold text-slate-600 block">HOẶC Dán Link Ảnh SAU (Google Drive...):</label>
+                  <textarea
+                    rows={2}
+                    value={form.afterImageLink}
+                    onChange={(e) => setForm({ ...form, afterImageLink: e.target.value })}
+                    placeholder="https://drive.google.com/file/d/..."
+                    className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-[11px] font-medium outline-none focus:border-[#006838] resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* AFTER VIDEO (Video Upload & Link) */}
+              <div className="space-y-2 p-3.5 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/30">
+                <div className="flex items-center justify-between">
+                  <label className="font-black text-slate-900 text-xs flex items-center gap-1.5">
+                    <IconVideo size={16} className="text-slate-600" />
+                    <span>Video SAU Cải Tiến (Quay clip kết quả):</span>
+                  </label>
+                  {form.afterVideoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, afterVideoUrl: "" })}
+                      className="text-[11px] text-rose-600 font-bold flex items-center gap-1 cursor-pointer"
+                    >
+                      <IconTrash size={13} />
+                      <span>Xóa video</span>
+                    </button>
+                  )}
+                </div>
+
+                {uploadProgress !== null ? (
+                  <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-2">
+                    <div className="flex items-center justify-between text-xs font-bold text-slate-800">
+                      <span className="flex items-center gap-1.5">
+                        <IconLoader2 className="animate-spin text-slate-600" size={16} />
+                        <span>Đang tải video lên Cloudinary...</span>
+                      </span>
+                      <span className="font-mono text-slate-700">{uploadProgress}%</span>
+                    </div>
+                    <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                      <div
+                        className="bg-slate-600 h-2 rounded-full transition-all duration-200"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                ) : form.afterVideoUrl ? (
+                  <div className="space-y-1">
+                    <UniversalVideoPlayer url={form.afterVideoUrl} title="Video SAU Cải Tiến" />
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center p-3 h-32 bg-white rounded-xl border border-slate-200 cursor-pointer text-center hover:bg-slate-50 transition-colors">
+                    <IconVideo size={24} className="text-slate-500 mb-1" />
+                    <span className="text-[11px] font-black text-slate-900">Upload Video SAU Cải Tiến</span>
+                    <span className="text-[10px] text-slate-500 font-medium">Hỗ trợ MP4, MOV, WEBM tối đa 50MB</span>
+                    <input
+                      type="file"
+                      accept="video/*"
+                      className="hidden"
+                      onChange={(e) => handleVideoUpload(e, "afterVideoUrl")}
+                    />
+                  </label>
+                )}
+
+                <div className="space-y-1 pt-1">
+                  <label className="text-[10px] font-bold text-slate-600 block">HOẶC Dán Link Video SAU (Google Drive, Youtube...):</label>
+                  <input
+                    type="text"
+                    value={form.afterVideoLink}
+                    onChange={(e) => setForm({ ...form, afterVideoLink: e.target.value })}
+                    placeholder="https://drive.google.com/file/d/..."
+                    className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-[11px] font-medium outline-none focus:border-[#006838]"
+                  />
+                  {form.afterVideoLink && !form.afterVideoUrl && (
+                    <div className="pt-2">
+                      <span className="text-[10px] font-bold text-slate-700 block mb-1">🎬 Preview Video từ Link:</span>
+                      <UniversalVideoPlayer url={form.afterVideoLink} title="Video SAU Cải Tiến (Link)" />
                     </div>
                   )}
                 </div>

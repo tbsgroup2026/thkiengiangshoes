@@ -16,13 +16,18 @@ export interface OrgNodeMap {
   } | string[];
 }
 
+// "Phòng CN-CI" trước đây là 1 mục gộp chung — tách thành "Phòng CI" (Cải Tiến) và "Phòng CN"
+// (Công Nghệ) riêng biệt theo yêu cầu. Dữ liệu CŨ đã lưu với factory = "Phòng CN-CI" KHÔNG đổi,
+// vẫn hiển thị đúng nhãn cũ ở các nơi thống kê lịch sử (xem TH_KG_SUB_ITEMS/STANDARD_8_REGIONS) —
+// 2 mục mới này chỉ áp dụng cho lựa chọn từ nay về sau.
 export const KIEN_GIANG_FACTORIES = [
   "Kiên Giang 1",
   "Kiên Giang 2",
   "Kiên Giang 3",
   "Hoàn thiện đế",
   "Phòng kế hoạch",
-  "Phòng CN-CI",
+  "Phòng CI",
+  "Phòng CN",
   "Phòng chất lượng",
   "Phòng nhân sự",
 ];
@@ -37,6 +42,7 @@ export function isKienGiangFactory(factory: string): boolean {
     normalized.includes("htđ") ||
     normalized.includes("kế hoạch") ||
     normalized.includes("ci") ||
+    normalized.includes("cn") ||
     normalized.includes("chất lượng") ||
     normalized.includes("nhân sự")
   );
@@ -64,9 +70,16 @@ export const INITIAL_ORG_TREE: OrgNodeMap = {
     },
   },
 
-  "Phòng CN-CI": {
+  "Phòng CI": {
     "Bộ Phận Chuyển Đổi Số & Kaizen": {
       "Tổ Cải Tiến CI": ["Bộ Phận CI"],
+    },
+  },
+
+  // Cơ cấu tạm thời (placeholder) — cập nhật lại tên Bộ Phận/Tổ chính xác khi có thông tin đầy đủ.
+  "Phòng CN": {
+    "Bộ Phận Công Nghệ": {
+      "Tổ Công Nghệ": ["Bộ Phận CN"],
     },
   },
 

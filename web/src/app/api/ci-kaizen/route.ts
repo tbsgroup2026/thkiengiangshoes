@@ -4,7 +4,7 @@ export const dynamic = 'force-static';
 import { verifyToken } from '@/lib/auth';
 import { ensureKaizenSchema } from '@/lib/kaizenDbMigration';
 
-const KG_FACTORIES_SQL = "('KG 1', 'KG 2', 'KG 3', 'Hoàn thiện đế', 'Kiên Giang 1', 'Kiên Giang 2', 'Kiên Giang 3', 'HTĐ KG', 'Phòng kế hoạch', 'Phòng CN-CI', 'Phòng chất lượng', 'Phòng nhân sự', 'P. Kế Hoạch', 'P. CN-CI', 'P. Chất Lượng', 'P. Nhân Sự')";
+const KG_FACTORIES_SQL = "('KG 1', 'KG 2', 'KG 3', 'Hoàn thiện đế', 'Kiên Giang 1', 'Kiên Giang 2', 'Kiên Giang 3', 'HTĐ KG', 'Phòng kế hoạch', 'Phòng CN-CI', 'Phòng CI', 'Phòng CN', 'Phòng chất lượng', 'Phòng nhân sự', 'P. Kế Hoạch', 'P. CN-CI', 'P. CI', 'P. CN', 'P. Chất Lượng', 'P. Nhân Sự')";
 
 function getDbBinding(): any {
   return (process.env as any).DB || (globalThis as any).DB || null;
@@ -274,6 +274,13 @@ export async function PUT(request: Request) {
     const costBefore = body.costBefore !== undefined ? body.costBefore : (body.cost_before !== undefined ? body.cost_before : body.chi_phi_truoc);
     const costAfter = body.costAfter !== undefined ? body.costAfter : (body.cost_after !== undefined ? body.cost_after : body.chi_phi_sau);
 
+    // Cho phép sửa lại Nhà máy/Khu vực/Bộ phận — dùng khi phân loại lại thủ công 1 đề xuất đã có
+    // sẵn (VD: tách "Phòng CN-CI" cũ thành "Phòng CI"/"Phòng CN"), không phải field chỉnh sửa
+    // thường xuyên từ form nên KHÔNG có mặt trong KaizenPublicSubmitForm — chỉ gọi trực tiếp.
+    const factory = body.factory;
+    const region = body.region;
+    const department = body.department;
+
     const db = getDbBinding();
 
     if (db) {
@@ -310,6 +317,9 @@ export async function PUT(request: Request) {
             chi_phi_truoc = COALESCE(?, chi_phi_truoc),
             cost_after = COALESCE(?, cost_after),
             chi_phi_sau = COALESCE(?, chi_phi_sau),
+            factory = COALESCE(?, factory),
+            region = COALESCE(?, region),
+            department = COALESCE(?, department),
             updated_at = CURRENT_TIMESTAMP
         WHERE id = ? OR code = ?
       `;
@@ -346,6 +356,9 @@ export async function PUT(request: Request) {
           costBefore ?? null,
           costAfter ?? null,
           costAfter ?? null,
+          factory ?? null,
+          region ?? null,
+          department ?? null,
           id,
           id
         )

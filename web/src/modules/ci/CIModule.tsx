@@ -297,6 +297,10 @@ export function HalfStarRating({ value, onChange, readOnly = false, size = 22 }:
   );
 }
 
+// "Phòng CN-CI" giữ lại riêng trong danh sách này (khác với REAL_FACTORIES ở form đăng ký) vì đây
+// là danh sách ĐẾM/THỐNG KÊ cho toàn bộ đề xuất kể cả CŨ — đề xuất đã lưu factory = "Phòng CN-CI"
+// từ trước khi tách vẫn cần hiện đúng số liệu ở sidebar. "Phòng CI"/"Phòng CN" là 2 mục MỚI, chỉ
+// đề xuất tạo từ nay trở đi mới rơi vào 1 trong 2 mục này.
 const TH_KG_SUB_ITEMS = [
   "Kiên Giang 1",
   "Kiên Giang 2",
@@ -304,6 +308,8 @@ const TH_KG_SUB_ITEMS = [
   "Hoàn thiện đế",
   "Phòng kế hoạch",
   "Phòng CN-CI",
+  "Phòng CI",
+  "Phòng CN",
   "Phòng chất lượng",
   "Phòng nhân sự",
 ];
@@ -369,7 +375,18 @@ const matchRegionFilter = (propRegionOrObj: any, filterRegion: string) => {
     return pr.includes("KẾ HOẠCH") || pr.includes("KE HOACH") || pr.includes("PPC");
   }
   if (filterRegion === "Phòng CN-CI") {
-    return pr.includes("CN-CI") || pr.includes("CN CI") || pr.includes("CONTINUOUS IMPROVEMENT") || pr.includes("CI");
+    // Nhãn CŨ (trước khi tách) — chỉ khớp đúng chuỗi gộp, KHÔNG khớp "Phòng CI"/"Phòng CN" mới.
+    return pr.includes("CN-CI") || pr.includes("CN CI") || pr.includes("CONTINUOUS IMPROVEMENT");
+  }
+  if (filterRegion === "Phòng CI") {
+    return (pr.includes("CI") || pr.includes("CẢI TIẾN")) && !pr.includes("CN-CI") && !pr.includes("CN CI");
+  }
+  if (filterRegion === "Phòng CN") {
+    return (
+      (pr.includes("PHÒNG CN") || pr.includes("P. CN") || pr.includes("CÔNG NGHỆ") || pr.includes("CONG NGHE")) &&
+      !pr.includes("CN-CI") &&
+      !pr.includes("CN CI")
+    );
   }
   if (filterRegion === "Phòng chất lượng") {
     return pr.includes("CHẤT LƯỢNG") || pr.includes("CHAT LUONG") || pr.includes("QA") || pr.includes("QC");
