@@ -4999,6 +4999,7 @@ export default {
             decision,
             note,
             category,
+            categoryLabel,
             timeBeforeSeconds,
             timeAfterSeconds,
             savedSeconds,
@@ -5085,7 +5086,10 @@ export default {
             AUTOMATION: "6.Tự động hoá",
             EQUIPMENT: "7.MMTB CCDC",
           };
-          const catLabelVal = catVal ? (CATEGORY_LABEL_MAP[catVal] || catVal) : null;
+          // Đa phân loại (VD "1.Tiết kiệm Vật tư + 3.Tăng Năng suất") — client tự ghép nhãn khi
+          // chọn nhiều phân loại cùng lúc và gửi thẳng lên đây, KHÔNG suy ra từ map 1-1 nữa vì map
+          // chỉ biết ánh xạ đúng 1 category ID sang đúng 1 nhãn.
+          const catLabelVal = categoryLabel || (catVal ? (CATEGORY_LABEL_MAP[catVal] || catVal) : null);
 
           // Auto-migration for required D1 columns
           await env.DB.prepare('ALTER TABLE ci_kaizen_proposals ADD COLUMN pair_quantity INTEGER DEFAULT 0').run().catch(() => {});

@@ -15,6 +15,7 @@ import {
   IconLock,
   IconDeviceFloppy,
   IconReload,
+  IconLoader2,
   IconUserCheck,
   IconChevronRight,
   IconBuilding,
@@ -107,6 +108,7 @@ export default function KaizenDetailModal({
 }: KaizenDetailModalProps) {
   const { user, isExecutiveOrAdmin, levelRank } = usePermission();
   const [activeTab, setActiveTab] = useState<"info" | "expert_review" | "star_review">("info");
+  const [submittingQuickAward, setSubmittingQuickAward] = useState(false);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // INLINE EDITING STATE & FUNCTIONS
@@ -197,6 +199,53 @@ export default function KaizenDetailModal({
 
     setEditError(null);
     setIsEditing(true);
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // NÚT "KHUYẾN KHÍCH" — trao thẳng Giải Khuyến Khích (100.000đ), gộp luôn Bước 3
+  // (Phê duyệt tính khả thi) + Chấm điểm thành 1 cú click, không cần nhập số liệu
+  // hiệu quả chi tiết. Dùng lại đúng action "EVALUATE" của API chung (đã tự đưa
+  // proposal sang status=APPROVED, sub_status=DA_DANH_GIA bất kể trạng thái hiện
+  // tại là gì — xem PUT /api/ci-kaizen trong public/_worker.js) nên tự động lên
+  // danh sách "Đã duyệt" + tính vào xếp hạng thi đua như mọi đề xuất đã chấm điểm.
+  const handleQuickEncouragement = async () => {
+    if (!proposal) return;
+    const ok = confirm(
+      `Xác nhận trao GIẢI KHUYẾN KHÍCH (100.000đ) cho đề xuất này?\n\nĐề xuất sẽ được duyệt ngay và tính vào xếp hạng thi đua — KHÔNG cần qua đầy đủ quy trình Phê duyệt tính khả thi & Chấm điểm 5 tiêu chí.`
+    );
+    if (!ok) return;
+
+    setSubmittingQuickAward(true);
+    try {
+      const res = await fetch("/api/ci-kaizen", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: proposal.id,
+          action: "EVALUATE",
+          awardTitle: "Giải Khuyến Khích",
+          scorePoints: 50,
+          reviewComment: "🎗️ Trao Giải Khuyến Khích nhanh — ghi nhận tinh thần đóng góp, không qua đánh giá chi tiết 5 tiêu chí.",
+          version: (proposal as any).version,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        Object.assign(proposal, {
+          status: "APPROVED",
+          sub_status: "DA_DANH_GIA",
+          award_title: "Giải Khuyến Khích",
+          score_points: 50,
+        });
+        if (onEvaluate) onEvaluate();
+      } else {
+        alert(`❌ ${json.message || "Không thể trao Giải Khuyến Khích!"}`);
+      }
+    } catch (err) {
+      alert("❌ Lỗi kết nối máy chủ!");
+    } finally {
+      setSubmittingQuickAward(false);
+    }
   };
 
   const handleUploadBeforeImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1060,6 +1109,22 @@ export default function KaizenDetailModal({
                   >
                     <IconX size={14} />
                     <span>Từ Chối Triển Khai</span>
+                  </button>
+                  {/* Tắt luôn Bước 3 + Chấm điểm thành 1 cú click — nổi bật nhất trong nhóm nút,
+                      đặt cuối cùng (góc phải) để dễ thấy ngay. */}
+                  <button
+                    type="button"
+                    disabled={submittingQuickAward}
+                    onClick={handleQuickEncouragement}
+                    title="Trao thẳng Giải Khuyến Khích (100.000đ), không cần qua đầy đủ quy trình phê duyệt & chấm điểm"
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 active:from-amber-700 active:to-amber-800 text-white font-black text-sm shadow-md ring-2 ring-amber-300 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {submittingQuickAward ? (
+                      <IconLoader2 size={18} className="animate-spin" />
+                    ) : (
+                      <IconAward size={18} />
+                    )}
+                    <span>Khuyến Khích</span>
                   </button>
                 </div>
               </div>

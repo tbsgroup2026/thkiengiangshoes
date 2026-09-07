@@ -28,6 +28,7 @@ interface FeasibilityApprovalModalProps {
     sub_status: string;
     approval_status: string;
     category?: string;
+    category_label?: string;
     time_before_seconds?: number;
     time_after_seconds?: number;
     saved_seconds?: number;
@@ -53,23 +54,38 @@ export default function FeasibilityApprovalModal({
 }: FeasibilityApprovalModalProps) {
   const [decision, setDecision] = useState<"APPROVE" | "REJECT">(initialDecision);
   const [note, setNote] = useState<string>("");
-  const [editedCategory, setEditedCategory] = useState<string>(
-    normalizeCategoryId(proposal?.category || proposal?.category_label || (proposal as any)?.product_group)
-  );
+  // ĐA PHÂN LOẠI — 1 sáng kiến có thể vừa Tiết kiệm vật tư/chi phí, vừa Tăng năng suất... mỗi
+  // nhóm góp phần tiết kiệm riêng, CỘNG DỒN lại thành tổng cuối cùng (xem editedKinds bên dưới).
+  const [editedCategories, setEditedCategories] = useState<string[]>(() => {
+    const c = normalizeCategoryId(proposal?.category || proposal?.category_label || (proposal as any)?.product_group);
+    return c ? [c] : [];
+  });
+  const toggleCategory = (id: string) => {
+    setEditedCategories((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
+  };
+
   const [timeBefore, setTimeBefore] = useState<number | string>(proposal?.time_before_seconds || 0);
   const [timeAfter, setTimeAfter] = useState<number | string>(proposal?.time_after_seconds || 0);
   const [pairQuantity, setPairQuantity] = useState<number | string>(
     proposal?.pair_quantity || (proposal as any)?.so_luong_giay || (proposal as any)?.quantity || ""
   );
-  const [directSavingsVnd, setDirectSavingsVnd] = useState<number | string>(
-    proposal?.total_savings_vnd || (proposal as any)?.tong_tien_tiet_kiem || ""
-  );
+  // Khối "Chi phí/Vật tư" dùng CHUNG cho cả 2 phân loại 1.Tiết kiệm Vật tư & 2.Tiết kiệm Chi phí
+  // (2 phân loại này tính tiết kiệm theo CÙNG 1 cách — chi phí trước/sau — nên gộp 1 khối nhập
+  // liệu duy nhất thay vì bắt nhập 2 lần giống hệt nhau khi chọn cả 2).
   const [costBefore, setCostBefore] = useState<number | string>(
     (proposal as any)?.cost_before || (proposal as any)?.chi_phi_truoc || ""
   );
   const [costAfter, setCostAfter] = useState<number | string>(
     (proposal as any)?.cost_after || (proposal as any)?.chi_phi_sau || ""
   );
+  const [directSavingsVnd, setDirectSavingsVnd] = useState<number | string>("");
+  // Ghi đè thủ công tổng tiết kiệm của khối Năng suất (mặc định tự tính từ thời gian × số đôi) —
+  // TÁCH RIÊNG khỏi directSavingsVnd (khối Chi phí/Vật tư) để 2 khối không đè giá trị lẫn nhau khi
+  // cùng được chọn.
+  const [productivityDirectSavings, setProductivityDirectSavings] = useState<number | string>("");
+  // Khối "Phi tài chính" (4.An toàn, 5.5S, 6.Tự động hoá, 7.MMTB CCDC) — tiết kiệm nhập trực tiếp,
+  // không bắt buộc.
+  const [nonFinancialSavingsVnd, setNonFinancialSavingsVnd] = useState<number | string>("");
   const [afterMediaList, setAfterMediaList] = useState<{ id: string; type: "image" | "video"; url: string; name?: string }[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -89,32 +105,16 @@ export default function FeasibilityApprovalModal({
     index: 0,
   });
 
-  // ⚡ Determine Category Mode dynamically from selected Category
-  const categoryMode = React.useMemo(() => {
-    if (!proposal) return "PRODUCTIVITY_TIME";
-
-    const matchedCat = CATEGORIES.find((c) => c.id === editedCategory || c.label === editedCategory);
-    const catStr = matchedCat
-      ? matchedCat.label
-      : String(proposal.category_label || proposal.category || (proposal as any).product_group || "");
-    const cat = catStr.toLowerCase();
-
-    // 1. Tiết kiệm Vật tư
-    if (cat.includes("1.") || cat.includes("vật tư") || cat.includes("vat tu") || editedCategory === "SAVE_MATERIAL") {
-      return "MATERIAL_SAVINGS";
-    }
-    // 2. Tiết kiệm Chi phí
-    if (cat.includes("2.") || cat.includes("chi phí") || cat.includes("chi phi") || cat.includes("tài chính") || editedCategory === "SAVE_COST") {
-      return "COST_SAVINGS";
-    }
-    // 3. Tăng Năng suất (Dạng có thời gian & số lượng đôi)
-    if (cat.includes("3.") || cat.includes("năng suất") || cat.includes("nang suat") || cat.includes("thời gian") || editedCategory === "INCREASE_PRODUCTIVITY") {
-      return "PRODUCTIVITY_TIME";
-    }
-
-    // 4. An toàn lao động, 5. 5S, 6. Tự động hoá, 7. MMTB CCDC -> Non-financial
-    return "NON_FINANCIAL";
-  }, [editedCategory, proposal]);
+  // ⚡ ĐA PHÂN LOẠI — mỗi phân loại đã chọn góp vào ĐÚNG 1 trong 3 khối nhập liệu (khối "Chi
+  // phí/Vật tư" dùng chung cho cả 2 phân loại 1&2 vì tính tiết kiệm giống hệt nhau). Chọn càng
+  // nhiều phân loại thuộc các khối khác nhau thì càng nhiều khối hiện ra, tổng tiết kiệm CỘNG DỒN
+  // toàn bộ khối đang hiện — xem grandTotalSavings bên dưới.
+  const showProductivityBlock = editedCategories.includes("PRODUCTIVITY");
+  const showMaterialCostBlock = editedCategories.includes("MATERIAL_SAVING") || editedCategories.includes("COST_SAVING");
+  const showNonFinancialBlock = editedCategories.some((c) => ["SAFETY", "5S", "AUTOMATION", "EQUIPMENT"].includes(c));
+  // Chưa chọn phân loại nào (VD mở modal lần đầu chưa kịp tick) -> mặc định hiện khối Năng suất
+  // như hành vi cũ, tránh màn hình trống không biết nhập gì.
+  const noCategorySelected = editedCategories.length === 0;
 
   useEffect(() => {
     if (isOpen && proposal) {
@@ -122,13 +122,20 @@ export default function FeasibilityApprovalModal({
       setNote("");
       setErrorMsg(null);
       setPairQtyError(null);
-      setEditedCategory(
-        normalizeCategoryId(proposal.category || proposal.category_label || (proposal as any).product_group || proposal.title)
+      const initialCat = normalizeCategoryId(
+        proposal.category || proposal.category_label || (proposal as any).product_group || proposal.title
       );
+      setEditedCategories(initialCat ? [initialCat] : []);
       setNote("");
       setErrorMsg(null);
       setPairQtyError(null);
-      setDirectSavingsVnd(proposal.total_savings_vnd || (proposal as any).tong_tien_tiet_kiem || "");
+      setDirectSavingsVnd((proposal as any).cost_before || (proposal as any).cost_after ? Math.max(0, Number((proposal as any).cost_before || 0) - Number((proposal as any).cost_after || 0)) : "");
+      setProductivityDirectSavings("");
+      setNonFinancialSavingsVnd(
+        initialCat && ["SAFETY", "5S", "AUTOMATION", "EQUIPMENT"].includes(initialCat)
+          ? proposal.total_savings_vnd || (proposal as any).tong_tien_tiet_kiem || ""
+          : ""
+      );
       setCostBefore((proposal as any).cost_before || (proposal as any).chi_phi_truoc || "");
       setCostAfter((proposal as any).cost_after || (proposal as any).chi_phi_sau || "");
       
@@ -242,6 +249,20 @@ export default function FeasibilityApprovalModal({
     };
   }, [timeBefore, timeAfter, pairQuantity, proposal?.saved_seconds]);
 
+  // 💰 CỘNG DỒN tiết kiệm — mỗi khối đang hiện (theo phân loại đã chọn) góp phần riêng, tổng lại
+  // thành 1 số cuối cùng. VD chọn cả "1.Tiết kiệm Vật tư" + "3.Tăng Năng suất" thì tổng = tiết
+  // kiệm từ chi phí vật tư CỘNG tiết kiệm từ rút ngắn thời gian.
+  const materialCostAutoSavings = Math.max(0, (Number(costBefore) || 0) - (Number(costAfter) || 0));
+  const materialCostSavingsFinal = showMaterialCostBlock
+    ? directSavingsVnd !== "" ? Number(directSavingsVnd) || 0 : materialCostAutoSavings
+    : 0;
+  const productivitySavingsFinal = showProductivityBlock || noCategorySelected
+    ? productivityDirectSavings !== "" ? Number(productivityDirectSavings) || 0 : totalSavingsVndVal
+    : 0;
+  const nonFinancialSavingsFinal = showNonFinancialBlock ? Number(nonFinancialSavingsVnd) || 0 : 0;
+  const grandTotalSavings = materialCostSavingsFinal + productivitySavingsFinal + nonFinancialSavingsFinal;
+  const activeBlockCount = [showMaterialCostBlock, showProductivityBlock || noCategorySelected, showNonFinancialBlock].filter(Boolean).length;
+
   if (!isOpen || !proposal) return null;
 
   const formatDate = (dateStr?: string) => {
@@ -264,10 +285,13 @@ export default function FeasibilityApprovalModal({
       setErrorMsg(null);
       setPairQtyError(null);
 
+      const isProdTime = showProductivityBlock || noCategorySelected;
+      const isDirectCost = showMaterialCostBlock;
+
       if (decision === "APPROVE") {
         let hasErr = false;
 
-        if (categoryMode === "PRODUCTIVITY_TIME") {
+        if (isProdTime) {
           if (beforeVal < 0 || afterVal < 0) {
             setErrorMsg("❌ Thời gian Trước và Sau phải là số không âm!");
             hasErr = true;
@@ -280,11 +304,14 @@ export default function FeasibilityApprovalModal({
             }
             hasErr = true;
           }
-        } else if (categoryMode === "MATERIAL_SAVINGS" || categoryMode === "COST_SAVINGS") {
-          if (!directSavingsVnd || Number(directSavingsVnd) <= 0) {
-            setErrorMsg("❌ Vui lòng nhập số tiền tiết kiệm chi phí/vật tư!");
-            hasErr = true;
-          }
+        }
+        if (isDirectCost && materialCostSavingsFinal <= 0) {
+          setErrorMsg("❌ Vui lòng nhập số tiền tiết kiệm chi phí/vật tư!");
+          hasErr = true;
+        }
+        if (!isProdTime && !isDirectCost && !showNonFinancialBlock) {
+          setErrorMsg("❌ Vui lòng chọn ít nhất 1 Phân loại!");
+          hasErr = true;
         }
 
         if (hasErr) {
@@ -293,18 +320,18 @@ export default function FeasibilityApprovalModal({
         }
       }
 
-      const isProdTime = categoryMode === "PRODUCTIVITY_TIME";
-      const isDirectCost = categoryMode === "MATERIAL_SAVINGS" || categoryMode === "COST_SAVINGS";
-      const finalCostBefore = costBefore !== "" ? Number(costBefore) || 0 : autoCostBefore;
-      const finalCostAfter = costAfter !== "" ? Number(costAfter) || 0 : autoCostAfter;
-      const finalTotalSavings = directSavingsVnd !== ""
-        ? Number(directSavingsVnd) || 0
-        : (costBefore !== "" || costAfter !== "")
-        ? Math.max(0, finalCostBefore - finalCostAfter)
-        : autoTotalSavings > 0
-        ? autoTotalSavings
-        : totalSavingsVndVal;
+      const finalCostBefore = isDirectCost ? (costBefore !== "" ? Number(costBefore) || 0 : 0) : 0;
+      const finalCostAfter = isDirectCost ? (costAfter !== "" ? Number(costAfter) || 0 : 0) : 0;
+      const finalTotalSavings = grandTotalSavings;
       const savingsInWords = convertNumberToWords(finalTotalSavings);
+
+      // Ghép nhãn Phân loại đã chọn (VD "1.Tiết kiệm Vật tư + 3.Tăng Năng suất") — category (ID)
+      // vẫn giữ đúng 1 giá trị CHÍNH (phân loại đầu tiên) để không phá vỡ các bộ đếm/biểu đồ đang
+      // đếm theo đúng 1 category ID sẵn có; category_label mới là nơi thể hiện đủ các phân loại.
+      const selectedCategoryLabel = editedCategories.length > 0
+        ? editedCategories.map((id) => CATEGORIES.find((c) => c.id === id)?.label || id).join(" + ")
+        : proposal.category_label || proposal.category || "";
+      const primaryCategoryId = editedCategories[0] || normalizeCategoryId(proposal.category || proposal.category_label);
 
       const mediaUrls = afterMediaList.map((m) => m.url);
       const afterImgUrlStr = mediaUrls.length > 0 ? mediaUrls[0] : "";
@@ -324,14 +351,15 @@ export default function FeasibilityApprovalModal({
         body: JSON.stringify({
           proposalId: proposal.id,
           decision,
-          category: editedCategory,
+          category: primaryCategoryId,
+          categoryLabel: selectedCategoryLabel,
           note: note.trim() || (decision === "APPROVE" ? "Đã phê duyệt tính khả thi (Bước 3)" : "Không đạt tính khả thi"),
-          timeBeforeSeconds: categoryMode === "PRODUCTIVITY_TIME" && decision === "APPROVE" ? beforeVal : 0,
-          timeAfterSeconds: categoryMode === "PRODUCTIVITY_TIME" && decision === "APPROVE" ? afterVal : 0,
-          savedSeconds: categoryMode === "PRODUCTIVITY_TIME" && decision === "APPROVE" ? savedVal : 0,
-          efficiencyValueVND: categoryMode === "PRODUCTIVITY_TIME" && decision === "APPROVE" ? efficiencyVndVal : 0,
-          pairQuantity: categoryMode === "PRODUCTIVITY_TIME" && decision === "APPROVE" ? pairQtyVal : 1,
-          so_luong_giay: categoryMode === "PRODUCTIVITY_TIME" && decision === "APPROVE" ? pairQtyVal : 1,
+          timeBeforeSeconds: isProdTime && decision === "APPROVE" ? beforeVal : 0,
+          timeAfterSeconds: isProdTime && decision === "APPROVE" ? afterVal : 0,
+          savedSeconds: isProdTime && decision === "APPROVE" ? savedVal : 0,
+          efficiencyValueVND: isProdTime && decision === "APPROVE" ? efficiencyVndVal : 0,
+          pairQuantity: isProdTime && decision === "APPROVE" ? pairQtyVal : 1,
+          so_luong_giay: isProdTime && decision === "APPROVE" ? pairQtyVal : 1,
           totalSavingsVND: decision === "APPROVE" ? finalTotalSavings : 0,
           tong_tien_tiet_kiem: decision === "APPROVE" ? finalTotalSavings : 0,
           totalSavingsWords: decision === "APPROVE" ? savingsInWords : "",
@@ -357,7 +385,8 @@ export default function FeasibilityApprovalModal({
           status: json.status || (decision === "APPROVE" ? "UNDER_REVIEW" : "REJECTED"),
           sub_status: json.sub_status || (decision === "APPROVE" ? "CHO_DANH_GIA" : "TU_CHOI_TRIEN_KHAI"),
           approval_status: json.approval_status || (decision === "APPROVE" ? "PHE_DUYET" : "TU_CHOI"),
-          category: editedCategory,
+          category: primaryCategoryId,
+          category_label: selectedCategoryLabel,
           time_before_seconds: json.time_before_seconds !== undefined ? json.time_before_seconds : (isProdTime ? beforeVal : 0),
           time_after_seconds: json.time_after_seconds !== undefined ? json.time_after_seconds : (isProdTime ? afterVal : 0),
           saved_seconds: json.saved_seconds !== undefined ? json.saved_seconds : (isProdTime ? savedVal : 0),
@@ -473,22 +502,16 @@ export default function FeasibilityApprovalModal({
                 </span>
               </div>
 
-              {/* Cột 3: Phân loại (Người duyệt có thể chọn lại tag này) */}
+              {/* Cột 3: Phân loại (chỉ hiện — chọn/sửa ở khối bên dưới, cho phép chọn NHIỀU) */}
               <div className="space-y-1">
                 <span className="text-[11px] font-bold text-slate-400 block">
                   Phân loại
                 </span>
-                <select
-                  value={editedCategory}
-                  onChange={(e) => setEditedCategory(e.target.value)}
-                  className="px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-800 font-extrabold text-xs border border-emerald-300 outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer shadow-2xs w-full max-w-[170px]"
-                >
-                  {CATEGORIES.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
+                <span className="px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-800 font-extrabold text-xs border border-emerald-300 inline-block w-full max-w-[170px] truncate" title={editedCategories.map((id) => CATEGORIES.find((c) => c.id === id)?.label || id).join(" + ") || "Chưa chọn"}>
+                  {editedCategories.length > 0
+                    ? editedCategories.map((id) => CATEGORIES.find((c) => c.id === id)?.label || id).join(" + ")
+                    : "Chưa chọn"}
+                </span>
               </div>
 
               {/* Cột 4: Ngày đăng ký */}
@@ -501,6 +524,38 @@ export default function FeasibilityApprovalModal({
                   <span>{formatDate(proposal.created_at)}</span>
                 </span>
               </div>
+            </div>
+          </div>
+
+          {/* PHÂN LOẠI — CHỌN NHIỀU (mỗi phân loại góp phần tiết kiệm riêng, cộng dồn) */}
+          <div className="space-y-2 pt-1">
+            <span className="font-black text-slate-900 text-xs block">
+              Phân loại <span className="text-slate-400 font-medium">(chọn được nhiều — mỗi loại góp phần tiết kiệm riêng, cộng dồn lại)</span>
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {CATEGORIES.map((c) => {
+                const checked = editedCategories.includes(c.id);
+                return (
+                  <label
+                    key={c.id}
+                    onClick={() => toggleCategory(c.id)}
+                    className={`px-3 py-1.5 rounded-xl border-2 text-xs font-extrabold cursor-pointer transition-all flex items-center gap-1.5 select-none ${
+                      checked
+                        ? "border-emerald-600 bg-emerald-50 text-emerald-900"
+                        : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span
+                      className={`w-4 h-4 rounded flex items-center justify-center border-2 shrink-0 ${
+                        checked ? "border-emerald-600 bg-emerald-600 text-white" : "border-slate-300"
+                      }`}
+                    >
+                      {checked && <IconCheck size={11} strokeWidth={3} />}
+                    </span>
+                    <span>{c.label}</span>
+                  </label>
+                );
+              })}
             </div>
           </div>
 
@@ -715,7 +770,7 @@ export default function FeasibilityApprovalModal({
           {decision === "APPROVE" && (
             <>
               {/* MODE 1: Category 3 - 3.Tăng Năng Suất (Có nhập thời gian & số lượng đôi) */}
-              {categoryMode === "PRODUCTIVITY_TIME" && (
+              {(showProductivityBlock || noCategorySelected) && (
                 <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="font-extrabold text-xs text-emerald-900 flex items-center gap-1.5">
@@ -787,66 +842,18 @@ export default function FeasibilityApprovalModal({
                     </div>
                   </div>
 
-                  {/* HÀNG 2 Ô INPUT BỔ SUNG CHI PHÍ: CHI PHÍ TRƯỚC (VNĐ) & CHI PHÍ SAU (VNĐ) */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-emerald-200/60">
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-slate-700 block">
-                        💵 CHI PHÍ TRƯỚC (VNĐ)
-                      </label>
-                      <input
-                        type="number"
-                        min={0}
-                        step="1000"
-                        value={costBefore}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setCostBefore(val);
-                          const cb = Number(val) || 0;
-                          const ca = Number(costAfter) || 0;
-                          if (cb > 0 || ca > 0) {
-                            setDirectSavingsVnd(Math.max(0, cb - ca));
-                          }
-                        }}
-                        placeholder="VD: 10,000,000"
-                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-black text-slate-900 bg-white outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 shadow-2xs"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-slate-700 block">
-                        💵 CHI PHÍ SAU (VNĐ)
-                      </label>
-                      <input
-                        type="number"
-                        min={0}
-                        step="1000"
-                        value={costAfter}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setCostAfter(val);
-                          const cb = Number(costBefore) || 0;
-                          const ca = Number(val) || 0;
-                          if (cb > 0 || ca > 0) {
-                            setDirectSavingsVnd(Math.max(0, cb - ca));
-                          }
-                        }}
-                        placeholder="VD: 5,000,000"
-                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-black text-slate-900 bg-white outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 shadow-2xs"
-                      />
-                    </div>
-                  </div>
-
-                  {/* TỔNG SỐ TIỀN TIẾT KIỆM ĐƯỢC (VNĐ) */}
+                  {/* TỔNG SỐ TIỀN TIẾT KIỆM ĐƯỢC (VNĐ) — riêng của khối Năng suất, sẽ cộng dồn
+                      với khối khác (nếu có) ở phần Tổng cộng cuối form */}
                   <div className="space-y-1">
                     <label className="text-[11px] font-bold text-slate-700 block">
-                      💰 TỔNG SỐ TIỀN TIẾT KIỆM ĐƯỢC (VNĐ)
+                      💰 TIẾT KIỆM TỪ NĂNG SUẤT (VNĐ)
                     </label>
                     <input
                       type="number"
                       min={0}
                       step="1000"
-                      value={directSavingsVnd !== "" ? directSavingsVnd : (totalSavingsVndVal > 0 ? totalSavingsVndVal : "")}
-                      onChange={(e) => setDirectSavingsVnd(e.target.value)}
+                      value={productivityDirectSavings !== "" ? productivityDirectSavings : (totalSavingsVndVal > 0 ? totalSavingsVndVal : "")}
+                      onChange={(e) => setProductivityDirectSavings(e.target.value)}
                       placeholder="Nhập hoặc tính tự động từ thời gian & đôi..."
                       className="w-full p-2.5 rounded-xl border border-emerald-400 text-sm font-black text-emerald-950 bg-white outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 shadow-2xs"
                     />
@@ -883,9 +890,9 @@ export default function FeasibilityApprovalModal({
                     </div>
 
                     <div className="p-2 rounded-xl bg-[#00522c] text-white space-y-0.5 shadow-sm border border-emerald-500/30 col-span-2 sm:col-span-1">
-                      <span className="text-[9px] font-extrabold uppercase text-amber-300 block">TỔNG TIẾT KIỆM</span>
-                      <span className="text-xs font-black text-white block truncate" title={`${(Number(directSavingsVnd) || totalSavingsVndVal).toLocaleString("vi-VN")} VNĐ`}>
-                        {(Number(directSavingsVnd) || totalSavingsVndVal).toLocaleString("vi-VN")}
+                      <span className="text-[9px] font-extrabold uppercase text-amber-300 block">TIẾT KIỆM KHỐI NÀY</span>
+                      <span className="text-xs font-black text-white block truncate" title={`${productivitySavingsFinal.toLocaleString("vi-VN")} VNĐ`}>
+                        {productivitySavingsFinal.toLocaleString("vi-VN")}
                       </span>
                       <span className="text-[8.5px] font-bold text-emerald-200 block">VNĐ</span>
                     </div>
@@ -896,21 +903,22 @@ export default function FeasibilityApprovalModal({
                     <div className="text-[11.5px] font-bold text-slate-700 flex items-start sm:items-center gap-1.5 flex-wrap">
                       <span className="font-extrabold text-slate-900 not-italic shrink-0">Bằng chữ:</span>
                       <span className="italic text-emerald-950 font-semibold bg-white/90 px-2.5 py-0.5 rounded-lg border border-emerald-300/80 shadow-2xs leading-relaxed text-xs">
-                        "{convertNumberToWords(Number(directSavingsVnd) || totalSavingsVndVal)}"
+                        "{convertNumberToWords(productivitySavingsFinal)}"
                       </span>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* MODE 2: Category 1 & Category 2 - 1.Tiết kiệm Vật tư / 2.Tiết kiệm Chi phí */}
-              {(categoryMode === "MATERIAL_SAVINGS" || categoryMode === "COST_SAVINGS") && (
+              {/* MODE 2: Category 1 & Category 2 - 1.Tiết kiệm Vật tư / 2.Tiết kiệm Chi phí (dùng
+                  CHUNG 1 khối vì tính tiết kiệm giống hệt nhau — xem showMaterialCostBlock) */}
+              {showMaterialCostBlock && (
                 <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="font-extrabold text-xs text-amber-950 flex items-center gap-1.5">
                       <span>💰</span>
                       <span>
-                        Nhập chi phí &amp; đánh giá tiết kiệm ({categoryMode === "MATERIAL_SAVINGS" ? "1. Tiết kiệm Vật tư" : "2. Tiết kiệm Chi phí"})
+                        Nhập chi phí &amp; đánh giá tiết kiệm ({[editedCategories.includes("MATERIAL_SAVING") && "1. Tiết kiệm Vật tư", editedCategories.includes("COST_SAVING") && "2. Tiết kiệm Chi phí"].filter(Boolean).join(" + ")})
                       </span>
                     </span>
                     <span className="text-[10px] font-bold text-amber-900 bg-amber-100 border border-amber-300 px-2.5 py-0.5 rounded-full">
@@ -994,92 +1002,56 @@ export default function FeasibilityApprovalModal({
               )}
 
               {/* MODE 3: Categories 4, 5, 6, 7 - An toàn lao động, 5S, Tự động hoá, MMTB CCDC (Không bắt buộc có thời gian/số tiền) */}
-              {categoryMode === "NON_FINANCIAL" && (
+              {showNonFinancialBlock && (
                 <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-200 space-y-3">
                   <div className="flex items-center gap-2 text-blue-900 font-extrabold text-xs">
                     <span className="text-sm">🛡️</span>
                     <span>
-                      Đánh giá Phê duyệt Tính Khả thi ({proposal.category_label || proposal.category || "Cải tiến Quy trình"})
+                      Đánh giá Phê duyệt Tính Khả thi ({editedCategories.filter((c) => ["SAFETY", "5S", "AUTOMATION", "EQUIPMENT"].includes(c)).map((id) => CATEGORIES.find((c) => c.id === id)?.label || id).join(" + ")})
                     </span>
                   </div>
                   <p className="text-[11px] text-blue-800 font-medium leading-relaxed bg-white/80 p-2.5 rounded-xl border border-blue-200">
-                    💡 Cải tiến thuộc nhóm <strong>{(proposal as any).product_group || proposal.category_label || proposal.category}</strong> (tập trung cải thiện môi trường làm việc, an toàn lao động, chuẩn hóa 5S, tự động hóa hoặc thiết bị MMTB CCDC).
+                    💡 Tập trung cải thiện môi trường làm việc, an toàn lao động, chuẩn hóa 5S, tự động hóa hoặc thiết bị MMTB CCDC — tiết kiệm (nếu có) tính riêng, cộng dồn với các khối khác.
                   </p>
-
-                  {/* HÀNG 2 Ô INPUT: CHI PHÍ TRƯỚC (VNĐ) & CHI PHÍ SAU (VNĐ) */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-blue-200/60">
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-slate-700 block">
-                        💵 CHI PHÍ TRƯỚC (VNĐ)
-                      </label>
-                      <input
-                        type="number"
-                        min={0}
-                        step="1000"
-                        value={costBefore}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setCostBefore(val);
-                          const cb = Number(val) || 0;
-                          const ca = Number(costAfter) || 0;
-                          if (cb > 0 || ca > 0) {
-                            setDirectSavingsVnd(Math.max(0, cb - ca));
-                          }
-                        }}
-                        placeholder="VD: 10,000,000"
-                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-black text-slate-900 bg-white outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-2xs"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-slate-700 block">
-                        💵 CHI PHÍ SAU (VNĐ)
-                      </label>
-                      <input
-                        type="number"
-                        min={0}
-                        step="1000"
-                        value={costAfter}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setCostAfter(val);
-                          const cb = Number(costBefore) || 0;
-                          const ca = Number(val) || 0;
-                          if (cb > 0 || ca > 0) {
-                            setDirectSavingsVnd(Math.max(0, cb - ca));
-                          }
-                        }}
-                        placeholder="VD: 5,000,000"
-                        className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-black text-slate-900 bg-white outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-2xs"
-                      />
-                    </div>
-                  </div>
 
                   <div className="space-y-1">
                     <label className="text-[11px] font-bold text-slate-700 block">
-                      💰 TỔNG SỐ TIỀN TIẾT KIỆM ĐƯỢC (VNĐ)
+                      💰 TIẾT KIỆM KHỐI NÀY (VNĐ) — không bắt buộc
                     </label>
                     <input
                       type="number"
                       min={0}
                       step="1000"
-                      value={directSavingsVnd}
-                      onChange={(e) => setDirectSavingsVnd(e.target.value)}
+                      value={nonFinancialSavingsVnd}
+                      onChange={(e) => setNonFinancialSavingsVnd(e.target.value)}
                       placeholder="Nhập số tiền tiết kiệm (nếu có)..."
                       className="w-full p-2.5 rounded-xl border border-blue-300 text-sm font-black text-blue-950 bg-white outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-2xs"
                     />
                   </div>
 
-                  {directSavingsVnd !== "" && Number(directSavingsVnd) > 0 && (
+                  {nonFinancialSavingsVnd !== "" && Number(nonFinancialSavingsVnd) > 0 && (
                     <div className="pt-2 border-t border-blue-200/80 text-left">
                       <div className="text-[11.5px] font-bold text-slate-700 flex items-start sm:items-center gap-1.5 flex-wrap">
                         <span className="font-extrabold text-slate-900 not-italic shrink-0">Bằng chữ:</span>
                         <span className="italic text-blue-950 font-semibold bg-white/90 px-2.5 py-0.5 rounded-lg border border-blue-300 shadow-2xs leading-relaxed text-xs">
-                          "{convertNumberToWords(Number(directSavingsVnd) || 0)}"
+                          "{convertNumberToWords(Number(nonFinancialSavingsVnd) || 0)}"
                         </span>
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* TỔNG CỘNG TẤT CẢ KHỐI — chỉ hiện khi có từ 2 khối trở lên để không lặp thừa với
+                  ô "Tiết kiệm khối này" khi chỉ có đúng 1 khối */}
+              {activeBlockCount > 1 && (
+                <div className="p-4 rounded-2xl bg-[#006838] text-white space-y-1 shadow-md">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-emerald-200 flex items-center gap-1.5">
+                    <span>💰</span>
+                    <span>Tổng cộng tiết kiệm (cộng dồn {activeBlockCount} phân loại)</span>
+                  </span>
+                  <span className="text-xl font-black block">{grandTotalSavings.toLocaleString("vi-VN")} VNĐ</span>
+                  <span className="text-[11px] italic text-emerald-100 block">"{convertNumberToWords(grandTotalSavings)}"</span>
                 </div>
               )}
             </>
