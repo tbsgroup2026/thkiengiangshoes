@@ -318,13 +318,21 @@ const matchRegionFilter = (propRegionOrObj: any, filterRegion: string) => {
   if (!propRegionOrObj) return false;
 
   let propStr = "";
+  // Chuỗi RIÊNG chỉ gồm factory/region — dùng cho Phòng CI/Phòng CN vì "CI"/"Cải Tiến" là từ CỰC
+  // KỲ phổ biến trong TIÊU ĐỀ mọi đề xuất Kaizen (đề xuất nào cũng là "cải tiến" gì đó) — nếu lỡ so
+  // khớp luôn cả title/code như pr bên dưới thì lọc "Phòng CI" sẽ dính nhầm hầu như MỌI đề xuất bất
+  // kể thuộc Kiên Giang 1/2/3 hay đâu khác, chỉ vì tiêu đề có chữ "cải tiến".
+  let propFactoryStr = "";
   if (typeof propRegionOrObj === "string") {
     propStr = propRegionOrObj;
+    propFactoryStr = propRegionOrObj;
   } else if (typeof propRegionOrObj === "object") {
     propStr = `${propRegionOrObj.factory || ""} ${propRegionOrObj.region || ""} ${propRegionOrObj.department || ""} ${propRegionOrObj.area || ""} ${propRegionOrObj.code || ""} ${propRegionOrObj.title || ""}`;
+    propFactoryStr = `${propRegionOrObj.factory || ""} ${propRegionOrObj.region || ""}`;
   }
 
   const pr = propStr.toUpperCase();
+  const prFactory = propFactoryStr.toUpperCase();
 
   if (filterRegion === "Kiên Giang 1" || filterRegion === "KG 1") {
     return (
@@ -373,13 +381,13 @@ const matchRegionFilter = (propRegionOrObj: any, filterRegion: string) => {
     return pr.includes("KẾ HOẠCH") || pr.includes("KE HOACH") || pr.includes("PPC");
   }
   if (filterRegion === "Phòng CI") {
-    return (pr.includes("CI") || pr.includes("CẢI TIẾN")) && !pr.includes("CN-CI") && !pr.includes("CN CI");
+    return prFactory.includes("CI") && !prFactory.includes("CN-CI") && !prFactory.includes("CN CI");
   }
   if (filterRegion === "Phòng CN") {
     return (
-      (pr.includes("PHÒNG CN") || pr.includes("P. CN") || pr.includes("CÔNG NGHỆ") || pr.includes("CONG NGHE")) &&
-      !pr.includes("CN-CI") &&
-      !pr.includes("CN CI")
+      (prFactory.includes("PHÒNG CN") || prFactory.includes("P. CN") || prFactory.includes("CÔNG NGHỆ") || prFactory.includes("CONG NGHE")) &&
+      !prFactory.includes("CN-CI") &&
+      !prFactory.includes("CN CI")
     );
   }
   if (filterRegion === "Phòng chất lượng") {

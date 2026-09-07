@@ -164,8 +164,11 @@ const normalizeRegion = (p: KaizenProposal | any): string => {
   if (combined.includes("KIÊN GIANG 1") || combined.includes("KIEN GIANG 1") || combined.includes("KG 1") || combined.includes("KG1")) return "Kiên Giang 1";
   if (combined.includes("HOÀN THIỆN ĐẾ") || combined.includes("HOAN THIEN DE") || combined.includes("HTĐ") || combined.includes("HTD") || combined.includes("ĐẾ") || combined.includes("DE")) return "Hoàn thiện đế";
   if (combined.includes("KẾ HOẠCH") || combined.includes("KE HOACH") || combined.includes("PPC")) return "Phòng kế hoạch";
-  if (combined.includes("PHÒNG CN") || combined.includes("P. CN") || combined.includes("CÔNG NGHỆ") || combined.includes("CONG NGHE")) return "Phòng CN";
-  if (combined.includes("CI") || combined.includes("CẢI TIẾN")) return "Phòng CI";
+  // Chỉ so trên factory/region (KHÔNG dùng combined có lẫn department/title) — "CI"/"Cải Tiến" là
+  // từ quá phổ biến trong tiêu đề mọi đề xuất Kaizen, so khớp rộng sẽ dính nhầm cả Kiên Giang 1/2/3.
+  const facRegOnly = `${regionStr || ""} ${factoryStr || ""}`.toUpperCase();
+  if (facRegOnly.includes("PHÒNG CN") || facRegOnly.includes("P. CN") || facRegOnly.includes("CÔNG NGHỆ") || facRegOnly.includes("CONG NGHE")) return "Phòng CN";
+  if (facRegOnly.includes("CI")) return "Phòng CI";
   if (combined.includes("CHẤT LƯỢNG") || combined.includes("CHAT LUONG") || combined.includes("QA") || combined.includes("QC")) return "Phòng chất lượng";
   if (combined.includes("NHÂN SỰ") || combined.includes("NHAN SU") || combined.includes("HR") || combined.includes("HÀNH CHÍNH")) return "Phòng nhân sự";
 
@@ -200,15 +203,18 @@ const matchCascadingFilter = (p: KaizenProposal, filter: CascadingFilterState): 
       }
       // "Phòng CN-CI" không còn là 1 mục chọn được trong cây tổ chức (đã tách), nên `target` ở đây
       // chỉ còn có thể là "Phòng CI" hoặc "Phòng CN" — loại trừ đề xuất CŨ (chuỗi "CN-CI") khỏi cả
-      // 2 nhánh để không gộp nhầm dữ liệu trước/sau khi tách.
+      // 2 nhánh để không gộp nhầm dữ liệu trước/sau khi tách. Chỉ so trên factory/region (KHÔNG
+      // dùng combined có lẫn department) — "CI"/"Cải Tiến" là từ quá phổ biến trong tiêu đề/mô tả
+      // mọi đề xuất Kaizen, so khớp rộng sẽ dính nhầm cả Kiên Giang 1/2/3.
+      const facReg = `${fRaw} ${rRaw}`;
       if (target.includes("PHÒNG CI") || target === "CI") {
-        return (combined.includes("CI") || combined.includes("CẢI TIẾN")) && !combined.includes("CN-CI") && !combined.includes("CN CI");
+        return facReg.includes("CI") && !facReg.includes("CN-CI") && !facReg.includes("CN CI");
       }
       if (target.includes("PHÒNG CN") || target === "CN") {
         return (
-          (combined.includes("PHÒNG CN") || combined.includes("P. CN") || combined.includes("CÔNG NGHỆ")) &&
-          !combined.includes("CN-CI") &&
-          !combined.includes("CN CI")
+          (facReg.includes("PHÒNG CN") || facReg.includes("P. CN") || facReg.includes("CÔNG NGHỆ")) &&
+          !facReg.includes("CN-CI") &&
+          !facReg.includes("CN CI")
         );
       }
       if (target.includes("KẾ HOẠCH") || target.includes("PPC")) {
