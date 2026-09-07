@@ -69,6 +69,22 @@ const CATEGORIES = [
 const VTCV_OPTIONS = ["Cán bộ quản lý", "Công nhân", "Nhân viên"];
 const PRODUCT_GROUPS = ["Quai", "Mũi", "Gót", "Đế", "Thành phẩm", "Phụ liệu", "Dịch vụ", "Khác"];
 
+// Tách nhãn Phân loại đã gộp (VD "1.Tiết kiệm Vật tư + 3.Tăng Năng suất", xem
+// FeasibilityApprovalModal.tsx) ngược lại thành mảng category ID để tick đúng checkbox khi mở lại
+// sửa 1 đề xuất đã có nhiều phân loại.
+function parseCategoryIds(categoryLabel?: string | null, categoryId?: string | null): string[] {
+  const label = (categoryLabel || "").trim();
+  if (label.includes(" + ")) {
+    const parts = label.split(" + ").map((p) => p.trim());
+    const ids = parts
+      .map((p) => CATEGORIES.find((c) => c.label === p)?.id || normalizeCategoryId(p))
+      .filter(Boolean);
+    if (ids.length > 0) return Array.from(new Set(ids));
+  }
+  const single = normalizeCategoryId(categoryId || categoryLabel || undefined);
+  return single ? [single] : [];
+}
+
 function getFirstImageUrl(urlStr?: string | null): string {
   if (!urlStr) return "";
   const trimmed = urlStr.trim();
@@ -118,7 +134,12 @@ export default function KaizenDetailModal({
   const [editError, setEditError] = useState<string | null>(null);
 
   const [editTitle, setEditTitle] = useState("");
-  const [editCategory, setEditCategory] = useState("");
+  // ĐA PHÂN LOẠI — chọn được nhiều, mỗi loại góp phần tiết kiệm riêng rồi CỘNG DỒN (xem
+  // showProductivityBlock/showMaterialCostBlock/showNonFinancialBlock trong TabInfoContent).
+  const [editCategories, setEditCategories] = useState<string[]>([]);
+  const toggleEditCategory = (id: string) => {
+    setEditCategories((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
+  };
   const [editProposerPosition, setEditProposerPosition] = useState("");
   const [editProductGroup, setEditProductGroup] = useState("");
   const [editCustomer, setEditCustomer] = useState("");
@@ -138,10 +159,16 @@ export default function KaizenDetailModal({
   const [editTimeAfterSeconds, setEditTimeAfterSeconds] = useState<number | string>("");
   const [editEfficiencyValueVnd, setEditEfficiencyValueVnd] = useState<number | string>("");
   const [editPairQuantity, setEditPairQuantity] = useState<number | string>("");
+  // Tiết kiệm riêng của khối Năng suất (thời gian × số đôi) — TÁCH RIÊNG khỏi 2 khối kia để 3 khối
+  // không đè giá trị lẫn nhau khi cùng được chọn, cộng dồn cả 3 lại ở handleSaveInlineEdit.
   const [editTotalSavingsVnd, setEditTotalSavingsVnd] = useState<number | string>("");
 
   const [editCostBefore, setEditCostBefore] = useState<number | string>("");
   const [editCostAfter, setEditCostAfter] = useState<number | string>("");
+  // Tiết kiệm riêng của khối Chi phí/Vật tư (dùng chung cho 2 phân loại 1&2)
+  const [editMaterialCostSavings, setEditMaterialCostSavings] = useState<number | string>("");
+  // Tiết kiệm riêng của khối Phi tài chính (4/5/6/7), không bắt buộc
+  const [editNonFinancialSavings, setEditNonFinancialSavings] = useState<number | string>("");
 
   const [editBeforeImages, setEditBeforeImages] = useState<string[]>([]);
   const [editAfterImages, setEditAfterImages] = useState<string[]>([]);
@@ -154,7 +181,8 @@ export default function KaizenDetailModal({
   const startEditing = () => {
     if (!proposal) return;
     setEditTitle(proposal.title || "");
-    setEditCategory(normalizeCategoryId(proposal.category || proposal.category_label));
+    const initialCatIds = parseCategoryIds(proposal.category_label, proposal.category);
+    setEditCategories(initialCatIds);
     setEditProposerPosition((proposal as any).proposer_position || VTCV_OPTIONS[1]);
     setEditProductGroup((proposal as any).product_group || "");
     setEditCustomer(proposal.customer || "");
@@ -188,10 +216,24 @@ export default function KaizenDetailModal({
     setEditTimeAfterSeconds(tAfter > 0 ? tAfter : "");
     setEditEfficiencyValueVnd(effVnd > 0 ? effVnd : "");
     setEditPairQuantity(pQty > 0 ? pQty : "");
-    setEditTotalSavingsVnd(totSavings > 0 ? totSavings : "");
 
     setEditCostBefore((proposal as any).cost_before ?? (proposal as any).costBefore ?? (proposal as any).chi_phi_truoc ?? "");
     setEditCostAfter((proposal as any).cost_after ?? (proposal as any).costAfter ?? (proposal as any).chi_phi_sau ?? "");
+
+    // Dữ liệu CŨ chỉ lưu 1 tổng tiết kiệm duy nhất (chưa tách theo phân loại) — gán tạm vào ĐÚNG 1
+    // khối tương ứng với phân loại ĐẦU TIÊN đã chọn để không mất số liệu, người sửa có thể tự phân
+    // bổ lại giữa các khối nếu cần khi đã chọn thêm phân loại khác.
+    const firstCatId = initialCatIds[0];
+    setEditTotalSavingsVnd("");
+    setEditMaterialCostSavings("");
+    setEditNonFinancialSavings("");
+    if (firstCatId === "MATERIAL_SAVING" || firstCatId === "COST_SAVING") {
+      setEditMaterialCostSavings(totSavings > 0 ? totSavings : "");
+    } else if (["SAFETY", "5S", "AUTOMATION", "EQUIPMENT"].includes(firstCatId)) {
+      setEditNonFinancialSavings(totSavings > 0 ? totSavings : "");
+    } else {
+      setEditTotalSavingsVnd(totSavings > 0 ? totSavings : "");
+    }
 
     setEditBeforeImages(splitImageUrls(proposal.before_image_url));
     setEditAfterImages(splitImageUrls(proposal.after_image_url));
@@ -327,14 +369,29 @@ export default function KaizenDetailModal({
     setEditError(null);
 
     try {
-      const timeBeforeNum = Number(editTimeBeforeSeconds) || 0;
-      const timeAfterNum = Number(editTimeAfterSeconds) || 0;
+      const showProductivity = editCategories.includes("PRODUCTIVITY");
+      const showMaterialCost = editCategories.includes("MATERIAL_SAVING") || editCategories.includes("COST_SAVING");
+      const showNonFinancial = editCategories.some((c) => ["SAFETY", "5S", "AUTOMATION", "EQUIPMENT"].includes(c));
+
+      const timeBeforeNum = showProductivity ? Number(editTimeBeforeSeconds) || 0 : 0;
+      const timeAfterNum = showProductivity ? Number(editTimeAfterSeconds) || 0 : 0;
       const savedSecsNum = Math.max(0, timeBeforeNum - timeAfterNum);
-      const efficiencyVndNum =
-        Number(editEfficiencyValueVnd) || (savedSecsNum > 0 ? Math.round(savedSecsNum * 12.5) : 0);
-      const pairQtyNum = Number(editPairQuantity) || Number(editQuantity) || 0;
-      const totalSavingsNum =
-        Number(editTotalSavingsVnd) || (pairQtyNum > 0 ? efficiencyVndNum * pairQtyNum : efficiencyVndNum);
+      const efficiencyVndNum = showProductivity
+        ? Number(editEfficiencyValueVnd) || (savedSecsNum > 0 ? Math.round(savedSecsNum * 12.5) : 0)
+        : 0;
+      const pairQtyNum = showProductivity ? Number(editPairQuantity) || Number(editQuantity) || 0 : 0;
+      const productivitySavings = showProductivity
+        ? Number(editTotalSavingsVnd) || (pairQtyNum > 0 ? efficiencyVndNum * pairQtyNum : efficiencyVndNum)
+        : 0;
+      const materialCostSavings = showMaterialCost ? Number(editMaterialCostSavings) || 0 : 0;
+      const nonFinancialSavings = showNonFinancial ? Number(editNonFinancialSavings) || 0 : 0;
+      // 💰 CỘNG DỒN — mỗi khối đang chọn góp phần riêng, tổng lại thành 1 số cuối cùng.
+      const totalSavingsNum = productivitySavings + materialCostSavings + nonFinancialSavings;
+
+      const primaryCategoryId = editCategories[0] || normalizeCategoryId(proposal.category || proposal.category_label);
+      const joinedCategoryLabel = editCategories.length > 0
+        ? editCategories.map((id) => CATEGORIES.find((c) => c.id === id)?.label || id).join(" + ")
+        : proposal.category_label || proposal.category || "";
 
       // "Phòng CI"/"Phòng CN" có cơ cấu Bộ Phận cố định (không có Xưởng/Line con) nên tự map luôn
       // department cho khớp khi đổi qua lại giữa 2 phòng này — các Khu vực khác (Kiên Giang 1/2/3...)
@@ -350,9 +407,9 @@ export default function KaizenDetailModal({
         id: proposal.id,
         action: "UPDATE",
         title: editTitle.trim(),
-        category: editCategory,
-        categoryLabel: CATEGORIES.find((c) => c.id === editCategory)?.label || editCategory,
-        category_label: CATEGORIES.find((c) => c.id === editCategory)?.label || editCategory,
+        category: primaryCategoryId,
+        categoryLabel: joinedCategoryLabel,
+        category_label: joinedCategoryLabel,
         proposer_position: editProposerPosition.trim(),
         proposerPosition: editProposerPosition.trim(),
         product_group: editProductGroup.trim(),
@@ -384,12 +441,12 @@ export default function KaizenDetailModal({
         totalSavingsVnd: totalSavingsNum,
         total_savings_words: totalSavingsNum > 0 ? convertNumberToWords(totalSavingsNum) : "",
         totalSavingsWords: totalSavingsNum > 0 ? convertNumberToWords(totalSavingsNum) : "",
-        cost_before: Number(editCostBefore) || 0,
-        costBefore: Number(editCostBefore) || 0,
-        chi_phi_truoc: Number(editCostBefore) || 0,
-        cost_after: Number(editCostAfter) || 0,
-        costAfter: Number(editCostAfter) || 0,
-        chi_phi_sau: Number(editCostAfter) || 0,
+        cost_before: showMaterialCost ? Number(editCostBefore) || 0 : 0,
+        costBefore: showMaterialCost ? Number(editCostBefore) || 0 : 0,
+        chi_phi_truoc: showMaterialCost ? Number(editCostBefore) || 0 : 0,
+        cost_after: showMaterialCost ? Number(editCostAfter) || 0 : 0,
+        costAfter: showMaterialCost ? Number(editCostAfter) || 0 : 0,
+        chi_phi_sau: showMaterialCost ? Number(editCostAfter) || 0 : 0,
         before_image_url: editBeforeImages.join(","),
         beforeImageUrl: editBeforeImages.join(","),
         after_image_url: editAfterImages.join(","),
@@ -657,7 +714,9 @@ export default function KaizenDetailModal({
 
   if (!isOpen || !proposal) return null;
 
-  const catObj = CATEGORIES.find((c) => c.id === normalizeCategoryId(isEditing ? editCategory : (proposal.category || proposal.category_label))) || CATEGORIES[0];
+  const catObj = CATEGORIES.find((c) => c.id === normalizeCategoryId(isEditing ? editCategories[0] : (proposal.category || proposal.category_label))) || CATEGORIES[0];
+  // Nhãn gộp đủ các phân loại đang chọn (khi sửa) — hiện ở pill trên đầu + ô Phân loại sidebar.
+  const editCategoriesLabel = editCategories.map((id) => CATEGORIES.find((c) => c.id === id)?.label || id).join(" + ");
 
   const isApproved = isApprovedProposal(proposal);
   const isRejected = isRejectedProposal(proposal);
@@ -856,21 +915,13 @@ export default function KaizenDetailModal({
               )}
             </div>
 
-            {/* Hàng 2: PHÂN LOẠI | NGÀY ĐĂNG */}
+            {/* Hàng 2: PHÂN LOẠI (chọn nhiều — xem chip bên dưới) | NGÀY ĐĂNG */}
             <div className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-0.5">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">PHÂN LOẠI</span>
               {isEditing ? (
-                <select
-                  value={editCategory}
-                  onChange={(e) => setEditCategory(e.target.value)}
-                  className="w-full text-[11px] font-black text-slate-900 border border-amber-300 rounded-lg px-1.5 py-1 bg-amber-50/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
-                >
-                  {CATEGORIES.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
+                <span className="text-[11px] font-black text-amber-800 block truncate" title={editCategoriesLabel || "Chưa chọn"}>
+                  {editCategoriesLabel || "Chưa chọn — chọn ở khối bên dưới"}
+                </span>
               ) : (
                 <span className="text-xs font-extrabold text-slate-900 block truncate" title={catObj.label}>
                   {catObj.label}
@@ -1009,19 +1060,12 @@ export default function KaizenDetailModal({
 
             {/* 3 Pills Hàng Trên */}
             <div className="flex items-center gap-2 flex-wrap mb-3">
-              {/* Pill 1: Phân loại */}
+              {/* Pill 1: Phân loại — chỉ hiện (chọn nhiều ở khối "PHÂN LOẠI" trong tab Thông tin) */}
               {isEditing ? (
-                <select
-                  value={editCategory}
-                  onChange={(e) => setEditCategory(e.target.value)}
-                  className="px-3 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-900 text-xs font-black cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500"
-                >
-                  {CATEGORIES.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
+                <span className="px-3 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-900 text-xs font-black flex items-center gap-1 max-w-full truncate" title={editCategoriesLabel || "Chưa chọn"}>
+                  <span>📈</span>
+                  <span className="truncate">{editCategoriesLabel || "Chưa chọn"}</span>
+                </span>
               ) : (
                 <span className="px-3 py-1 rounded-full bg-slate-100 border border-slate-300 text-slate-800 text-xs font-black flex items-center gap-1">
                   <span>📈</span>
@@ -1191,8 +1235,8 @@ export default function KaizenDetailModal({
                 proposal={proposal}
                 onOpenLightbox={handleOpenLightbox}
                 isEditing={isEditing}
-                editCategory={editCategory}
-                setEditCategory={setEditCategory}
+                editCategories={editCategories}
+                toggleEditCategory={toggleEditCategory}
                 editProductCode={editProductCode}
                 setEditProductCode={setEditProductCode}
                 editQuantity={editQuantity}
@@ -1217,6 +1261,10 @@ export default function KaizenDetailModal({
                 setEditCostBefore={setEditCostBefore}
                 editCostAfter={editCostAfter}
                 setEditCostAfter={setEditCostAfter}
+                editMaterialCostSavings={editMaterialCostSavings}
+                setEditMaterialCostSavings={setEditMaterialCostSavings}
+                editNonFinancialSavings={editNonFinancialSavings}
+                setEditNonFinancialSavings={setEditNonFinancialSavings}
                 editBeforeImages={editBeforeImages}
                 handleUploadBeforeImages={handleUploadBeforeImages}
                 handleRemoveBeforeImage={handleRemoveBeforeImage}
@@ -1317,8 +1365,8 @@ interface TabInfoContentProps {
   proposal: KaizenProposal;
   onOpenLightbox?: (idx: number, items: MediaItem[]) => void;
   isEditing?: boolean;
-  editCategory?: string;
-  setEditCategory?: (v: string) => void;
+  editCategories?: string[];
+  toggleEditCategory?: (id: string) => void;
   editProductCode?: string;
   setEditProductCode?: (v: string) => void;
   editQuantity?: number | string;
@@ -1343,6 +1391,10 @@ interface TabInfoContentProps {
   setEditCostBefore?: (v: number | string) => void;
   editCostAfter?: number | string;
   setEditCostAfter?: (v: number | string) => void;
+  editMaterialCostSavings?: number | string;
+  setEditMaterialCostSavings?: (v: number | string) => void;
+  editNonFinancialSavings?: number | string;
+  setEditNonFinancialSavings?: (v: number | string) => void;
   editBeforeImages?: string[];
   handleUploadBeforeImages?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleRemoveBeforeImage?: (idx: number) => void;
@@ -1361,8 +1413,8 @@ function TabInfoContent({
   proposal,
   onOpenLightbox,
   isEditing,
-  editCategory,
-  setEditCategory,
+  editCategories = [],
+  toggleEditCategory,
   editProductCode,
   setEditProductCode,
   editQuantity,
@@ -1387,6 +1439,10 @@ function TabInfoContent({
   setEditCostBefore,
   editCostAfter,
   setEditCostAfter,
+  editMaterialCostSavings,
+  setEditMaterialCostSavings,
+  editNonFinancialSavings,
+  setEditNonFinancialSavings,
   editBeforeImages = [],
   handleUploadBeforeImages,
   handleRemoveBeforeImage,
@@ -1527,11 +1583,16 @@ function TabInfoContent({
         </div>
       </div>
 
-      {/* SECTION 3 — 📈 HIỆU QUẢ CẢI TIẾN */}
+      {/* SECTION 3 — 📈 HIỆU QUẢ CẢI TIẾN — ĐA PHÂN LOẠI, mỗi khối tiết kiệm riêng CỘNG DỒN */}
       {(() => {
-        const normCat = normalizeCategoryId(isEditing ? (editCategory || proposal.category || proposal.category_label) : (proposal.category || proposal.category_label));
-        const isMaterialOrCost = normCat === "MATERIAL_SAVING" || normCat === "COST_SAVING";
-        const catObj = CATEGORIES.find((c) => c.id === normCat) || CATEGORIES[0];
+        const catIdsForDisplay = isEditing
+          ? (editCategories.length > 0 ? editCategories : [normalizeCategoryId(proposal.category || proposal.category_label)])
+          : parseCategoryIds(proposal.category_label, proposal.category);
+        const showMaterialCost = catIdsForDisplay.includes("MATERIAL_SAVING") || catIdsForDisplay.includes("COST_SAVING");
+        const showProductivity = catIdsForDisplay.includes("PRODUCTIVITY");
+        const showNonFinancial = catIdsForDisplay.some((id) => ["SAFETY", "5S", "AUTOMATION", "EQUIPMENT"].includes(id));
+        const multiBlockCount = [showMaterialCost, showProductivity, showNonFinancial].filter(Boolean).length;
+        const headerLabel = catIdsForDisplay.map((id) => CATEGORIES.find((c) => c.id === id)?.label || id).join(" + ");
 
         const timeBefore = isEditing ? Number(editTimeBeforeSeconds || 0) : Number(proposal.time_before_seconds || (proposal as any).timeBeforeSeconds || 0);
         const timeAfter = isEditing ? Number(editTimeAfterSeconds || 0) : Number(proposal.time_after_seconds || (proposal as any).timeAfterSeconds || 0);
@@ -1547,27 +1608,56 @@ function TabInfoContent({
               proposal.pair_quantity || (proposal as any).pairQuantity || (proposal as any).so_luong_giay || (proposal as any).quantity || 0
             );
         const autoTotSavings = pairQty > 0 ? efficiencyVnd * pairQty : efficiencyVnd;
-        const totalSavingsVnd = isEditing
-          ? (Number(editTotalSavingsVnd) || autoTotSavings)
-          : Number(
-              proposal.total_savings_vnd ||
-              (proposal as any).totalSavingsVND ||
-              (proposal as any).tong_tien_tiet_kiem ||
-              autoTotSavings
-            );
-        const totalSavingsWordsText = totalSavingsVnd > 0 ? convertNumberToWords(totalSavingsVnd) : "";
+        const storedTotal = Number(
+          proposal.total_savings_vnd || (proposal as any).totalSavingsVND || (proposal as any).tong_tien_tiet_kiem || 0
+        );
 
         const costBeforeVal = isEditing ? Number(editCostBefore || 0) : Number((proposal as any).cost_before ?? (proposal as any).costBefore ?? (proposal as any).chi_phi_truoc ?? 0);
         const costAfterVal = isEditing ? Number(editCostAfter || 0) : Number((proposal as any).cost_after ?? (proposal as any).costAfter ?? (proposal as any).chi_phi_sau ?? 0);
+
+        // Tiết kiệm RIÊNG của từng khối (edit: từ state riêng; xem — read-mode chỉ 1 khối thì dùng
+        // đúng số đã lưu, nhiều khối thì không tách được số cũ nên chỉ hiện TỔNG CỘNG ở cuối).
+        const productivitySubtotal = isEditing ? (Number(editTotalSavingsVnd) || autoTotSavings) : (multiBlockCount > 1 ? autoTotSavings : storedTotal || autoTotSavings);
+        const materialCostSubtotal = isEditing ? (Number(editMaterialCostSavings) || 0) : (multiBlockCount > 1 ? Math.max(0, costBeforeVal - costAfterVal) : storedTotal || Math.max(0, costBeforeVal - costAfterVal));
+        const nonFinancialSubtotal = isEditing ? (Number(editNonFinancialSavings) || 0) : (multiBlockCount > 1 ? 0 : storedTotal);
+
+        const grandTotal = isEditing
+          ? (showProductivity ? productivitySubtotal : 0) + (showMaterialCost ? materialCostSubtotal : 0) + (showNonFinancial ? nonFinancialSubtotal : 0)
+          : (storedTotal > 0 ? storedTotal : (showProductivity ? productivitySubtotal : 0) + (showMaterialCost ? materialCostSubtotal : 0));
+        const totalSavingsVnd = grandTotal;
+        const totalSavingsWordsText = grandTotal > 0 ? convertNumberToWords(grandTotal) : "";
 
         return (
           <div className="space-y-3">
             <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-2">
               <span>📈</span>
-              <span>HIỆU QUẢ CẢI TIẾN ({catObj.label})</span>
+              <span>HIỆU QUẢ CẢI TIẾN ({headerLabel})</span>
             </h4>
 
-            {isMaterialOrCost ? (
+            {/* CHỌN PHÂN LOẠI (chọn nhiều) — chỉ hiện khi đang sửa */}
+            {isEditing && (
+              <div className="flex flex-wrap gap-2 p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                {CATEGORIES.map((c) => {
+                  const checked = editCategories.includes(c.id);
+                  return (
+                    <label
+                      key={c.id}
+                      onClick={() => toggleEditCategory?.(c.id)}
+                      className={`px-2.5 py-1 rounded-lg border-2 text-[11px] font-extrabold cursor-pointer transition-all flex items-center gap-1 select-none ${
+                        checked ? "border-emerald-600 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-white text-slate-500 hover:bg-slate-100"
+                      }`}
+                    >
+                      <span className={`w-3.5 h-3.5 rounded flex items-center justify-center border-2 shrink-0 ${checked ? "border-emerald-600 bg-emerald-600 text-white" : "border-slate-300"}`}>
+                        {checked && <IconCheck size={10} strokeWidth={3} />}
+                      </span>
+                      <span>{c.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+
+            {showMaterialCost && (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {/* Thẻ 1: CHI PHÍ TRƯỚC */}
                 <div className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
@@ -1581,8 +1671,7 @@ function TabInfoContent({
                         setEditCostBefore?.(v);
                         const cb = Number(v) || 0;
                         const ca = Number(editCostAfter) || 0;
-                        const diff = Math.max(0, cb - ca);
-                        setEditTotalSavingsVnd?.(diff);
+                        setEditMaterialCostSavings?.(Math.max(0, cb - ca));
                       }}
                       className="w-full border border-slate-300 rounded-lg p-1.5 text-xs font-black text-slate-900 bg-amber-50/50"
                       placeholder="Chi phí trước..."
@@ -1607,8 +1696,7 @@ function TabInfoContent({
                         setEditCostAfter?.(v);
                         const ca = Number(v) || 0;
                         const cb = Number(editCostBefore) || 0;
-                        const diff = Math.max(0, cb - ca);
-                        setEditTotalSavingsVnd?.(diff);
+                        setEditMaterialCostSavings?.(Math.max(0, cb - ca));
                       }}
                       className="w-full border border-slate-300 rounded-lg p-1.5 text-xs font-black text-slate-900 bg-amber-50/50"
                       placeholder="Chi phí sau..."
@@ -1621,26 +1709,28 @@ function TabInfoContent({
                   <span className="text-[10px] font-bold text-emerald-600 block">sau cải tiến</span>
                 </div>
 
-                {/* Thẻ 3: TỔNG SỐ TIỀN TIẾT KIỆM */}
+                {/* Thẻ 3: TIẾT KIỆM KHỐI NÀY */}
                 <div className="p-3.5 rounded-2xl bg-[#006838] text-white space-y-1 shadow-md border border-emerald-400/30">
-                  <span className="text-[10px] font-extrabold uppercase text-amber-300 block">TỔNG TIẾT KIỆM</span>
+                  <span className="text-[10px] font-extrabold uppercase text-amber-300 block">{multiBlockCount > 1 ? "TIẾT KIỆM KHỐI NÀY" : "TỔNG TIẾT KIỆM"}</span>
                   {isEditing ? (
                     <input
                       type="number"
-                      value={editTotalSavingsVnd ?? ""}
-                      onChange={(e) => setEditTotalSavingsVnd?.(e.target.value)}
+                      value={editMaterialCostSavings ?? ""}
+                      onChange={(e) => setEditMaterialCostSavings?.(e.target.value)}
                       className="w-full border border-emerald-400 rounded-lg p-1.5 text-xs font-black text-white bg-emerald-900"
                       placeholder="Tổng tiết kiệm VNĐ..."
                     />
                   ) : (
                     <span className="text-lg sm:text-xl font-black text-white block truncate">
-                      {totalSavingsVnd > 0 ? `${totalSavingsVnd.toLocaleString("vi-VN")} VNĐ` : "0 VNĐ"}
+                      {materialCostSubtotal > 0 ? `${materialCostSubtotal.toLocaleString("vi-VN")} VNĐ` : "0 VNĐ"}
                     </span>
                   )}
                   <span className="text-[10px] font-bold text-emerald-200 block truncate">tiết kiệm trực tiếp</span>
                 </div>
               </div>
-            ) : pricingDir === "TRI_GIA" || pricingDir === "Trị giá" ? (
+            )}
+
+            {showProductivity && (pricingDir === "TRI_GIA" || pricingDir === "Trị giá" ? (
               <div className="p-4 rounded-2xl bg-[#006838] text-white shadow-sm flex items-center justify-between">
                 <div>
                   <span className="text-[10px] font-extrabold uppercase text-emerald-200 block">
@@ -1789,9 +1879,9 @@ function TabInfoContent({
                   <span className="text-[10px] font-bold text-blue-600 block">đôi / đơn hàng</span>
                 </div>
 
-                {/* Thẻ 6: TỔNG TIẾT KIỆM */}
+                {/* Thẻ 6: TIẾT KIỆM KHỐI NÀY */}
                 <div className="p-3.5 rounded-2xl bg-[#00522c] text-white space-y-1 shadow-md border border-emerald-400/30">
-                  <span className="text-[10px] font-extrabold uppercase text-amber-300 block">TỔNG TIẾT KIỆM</span>
+                  <span className="text-[10px] font-extrabold uppercase text-amber-300 block">{multiBlockCount > 1 ? "TIẾT KIỆM KHỐI NÀY" : "TỔNG TIẾT KIỆM"}</span>
                   {isEditing ? (
                     <input
                       type="number"
@@ -1801,13 +1891,46 @@ function TabInfoContent({
                     />
                   ) : (
                     <span className="text-base sm:text-lg font-black text-white block truncate">
-                      {totalSavingsVnd > 0 ? `${totalSavingsVnd.toLocaleString("vi-VN")} VNĐ` : "0 VNĐ"}
+                      {productivitySubtotal > 0 ? `${productivitySubtotal.toLocaleString("vi-VN")} VNĐ` : "0 VNĐ"}
                     </span>
                   )}
                   <span className="text-[10px] font-bold text-emerald-200 block truncate">
                     {pairQty > 0 ? `cho ${pairQty.toLocaleString("vi-VN")} đôi` : "tính quy đổi"}
                   </span>
                 </div>
+              </div>
+            ))}
+
+            {showNonFinancial && (
+              <div className="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200 space-y-1">
+                <span className="text-[10px] font-extrabold uppercase text-blue-700 block">
+                  TIẾT KIỆM PHI TÀI CHÍNH (an toàn/5S/tự động hoá/MMTB) — không bắt buộc
+                </span>
+                {isEditing ? (
+                  <input
+                    type="number"
+                    value={editNonFinancialSavings ?? ""}
+                    onChange={(e) => setEditNonFinancialSavings?.(e.target.value)}
+                    className="w-full border border-blue-300 rounded-lg p-1.5 text-sm font-black text-blue-950 bg-white"
+                    placeholder="Nhập số tiền tiết kiệm (nếu có)..."
+                  />
+                ) : (
+                  <span className="text-lg font-black text-blue-950 block">
+                    {nonFinancialSubtotal > 0 ? `${nonFinancialSubtotal.toLocaleString("vi-VN")} VNĐ` : "Không áp dụng"}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* TỔNG CỘNG TẤT CẢ KHỐI — chỉ hiện khi ≥ 2 khối để không lặp thừa với thẻ "Tổng tiết
+                kiệm" khi chỉ có đúng 1 khối */}
+            {multiBlockCount > 1 && (
+              <div className="p-4 rounded-2xl bg-[#006838] text-white space-y-1 shadow-md">
+                <span className="text-[11px] font-black uppercase tracking-wider text-emerald-200 flex items-center gap-1.5">
+                  <span>💰</span>
+                  <span>Tổng cộng tiết kiệm (cộng dồn {multiBlockCount} phân loại)</span>
+                </span>
+                <span className="text-xl font-black block">{grandTotal.toLocaleString("vi-VN")} VNĐ</span>
               </div>
             )}
 
