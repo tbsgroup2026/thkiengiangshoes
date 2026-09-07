@@ -1,3 +1,5 @@
+// ⚠️ Site build bằng Next.js static export — Route Handler này KHÔNG nằm trong bản deploy.
+// API thật chạy trong `web/public/_worker.js`, sửa logic phải sửa đúng bên đó.
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-static';
