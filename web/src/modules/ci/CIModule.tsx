@@ -2005,10 +2005,11 @@ export default function CIModule() {
           >
             <option value="ALL">🏢 Khu vực</option>
             <option value="THKG">THKG</option>
-            <option value="Kiên Giang 1">Kiên Giang 1</option>
-            <option value="Kiên Giang 2">Kiên Giang 2</option>
-            <option value="Kiên Giang 3">Kiên Giang 3</option>
-            <option value="Hoàn Thiện Đế">Hoàn Thiện Đế</option>
+            {TH_KG_SUB_ITEMS.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
           </select>
 
           {/* Xưởng Sản Xuất */}
