@@ -405,6 +405,7 @@ async function verifyServerAuth(request, env) {
     const isExecutiveOrAdmin =
       empCode === "ADMIN-2026" ||
       empCode === "202608001" ||
+      empCode === "202608002" ||
       empCode === "200405004" ||
       empCode === "201809012" ||
       empCode === "PGĐ-005" ||
