@@ -16,6 +16,24 @@ export async function GET(request: Request) {
 
     if (db) {
       await ensureKaizenSchema(db);
+
+      // Debug tạm thời: xem đúng bản ghi theo MSNV, KHÔNG áp allow-list KG_FACTORIES_SQL — dùng
+      // để đối chiếu khi nghi ngờ 1 giá trị factory/region không khớp allow-list. Xoá sau khi xong.
+      const { searchParams } = new URL(request.url);
+      const debugEmpCodes = searchParams.get('debug_emp_codes');
+      if (debugEmpCodes) {
+        const codes = debugEmpCodes.split(',').map((c) => c.trim()).filter(Boolean);
+        if (codes.length > 0) {
+          const placeholders = codes.map(() => '?').join(',');
+          const debugQuery = `SELECT id, code, proposer_name, proposer_emp_code, factory, region, department, trang_thai, created_at, updated_at FROM ci_kaizen_proposals WHERE proposer_emp_code IN (${placeholders})`;
+          const { results: debugResults } = await db.prepare(debugQuery).bind(...codes).all();
+          return NextResponse.json(
+            { success: true, debug: true, data: debugResults || [] },
+            { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' } }
+          );
+        }
+      }
+
       // Always fetch ALL proposals — filtering is done client-side in CIModule
       const query = `SELECT * FROM ci_kaizen_proposals WHERE factory IN ${KG_FACTORIES_SQL} ORDER BY created_at DESC LIMIT 500`;
       const { results } = await db.prepare(query).all();
