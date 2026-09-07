@@ -42,8 +42,19 @@ export function usePermission() {
   const empCode = user?.empCode || "";
   const roleCode = (user as any)?.roleCode || "";
 
-  // Ban Giám Đốc hoặc Admin (Rank >= 3 hoặc Super Admin hoặc PGĐ Kiều Thanh Vũ)
-  const isExecutiveOrAdmin = resolved.levelRank >= 3 || roleCode === "SUPER_ADMIN" || empCode === "ADMIN-2026" || empCode === "201809012" || roleCode === "PHO_GIAM_DOC";
+  // Ban Giám Đốc hoặc Admin (Rank >= 3 hoặc Super Admin hoặc PGĐ Kiều Thanh Vũ hoặc IT Team Chuyển
+  // Đổi Số 202608001/202608002 — 2 tài khoản này đã nằm trong ADMIN_WHITELIST (trang /admin) và
+  // MMTB_AUTOLOGIN_ADMIN_EMP_CODES từ trước, role_code thật trong CSDL (TRUONG_PHONG/LE_TAN) không
+  // phản ánh đúng quyền hạn thật nên phải liệt kê thẳng MSNV ở đây, đồng bộ với isExecutiveOrAdmin
+  // phía server (verifyServerAuth trong public/_worker.js).
+  const isExecutiveOrAdmin =
+    resolved.levelRank >= 3 ||
+    roleCode === "SUPER_ADMIN" ||
+    empCode === "ADMIN-2026" ||
+    empCode === "201809012" ||
+    empCode === "202608001" ||
+    empCode === "202608002" ||
+    roleCode === "PHO_GIAM_DOC";
 
   // Tính toán tập quyền (permissions) dựa trên vai trò thực tế của người dùng
   const userPermissions = new Set<Permission>();
