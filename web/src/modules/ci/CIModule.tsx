@@ -1226,7 +1226,13 @@ export default function CIModule() {
       return isApproved && (regType === "THI_DUA" || Number(p.is_thi_dua) === 1 || subStatus === "CHO_DANH_GIA" || subStatus === "DA_DANH_GIA");
     });
 
-    const sorted = [...thiDuaList].sort((a, b) => {
+    // Bài được trao "Giải Khuyến Khích" (nút Khuyến Khích nhanh, hoặc chấm điểm <60) -> LUÔN
+    // cố định phần thưởng 100k, KHÔNG cạnh tranh vị trí Hạng 1-4 theo số tiền tiết kiệm.
+    const isQuickAward = (p: any) => String(p?.award_title || "").trim() === "Giải Khuyến Khích";
+    const quickAwardItems = thiDuaList.filter(isQuickAward);
+    const competeItems = thiDuaList.filter((p) => !isQuickAward(p));
+
+    const sorted = [...competeItems].sort((a, b) => {
       const valA = getProposalSavingsVal(a);
       const valB = getProposalSavingsVal(b);
       if (valB !== valA) return valB - valA;
@@ -1290,6 +1296,18 @@ export default function CIModule() {
       }
 
       map[item.id] = { rank, rankIndex: index, rankTitle, badgeLabel, badgeStyle, icon };
+    });
+
+    // Giải Khuyến Khích: xếp sau tất cả bài thi đua cạnh tranh, cố định nhãn + không dựa vào tiền tiết kiệm
+    quickAwardItems.forEach((item, i) => {
+      map[item.id] = {
+        rank: 5,
+        rankIndex: sorted.length + i,
+        rankTitle: "Giải Khuyến Khích",
+        badgeLabel: "🎗️ Giải Khuyến Khích",
+        badgeStyle: "bg-amber-50 text-amber-800 font-black border border-amber-200 shadow-2xs",
+        icon: "🎗️",
+      };
     });
 
     return map;

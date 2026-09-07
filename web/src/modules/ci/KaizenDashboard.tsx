@@ -724,7 +724,13 @@ export default function KaizenDashboard({ proposals, onBackToLibrary, onNavigate
       thiDuaList = proposals;
     }
 
-    const sorted = [...thiDuaList]
+    // Bài được trao "Giải Khuyến Khích" (nút Khuyến Khích nhanh, hoặc chấm điểm <60) -> LUÔN
+    // cố định phần thưởng 100k, KHÔNG cạnh tranh vị trí Hạng 1-4 theo số tiền tiết kiệm.
+    const isQuickAward = (p: any) => String(p?.award_title || (p as any)?.awardTitle || "").trim() === "Giải Khuyến Khích";
+    const quickAwardList = thiDuaList.filter(isQuickAward);
+    const competeList = thiDuaList.filter((p) => !isQuickAward(p));
+
+    const sorted = [...competeList]
       .sort((a, b) => {
         const valA = getProposalValue(a);
         const valB = getProposalValue(b);
@@ -744,7 +750,7 @@ export default function KaizenDashboard({ proposals, onBackToLibrary, onNavigate
       })
       .slice(0, 38);
 
-    return sorted.map((item, index) => {
+    const rankedCompete = sorted.map((item, index) => {
       let rank = 1;
       let rankTitle = "Hạng Nhất";
       let prizeValueTr = 1.0;
@@ -810,6 +816,19 @@ export default function KaizenDashboard({ proposals, onBackToLibrary, onNavigate
 
       return { item, rank, rankTitle, prizeValueTr, badgeLabel, badgeStyle, isTied };
     });
+
+    // Giải Khuyến Khích: cố định 100k / nhãn riêng, xếp sau danh sách cạnh tranh
+    const rankedQuickAward = quickAwardList.map((item) => ({
+      item,
+      rank: 5,
+      rankTitle: "Giải Khuyến Khích",
+      prizeValueTr: 0.1,
+      badgeLabel: "🎗️ Giải Khuyến Khích",
+      badgeStyle: "bg-amber-50 text-amber-900 border-amber-200 font-black",
+      isTied: false,
+    }));
+
+    return [...rankedCompete, ...rankedQuickAward];
   }, [proposals, selectedMonth, cascadingFilterState]);
 
   // Sorted version of ranked11Proposals applied on top of the ranked array
