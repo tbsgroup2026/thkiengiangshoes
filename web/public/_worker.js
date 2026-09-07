@@ -4502,7 +4502,7 @@ export default {
       if ((url.pathname === "/api/ci-kaizen" || url.pathname === "/api/ci-kaizen/") && request.method === "GET") {
         try {
           await ensureProposalSchemaAndMigration();
-          const KG_FACTORIES = ["KG 1","KG 2","KG 3","Hoàn thiện đế","Kiên Giang 1","Kiên Giang 2","Kiên Giang 3","HTĐ KG","Phòng kế hoạch","Phòng CN-CI","Phòng CI","Phòng CN","Phòng chất lượng","Phòng nhân sự","P. Kế Hoạch","P. CN-CI","P. CI","P. CN","P. Chất Lượng","P. Nhân Sự"];
+          const KG_FACTORIES = ["KG 1","KG 2","KG 3","Hoàn thiện đế","Kiên Giang 1","Kiên Giang 2","Kiên Giang 3","HTĐ KG","Phòng kế hoạch","Phòng CI","Phòng CN","Phòng chất lượng","Phòng nhân sự","P. Kế Hoạch","P. CI","P. CN","P. Chất Lượng","P. Nhân Sự"];
           const placeholders = KG_FACTORIES.map(() => "?").join(",");
           const { results } = await env.DB.prepare(
             `SELECT * FROM ci_kaizen_proposals WHERE factory IN (${placeholders}) ORDER BY created_at DESC LIMIT 500`
@@ -4553,7 +4553,7 @@ export default {
           // Region counts using factory field
           const regionCounts = {
             "Kiên Giang 1": 0, "Kiên Giang 2": 0, "Kiên Giang 3": 0,
-            "Hoàn thiện đế": 0, "Phòng kế hoạch": 0, "Phòng CN-CI": 0,
+            "Hoàn thiện đế": 0, "Phòng kế hoạch": 0,
             "Phòng CI": 0, "Phòng CN": 0,
             "Phòng chất lượng": 0, "Phòng nhân sự": 0,
           };
@@ -4568,7 +4568,6 @@ export default {
             else if (fac.includes("KIÊN GIANG 3") || fac.includes("KIEN GIANG 3") || fac === "KG3" || fac === "KG 3") regionCounts["Kiên Giang 3"]++;
             else if (fac.includes("HOÀN THIỆN ĐẾ") || fac.includes("HOAN THIEN DE") || fac.includes("HTĐ") || fac.includes("HTD")) regionCounts["Hoàn thiện đế"]++;
             else if (fac.includes("KẾ HOẠCH") || fac.includes("KE HOACH") || fac.includes("PPC")) regionCounts["Phòng kế hoạch"]++;
-            else if (fac.includes("CN-CI") || fac.includes("CN CI")) regionCounts["Phòng CN-CI"]++;
             else if (fac.includes("PHÒNG CN") || fac.includes("P. CN") || fac.includes("CÔNG NGHỆ") || fac.includes("CONG NGHE")) regionCounts["Phòng CN"]++;
             else if (fac.includes("CI") || fac.includes("CẢI TIẾN")) regionCounts["Phòng CI"]++;
             else if (fac.includes("CHẤT LƯỢNG") || fac.includes("CHAT LUONG") || fac.includes("QA") || fac.includes("QC")) regionCounts["Phòng chất lượng"]++;
@@ -4628,7 +4627,6 @@ export default {
             "Kiên Giang 3": 0,
             "Hoàn thiện đế": 0,
             "Phòng kế hoạch": 0,
-            "Phòng CN-CI": 0,
             "Phòng CI": 0,
             "Phòng CN": 0,
             "Phòng chất lượng": 0,
@@ -4679,9 +4677,7 @@ export default {
             if (reg.includes("KẾ HOẠCH") || reg.includes("KE HOACH") || reg.includes("PPC")) {
               regions["Phòng kế hoạch"]++;
             }
-            if (reg.includes("CN-CI") || reg.includes("CN CI") || reg.includes("CONTINUOUS IMPROVEMENT")) {
-              regions["Phòng CN-CI"]++;
-            } else if (reg.includes("PHÒNG CN") || reg.includes("P. CN") || reg.includes("CÔNG NGHỆ") || reg.includes("CONG NGHE")) {
+            if (reg.includes("PHÒNG CN") || reg.includes("P. CN") || reg.includes("CÔNG NGHỆ") || reg.includes("CONG NGHE")) {
               regions["Phòng CN"]++;
             } else if (reg.includes("CI") || reg.includes("CẢI TIẾN")) {
               regions["Phòng CI"]++;

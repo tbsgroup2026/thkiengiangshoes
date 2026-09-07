@@ -43,15 +43,14 @@ import {
   getTosForChuyens,
 } from "./organizationTree";
 
-// "Phòng CN-CI" giữ lại riêng (đề xuất CŨ trước khi tách vẫn cần lên đúng biểu đồ theo nhãn cũ),
-// cộng thêm 2 mục MỚI "Phòng CI"/"Phòng CN" cho đề xuất tạo từ nay trở đi — xem normalizeRegion().
+// "Phòng CN-CI" đã tách hẳn thành "Phòng CI"/"Phòng CN" (đề xuất cũ đã được phân loại lại thủ
+// công), không còn đề xuất nào dùng nhãn gộp cũ nên bỏ hẳn khỏi biểu đồ — xem normalizeRegion().
 export const STANDARD_8_REGIONS = [
   "Kiên Giang 1",
   "Kiên Giang 2",
   "Kiên Giang 3",
   "Hoàn thiện đế",
   "Phòng kế hoạch",
-  "Phòng CN-CI",
   "Phòng CI",
   "Phòng CN",
   "Phòng chất lượng",
@@ -165,8 +164,6 @@ const normalizeRegion = (p: KaizenProposal | any): string => {
   if (combined.includes("KIÊN GIANG 1") || combined.includes("KIEN GIANG 1") || combined.includes("KG 1") || combined.includes("KG1")) return "Kiên Giang 1";
   if (combined.includes("HOÀN THIỆN ĐẾ") || combined.includes("HOAN THIEN DE") || combined.includes("HTĐ") || combined.includes("HTD") || combined.includes("ĐẾ") || combined.includes("DE")) return "Hoàn thiện đế";
   if (combined.includes("KẾ HOẠCH") || combined.includes("KE HOACH") || combined.includes("PPC")) return "Phòng kế hoạch";
-  // Nhãn CŨ (trước khi tách) — kiểm tra TRƯỚC 2 nhãn mới bên dưới để đề xuất cũ không bị gộp nhầm.
-  if (combined.includes("CN-CI") || combined.includes("CN CI") || combined.includes("CONTINUOUS IMPROVEMENT") || combined.includes("P. CN-CI")) return "Phòng CN-CI";
   if (combined.includes("PHÒNG CN") || combined.includes("P. CN") || combined.includes("CÔNG NGHỆ") || combined.includes("CONG NGHE")) return "Phòng CN";
   if (combined.includes("CI") || combined.includes("CẢI TIẾN")) return "Phòng CI";
   if (combined.includes("CHẤT LƯỢNG") || combined.includes("CHAT LUONG") || combined.includes("QA") || combined.includes("QC")) return "Phòng chất lượng";
