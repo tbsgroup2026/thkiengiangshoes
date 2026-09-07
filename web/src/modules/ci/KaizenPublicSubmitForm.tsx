@@ -21,7 +21,7 @@ import {
 } from "@tabler/icons-react";
 import { INITIAL_ORG_TREE } from "./organizationTree";
 import KaizenDuplicateCompareModal from "./KaizenDuplicateCompareModal";
-import { UniversalVideoPlayer } from "./kaizenMediaUtils";
+import { UniversalVideoPlayer, splitImageUrls } from "./kaizenMediaUtils";
 
 export const CATEGORIES = [
   { id: "MATERIAL_SAVING", label: "1.Tiết kiệm Vật tư", color: "bg-amber-600 text-white" },
@@ -1115,7 +1115,7 @@ export default function KaizenPublicSubmitForm({
                 {form.beforeImageUrl ? (
                   <div className="space-y-2">
                     <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto p-1 bg-white rounded-xl border border-slate-200">
-                      {form.beforeImageUrl.split(",").map((url, idx) => {
+                      {splitImageUrls(form.beforeImageUrl).map((url, idx) => {
                         const cleanUrl = url.trim();
                         if (!cleanUrl) return null;
                         return (
@@ -1124,7 +1124,7 @@ export default function KaizenPublicSubmitForm({
                             <button
                               type="button"
                               onClick={() => {
-                                const currentUrls = form.beforeImageUrl.split(",").map((s) => s.trim()).filter(Boolean);
+                                const currentUrls = splitImageUrls(form.beforeImageUrl);
                                 const updated = currentUrls.filter((_, i) => i !== idx);
                                 setForm({ ...form, beforeImageUrl: updated.join(",") });
                               }}
@@ -1290,7 +1290,7 @@ export default function KaizenPublicSubmitForm({
                 {form.afterImageUrl ? (
                   <div className="space-y-2">
                     <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto p-1 bg-white rounded-xl border border-slate-200">
-                      {form.afterImageUrl.split(",").map((url, idx) => {
+                      {splitImageUrls(form.afterImageUrl).map((url, idx) => {
                         const cleanUrl = url.trim();
                         if (!cleanUrl) return null;
                         return (
@@ -1299,7 +1299,7 @@ export default function KaizenPublicSubmitForm({
                             <button
                               type="button"
                               onClick={() => {
-                                const currentUrls = form.afterImageUrl.split(",").map((s) => s.trim()).filter(Boolean);
+                                const currentUrls = splitImageUrls(form.afterImageUrl);
                                 const updated = currentUrls.filter((_, i) => i !== idx);
                                 setForm({ ...form, afterImageUrl: updated.join(",") });
                               }}

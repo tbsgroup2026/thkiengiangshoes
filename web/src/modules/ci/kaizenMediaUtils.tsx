@@ -9,14 +9,42 @@ import React from "react";
 
 export function splitImageUrls(raw?: string | null): string[] {
   if (!raw || typeof raw !== "string") return [];
+  // KHÔNG được split thô theo mọi dấu phẩy — 1 data URI ảnh base64 ("data:image/jpeg;base64,...")
+  // có SẴN 1 dấu phẩy ngay trong cú pháp của chính nó (ngăn cách phần khai báo mã hoá với phần dữ
+  // liệu), split thô sẽ băm nát 1 ảnh base64 thành 2 mảnh hỏng (vỡ ảnh). Chỉ split tại dấu phẩy
+  // nào thực sự đứng TRƯỚC 1 URL/URI MỚI (bắt đầu bằng http(s):// hoặc data:), không phải dấu phẩy
+  // nằm giữa phần payload base64.
   return raw
-    .split(",")
+    .split(/,(?=\s*(?:https?:\/\/|data:))/)
     .map((s) => s.trim())
     .filter(Boolean);
 }
 
 export function firstImageUrl(raw?: string | null): string {
   return splitImageUrls(raw)[0] || "";
+}
+
+// Upload dùng chung cho mọi nơi cần đính kèm ảnh/video Kaizen (KaizenDetailModal,
+// FeasibilityApprovalModal...) — LUÔN upload lên Cloudinary lấy về https URL, KHÔNG lưu thẳng
+// base64 vào CSDL (base64 vừa nặng vừa dễ vỡ hiển thị vì data URI có dấu phẩy ngay trong cú pháp).
+const CLOUDINARY_CLOUD_NAME = "dwl2xtbqa";
+const CLOUDINARY_PRESET = "vpchuoisk";
+
+export async function uploadFileToCloudinary(file: File, fileType: "image" | "video"): Promise<string> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", CLOUDINARY_PRESET);
+
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${fileType}/upload`, {
+    method: "POST",
+    body: formData,
+  });
+
+  const json: any = await res.json();
+  if (!res.ok || json.error) {
+    throw new Error(json.error?.message || `Lỗi khi tải ${fileType} lên Cloudinary!`);
+  }
+  return json.secure_url || json.url;
 }
 
 /** Ảnh đại diện tốt nhất để hiển thị: ưu tiên ảnh TRƯỚC, không có thì lấy ảnh SAU. */

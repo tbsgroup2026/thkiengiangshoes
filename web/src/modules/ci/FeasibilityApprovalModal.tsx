@@ -16,7 +16,7 @@ import {
 } from "@tabler/icons-react";
 import { convertNumberToWords } from "@/lib/numberToWords";
 import { KaizenProposal, CATEGORIES } from "./CIModule";
-import { normalizeCategoryId, KaizenMediaLightbox, MediaItem } from "./kaizenMediaUtils";
+import { normalizeCategoryId, KaizenMediaLightbox, MediaItem, uploadFileToCloudinary, splitImageUrls } from "./kaizenMediaUtils";
 
 interface FeasibilityApprovalModalProps {
   isOpen: boolean;
@@ -87,6 +87,7 @@ export default function FeasibilityApprovalModal({
   // không bắt buộc.
   const [nonFinancialSavingsVnd, setNonFinancialSavingsVnd] = useState<number | string>("");
   const [afterMediaList, setAfterMediaList] = useState<{ id: string; type: "image" | "video"; url: string; name?: string }[]>([]);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Ảnh/video TRƯỚC do người đăng ký gửi lên — có thể nhiều ảnh gộp chuỗi "url1,url2,..."
@@ -162,7 +163,7 @@ export default function FeasibilityApprovalModal({
       const beforeUrl = proposal.before_image_url ? proposal.before_image_url.trim() : "";
 
       if (proposal.after_image_url) {
-        const urls = proposal.after_image_url.split(",").map((s) => s.trim()).filter(Boolean);
+        const urls = splitImageUrls(proposal.after_image_url);
         urls.forEach((u, idx) => {
           if (u !== beforeUrl) {
             const isVid = u.endsWith(".mp4") || u.endsWith(".mov") || u.endsWith(".webm") || u.startsWith("data:video");
@@ -187,25 +188,30 @@ export default function FeasibilityApprovalModal({
     }
   }, [isOpen, initialDecision, proposal]);
 
-  const handleAddMediaFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAddMediaFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      const isVid = file.type.startsWith("video/") || file.name.endsWith(".mp4") || file.name.endsWith(".mov") || file.name.endsWith(".webm");
-      reader.onload = (event) => {
-        const url = event.target?.result as string;
-        if (url) {
-          setAfterMediaList((prev) => [
-            ...prev,
-            { id: `${Date.now()}-${Math.random()}`, type: isVid ? "video" : "image", url, name: file.name },
-          ]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    setUploadingMedia(true);
+    setErrorMsg(null);
+    try {
+      // Upload lên Cloudinary (giống mọi ảnh/video khác trong app) thay vì lưu thẳng base64 vào
+      // CSDL — 1 ảnh base64 nặng 250-800KB lưu trực tiếp trong D1 vừa dễ vỡ hiển thị (data URI có
+      // dấu phẩy ngay trong cú pháp, dễ bị hàm tách chuỗi băm nhầm) vừa phình CSDL không cần thiết.
+      for (const file of Array.from(files)) {
+        const isVid = file.type.startsWith("video/") || file.name.endsWith(".mp4") || file.name.endsWith(".mov") || file.name.endsWith(".webm");
+        const url = await uploadFileToCloudinary(file, isVid ? "video" : "image");
+        setAfterMediaList((prev) => [
+          ...prev,
+          { id: `${Date.now()}-${Math.random()}`, type: isVid ? "video" : "image", url, name: file.name },
+        ]);
+      }
+    } catch (err: any) {
+      setErrorMsg(err?.message || "❌ Lỗi khi tải ảnh/video lên Cloudinary!");
+    } finally {
+      setUploadingMedia(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   const handleRemoveMedia = (id: string) => {
@@ -624,11 +630,12 @@ export default function FeasibilityApprovalModal({
               </span>
               <button
                 type="button"
+                disabled={uploadingMedia}
                 onClick={() => fileInputRef.current?.click()}
-                className="px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-[#006838] border border-emerald-200 font-extrabold text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
+                className="px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-[#006838] border border-emerald-200 font-extrabold text-[11px] flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
               >
-                <IconPlus size={13} />
-                <span>Thêm ảnh / video</span>
+                {uploadingMedia ? <IconLoader2 size={13} className="animate-spin" /> : <IconPlus size={13} />}
+                <span>{uploadingMedia ? "Đang tải lên..." : "Thêm ảnh / video"}</span>
               </button>
             </div>
 
@@ -639,6 +646,7 @@ export default function FeasibilityApprovalModal({
               multiple
               accept="image/*,video/*"
               className="hidden"
+              disabled={uploadingMedia}
             />
 
             {/* THUMBNAILS GRID PREVIEW (ĐƯỢC PHÉP XÓA ẢNH SAU CẢI TIẾN) */}

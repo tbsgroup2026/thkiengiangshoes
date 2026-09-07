@@ -6660,14 +6660,14 @@ export default {
                 customer = ?,
                 product_group = ?,
                 product_code = ?,
-                quantity = ?,
+                quantity = COALESCE(?, quantity),
                 before_description = ?,
                 after_solution = ?,
-                saved_seconds = ?,
+                saved_seconds = COALESCE(?, saved_seconds),
                 pricing_direction = ?,
-                time_before_seconds = ?,
-                time_after_seconds = ?,
-                efficiency_value_vnd = ?,
+                time_before_seconds = COALESCE(?, time_before_seconds),
+                time_after_seconds = COALESCE(?, time_after_seconds),
+                efficiency_value_vnd = COALESCE(?, efficiency_value_vnd),
                 cost_before = COALESCE(?, cost_before),
                 chi_phi_truoc = COALESCE(?, chi_phi_truoc),
                 cost_after = COALESCE(?, cost_after),
@@ -6698,14 +6698,14 @@ export default {
               safeVal(customer, proposal.customer),
               safeVal(productGroup, proposal.product_group),
               safeVal(productCode, proposal.product_code),
-              parseInt(quantity || 0, 10),
+              quantity !== undefined ? parseInt(quantity, 10) : null,
               safeVal(beforeDescription, proposal.before_description),
               safeVal(afterSolution, proposal.after_solution),
-              parseInt(savedSeconds || 0, 10),
+              savedSeconds !== undefined ? parseInt(savedSeconds, 10) : null,
               safeVal(pricingDirection, proposal.pricing_direction),
-              parseInt(timeBeforeSeconds || 0, 10),
-              parseInt(timeAfterSeconds || 0, 10),
-              parseInt(efficiencyValueVND || 0, 10),
+              timeBeforeSeconds !== undefined ? parseInt(timeBeforeSeconds, 10) : null,
+              timeAfterSeconds !== undefined ? parseInt(timeAfterSeconds, 10) : null,
+              efficiencyValueVND !== undefined ? parseInt(efficiencyValueVND, 10) : null,
               costBefore !== undefined ? Number(costBefore) : null,
               costBefore !== undefined ? Number(costBefore) : null,
               costAfter !== undefined ? Number(costAfter) : null,
@@ -6739,6 +6739,12 @@ export default {
 
           let nextStatus = proposal.status;
           let nextSubStatus = proposal.sub_status;
+          // approval_status vốn chỉ được set bởi endpoint /approve (Bước 3) — nếu 1 đề xuất được
+          // EVALUATE/APPROVE thẳng qua route chung này mà CHƯA từng qua /approve (VD nút "Khuyến
+          // Khích" tắt luôn Bước 3), approval_status sẽ kẹt mãi ở PENDING dù status/sub_status đã
+          // đúng là đã duyệt — khiến các bộ lọc khác dựa vào approval_status (banner Bước 3, xếp
+          // hạng thi đua...) hiểu nhầm là "chưa duyệt". Đồng bộ luôn ở đây cho nhất quán.
+          let nextApprovalStatus = proposal.approval_status;
           let nextAward = proposal.award_title;
           let nextScore = proposal.score_points;
           let nextComment = proposal.review_comment;
@@ -6761,10 +6767,12 @@ export default {
             }
             nextStatus = "APPROVED";
             nextSubStatus = "DA_DANH_GIA";
+            nextApprovalStatus = "PHE_DUYET";
             if (awardTitle) nextAward = awardTitle;
             if (scorePoints !== undefined) nextScore = parseFloat(scorePoints);
           } else if (action === "REJECT") {
             nextStatus = "REJECTED";
+            nextApprovalStatus = "TU_CHOI";
             nextRejReason = rejectionReason || "Chưa đạt tiêu chí cải tiến";
           } else if (action === "IMPLEMENT") {
             // Transition Guard: Only APPROVED proposals can be marked IMPLEMENTED
@@ -6783,11 +6791,12 @@ export default {
           // (4) Optimistic Locking Update
           const res = await env.DB.prepare(`
             UPDATE ci_kaizen_proposals SET
-              status = ?, sub_status = ?, award_title = ?, score_points = ?, review_comment = ?, rejection_reason = ?, after_solution = ?, saved_seconds = ?, after_image_url = ?, updated_at = CURRENT_TIMESTAMP, version = version + 1
+              status = ?, sub_status = ?, approval_status = ?, award_title = ?, score_points = ?, review_comment = ?, rejection_reason = ?, after_solution = ?, saved_seconds = ?, after_image_url = ?, updated_at = CURRENT_TIMESTAMP, version = version + 1
             WHERE id = ? AND version = ?
           `).bind(
             safeVal(nextStatus, "SUBMITTED"),
             safeVal(nextSubStatus, "CHO_DANH_GIA"),
+            safeVal(nextApprovalStatus, "PENDING"),
             safeVal(nextAward, null),
             safeVal(nextScore, 0.0),
             safeVal(nextComment, null),

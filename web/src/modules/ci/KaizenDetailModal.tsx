@@ -37,6 +37,7 @@ import {
   splitImageUrls,
   normalizeCategoryId,
   extractProposalVideos,
+  uploadFileToCloudinary,
   UniversalVideoPlayer,
   KaizenMediaLightbox,
   MediaItem,
@@ -85,33 +86,6 @@ function parseCategoryIds(categoryLabel?: string | null, categoryId?: string | n
   return single ? [single] : [];
 }
 
-function getFirstImageUrl(urlStr?: string | null): string {
-  if (!urlStr) return "";
-  const trimmed = urlStr.trim();
-  if (!trimmed) return "";
-  const first = trimmed.split(",")[0].trim();
-  return first;
-}
-
-const CLOUDINARY_CLOUD_NAME = "dwl2xtbqa";
-const CLOUDINARY_PRESET = "vpchuoisk";
-
-async function uploadFileToCloudinary(file: File, fileType: "image" | "video"): Promise<string> {
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("upload_preset", CLOUDINARY_PRESET);
-
-  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${fileType}/upload`, {
-    method: "POST",
-    body: formData,
-  });
-
-  const json = await res.json();
-  if (!res.ok || json.error) {
-    throw new Error(json.error?.message || `Lỗi khi tải ${fileType} lên Cloudinary!`);
-  }
-  return json.secure_url || json.url;
-}
 
 export default function KaizenDetailModal({
   proposal,
@@ -220,19 +194,39 @@ export default function KaizenDetailModal({
     setEditCostBefore((proposal as any).cost_before ?? (proposal as any).costBefore ?? (proposal as any).chi_phi_truoc ?? "");
     setEditCostAfter((proposal as any).cost_after ?? (proposal as any).costAfter ?? (proposal as any).chi_phi_sau ?? "");
 
-    // Dữ liệu CŨ chỉ lưu 1 tổng tiết kiệm duy nhất (chưa tách theo phân loại) — gán tạm vào ĐÚNG 1
-    // khối tương ứng với phân loại ĐẦU TIÊN đã chọn để không mất số liệu, người sửa có thể tự phân
-    // bổ lại giữa các khối nếu cần khi đã chọn thêm phân loại khác.
     const firstCatId = initialCatIds[0];
     setEditTotalSavingsVnd("");
     setEditMaterialCostSavings("");
     setEditNonFinancialSavings("");
-    if (firstCatId === "MATERIAL_SAVING" || firstCatId === "COST_SAVING") {
-      setEditMaterialCostSavings(totSavings > 0 ? totSavings : "");
-    } else if (["SAFETY", "5S", "AUTOMATION", "EQUIPMENT"].includes(firstCatId)) {
-      setEditNonFinancialSavings(totSavings > 0 ? totSavings : "");
+
+    if (initialCatIds.length <= 1) {
+      // CHỈ 1 phân loại — tổng đã lưu chắc chắn thuộc trọn về đúng khối này, dùng thẳng không suy
+      // diễn (tránh sai lệch nếu người duyệt trước đó từng ghi đè tay khác công thức tự tính).
+      if (firstCatId === "MATERIAL_SAVING" || firstCatId === "COST_SAVING") {
+        setEditMaterialCostSavings(totSavings > 0 ? totSavings : "");
+      } else if (["SAFETY", "5S", "AUTOMATION", "EQUIPMENT"].includes(firstCatId)) {
+        setEditNonFinancialSavings(totSavings > 0 ? totSavings : "");
+      } else {
+        setEditTotalSavingsVnd(totSavings > 0 ? totSavings : "");
+      }
     } else {
-      setEditTotalSavingsVnd(totSavings > 0 ? totSavings : "");
+      // ĐÃ SẴN nhiều phân loại (mở sửa lại lần 2 trở lên) — totSavings lúc này là TỔNG ĐÃ CỘNG DỒN
+      // của mọi khối, TUYỆT ĐỐI không được dồn nguyên vào 1 khối rồi cộng dồn lại — sẽ tính trùng
+      // đúng phần đã cộng trước đó (bug đã xảy ra: sửa lần 2 ra tổng sai gấp đôi phần 1 khối). Mỗi
+      // khối tự tính lại ĐÚNG phần của mình từ field gốc riêng (thời gian/chi phí), không suy ra
+      // từ tổng gộp.
+      if (initialCatIds.includes("PRODUCTIVITY")) {
+        const autoProd = effVnd > 0 ? (pQty > 0 ? effVnd * pQty : effVnd) : 0;
+        setEditTotalSavingsVnd(autoProd > 0 ? autoProd : "");
+      }
+      if (initialCatIds.includes("MATERIAL_SAVING") || initialCatIds.includes("COST_SAVING")) {
+        const cb = Number((proposal as any).cost_before ?? (proposal as any).chi_phi_truoc ?? 0);
+        const ca = Number((proposal as any).cost_after ?? (proposal as any).chi_phi_sau ?? 0);
+        const autoMat = Math.max(0, cb - ca);
+        setEditMaterialCostSavings(autoMat > 0 ? autoMat : "");
+      }
+      // Phi tài chính không có field lưu riêng cho phần đóng góp cũ — để trống, người sửa tự nhập
+      // lại nếu cần, không đoán bừa để tránh cộng dồn sai.
     }
 
     setEditBeforeImages(splitImageUrls(proposal.before_image_url));
@@ -276,6 +270,7 @@ export default function KaizenDetailModal({
         Object.assign(proposal, {
           status: "APPROVED",
           sub_status: "DA_DANH_GIA",
+          approval_status: "PHE_DUYET",
           award_title: "Giải Khuyến Khích",
           score_points: 50,
         });
@@ -1096,6 +1091,14 @@ export default function KaizenDetailModal({
                   {isRejected ? "Từ chối" : isApproved ? "Đã duyệt" : "Chờ duyệt"}
                 </span>
               </span>
+
+              {/* Pill 4: Giải thưởng — chỉ hiện khi đã chấm/trao giải (kể cả qua nút Khuyến Khích) */}
+              {proposal.award_title && (
+                <span className="px-3 py-1 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 border border-amber-500 text-white text-xs font-black flex items-center gap-1 shadow-xs">
+                  <span>🎗️</span>
+                  <span>{proposal.award_title}</span>
+                </span>
+              )}
             </div>
 
             {/* Tiêu đề hồ sơ */}
@@ -1118,8 +1121,11 @@ export default function KaizenDetailModal({
               MSNV: <span className="font-mono text-slate-700">{proposal.proposer_emp_code}</span> &bull; KV: <span className="text-slate-700">{proposal.region || "Kiên Giang 1"}</span> &bull; Tháng {pMonth}/{pYear}
             </p>
 
-            {/* BANNER XEM XÉT TÍNH KHẢ THI (BƯỚC 3 QĐ-TBKG) */}
-            {(proposal.sub_status === "CHO_REVIEW" || proposal.approval_status === "PENDING" || proposal.status === "SUBMITTED") && isJudgeOrExecutive && (
+            {/* BANNER XEM XÉT TÍNH KHẢ THI (BƯỚC 3 QĐ-TBKG) — ẨN LUÔN nếu đã có award_title (đã
+                chấm điểm/trao giải, kể cả qua nút Khuyến Khích) vì approval_status/sub_status vốn
+                KHÔNG được cập nhật khi trao Khuyến Khích nhanh (chỉ EVALUATE, không đụng bước 3),
+                nên phải chặn thêm điều kiện này để banner không "kẹt" hiện mãi sau khi đã xong. */}
+            {(proposal.sub_status === "CHO_REVIEW" || proposal.approval_status === "PENDING" || proposal.status === "SUBMITTED") && !proposal.award_title && isJudgeOrExecutive && (
               <div className="mt-4 p-4 rounded-2xl bg-blue-50/90 border border-blue-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
                 <div className="space-y-0.5">
                   <span className="text-xs font-black text-blue-900 flex items-center gap-1.5">
