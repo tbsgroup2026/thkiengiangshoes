@@ -4502,6 +4502,23 @@ export default {
       if ((url.pathname === "/api/ci-kaizen" || url.pathname === "/api/ci-kaizen/") && request.method === "GET") {
         try {
           await ensureProposalSchemaAndMigration();
+
+          // Debug tạm thời — xem đúng bản ghi theo MSNV, KHÔNG áp allow-list KG_FACTORIES. Xoá
+          // ngay sau khi đối chiếu xong việc tách Phòng CN-CI.
+          const debugEmpCodes = url.searchParams.get("debug_emp_codes");
+          if (debugEmpCodes) {
+            const codes = debugEmpCodes.split(",").map((c) => c.trim()).filter(Boolean);
+            if (codes.length > 0) {
+              const ph = codes.map(() => "?").join(",");
+              const { results: dbg } = await env.DB.prepare(
+                `SELECT id, code, proposer_name, proposer_emp_code, factory, region, department, approval_status, status, updated_at FROM ci_kaizen_proposals WHERE proposer_emp_code IN (${ph})`
+              ).bind(...codes).all().catch((e) => ({ results: [], error: String(e) }));
+              return new Response(JSON.stringify({ success: true, debug: true, data: dbg || [] }), {
+                headers: { ...SECURE_JSON_HEADERS, "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0" }
+              });
+            }
+          }
+
           const KG_FACTORIES = ["KG 1","KG 2","KG 3","Hoàn thiện đế","Kiên Giang 1","Kiên Giang 2","Kiên Giang 3","HTĐ KG","Phòng kế hoạch","Phòng CN-CI","Phòng CI","Phòng CN","Phòng chất lượng","Phòng nhân sự","P. Kế Hoạch","P. CN-CI","P. CI","P. CN","P. Chất Lượng","P. Nhân Sự"];
           const placeholders = KG_FACTORIES.map(() => "?").join(",");
           const { results } = await env.DB.prepare(
