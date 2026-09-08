@@ -805,10 +805,11 @@ function pphSlotMinutes(s) {
 // tới; nếu hết cả 8 khung, báo "done".
 // 🚧 CÔNG TẮC DEMO TẠM THỜI — bật (true) = BỎ QUA hẳn giới hạn "chưa tới giờ", cho phép nhập số
 // lượng ở BẤT KỲ khung giờ nào ngay lập tức (dùng để demo cho sếp xem, không phải đợi đúng giờ
-// thật). Áp dụng CHO TOÀN BỘ hệ thống (mọi Nhà máy/Xưởng/Chuyền/Tổ) — người dùng đã xác nhận chấp
-// nhận đánh đổi này trong lúc demo. NHỚ set lại `false` ngay sau khi demo xong để khôi phục đúng
-// luật giờ giấc thật cho dữ liệu sản xuất thật.
-const PPH_DEMO_SKIP_TIME_GATE = true;
+// thật). Áp dụng CHO TOÀN BỘ hệ thống (mọi Nhà máy/Xưởng/Chuyền/Tổ).
+// ĐÃ TẮT LẠI (false) — khôi phục đúng luật giờ giấc thật: quét mã lúc mấy giờ thì chỉ nhập được
+// đúng khung giờ đó (trừ hao 10 phút cho phép nhập sớm), ví dụ quét lúc 13:30 thì vào đúng khung
+// 13:30 (không phải khung khác); qua giờ mà chưa nhập vẫn cho "bắt kịp" ở khung sớm nhất còn thiếu.
+const PPH_DEMO_SKIP_TIME_GATE = false;
 
 function pphResolveStatus(setupDone, filledSlots) {
   if (!setupDone) return { nextAction: "setup", targetSlot: "08:00" };
