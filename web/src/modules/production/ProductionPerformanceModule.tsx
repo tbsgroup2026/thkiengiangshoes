@@ -158,12 +158,20 @@ function slotMinutes(slot: string): number {
   return h * 60 + m;
 }
 
+// Map slot -> phút giờ MỞ đã cấu hình ("Ràng buộc thời gian") — khớp đúng mốc chặn nộp thật ở
+// pphResolveStatus() phía backend. openMinutesBySlot=null (chưa tải xong /api/pph/slot-windows) thì
+// tạm dùng ĐÚNG giờ khung (không trừ hao) làm mốc — khớp giá trị mặc định phía backend
+// (pphDefaultSlotWindow) khi admin chưa chỉnh gì, tự cập nhật lại ngay khi tải xong.
+function openMinutesFor(slot: string, openMinutesBySlot: Map<string, number> | null): number {
+  return openMinutesBySlot?.get(slot) ?? slotMinutes(slot);
+}
+
 // Trạng thái 1 khung giờ cụ thể của 1 Tổ — dùng cho bảng chi tiết khi đang lọc riêng 1 Tổ. Đã QUA
-// giờ của khung mà vẫn chưa nhập -> "Quá hạn" (khác với "Chưa tới giờ" — chưa đến lúc, bình
+// giờ MỞ của khung mà vẫn chưa nhập -> "Quá hạn" (khác với "Chưa tới giờ" — chưa đến lúc, bình
 // thường, không có gì đáng lo).
-function slotDueState(slot: string, filled: boolean, isToday: boolean): { label: string; cls: string } {
+function slotDueState(slot: string, filled: boolean, isToday: boolean, openMinutesBySlot: Map<string, number> | null): { label: string; cls: string } {
   if (filled) return { label: 'Đã cập nhật', cls: 'bg-emerald-50 text-emerald-700' };
-  const due = !isToday || nowVNMinutes() >= slotMinutes(slot) - 10;
+  const due = !isToday || nowVNMinutes() >= openMinutesFor(slot, openMinutesBySlot);
   return due ? { label: 'Quá hạn', cls: 'bg-rose-50 text-rose-700' } : { label: 'Chưa tới giờ', cls: 'bg-slate-100 text-slate-400' };
 }
 
@@ -172,18 +180,18 @@ function slotDueState(slot: string, filled: boolean, isToday: boolean): { label:
 // còn SỚM, chưa tới lúc phải nhập gì cả (bình thường) và (2) ĐÃ QUA giờ 1 khung nào đó mà vẫn
 // chưa nhập (đáng chú ý, cần nhắc). Tách riêng ở đây bằng đúng dữ liệu slots đã có sẵn, không cần
 // đổi gì bên server.
-function leafStatusBadge(leaf: PphLeaf, isToday: boolean): { label: string; cls: string } {
+function leafStatusBadge(leaf: PphLeaf, isToday: boolean, openMinutesBySlot: Map<string, number> | null): { label: string; cls: string } {
   if (leaf.entryStatus !== 'missing') return ENTRY_LABEL[leaf.entryStatus];
   if (!isToday) return { label: 'Quá hạn', cls: 'bg-rose-50 text-rose-700' }; // Ngày đã qua — còn thiếu chắc chắn là trễ.
   if (!leaf.setup) {
     // Chưa cập nhật đầu ca — chỉ tính "quá hạn" khi đã qua luôn cả mốc khung số lượng ĐẦU TIÊN
     // (không có đầu ca thì không nhập được khung nào cả, nên mốc quan trọng là khung đầu tiên).
-    const firstQtyDueMin = slotMinutes('08:30') - 10;
+    const firstQtyDueMin = openMinutesFor('08:30', openMinutesBySlot);
     return nowVNMinutes() >= firstQtyDueMin
       ? { label: 'Quá hạn', cls: 'bg-rose-50 text-rose-700' }
       : { label: 'Chưa tới hạn', cls: 'bg-slate-100 text-slate-400' };
   }
-  const overdue = leaf.slots.some((s) => !s.filled && nowVNMinutes() >= slotMinutes(s.slot) - 10);
+  const overdue = leaf.slots.some((s) => !s.filled && nowVNMinutes() >= openMinutesFor(s.slot, openMinutesBySlot));
   return overdue
     ? { label: 'Quá hạn', cls: 'bg-rose-50 text-rose-700' }
     : { label: 'Chưa tới hạn', cls: 'bg-slate-100 text-slate-400' };
@@ -207,8 +215,25 @@ export default function ProductionPerformanceModule() {
   // (đang xem riêng 1 Tổ) đều mở popup này. actualQty/submittedBy luôn có khi khung đã nhập;
   // reason/solution chỉ có khi khung đó từng hụt chỉ tiêu/giờ.
   const [slotPopup, setSlotPopup] = useState<PphSlot | null>(null);
+  // Giờ MỞ từng khung ("Ràng buộc thời gian", trang Cài Đặt) — tải 1 lần, dùng để tính badge
+  // "Quá hạn/Chưa tới hạn" cho khớp đúng mốc chặn nộp thật ở backend (pphResolveStatus), thay cho
+  // công thức cố định "-10 phút" trước đây.
+  const [openMinutesBySlot, setOpenMinutesBySlot] = useState<Map<string, number> | null>(null);
   const firstLoadRef = useRef(true);
   const isToday = selectedDate === todayVNStr();
+
+  useEffect(() => {
+    fetch('/api/pph/slot-windows')
+      .then((r) => r.json())
+      .then((res) => {
+        if (res.success && Array.isArray(res.windows)) {
+          const map = new Map<string, number>();
+          for (const w of res.windows) map.set(w.slot, slotMinutes(w.startTime));
+          setOpenMinutesBySlot(map);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const load = useCallback(async (opts?: { silent?: boolean; fresh?: boolean; date?: string }) => {
     if (!opts?.silent) setLoading(true);
@@ -366,7 +391,9 @@ export default function ProductionPerformanceModule() {
             onSelectLeaf={handleSelectLeaf}
             onCollapse={() => setPickerOpen(false)}
           />
-          {factory && factoryAggregate && <InfoPanel leaf={leaf} factory={factory} factoryAggregate={factoryAggregate} isToday={isToday} />}
+          {factory && factoryAggregate && (
+            <InfoPanel leaf={leaf} factory={factory} factoryAggregate={factoryAggregate} isToday={isToday} openMinutesBySlot={openMinutesBySlot} />
+          )}
         </div>
 
         {/* CỘT PHẢI — Chỉ số nhanh + Biểu đồ + Bảng chi tiết — nhận hết phần rộng còn dư */}
@@ -474,7 +501,7 @@ export default function ProductionPerformanceModule() {
                     </thead>
                     <tbody className="divide-y divide-slate-50 text-sm text-slate-700 whitespace-nowrap">
                       {leaf.slots.map((s) => {
-                        const due = slotDueState(s.slot, s.filled, isToday);
+                        const due = slotDueState(s.slot, s.filled, isToday, openMinutesBySlot);
                         const hasShortfall = !!(s.filled && s.shortfallReason);
                         const status = slotStatus(s.actualQty, leaf.perHourTarget);
                         return (
@@ -549,7 +576,7 @@ export default function ProductionPerformanceModule() {
                             </td>
                             <td className="px-4 py-3">
                               {(() => {
-                                const badge = leafStatusBadge(l, isToday);
+                                const badge = leafStatusBadge(l, isToday, openMinutesBySlot);
                                 return <span className={`px-2 py-1 rounded-full text-xs font-bold ${badge.cls}`}>{badge.label}</span>;
                               })()}
                             </td>
@@ -839,6 +866,7 @@ function InfoPanel({
   factory,
   factoryAggregate,
   isToday,
+  openMinutesBySlot,
 }: {
   leaf: PphLeaf | null;
   factory: PphDashboardFactory;
@@ -849,6 +877,7 @@ function InfoPanel({
     cumulativeTarget: number;
   };
   isToday: boolean;
+  openMinutesBySlot: Map<string, number> | null;
 }) {
   const cumActual = leaf ? leaf.cumulativeActual : factoryAggregate.cumulativeActual;
   const cumTarget = leaf ? leaf.cumulativeTarget : factoryAggregate.cumulativeTarget;
@@ -859,7 +888,7 @@ function InfoPanel({
         ['Model sản xuất', leaf.setup?.model || 'Chưa cập nhật'],
         ['Số lao động', leaf.setup ? `${leaf.setup.workerCount} người` : 'Chưa cập nhật'],
         ['Chỉ tiêu / giờ', `${leaf.perHourTarget} đôi`],
-        ['Trạng thái nhập', leafStatusBadge(leaf, isToday).label],
+        ['Trạng thái nhập', leafStatusBadge(leaf, isToday, openMinutesBySlot).label],
       ]
     : [
         ['Điểm quét', `${factory.leaves.length} điểm`],

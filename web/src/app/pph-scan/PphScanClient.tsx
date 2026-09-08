@@ -149,8 +149,10 @@ export default function PphScanClient() {
   }, [teamId]);
 
   // Giờ mở/đóng từng khung ("Ràng buộc thời gian", cấu hình chung ở trang Cài Đặt) — tải 1 LẦN,
-  // dùng để tính đồng hồ đếm ngược bên dưới. CHỈ để hiển thị — CHƯA dùng để chặn nộp sớm/trễ (việc
-  // chặn vẫn theo đúng luật cũ, không đổi gì ở đây).
+  // dùng để tính đồng hồ đếm ngược bên dưới. Giờ MỞ giờ đây LÀ MỐC THẬT chặn nộp sớm (server tự
+  // kiểm tra lại, xem pphResolveStatus() trong _worker.js) — đồng hồ đếm ngược hiển thị đúng khớp
+  // với luật đang áp dụng thật, không còn là hàng demo. Giờ ĐÓNG vẫn chỉ để tắt đồng hồ hiển thị,
+  // không khoá nộp trễ (luật "bắt kịp" khung sớm nhất còn thiếu vẫn giữ nguyên).
   useEffect(() => {
     fetch('/api/pph/slot-windows')
       .then((r) => r.json())
@@ -202,8 +204,8 @@ export default function PphScanClient() {
       setCountdownPhase(null);
       return;
     }
-    const startMs = slotLabelToDeadlineVNMs(win.startTime, 0);
-    const endMs = slotLabelToDeadlineVNMs(win.endTime, 0);
+    const startMs = slotLabelToDeadlineVNMs(win.startTime);
+    const endMs = slotLabelToDeadlineVNMs(win.endTime);
     const tick = () => {
       const now = vnNowMs();
       if (now < startMs) {
@@ -222,14 +224,14 @@ export default function PphScanClient() {
     return () => clearInterval(timer);
   }, [info?.targetSlot, info?.nextAction, slotWindows]);
 
-  // Tự tải lại NGẦM (không hiện số đếm nào) khi khung đang nhập THỰC SỰ hết hạn (= mốc bắt đầu của
-  // khung kế tiếp, trừ hao 10 phút, khớp đúng luật pphResolveStatus() phía backend) — để tự chuyển
-  // sang khung mới mà không bắt người dùng phải tự bấm làm mới.
+  // Tự tải lại NGẦM (không hiện số đếm nào) khi khung đang nhập THỰC SỰ hết hạn (= giờ MỞ đã cấu
+  // hình của khung kế tiếp, khớp đúng luật pphResolveStatus() phía backend) — để tự chuyển sang
+  // khung mới mà không bắt người dùng phải tự bấm làm mới.
   //
   // BUG ĐÃ TÌM RA VÀ SỬA TRƯỚC ĐÓ (nguyên nhân "quét lần 2 xoay/giật liên tục"): pphResolveStatus()
   // phía backend cố tình trả về khung SỚM NHẤT còn thiếu — kể cả khung đó đã trễ rất lâu (VD cập
   // nhật đầu ca lúc 14h thì targetSlot vẫn là "08:30" để "bắt kịp"). Với 1 khung đã trễ như vậy,
-  // mốc hết hạn (= khung kế tiếp - 10 phút) CŨNG đã trôi qua từ lâu — nếu không kiểm tra trước, tick
+  // mốc hết hạn (= giờ mở của khung kế tiếp) CŨNG đã trôi qua từ lâu — nếu không kiểm tra trước, tick
   // đầu tiên lập tức thấy "đã hết giờ" và tự gọi load(); load() trả về info MỚI (object JSON parse
   // lại — LUÔN khác reference dù giá trị giống hệt), khiến effect này (phụ thuộc info?.slots) bị
   // coi là "đổi" và CHẠY LẠI ngay — rồi lại lập tức thấy hết giờ, lại load()... lặp vô hạn. Fix: CHỈ
@@ -239,13 +241,15 @@ export default function PphScanClient() {
     const idx = info.slots.indexOf(info.targetSlot);
     const nextBoundarySlot = idx >= 0 ? info.slots[idx + 1] : undefined;
     if (!nextBoundarySlot) return; // Khung cuối ngày — không còn mốc để tự chuyển tiếp
-    const windowCloseMs = slotLabelToDeadlineVNMs(nextBoundarySlot, 10);
-    const diffMs = windowCloseMs - vnNowMs();
+    const win = slotWindows?.[nextBoundarySlot];
+    if (!win) return; // Chưa tải xong giờ cấu hình — bỏ qua, effect tự chạy lại khi slotWindows có
+    const windowOpenMs = slotLabelToDeadlineVNMs(win.startTime);
+    const diffMs = windowOpenMs - vnNowMs();
     if (diffMs <= 0) return; // Đã trễ sẵn (khung "bắt kịp") — không hẹn lại, tránh lặp vô hạn
     const t = setTimeout(() => load(), diffMs);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [info?.slots, info?.targetSlot, info?.nextAction]);
+  }, [info?.slots, info?.targetSlot, info?.nextAction, slotWindows]);
 
   // Hụt Mục tiêu/giờ — so số đang gõ (chưa cần bấm gửi) với Mục tiêu/giờ suy ra từ kế hoạch đầu ca.
   const parsedActualQty = actualQty === '' ? null : Number(actualQty);
@@ -594,16 +598,13 @@ function vnNowMs(): number {
   return Date.now() + 7 * 60 * 60 * 1000;
 }
 
-// Parse nhãn "HH:MM" thành mốc "giờ VN hôm nay" (cùng hệ quy chiếu với vnNowMs()), trừ hao 10 phút
-// — khớp đúng luật pphResolveStatus() phía backend, để đồng hồ đếm ngược hiển thị đúng lúc khung
-// giờ thật sự đóng.
-// bufferMinutes: trừ hao bao nhiêu phút so với nhãn giờ gốc — dùng 0 để lấy ĐÚNG giờ của khung
-// (hiển thị đếm ngược cho người dùng xem), dùng 10 để lấy mốc "khung kế tiếp mở sớm" (khớp luật
-// pphResolveStatus() phía backend, dùng cho việc tự tải lại khi khung hiện tại thực sự đóng).
-function slotLabelToDeadlineVNMs(slotLabel: string, bufferMinutes: number): number {
+// Parse nhãn "HH:MM" thành mốc "giờ VN hôm nay" (cùng hệ quy chiếu với vnNowMs()) — dùng cho cả
+// đồng hồ đếm ngược hiển thị lẫn mốc tự tải lại khi khung kế tiếp mở (khớp đúng luật
+// pphResolveStatus() phía backend — đọc thẳng giờ MỞ/ĐÓNG đã cấu hình, không còn trừ hao cố định).
+function slotLabelToDeadlineVNMs(slotLabel: string): number {
   const [h, m] = slotLabel.split(':').map(Number);
   const vnNow = new Date(vnNowMs());
-  return Date.UTC(vnNow.getUTCFullYear(), vnNow.getUTCMonth(), vnNow.getUTCDate(), h, m - bufferMinutes, 0, 0);
+  return Date.UTC(vnNow.getUTCFullYear(), vnNow.getUTCMonth(), vnNow.getUTCDate(), h, m, 0, 0);
 }
 
 function pad(n: number): string {

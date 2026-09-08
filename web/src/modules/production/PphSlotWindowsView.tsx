@@ -20,9 +20,11 @@ const SLOT_LABEL: Record<string, string> = {
 };
 
 // "Ràng buộc thời gian" — cấu hình giờ MỞ/ĐÓNG dùng CHUNG cho toàn hệ thống (không phải riêng từng
-// điểm quét), áp dụng cho cả 9 khung PPH. LƯU Ý: màn hình này CHỈ để CHỈNH giá trị lưu ở D1 (dùng
-// cho đồng hồ đếm ngược ở trang quét /pph-scan) — CHƯA bật chặn nộp sớm/trễ theo giờ này (việc chặn
-// thật vẫn theo cờ PPH_DEMO_SKIP_TIME_GATE + luật cũ, không đổi ở đây theo đúng yêu cầu).
+// điểm quét), áp dụng cho cả 9 khung PPH. Giờ MỞ chỉnh ở đây LÀ MỐC THẬT server dùng để chặn nộp
+// sớm (xem pphResolveStatus() trong _worker.js) — không còn chỉ để trang trí đồng hồ đếm ngược ở
+// trang quét /pph-scan. Giờ ĐÓNG vẫn chỉ dùng để tắt đồng hồ đếm ngược hiển thị, KHÔNG khoá cứng
+// việc nộp trễ — luật "bắt kịp" (cho nhập bù khung sớm nhất còn thiếu dù đã quá giờ đóng) vẫn giữ
+// nguyên như trước.
 export default function PphSlotWindowsView({ onBack }: { onBack: () => void }) {
   const [windows, setWindows] = useState<SlotWindow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,8 +99,10 @@ export default function PphSlotWindowsView({ onBack }: { onBack: () => void }) {
             <IconClock size={20} className="text-[#006838]" /> Ràng Buộc Thời Gian
           </h2>
           <p className="text-sm text-slate-500 mt-0.5">
-            Giờ mở/đóng của mỗi khung — dùng chung cho toàn hệ thống, mọi Tổ/Chuyền. Hiện tại chỉ để hiển thị đếm ngược
-            ở trang quét, <span className="font-bold text-slate-600">chưa chặn nộp sớm/trễ theo giờ này</span>.
+            Giờ mở/đóng của mỗi khung — dùng chung cho toàn hệ thống, mọi Tổ/Chuyền.{' '}
+            <span className="font-bold text-slate-600">Giờ mở là mốc thật chặn nộp sớm</span> — quét trước giờ mở sẽ
+            không nhập được. Giờ đóng chỉ để tắt đồng hồ đếm ngược trên trang quét, nộp trễ vẫn cho &quot;bắt kịp&quot;
+            như trước, không bị khoá.
           </p>
         </div>
       </div>

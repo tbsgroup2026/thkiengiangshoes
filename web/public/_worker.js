@@ -723,10 +723,13 @@ async function pphEnsureTable(env) {
 }
 
 // "Ràng buộc thời gian" — giờ MỞ/ĐÓNG của từng khung trong 9 khung PPH_SLOTS, DÙNG CHUNG cho toàn
-// hệ thống (không phải riêng từng điểm quét). Hiện TẠI chỉ dùng để hiển thị đếm ngược ở trang quét
-// (/pph-scan) — CHƯA dùng để chặn nộp trễ/sớm (việc chặn vẫn theo đúng luật cũ ở pphResolveStatus()
-// + cờ PPH_DEMO_SKIP_TIME_GATE, không đổi gì ở đây). Bảng để TRỐNG là bình thường — GET trả về đủ
-// 9 khung bằng cách tự suy ra giờ mặc định (pphDefaultSlotWindow) cho khung nào chưa có dòng riêng.
+// hệ thống (không phải riêng từng điểm quét). Giờ MỞ (startTime) giờ đây LÀ MỐC THẬT dùng để chặn
+// nộp sớm trong pphResolveStatus() (đọc qua pphOpenMinutesBySlot()) — admin chỉnh ở đây thì đúng là
+// đổi giờ được phép nhập thật, không còn chỉ để trang trí. Giờ ĐÓNG (endTime) vẫn CHỈ dùng để tắt
+// đồng hồ đếm ngược ở trang quét — KHÔNG khoá cứng việc nộp trễ, vì luật "bắt kịp" (cho nhập bù
+// khung sớm nhất còn thiếu dù đã quá giờ đóng từ lâu) vẫn giữ nguyên như trước, không đổi. Bảng để
+// TRỐNG là bình thường — GET trả về đủ 9 khung bằng cách tự suy ra giờ mặc định
+// (pphDefaultSlotWindow) cho khung nào chưa có dòng riêng.
 let __pphSlotWindowSchemaMigratedOnce = false;
 async function pphSlotWindowEnsureTable(env) {
   if (__pphSlotWindowSchemaMigratedOnce) return;
@@ -781,6 +784,14 @@ async function pphGetAllSlotWindows(env) {
   });
 }
 
+// Map slot -> phút-trong-ngày của giờ MỞ (startTime) đã cấu hình — dùng làm mốc chặn nộp sớm THẬT
+// trong pphResolveStatus() (thay cho công thức cố định "giờ khung - 10 phút" trước đây). Gọi 1 lần
+// rồi truyền map xuống, tránh mỗi lần resolve lại phải đọc D1.
+async function pphOpenMinutesBySlot(env) {
+  const windows = await pphGetAllSlotWindows(env);
+  return new Map(windows.map((w) => [w.slot, pphSlotMinutes(w.startTime)]));
+}
+
 // Giờ Việt Nam (UTC+7, không lệch DST) — Worker chạy theo UTC, cộng thủ công 7 tiếng rồi ĐỌC BẰNG
 // các hàm getUTC* của kết quả (không phải getHours thật) để không phụ thuộc timezone của runtime.
 function pphNowVN() {
@@ -800,27 +811,29 @@ function pphSlotMinutes(s) {
 
 // setupDone=false → luôn yêu cầu làm khung 08:00 trước (bất kể đang mấy giờ — "lần quét đầu tiên
 // trong ngày" theo đúng yêu cầu, không nhất thiết đúng 8:00 nếu ai đó quét trễ).
-// setupDone=true → tìm khung SỐ LƯỢNG sớm nhất đã tới giờ (trừ hao 10 phút) mà CHƯA nhập — cho
-// "bắt kịp" nếu bỏ lỡ khung trước đó. Nếu mọi khung đã tới giờ đều xong, báo khung TIẾP THEO sắp
-// tới; nếu hết cả 8 khung, báo "done".
+// setupDone=true → tìm khung SỐ LƯỢNG sớm nhất đã tới giờ MỞ (đọc từ openMinutesBySlot — cấu hình ở
+// trang "Ràng buộc thời gian", KHÔNG còn công thức cố định "-10 phút") mà CHƯA nhập — cho "bắt kịp"
+// nếu bỏ lỡ khung trước đó. Nếu mọi khung đã tới giờ đều xong, báo khung TIẾP THEO sắp tới; nếu hết
+// cả 8 khung, báo "done".
 // 🚧 CÔNG TẮC DEMO TẠM THỜI — bật (true) = BỎ QUA hẳn giới hạn "chưa tới giờ", cho phép nhập số
 // lượng ở BẤT KỲ khung giờ nào ngay lập tức (dùng để demo cho sếp xem, không phải đợi đúng giờ
 // thật). Áp dụng CHO TOÀN BỘ hệ thống (mọi Nhà máy/Xưởng/Chuyền/Tổ).
 // ĐÃ TẮT LẠI (false) — khôi phục đúng luật giờ giấc thật: quét mã lúc mấy giờ thì chỉ nhập được
-// đúng khung giờ đó (trừ hao 10 phút cho phép nhập sớm), ví dụ quét lúc 13:30 thì vào đúng khung
-// 13:30 (không phải khung khác); qua giờ mà chưa nhập vẫn cho "bắt kịp" ở khung sớm nhất còn thiếu.
+// đúng khung giờ đó (theo giờ MỞ admin cấu hình ở "Ràng buộc thời gian", mặc định = đúng giờ khung
+// nếu admin chưa chỉnh gì), ví dụ quét lúc 13:30 thì vào đúng khung 13:30 (không phải khung khác);
+// qua giờ mà chưa nhập vẫn cho "bắt kịp" ở khung sớm nhất còn thiếu.
 const PPH_DEMO_SKIP_TIME_GATE = false;
 
-function pphResolveStatus(setupDone, filledSlots) {
+function pphResolveStatus(setupDone, filledSlots, openMinutesBySlot) {
   if (!setupDone) return { nextAction: "setup", targetSlot: "08:00" };
   const nowMin = pphNowMinutes();
   const qSlots = PPH_SLOTS.slice(1);
   for (const s of qSlots) {
-    if ((PPH_DEMO_SKIP_TIME_GATE || nowMin >= pphSlotMinutes(s) - 10) && !filledSlots.has(s)) {
+    if ((PPH_DEMO_SKIP_TIME_GATE || nowMin >= openMinutesBySlot.get(s)) && !filledSlots.has(s)) {
       return { nextAction: "quantity", targetSlot: s };
     }
   }
-  const next = qSlots.find((s) => pphSlotMinutes(s) - 10 > nowMin);
+  const next = qSlots.find((s) => openMinutesBySlot.get(s) > nowMin);
   if (next) return { nextAction: "wait", targetSlot: null, nextSlot: next };
   return { nextAction: "done", targetSlot: null };
 }
@@ -972,6 +985,9 @@ async function handlePph(request, env, pathname, searchParams) {
       const factories = await pphBuildTree(env);
       const nowMin = pphNowMinutes();
       const qSlots = PPH_SLOTS.slice(1); // 8 khung SỐ LƯỢNG (không tính "08:00" đầu ca)
+      // Chỉ cần đọc 1 lần cho cả dashboard (giờ mở dùng chung toàn hệ thống, không riêng theo Tổ) —
+      // dùng để tính entryStatus bên dưới cho khớp đúng luật đang chặn nộp thật ở pphResolveStatus().
+      const openMinutesBySlot = isToday ? await pphOpenMinutesBySlot(env) : null;
 
       const factoriesOut = [];
       for (const f of factories) {
@@ -1017,14 +1033,15 @@ async function handlePph(request, env, pathname, searchParams) {
           const efficiencyPctLatest =
             latest && perHourTarget > 0 ? Math.round((latest.actualQty / perHourTarget) * 1000) / 10 : null;
 
-          // Trạng thái nhập: so khung nào ĐÃ TỚI GIỜ (trừ hao 10 phút, khớp pphResolveStatus) với
-          // khung đã thực sự nhập. "late" nếu có khung nhập trễ hơn 20 phút so với mốc của nó. Xem
-          // NGÀY QUÁ KHỨ thì cả ngày đã qua rồi — mọi khung đều coi là "đã tới giờ".
+          // Trạng thái nhập: so khung nào ĐÃ TỚI GIỜ MỞ (đọc từ openMinutesBySlot, khớp đúng luật
+          // đang chặn nộp thật ở pphResolveStatus) với khung đã thực sự nhập. "late" nếu có khung
+          // nhập trễ hơn 20 phút so với mốc của nó. Xem NGÀY QUÁ KHỨ thì cả ngày đã qua rồi — mọi
+          // khung đều coi là "đã tới giờ".
           let entryStatus = "missing";
           if (!setupRow) {
             entryStatus = "missing";
           } else {
-            const dueSlots = isToday ? qSlots.filter((s) => nowMin >= pphSlotMinutes(s) - 10) : qSlots;
+            const dueSlots = isToday ? qSlots.filter((s) => nowMin >= openMinutesBySlot.get(s)) : qSlots;
             const dueFilled = dueSlots.every((s) => bySlot.has(s));
             if (dueSlots.length === 0 || dueFilled) {
               const anyLate = dueSlots.some((s) => {
@@ -1135,7 +1152,8 @@ async function handlePph(request, env, pathname, searchParams) {
     const bySlot = new Map(results.map((r) => [r.slot, r]));
     const setupDone = bySlot.has("08:00");
     const filledSlots = new Set([...bySlot.keys()].filter((s) => s !== "08:00"));
-    const resolved = pphResolveStatus(setupDone, filledSlots);
+    const openMinutesBySlot = await pphOpenMinutesBySlot(env);
+    const resolved = pphResolveStatus(setupDone, filledSlots, openMinutesBySlot);
     const setupRow = bySlot.get("08:00");
     // Mục tiêu/giờ — suy ra từ kế hoạch cả ngày chia đều 8 khung số lượng, khớp đúng cách tính ở
     // dashboard — để FE hiện ngay trong nhãn ô nhập và tự phát hiện hụt chỉ tiêu lúc đang gõ.
@@ -1204,7 +1222,8 @@ async function handlePph(request, env, pathname, searchParams) {
       const setupDone = filled.has("08:00");
       const setupRow = results.find((r) => r.slot === "08:00");
       const perHourTarget = setupRow && setupRow.planned_qty ? setupRow.planned_qty / PPH_SLOTS.slice(1).length : 0;
-      const resolved = pphResolveStatus(setupDone, filled);
+      const openMinutesBySlot = await pphOpenMinutesBySlot(env);
+      const resolved = pphResolveStatus(setupDone, filled, openMinutesBySlot);
 
       if (resolved.nextAction === "wait") {
         return mmtbJson({ success: false, error: `Chưa tới giờ nhập — khung tiếp theo lúc ${resolved.nextSlot}` }, 409);
